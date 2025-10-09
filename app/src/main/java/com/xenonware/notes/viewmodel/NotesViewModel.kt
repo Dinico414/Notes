@@ -9,9 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xenonware.notes.SharedPreferenceManager
-import com.xenonware.notes.viewmodel.classes.Priority
 import com.xenonware.notes.viewmodel.classes.TaskItem
-import com.xenonware.notes.viewmodel.classes.TaskStep
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -22,16 +20,12 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 
 enum class SortOption {
     FREE_SORTING,
     CREATION_DATE,
-    DUE_DATE,
-    COMPLETENESS,
-    NAME,
-    IMPORTANCE
+    NAME
 }
 
 enum class SortOrder {
@@ -45,21 +39,11 @@ enum class FilterState {
 }
 
 enum class FilterableAttribute {
-    HAS_DESCRIPTION,
-    IS_LOW_PRIORITY,
-    IS_HIGH_PRIORITY,
-    IS_HIGHEST_PRIORITY,
-    HAS_DUE_DATE,
-    HAS_DUE_TIME;
+    HAS_DESCRIPTION;
 
     fun toDisplayString(): String {
         return when (this) {
             HAS_DESCRIPTION -> "Has Description"
-            IS_LOW_PRIORITY -> "Low Importance"
-            IS_HIGH_PRIORITY -> "High Importance"
-            IS_HIGHEST_PRIORITY -> "Highest Importance"
-            HAS_DUE_DATE -> "Has Due Date"
-            HAS_DUE_TIME -> "Has Due Time"
         }
     }
 }
@@ -151,7 +135,7 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         val currentQuery = searchQuery.value
         if (currentQuery.isNotBlank()) {
             tasksToProcess = tasksToProcess.filter { task ->
-                task.task.contains(currentQuery, ignoreCase = true) ||
+                task.title.contains(currentQuery, ignoreCase = true) ||
                         (task.description?.contains(currentQuery, ignoreCase = true) == true)
             }
         }
@@ -197,22 +181,12 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun getHeaderForTask(task: TaskItem, sortOption: SortOption, sortOrder: SortOrder): String {
         return when (sortOption) {
-            SortOption.COMPLETENESS -> if (task.isCompleted) "Completed" else "Not Completed"
-            SortOption.IMPORTANCE -> "Importance: ${task.priority.name.lowercase().replaceFirstChar { it.titlecase() }}"
-            SortOption.DUE_DATE -> {
-                if (task.dueDateMillis == null) {
-                    "No Due Date"
-                } else {
-                    val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-                    sdf.format(Date(task.dueDateMillis))
-                }
-            }
             SortOption.CREATION_DATE -> {
                 val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
                 sdf.format(Date(task.creationTimestamp))
             }
             SortOption.NAME -> {
-                task.task.firstOrNull()?.uppercaseChar()?.toString() ?: "Unknown"
+                task.title.firstOrNull()?.uppercaseChar()?.toString() ?: "Unknown"
             }
             SortOption.FREE_SORTING -> ""
         }
@@ -222,11 +196,6 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
     private fun TaskItem.matchesAttribute(attribute: FilterableAttribute): Boolean {
         return when (attribute) {
             FilterableAttribute.HAS_DESCRIPTION -> this.description?.isNotBlank() == true
-            FilterableAttribute.IS_LOW_PRIORITY -> this.priority == Priority.LOW
-            FilterableAttribute.IS_HIGH_PRIORITY -> this.priority == Priority.HIGH
-            FilterableAttribute.IS_HIGHEST_PRIORITY -> this.priority == Priority.HIGHEST
-            FilterableAttribute.HAS_DUE_DATE -> this.dueDateMillis != null
-            FilterableAttribute.HAS_DUE_TIME -> this.dueTimeHour != null && this.dueTimeMinute != null
         }
     }
 
@@ -238,14 +207,7 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         val comparator: Comparator<TaskItem> = when (option) {
             SortOption.FREE_SORTING -> compareBy { it.displayOrder }
             SortOption.CREATION_DATE -> compareBy<TaskItem> { it.creationTimestamp }.thenBy { it.displayOrder }
-            SortOption.DUE_DATE -> compareByDescending<TaskItem> { it.dueDateMillis == null }
-                .thenBy { it.dueDateMillis }
-                .thenBy { it.displayOrder }
-            SortOption.COMPLETENESS -> compareBy<TaskItem> { it.isCompleted }
-                .thenBy { it.displayOrder }
-            SortOption.NAME -> compareBy<TaskItem, String>(String.CASE_INSENSITIVE_ORDER) { it.task }
-                .thenBy { it.displayOrder }
-            SortOption.IMPORTANCE -> compareByDescending<TaskItem> { it.priority.ordinal }
+            SortOption.NAME -> compareBy<TaskItem, String>(String.CASE_INSENSITIVE_ORDER) { it.title }
                 .thenBy { it.displayOrder }
         }
 
@@ -312,29 +274,18 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addItem(
-        task: String,
-        description: String? = null,
-        priority: Priority = Priority.LOW,
-        dueDateMillis: Long? = null,
-        dueTimeHour: Int? = null,
-        dueTimeMinute: Int? = null,
-        steps: List<TaskStep> = emptyList()
+        title: String,
+        description: String? = null
     ) {
         val listIdForNewTask = currentSelectedListId
-        if (task.isNotBlank() && listIdForNewTask != null) {
+        if (title.isNotBlank() && listIdForNewTask != null) {
             val newItem = TaskItem(
                 id = currentTaskId++,
-                task = task.trim(),
+                title = title.trim(),
                 description = description?.trim()?.takeIf { it.isNotBlank() },
-                priority = priority,
-                isCompleted = false,
                 listId = listIdForNewTask,
-                dueDateMillis = dueDateMillis,
-                dueTimeHour = dueTimeHour,
-                dueTimeMinute = dueTimeMinute,
                 creationTimestamp = System.currentTimeMillis(),
-                displayOrder = determineNextDisplayOrder(listIdForNewTask),
-                steps = steps
+                displayOrder = determineNextDisplayOrder(listIdForNewTask)
             )
             _allTaskItems.add(newItem)
             saveAllTasks()
@@ -379,18 +330,6 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
             saveAllTasks()
             recentlyDeletedItem = null
             recentlyDeletedItemOriginalIndex = -1
-        }
-    }
-
-
-    fun toggleCompleted(itemId: Int) {
-        val indexInAll = _allTaskItems.indexOfFirst { it.id == itemId }
-        if (indexInAll != -1) {
-            val oldItem = _allTaskItems[indexInAll]
-            oldItem.isCompleted = !oldItem.isCompleted
-            _allTaskItems[indexInAll] = oldItem
-            saveAllTasks()
-            applySortingAndFiltering()
         }
     }
 
@@ -454,69 +393,6 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         saveAllTasks()
         applySortingAndFiltering()
     }
-
-    fun addStepToTask(taskId: Int, stepText: String) {
-        val taskIndex = _allTaskItems.indexOfFirst { it.id == taskId }
-        if (taskIndex != -1 && stepText.isNotBlank()) {
-            val task = _allTaskItems[taskIndex]
-            val newStep = TaskStep(
-                id = UUID.randomUUID().toString(),
-                text = stepText.trim(),
-                isCompleted = false,
-                displayOrder = task.steps.size
-            )
-            val updatedSteps = task.steps + newStep
-            _allTaskItems[taskIndex] = task.copy(steps = updatedSteps)
-            saveAllTasks()
-            applySortingAndFiltering()
-        }
-    }
-
-    fun toggleStepCompletion(taskId: Int, stepId: String) {
-        val taskIndex = _allTaskItems.indexOfFirst { it.id == taskId }
-        if (taskIndex != -1) {
-            val task = _allTaskItems[taskIndex]
-            val stepIndex = task.steps.indexOfFirst { it.id == stepId }
-            if (stepIndex != -1) {
-                val step = task.steps[stepIndex]
-                val updatedStep = step.copy(isCompleted = !step.isCompleted)
-                val updatedSteps = task.steps.toMutableList()
-                updatedSteps[stepIndex] = updatedStep
-                _allTaskItems[taskIndex] = task.copy(steps = updatedSteps)
-                saveAllTasks()
-                applySortingAndFiltering()
-            }
-        }
-    }
-
-    fun removeStepFromTask(taskId: Int, stepId: String) {
-        val taskIndex = _allTaskItems.indexOfFirst { it.id == taskId }
-        if (taskIndex != -1) {
-            val task = _allTaskItems[taskIndex]
-            val updatedSteps = task.steps.filterNot { it.id == stepId }
-            if (updatedSteps.size != task.steps.size) {
-                _allTaskItems[taskIndex] = task.copy(steps = updatedSteps)
-                saveAllTasks()
-                applySortingAndFiltering()
-            }
-        }
-    }
-
-    fun updateStepInTask(taskId: Int, updatedStep: TaskStep) {
-        val taskIndex = _allTaskItems.indexOfFirst { it.id == taskId }
-        if (taskIndex != -1) {
-            val task = _allTaskItems[taskIndex]
-            val stepIndex = task.steps.indexOfFirst { it.id == updatedStep.id }
-            if (stepIndex != -1) {
-                val updatedSteps = task.steps.toMutableList()
-                updatedSteps[stepIndex] = updatedStep
-                _allTaskItems[taskIndex] = task.copy(steps = updatedSteps)
-                saveAllTasks()
-                applySortingAndFiltering()
-            }
-        }
-    }
-
 
     companion object {
         const val DEFAULT_LIST_ID = "default_list"

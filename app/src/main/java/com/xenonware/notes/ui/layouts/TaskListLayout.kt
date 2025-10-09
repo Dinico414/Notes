@@ -4,14 +4,14 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntSize
-import com.xenonware.notes.ui.layouts.todo.CompactTodo
-import com.xenonware.notes.ui.layouts.todo.CoverTodo
+import com.xenonware.notes.ui.layouts.notes.CompactNotes
+import com.xenonware.notes.ui.layouts.notes.CoverNotes
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.TaskViewModel
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
-fun TodoListLayout(
+fun NotesListLayout(
     viewModel: TaskViewModel,
     isLandscape: Boolean,
     modifier: Modifier = Modifier,
@@ -23,7 +23,7 @@ fun TodoListLayout(
     when (layoutType) {
         LayoutType.COVER -> {
             if (isLandscape) {
-                CoverTodo(
+                CoverNotes(
                     onOpenSettings = onOpenSettings,
                     taskViewModel = viewModel,
                     layoutType = layoutType,
@@ -31,7 +31,7 @@ fun TodoListLayout(
                     appSize = appSize,
                 )
             } else {
-                CoverTodo(
+                CoverNotes(
                     onOpenSettings = onOpenSettings,
                     taskViewModel = viewModel,
                     layoutType = layoutType,
@@ -43,7 +43,7 @@ fun TodoListLayout(
 
         LayoutType.SMALL -> {
             if (isLandscape) {
-                CompactTodo(
+                CompactNotes(
                     onOpenSettings = onOpenSettings,
                     taskViewModel = viewModel,
                     layoutType = layoutType,
@@ -51,7 +51,7 @@ fun TodoListLayout(
                     appSize = appSize,
                 )
             } else {
-                CompactTodo(
+                CompactNotes(
                     onOpenSettings = onOpenSettings,
                     taskViewModel = viewModel,
                     layoutType = layoutType,
@@ -63,7 +63,7 @@ fun TodoListLayout(
 
         LayoutType.COMPACT -> {
             if (isLandscape) {
-                CompactTodo(
+                CompactNotes(
                     onOpenSettings = onOpenSettings,
                     taskViewModel = viewModel,
                     layoutType = layoutType,
@@ -71,7 +71,7 @@ fun TodoListLayout(
                     appSize = appSize,
                 )
             } else {
-                CompactTodo(
+                CompactNotes(
                     onOpenSettings = onOpenSettings,
                     taskViewModel = viewModel,
                     layoutType = layoutType,
@@ -83,7 +83,7 @@ fun TodoListLayout(
 
         LayoutType.MEDIUM -> {
             if (isLandscape) {
-                CompactTodo(
+                CompactNotes(
                     onOpenSettings = onOpenSettings,
                     taskViewModel = viewModel,
                     layoutType = layoutType,
@@ -91,7 +91,7 @@ fun TodoListLayout(
                     appSize = appSize,
                 )
             } else {
-                CompactTodo(
+                CompactNotes(
                     onOpenSettings = onOpenSettings,
                     taskViewModel = viewModel,
                     layoutType = layoutType,
@@ -103,7 +103,7 @@ fun TodoListLayout(
 
         LayoutType.EXPANDED -> {
             if (isLandscape) {
-                CompactTodo(
+                CompactNotes(
                     onOpenSettings = onOpenSettings,
                     taskViewModel = viewModel,
                     layoutType = layoutType,
@@ -111,7 +111,7 @@ fun TodoListLayout(
                     appSize = appSize,
                 )
             } else {
-                CompactTodo(
+                CompactNotes(
                     onOpenSettings = onOpenSettings,
                     taskViewModel = viewModel,
                     layoutType = layoutType,

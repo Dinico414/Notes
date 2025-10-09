@@ -46,7 +46,6 @@ fun SettingsItems(
     applyCoverTheme: Boolean,
     coverThemeEnabled: Boolean,
     currentLanguage: String,
-    currentFormat: String,
     appVersion: String,
     onNavigateToDeveloperOptions: () -> Unit,
     innerGroupRadius: Dp = SmallestCornerRadius,
@@ -203,7 +202,7 @@ fun SettingsItems(
                 tint = tileSubtitleColor
             )
         },
-        shape = tileShapeOverride ?: topShape,
+        shape = tileShapeOverride ?: standaloneShape,
         backgroundColor = tileBackgroundColor,
         contentColor = tileContentColor,
         subtitleColor = tileSubtitleColor,
@@ -211,25 +210,6 @@ fun SettingsItems(
         verticalPadding = tileVerticalPadding
     )
     LaunchedEffect(Unit) { viewModel.updateCurrentLanguage() }
-    Spacer(Modifier.height(actualInnerGroupSpacing))
-    SettingsTile(
-        title = stringResource(R.string.date_time_format),
-        subtitle = "${stringResource(R.string.current)} $currentFormat",
-        onClick = { viewModel.onTimeFormatClicked() },
-        icon = {
-            Icon(
-                painterResource(R.drawable.time_format),
-                stringResource(R.string.time_format),
-                tint = tileSubtitleColor
-            )
-        },
-        shape = tileShapeOverride ?: bottomShape,
-        backgroundColor = tileBackgroundColor,
-        contentColor = tileContentColor,
-        subtitleColor = tileSubtitleColor,
-        horizontalPadding = tileHorizontalPadding,
-        verticalPadding = tileVerticalPadding
-    )
 
     Spacer(Modifier.height(outerGroupSpacing))
 

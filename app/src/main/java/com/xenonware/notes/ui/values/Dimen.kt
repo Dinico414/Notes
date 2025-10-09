@@ -12,6 +12,7 @@ val LargePadding = 10.dp
 val LargerPadding = 15.dp
 val LargestPadding = 16.dp
 val ExtraLargePadding = 20.dp
+val ExtraLargestPadding = 24.dp
 val ButtonBoxPadding = (-48).dp
 val SmallTextFieldPadding = 40.dp
 val LargeTextFieldPadding = 50.dp

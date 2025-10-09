@@ -30,7 +30,6 @@ import com.xenonware.notes.R
 import com.xenonware.notes.ui.layouts.ActivityScreen
 import com.xenonware.notes.ui.res.DialogClearDataConfirmation
 import com.xenonware.notes.ui.res.DialogCoverDisplaySelection
-import com.xenonware.notes.ui.res.DialogDateTimeFormatSelection
 import com.xenonware.notes.ui.res.DialogLanguageSelection
 import com.xenonware.notes.ui.res.DialogResetSettingsConfirmation
 import com.xenonware.notes.ui.res.DialogThemeSelection
@@ -65,17 +64,6 @@ fun CoverSettings(
     val showLanguageDialog by viewModel.showLanguageDialog.collectAsState()
     val availableLanguages by viewModel.availableLanguages.collectAsState()
     val selectedLanguageTagInDialog by viewModel.selectedLanguageTagInDialog.collectAsState()
-
-    val showDateTimeFormatDialog by viewModel.showDateTimeFormatDialog.collectAsState()
-    val availableDateFormats = viewModel.availableDateFormats
-    val selectedDateFormatInDialog by viewModel.selectedDateFormatInDialog.collectAsState()
-    val selectedTimeFormatInDialog by viewModel.selectedTimeFormatInDialog.collectAsState()
-    val currentFormattedDateTime by viewModel.currentFormattedDateTime.collectAsState()
-
-    val systemTimePattern = remember { viewModel.systemShortTimePattern }
-    val twentyFourHourTimePattern = "HH:mm"
-    val twelveHourTimePattern = "h:mm a"
-
 
     val packageManager = context.packageManager
     val packageName = context.packageName
@@ -140,7 +128,6 @@ fun CoverSettings(
                     applyCoverTheme = applyCoverThemeActual,
                     coverThemeEnabled = coverThemeEnabled,
                     currentLanguage = currentLanguage,
-                    currentFormat = currentFormattedDateTime,
                     appVersion = appVersion,
                     tileBackgroundColor = coverScreenBackgroundColor,
                     tileContentColor = coverScreenContentColor,
@@ -216,27 +203,6 @@ fun CoverSettings(
                 onLanguageSelected = { tag -> viewModel.onLanguageSelectedInDialog(tag) },
                 onDismiss = { viewModel.dismissLanguageDialog() },
                 onConfirm = { viewModel.applySelectedLanguage() })
-        }
-    }
-
-    if (showDateTimeFormatDialog) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .hazeEffect(hazeState)
-        ) {
-            DialogDateTimeFormatSelection(
-                availableDateFormats = availableDateFormats,
-                currentDateFormatPattern = selectedDateFormatInDialog,
-                currentTimeFormatPattern = selectedTimeFormatInDialog,
-                onDateFormatSelected = { pattern -> viewModel.onDateFormatSelectedInDialog(pattern) },
-                onTimeFormatSelected = { pattern -> viewModel.onTimeFormatSelectedInDialog(pattern) },
-                onDismiss = { viewModel.dismissDateTimeFormatDialog() },
-                onConfirm = { viewModel.applySelectedDateTimeFormats() },
-                systemTimePattern = systemTimePattern,
-                twentyFourHourTimePattern = twentyFourHourTimePattern,
-                twelveHourTimePattern = twelveHourTimePattern
-            )
         }
     }
 }

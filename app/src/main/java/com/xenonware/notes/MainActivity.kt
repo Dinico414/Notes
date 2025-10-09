@@ -14,7 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.IntSize
 import androidx.core.view.WindowCompat
-import com.xenonware.notes.ui.layouts.TodoListLayout
+import com.xenonware.notes.ui.layouts.NotesListLayout
 import com.xenonware.notes.ui.theme.ScreenEnvironment
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.TaskViewModel
@@ -118,7 +118,7 @@ fun TodolistApp(
     onOpenSettings: () -> Unit,
     appSize: IntSize,
 ) {
-    TodoListLayout(
+    NotesListLayout(
         viewModel = viewModel,
         isLandscape = isLandscape,
         layoutType = layoutType,

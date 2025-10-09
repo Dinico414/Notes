@@ -28,9 +28,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.text.DateFormat
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 enum class ThemeSetting(val title: String, val nightModeFlag: Int) {
@@ -41,17 +38,6 @@ enum class ThemeSetting(val title: String, val nightModeFlag: Int) {
 
 enum class LayoutType {
     COVER, SMALL, COMPACT, MEDIUM, EXPANDED
-}
-
-data class FormatOption(val displayName: String, val pattern: String)
-
-private fun getCurrentDateTimeFormatted(pattern: String): String {
-    return try {
-        val sdf = SimpleDateFormat(pattern, Locale.getDefault())
-        sdf.format(Date())
-    } catch (_: IllegalArgumentException) {
-        "Preview unavailable"
-    }
 }
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -98,65 +84,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _selectedLanguageTagInDialog = MutableStateFlow(getAppLocaleTag())
     val selectedLanguageTagInDialog: StateFlow<String> = _selectedLanguageTagInDialog.asStateFlow()
 
-    private val _currentDateFormat = MutableStateFlow(sharedPreferenceManager.dateFormat)
-    private val _currentTimeFormat = MutableStateFlow(sharedPreferenceManager.timeFormat)
-
-    val currentFormattedDateTime: StateFlow<String> = combine(
-        _currentDateFormat,
-        _currentTimeFormat
-    ) { datePattern, timePattern ->
-        try {
-            val now = Date()
-            val sdfDate = SimpleDateFormat(datePattern, Locale.getDefault())
-            val sdfTime = SimpleDateFormat(timePattern, Locale.getDefault())
-            "${sdfDate.format(now)} ${sdfTime.format(now)}"
-        } catch (_: Exception) {
-            "Invalid format"
-        }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = "Preview"
-    )
-
-    private val _showDateTimeFormatDialog = MutableStateFlow(false)
-    val showDateTimeFormatDialog: StateFlow<Boolean> = _showDateTimeFormatDialog.asStateFlow()
-
-    val availableDateFormats = listOf(
-        FormatOption("System Default (${getCurrentDateTimeFormatted(getSystemShortDatePattern())})", getSystemShortDatePattern()),
-        FormatOption("YY-MM-DD (${getCurrentDateTimeFormatted("yy-MM-dd")})", "yy-MM-dd"),
-        FormatOption("DD/MM/YY (${getCurrentDateTimeFormatted("dd/MM/yy")})", "dd/MM/yy"),
-        FormatOption("MM/DD/YY (${getCurrentDateTimeFormatted("MM/dd/yy")})", "MM/dd/yy"),
-        FormatOption("DD.MM.YY (${getCurrentDateTimeFormatted("dd.MM.yy")})", "dd.MM.yy"),
-    )
-
-    private fun getSystemShortDatePattern(): String {
-        return try {
-            val dateTimeInstance = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.getDefault())
-            if (dateTimeInstance is SimpleDateFormat) {
-                dateTimeInstance.toPattern().split(" ").firstOrNull() ?: "yyyy-MM-dd"
-            } else { "yyyy-MM-dd" }
-        } catch (_: Exception) { "yyyy-MM-dd" }
-    }
-
-    val systemShortTimePattern: String = getSystemShortTimePatternInternal()
-
-    private fun getSystemShortTimePatternInternal(): String {
-        return try {
-            val dateTimeInstance = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.getDefault())
-            if (dateTimeInstance is SimpleDateFormat) {
-                val parts = dateTimeInstance.toPattern().split(" ")
-                if (parts.size > 1) parts.getOrNull(1) ?: "HH:mm" else "HH:mm"
-            } else { "HH:mm" }
-        } catch (_: Exception) { "HH:mm" }
-    }
-
-    private val _selectedDateFormatInDialog = MutableStateFlow(sharedPreferenceManager.dateFormat)
-    val selectedDateFormatInDialog: StateFlow<String> = _selectedDateFormatInDialog.asStateFlow()
-
-    private val _selectedTimeFormatInDialog = MutableStateFlow(sharedPreferenceManager.timeFormat)
-    val selectedTimeFormatInDialog: StateFlow<String> = _selectedTimeFormatInDialog.asStateFlow()
-
     val activeNightModeFlag: StateFlow<Int> = combine(
         _persistedThemeIndexFlow,
         _dialogPreviewThemeIndex,
@@ -197,39 +124,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
         updateCurrentLanguage()
         prepareLanguageOptions()
-        _currentDateFormat.value = sharedPreferenceManager.dateFormat
-        _currentTimeFormat.value = sharedPreferenceManager.timeFormat
-        _selectedDateFormatInDialog.value = sharedPreferenceManager.dateFormat
-        _selectedTimeFormatInDialog.value = sharedPreferenceManager.timeFormat
     }
 
     fun refreshDeveloperModeState() {
         _developerModeEnabled.value = sharedPreferenceManager.developerModeEnabled
-    }
-
-
-    fun onDateFormatSelectedInDialog(formatPattern: String) {
-        _selectedDateFormatInDialog.value = formatPattern
-    }
-
-    fun onTimeFormatSelectedInDialog(formatPattern: String) {
-        _selectedTimeFormatInDialog.value = formatPattern
-    }
-
-    fun applySelectedDateTimeFormats() {
-        val newDateFormat = _selectedDateFormatInDialog.value
-        val newTimeFormat = _selectedTimeFormatInDialog.value
-        sharedPreferenceManager.dateFormat = newDateFormat
-        sharedPreferenceManager.timeFormat = newTimeFormat
-        _currentDateFormat.value = newDateFormat
-        _currentTimeFormat.value = newTimeFormat
-        _showDateTimeFormatDialog.value = false
-    }
-
-    fun dismissDateTimeFormatDialog() {
-        _showDateTimeFormatDialog.value = false
-        _selectedDateFormatInDialog.value = sharedPreferenceManager.dateFormat
-        _selectedTimeFormatInDialog.value = sharedPreferenceManager.timeFormat
     }
 
     fun onThemeOptionSelectedInDialog(index: Int) {
@@ -257,12 +155,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         _showThemeDialog.value = false
         _dialogPreviewThemeIndex.value = sharedPreferenceManager.theme
         _persistedThemeIndexFlow.value = sharedPreferenceManager.theme
-    }
-
-    fun onTimeFormatClicked() {
-        _selectedDateFormatInDialog.value = sharedPreferenceManager.dateFormat
-        _selectedTimeFormatInDialog.value = sharedPreferenceManager.timeFormat
-        _showDateTimeFormatDialog.value = true
     }
 
     fun setBlackedOutEnabled(enabled: Boolean) {
@@ -317,8 +209,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                     _developerModeEnabled.value = false
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) { setAppLocale("") }
                     updateCurrentLanguage()
-                    _currentDateFormat.value = sharedPreferenceManager.dateFormat
-                    _currentTimeFormat.value = sharedPreferenceManager.timeFormat
                     restartApplication(context)
                 } else {
                     Toast.makeText(context, context.getString(R.string.error_clearing_data_failed), Toast.LENGTH_LONG).show()
@@ -350,11 +240,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             _blackedOutModeEnabled.value = sharedPreferenceManager.blackedOutModeEnabled
             _enableCoverTheme.value = sharedPreferenceManager.coverThemeEnabled
             refreshDeveloperModeState()
-
-            _currentDateFormat.value = sharedPreferenceManager.dateFormat
-            _currentTimeFormat.value = sharedPreferenceManager.timeFormat
-            _selectedDateFormatInDialog.value = sharedPreferenceManager.dateFormat
-            _selectedTimeFormatInDialog.value = sharedPreferenceManager.timeFormat
 
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) { setAppLocale("") }
             updateCurrentLanguage()

@@ -1,4 +1,4 @@
-package com.xenonware.notes.ui.layouts.todo
+package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
 import android.app.Application
@@ -26,10 +26,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -56,7 +54,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xenonware.notes.R
 import com.xenonware.notes.ui.layouts.ActivityScreen
@@ -65,8 +62,8 @@ import com.xenonware.notes.ui.res.DialogTaskItemFiltering
 import com.xenonware.notes.ui.res.DialogTaskItemSorting
 import com.xenonware.notes.ui.res.FloatingToolbarContent
 import com.xenonware.notes.ui.res.GoogleProfilBorder
-import com.xenonware.notes.ui.res.TaskItemCell
-import com.xenonware.notes.ui.res.TaskItemContent
+import com.xenonware.notes.ui.res.TextNoteCell
+import com.xenonware.notes.ui.res.TextNoteEditor
 import com.xenonware.notes.ui.res.TodoListContent
 import com.xenonware.notes.ui.res.XenonSnackbar
 import com.xenonware.notes.ui.values.DialogPadding
@@ -78,22 +75,15 @@ import com.xenonware.notes.ui.values.NoSpacing
 import com.xenonware.notes.ui.values.SmallPadding
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.LayoutType
-import com.xenonware.notes.viewmodel.SnackbarEvent
 import com.xenonware.notes.viewmodel.TaskViewModel
 import com.xenonware.notes.viewmodel.TodoViewModel
 import com.xenonware.notes.viewmodel.TodoViewModelFactory
-import com.xenonware.notes.viewmodel.classes.Priority
 import com.xenonware.notes.viewmodel.classes.TaskItem
 import com.xenonware.notes.viewmodel.classes.TaskStep
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.rememberHazeState
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import sh.calvin.reorderable.DragGestureDetector
-import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
-import java.util.UUID
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(
@@ -102,7 +92,7 @@ import java.util.UUID
     ExperimentalMaterial3ExpressiveApi::class
 )
 @Composable
-fun CoverTodo(
+fun CoverNotes(
     taskViewModel: TaskViewModel = viewModel(),
     devSettingsViewModel: DevSettingsViewModel = viewModel(),
     layoutType: LayoutType,
@@ -117,14 +107,9 @@ fun CoverTodo(
     )
 
     var editingTaskId by rememberSaveable { mutableStateOf<Int?>(null) }
-    var textState by rememberSaveable { mutableStateOf("") }
+    var titleState by rememberSaveable { mutableStateOf("") }
     var descriptionState by rememberSaveable { mutableStateOf("") }
-    var currentPriority by rememberSaveable { mutableStateOf(Priority.LOW) }
-    var selectedDueDateMillis by rememberSaveable { mutableStateOf<Long?>(null) }
-    var selectedDueTimeHour by rememberSaveable { mutableStateOf<Int?>(null) }
-    var selectedDueTimeMinute by rememberSaveable { mutableStateOf<Int?>(null) }
     val currentSteps = remember { mutableStateListOf<TaskStep>() }
-
 
     val selectedListId by todoViewModel.selectedDrawerItemId
 
@@ -144,16 +129,10 @@ fun CoverTodo(
         appHeightDp / appWidthDp
     }
 
-    val aspectRatioConditionMet = if (isLandscape) {
-        currentAspectRatio > 0.5625f
-    } else {
-        currentAspectRatio < 1.77f
-    }
-
     val isAppBarCollapsible = when (layoutType) {
         LayoutType.COVER -> false
         LayoutType.SMALL -> false
-        LayoutType.COMPACT -> !isLandscape || !aspectRatioConditionMet
+        LayoutType.COMPACT -> !isLandscape
         LayoutType.MEDIUM -> true
         LayoutType.EXPANDED -> true
     }
@@ -171,14 +150,9 @@ fun CoverTodo(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val currentSearchQuery by taskViewModel.searchQuery.collectAsState()
-    //    var isRefreshing by remember { mutableStateOf(false) }
 
-
-//    LaunchedEffect(Unit) {
-//        isRefreshing = true
-//        delay(3000)
-//        isRefreshing = false
-//    }
+    var selectedTaskIds by remember { mutableStateOf(emptySet<Int>()) }
+    val isSelectionModeActive = selectedTaskIds.isNotEmpty()
 
     LaunchedEffect(drawerState.isClosed) {
         if (drawerState.isClosed) {
@@ -190,33 +164,11 @@ fun CoverTodo(
     val taskTextSnackbar = stringResource(R.string.task_text)
     val deletedTextSnackbar = stringResource(R.string.deleted_text)
 
-    LaunchedEffect(Unit) {
-        taskViewModel.snackbarEvent.collectLatest { event ->
-            when (event) {
-                is SnackbarEvent.ShowUndoDeleteSnackbar -> {
-                    val result = snackbarHostState.showSnackbar(
-                        message = "$taskTextSnackbar \"${event.taskItem.task}\" $deletedTextSnackbar",
-                        actionLabel = undoActionLabel,
-                        duration = SnackbarDuration.Long
-                    )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        taskViewModel.undoRemoveItem()
-                    } else {
-                        taskViewModel.confirmRemoveItem()
-                    }
-                }
-            }
-        }
-    }
 
     fun resetBottomSheetState() {
         editingTaskId = null
-        textState = ""
+        titleState = ""
         descriptionState = ""
-        currentPriority = Priority.LOW
-        selectedDueDateMillis = null
-        selectedDueTimeHour = null
-        selectedDueTimeMinute = null
         currentSteps.clear()
     }
 
@@ -354,12 +306,6 @@ fun CoverTodo(
                                 )
                             }
                         } else {
-                            val reorderableLazyListState =
-                                rememberReorderableLazyListState(lazyListState) { from, to ->
-                                    taskViewModel.swapDisplayOrder(from.index, to.index)
-                                }
-                            var draggedItem: TaskItem? by remember { mutableStateOf(null) }
-
                             LazyColumn(
                                 state = lazyListState,
                                 modifier = Modifier.weight(1f),
@@ -395,39 +341,25 @@ fun CoverTodo(
                                         }
 
                                         is TaskItem -> {
-                                            ReorderableItem(
-                                                reorderableLazyListState,
-                                                item.id,
-                                                enabled = (draggedItem?.currentHeader == item.currentHeader && currentSearchQuery.isBlank())
-                                            ) { isDragging ->
-                                                TaskItemCell(
-                                                    item = item,
-                                                    onToggleCompleted = {
-                                                        taskViewModel.toggleCompleted(item.id)
-                                                    },
-                                                    onDeleteItem = {
-                                                        taskViewModel.prepareRemoveItem(item.id)
-                                                    },
-                                                    onEditItem = { updatedItem ->
-                                                        taskViewModel.updateItem(updatedItem)
-                                                    },
-                                                    modifier = Modifier
-                                                        .draggableHandle(
-                                                            enabled = currentSearchQuery.isBlank(),
-                                                            onDragStarted = {
-                                                                draggedItem = item
-                                                            },
-                                                            onDragStopped = {
-                                                                draggedItem = null
-                                                                if (currentSearchQuery.isBlank()) {
-                                                                    taskViewModel.saveAllTasks()
-                                                                }
-                                                            },
-                                                            dragGestureDetector = DragGestureDetector.LongPress
-                                                        )
-                                                        .zIndex(if (isDragging) 4F else 0F)
-                                                )
-                                            }
+                                            val isSelected = selectedTaskIds.contains(item.id)
+                                            TextNoteCell(
+                                                item = item,
+                                                isSelected = isSelected,
+                                                isSelectionModeActive = isSelectionModeActive,
+                                                onSelectItem = {
+                                                    if (isSelected) {
+                                                        selectedTaskIds -= item.id
+                                                    } else {
+                                                        selectedTaskIds += item.id
+                                                    }
+                                                },
+                                                onEditItem = { itemToEdit ->
+                                                    editingTaskId = itemToEdit.id
+                                                    titleState = itemToEdit.title
+                                                    descriptionState = itemToEdit.description ?: ""
+                                                    showBottomSheet = true
+                                                }
+                                            )
                                             val isLastItemInListOrNextIsHeader =
                                                 index == todoItemsWithHeaders.lastIndex || (index + 1 < todoItemsWithHeaders.size && todoItemsWithHeaders[index + 1] is String)
 
@@ -450,123 +382,31 @@ fun CoverTodo(
             if (showBottomSheet) {
                 Box(
                     modifier = Modifier.fillMaxSize()
-                    // .hazeEffect(hazeState)
                 ) {
                     ModalBottomSheet(
                         onDismissRequest = {
                             showBottomSheet = false
                         }, sheetState = sheetState, modifier = Modifier.imePadding()
                     ) {
-                        TaskItemContent(
-                            textState = textState,
-                            onTextChange = { textState = it },
+                        TextNoteEditor(
+                            textState = titleState,
+                            onTextChange = { titleState = it },
                             descriptionState = descriptionState,
                             onDescriptionChange = { descriptionState = it },
-                            currentPriority = currentPriority,
-                            onPriorityChange = { newPriority -> currentPriority = newPriority },
-                            initialDueDateMillis = selectedDueDateMillis,
-                            initialDueTimeHour = selectedDueTimeHour,
-                            initialDueTimeMinute = selectedDueTimeMinute,
-                            currentSteps = currentSteps.toList(),
-                            onStepAdded = { stepText ->
-                                if (editingTaskId != null) {
-                                    taskViewModel.addStepToTask(editingTaskId!!, stepText)
-                                    (taskViewModel.taskItems.find { it is TaskItem && it.id == editingTaskId } as? TaskItem)?.let { task ->
-                                        currentSteps.clear()
-                                        currentSteps.addAll(task.steps)
-                                    }
-                                } else {
-                                    currentSteps.add(
-                                        TaskStep(
-                                            id = UUID.randomUUID().toString(),
-                                            text = stepText,
-                                            displayOrder = currentSteps.size
-                                        )
-                                    )
-                                }
-                            },
-                            onStepToggled = { stepId ->
-                                if (editingTaskId != null) {
-                                    taskViewModel.toggleStepCompletion(editingTaskId!!, stepId)
-                                    (taskViewModel.taskItems.find { it is TaskItem && it.id == editingTaskId } as? TaskItem)?.let { task ->
-                                        currentSteps.clear()
-                                        currentSteps.addAll(task.steps)
-                                    }
-                                } else {
-                                    val stepIndex = currentSteps.indexOfFirst { it.id == stepId }
-                                    if (stepIndex != -1) {
-                                        val step = currentSteps[stepIndex]
-                                        currentSteps[stepIndex] =
-                                            step.copy(isCompleted = !step.isCompleted)
-                                    }
-                                }
-                            },
-                            onStepTextUpdated = { stepId, newText ->
-                                if (editingTaskId != null) {
-                                    val stepToUpdate =
-                                        currentSteps.find { it.id == stepId }?.copy(text = newText)
-                                    if (stepToUpdate != null) {
-                                        taskViewModel.updateStepInTask(
-                                            editingTaskId!!, stepToUpdate
-                                        )
-                                        (taskViewModel.taskItems.find { it is TaskItem && it.id == editingTaskId } as? TaskItem)?.let { task ->
-                                            currentSteps.clear()
-                                            currentSteps.addAll(task.steps)
-                                        }
-                                    }
-                                } else {
-                                    val stepIndex = currentSteps.indexOfFirst { it.id == stepId }
-                                    if (stepIndex != -1) {
-                                        currentSteps[stepIndex] =
-                                            currentSteps[stepIndex].copy(text = newText)
-                                    }
-                                }
-                            },
-                            onStepRemoved = { stepId ->
-                                if (editingTaskId != null) {
-                                    taskViewModel.removeStepFromTask(editingTaskId!!, stepId)
-                                    (taskViewModel.taskItems.find { it is TaskItem && it.id == editingTaskId } as? TaskItem)?.let { task ->
-                                        currentSteps.clear()
-                                        currentSteps.addAll(task.steps)
-                                    }
-                                } else {
-                                    currentSteps.removeAll { it.id == stepId }
-                                }
-                            },
-                            onSaveTask = { newDateMillis, newHour, newMinute ->
-                                if (textState.isNotBlank()) {
+                            onSaveTask = {
+                                if (titleState.isNotBlank()) {
                                     if (editingTaskId != null) {
-                                        val originalTask =
-                                            taskViewModel.taskItems.filterIsInstance<TaskItem>()
-                                                .find { it.id == editingTaskId }
-
-                                        val updatedTask = TaskItem(
-                                            id = editingTaskId!!,
-                                            task = textState,
+                                        val updatedTask = taskViewModel.taskItems.filterIsInstance<TaskItem>().find { it.id == editingTaskId }?.copy(
+                                            title = titleState,
                                             description = descriptionState.takeIf { it.isNotBlank() },
-                                            priority = currentPriority,
-                                            dueDateMillis = newDateMillis,
-                                            dueTimeHour = newHour,
-                                            dueTimeMinute = newMinute,
-                                            steps = currentSteps.toList(),
-                                            listId = originalTask?.listId
-                                                ?: taskViewModel.currentSelectedListId
-                                                ?: TaskViewModel.Companion.DEFAULT_LIST_ID,
-                                            isCompleted = originalTask?.isCompleted ?: false,
-                                            creationTimestamp = originalTask?.creationTimestamp
-                                                ?: System.currentTimeMillis(),
-                                            displayOrder = originalTask?.displayOrder ?: 0
                                         )
-                                        taskViewModel.updateItem(updatedTask)
+                                        if (updatedTask != null) {
+                                            taskViewModel.updateItem(updatedTask)
+                                        }
                                     } else {
                                         taskViewModel.addItem(
-                                            task = textState,
+                                            title = titleState,
                                             description = descriptionState.takeIf { it.isNotBlank() },
-                                            priority = currentPriority,
-                                            dueDateMillis = newDateMillis,
-                                            dueTimeHour = newHour,
-                                            dueTimeMinute = newMinute,
-                                            steps = currentSteps.toList()
                                         )
                                     }
                                     resetBottomSheetState()
@@ -577,7 +417,7 @@ fun CoverTodo(
                                     }
                                 }
                             },
-                            isSaveEnabled = textState.isNotBlank(),
+                            isSaveEnabled = titleState.isNotBlank(),
                             horizontalContentPadding = DialogPadding,
                             bottomContentPadding = DialogPadding
                         )
@@ -587,7 +427,6 @@ fun CoverTodo(
             if (showSortDialog) {
                 Box(
                     modifier = Modifier.fillMaxSize()
-                    // .hazeEffect(hazeState)
                 ) {
                     DialogTaskItemSorting(
                         currentSortOption = taskViewModel.currentSortOption,
@@ -602,7 +441,6 @@ fun CoverTodo(
             if (showFilterDialog) {
                 Box(
                     modifier = Modifier.fillMaxSize()
-                    // .hazeEffect(hazeState)
                 ) {
                     DialogTaskItemFiltering(
                         initialFilterStates = taskViewModel.filterStates.toMap(),

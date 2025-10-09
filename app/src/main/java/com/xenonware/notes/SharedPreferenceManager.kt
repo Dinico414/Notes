@@ -26,8 +26,6 @@ class SharedPreferenceManager(context: Context) {
     private val taskListKey = "task_list_json"
     private val drawerTodoItemsKey = "drawer_todo_items_json"
     private val blackedOutModeKey = "blacked_out_mode_enabled"
-    private val dateFormatKey = "date_format_key"
-    private val timeFormatKey = "time_format_key"
     private val developerModeKey = "developer_mode_enabled"
     // New key for the dummy profile setting
     private val showDummyProfileKey = "show_dummy_profile_enabled"
@@ -36,9 +34,6 @@ class SharedPreferenceManager(context: Context) {
         context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
-
-    private val defaultDateFormat = "yyyy-MM-dd"
-    private val defaultTimeFormat = "HH:mm"
 
     var theme: Int
         get() = sharedPreferences.getInt(themeKey, ThemeSetting.SYSTEM.ordinal)
@@ -74,7 +69,8 @@ class SharedPreferenceManager(context: Context) {
                 try {
                     json.decodeFromString<List<TaskItem>>(jsonString)
                 } catch (e: Exception) {
-                    System.err.println("Error decoding task items: ${e.localizedMessage}")
+                    System.err.println("Error decoding task items, deleting old data: ${e.localizedMessage}")
+                    sharedPreferences.edit { remove(taskListKey) }
                     emptyList()
                 }
             } else {
@@ -141,14 +137,6 @@ class SharedPreferenceManager(context: Context) {
         get() = sharedPreferences.getBoolean(blackedOutModeKey, false)
         set(value) = sharedPreferences.edit { putBoolean(blackedOutModeKey, value) }
 
-    var dateFormat: String
-        get() = sharedPreferences.getString(dateFormatKey, defaultDateFormat) ?: defaultDateFormat
-        set(value) = sharedPreferences.edit { putString(dateFormatKey, value) }
-
-    var timeFormat: String
-        get() = sharedPreferences.getString(timeFormatKey, defaultTimeFormat) ?: defaultTimeFormat
-        set(value) = sharedPreferences.edit { putString(timeFormatKey, value) }
-
     var developerModeEnabled: Boolean
         get() = sharedPreferences.getBoolean(developerModeKey, false)
         set(value) = sharedPreferences.edit { putBoolean(developerModeKey, value) }
@@ -196,8 +184,6 @@ class SharedPreferenceManager(context: Context) {
             remove(coverDisplayDimension1Key)
             remove(coverDisplayDimension2Key)
             putBoolean(blackedOutModeKey, false)
-            putString(dateFormatKey, defaultDateFormat)
-            putString(timeFormatKey, defaultTimeFormat)
             putBoolean(developerModeKey, false)
             putBoolean(showDummyProfileKey, false)
         }
