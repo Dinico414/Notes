@@ -377,6 +377,7 @@ fun FloatingToolbarContent(
             colors = FloatingToolbarDefaults.standardFloatingToolbarColors(if (isSelectionActive) colorScheme.errorContainer else colorScheme.surfaceDim),
             contentPadding = FloatingToolbarDefaults.ContentPadding,
         ) {
+            Crossfade(targetState = isSelectionActive, label = "toolbar-content") { selectionActive ->
                 if (selectionActive) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
