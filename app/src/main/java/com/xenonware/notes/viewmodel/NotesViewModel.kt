@@ -9,7 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xenonware.notes.SharedPreferenceManager
-import com.xenonware.notes.viewmodel.classes.TaskItem
+import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -49,19 +49,19 @@ enum class FilterableAttribute {
 }
 
 sealed class SnackbarEvent {
-    data class ShowUndoDeleteSnackbar(val taskItem: TaskItem) : SnackbarEvent()
+    data class ShowUndoDeleteSnackbar(val notesItems: NotesItems) : SnackbarEvent()
 }
 
 
-class TaskViewModel(application: Application) : AndroidViewModel(application) {
+class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefsManager = SharedPreferenceManager(application.applicationContext)
-    private val _allTaskItems = mutableStateListOf<TaskItem>()
-    private val _displayedTaskItems = mutableStateListOf<Any>()
-    val taskItems: List<Any> get() = _displayedTaskItems
-    private var currentTaskId = 1
+    private val _allNotesItems = mutableStateListOf<NotesItems>()
+    private val _displayedNotesItems = mutableStateListOf<Any>()
+    val noteItems: List<Any> get() = _displayedNotesItems
+    private var currentNoteId = 1
 
-    private var recentlyDeletedItem: TaskItem? = null
+    private var recentlyDeletedItem: NotesItems? = null
     private var recentlyDeletedItemOriginalIndex: Int = -1
 
 
@@ -90,7 +90,7 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
 
 
     init {
-        loadAllTasks()
+        loadAllNotes()
         applySortingAndFiltering()
     }
 
@@ -101,120 +101,120 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun loadAllTasks() {
+    private fun loadAllNotes() {
         currentSortOption = prefsManager.sortOption
         currentSortOrder = prefsManager.sortOrder
-        val loadedTasks = prefsManager.taskItems
-        _allTaskItems.clear()
-        _allTaskItems.addAll(loadedTasks)
-        currentTaskId = if (loadedTasks.isNotEmpty()) {
-            (loadedTasks.maxOfOrNull { it.id } ?: 0) + 1
+        val loadedNotes = prefsManager.notesItems
+        _allNotesItems.clear()
+        _allNotesItems.addAll(loadedNotes)
+        currentNoteId = if (loadedNotes.isNotEmpty()) {
+            (loadedNotes.maxOfOrNull { it.id } ?: 0) + 1
         } else {
             1
         }
     }
 
-    fun saveAllTasks() {
-        prefsManager.taskItems = _allTaskItems.toList()
+    fun saveAllNotes() {
+        prefsManager.notesItems = _allNotesItems.toList()
     }
 
     private fun applySortingAndFiltering(preserveRecentlyDeleted: Boolean = false) {
         val currentRecentlyDeleted = if (preserveRecentlyDeleted) recentlyDeletedItem else null
-        val tempAllTaskItems = _allTaskItems.toMutableList()
-        if (currentRecentlyDeleted != null && !tempAllTaskItems.contains(currentRecentlyDeleted)) {
+        val tempAllNoteItems = _allNotesItems.toMutableList()
+        if (currentRecentlyDeleted != null && !tempAllNoteItems.contains(currentRecentlyDeleted)) {
         }
 
 
-        _displayedTaskItems.clear()
-        var tasksToProcess = if (currentSelectedListId != null) {
-            _allTaskItems.filter { it.listId == currentSelectedListId }
+        _displayedNotesItems.clear()
+        var notesToDisplay = if (currentSelectedListId != null) {
+            _allNotesItems.filter { it.listId == currentSelectedListId }
         } else {
             emptyList()
         }
 
         val currentQuery = searchQuery.value
         if (currentQuery.isNotBlank()) {
-            tasksToProcess = tasksToProcess.filter { task ->
-                task.title.contains(currentQuery, ignoreCase = true) ||
-                        (task.description?.contains(currentQuery, ignoreCase = true) == true)
+            notesToDisplay = notesToDisplay.filter { note ->
+                note.title.contains(currentQuery, ignoreCase = true) ||
+                        (note.description?.contains(currentQuery, ignoreCase = true) == true)
             }
         }
 
         if (filterStates.isNotEmpty()) {
-            tasksToProcess = tasksToProcess.filter { task ->
+            notesToDisplay = notesToDisplay.filter { note ->
                 val includedFilters = filterStates.filterValues { it == FilterState.INCLUDED }.keys
                 val matchesIncluded = if (includedFilters.isNotEmpty()) {
-                    includedFilters.any { attribute -> task.matchesAttribute(attribute) }
+                    includedFilters.any { attribute -> note.matchesAttribute(attribute) }
                 } else {
                     true
                 }
 
                 val excludedFilters = filterStates.filterValues { it == FilterState.EXCLUDED }.keys
-                val matchesExcluded = excludedFilters.none { attribute -> task.matchesAttribute(attribute) }
+                val matchesExcluded = excludedFilters.none { attribute -> note.matchesAttribute(attribute) }
 
                 matchesIncluded && matchesExcluded
             }
         }
 
-        val sortedTasks = sortTasks(tasksToProcess, currentSortOption, currentSortOrder)
+        val sortedNotes = sortNotes (notesToDisplay, currentSortOption, currentSortOrder)
 
-        if (currentSortOption != SortOption.FREE_SORTING && sortedTasks.isNotEmpty()) {
+        if (currentSortOption != SortOption.FREE_SORTING && sortedNotes.isNotEmpty()) {
             val groupedItems = mutableListOf<Any>()
             var lastHeader: String? = null
 
-            for (task in sortedTasks) {
-                task.currentHeader = getHeaderForTask(task, currentSortOption, currentSortOrder)
-                if (task.currentHeader != lastHeader) {
-                    groupedItems.add(task.currentHeader)
-                    lastHeader = task.currentHeader
+            for (note in sortedNotes) {
+                note.currentHeader = getHeaderForNote(note, currentSortOption, currentSortOrder)
+                if (note.currentHeader != lastHeader) {
+                    groupedItems.add(note.currentHeader)
+                    lastHeader = note.currentHeader
                 }
-                groupedItems.add(task)
+                groupedItems.add(note)
             }
-            _displayedTaskItems.addAll(groupedItems)
+            _displayedNotesItems.addAll(groupedItems)
         } else {
-            for (task in sortedTasks) {
-                task.currentHeader = ""
+            for (note in sortedNotes) {
+                note.currentHeader = ""
             }
-            _displayedTaskItems.addAll(sortedTasks)
+            _displayedNotesItems.addAll(sortedNotes)
         }
     }
 
-    private fun getHeaderForTask(task: TaskItem, sortOption: SortOption, sortOrder: SortOrder): String {
+    private fun getHeaderForNote(note: NotesItems, sortOption: SortOption, sortOrder: SortOrder): String {
         return when (sortOption) {
             SortOption.CREATION_DATE -> {
                 val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-                sdf.format(Date(task.creationTimestamp))
+                sdf.format(Date(note.creationTimestamp))
             }
             SortOption.NAME -> {
-                task.title.firstOrNull()?.uppercaseChar()?.toString() ?: "Unknown"
+                note.title.firstOrNull()?.uppercaseChar()?.toString() ?: "Unknown"
             }
             SortOption.FREE_SORTING -> ""
         }
     }
 
 
-    private fun TaskItem.matchesAttribute(attribute: FilterableAttribute): Boolean {
+    private fun NotesItems.matchesAttribute(attribute: FilterableAttribute): Boolean {
         return when (attribute) {
             FilterableAttribute.HAS_DESCRIPTION -> this.description?.isNotBlank() == true
         }
     }
 
-    private fun sortTasks(
-        tasks: List<TaskItem>,
+    private fun sortNotes(
+        notes: List<NotesItems>,
         option: SortOption,
         order: SortOrder,
-    ): List<TaskItem> {
-        val comparator: Comparator<TaskItem> = when (option) {
+    ): List<NotesItems> {
+        val comparator: Comparator<NotesItems> = when (option) {
             SortOption.FREE_SORTING -> compareBy { it.displayOrder }
-            SortOption.CREATION_DATE -> compareBy<TaskItem> { it.creationTimestamp }.thenBy { it.displayOrder }
-            SortOption.NAME -> compareBy<TaskItem, String>(String.CASE_INSENSITIVE_ORDER) { it.title }
+            SortOption.CREATION_DATE -> compareBy<NotesItems> { it.creationTimestamp }.thenBy { it.displayOrder }
+            SortOption.NAME -> compareBy<NotesItems, String>(String.CASE_INSENSITIVE_ORDER) { it.title }
                 .thenBy { it.displayOrder }
         }
 
         return if (order == SortOrder.ASCENDING) {
-            tasks.sortedWith(comparator)
+            notes.sortedWith(comparator)
         } else {
-            tasks.sortedWith(comparator.reversed())
+            notes.sortedWith(comparator.reversed())
         }
     }
 
@@ -229,14 +229,14 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun swapDisplayOrder(from: Int, to: Int) {
-        val item1 = taskItems[from] as? TaskItem
-        val item2 = taskItems[to] as? TaskItem
+        val item1 = noteItems[from] as? NotesItems
+        val item2 = noteItems[to] as? NotesItems
         if (item1 != null && item2 != null) {
             val tmp = item1.displayOrder
             item1.displayOrder = item2.displayOrder
             item2.displayOrder = tmp
         }
-        _displayedTaskItems.add(to, _displayedTaskItems.removeAt(from))
+        _displayedNotesItems.add(to, _displayedNotesItems.removeAt(from))
     }
 
     fun updateMultipleFilterStates(newStates: Map<FilterableAttribute, FilterState>) {
@@ -268,7 +268,7 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     private fun determineNextDisplayOrder(forListId: String): Int {
-        return _allTaskItems
+        return _allNotesItems
             .filter { it.listId == forListId }
             .maxOfOrNull { it.displayOrder }?.plus(1) ?: 0
     }
@@ -277,31 +277,31 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         title: String,
         description: String? = null
     ) {
-        val listIdForNewTask = currentSelectedListId
-        if (title.isNotBlank() && listIdForNewTask != null) {
-            val newItem = TaskItem(
-                id = currentTaskId++,
+        val listIdForNewNote = currentSelectedListId
+        if (title.isNotBlank() && listIdForNewNote != null) {
+            val newItem = NotesItems(
+                id = currentNoteId++,
                 title = title.trim(),
                 description = description?.trim()?.takeIf { it.isNotBlank() },
-                listId = listIdForNewTask,
+                listId = listIdForNewNote,
                 creationTimestamp = System.currentTimeMillis(),
-                displayOrder = determineNextDisplayOrder(listIdForNewTask)
+                displayOrder = determineNextDisplayOrder(listIdForNewNote)
             )
-            _allTaskItems.add(newItem)
-            saveAllTasks()
+            _allNotesItems.add(newItem)
+            saveAllNotes()
             applySortingAndFiltering()
-        } else if (listIdForNewTask == null) {
-            System.err.println("Cannot add task: No list selected.")
+        } else if (listIdForNewNote == null) {
+            System.err.println("Cannot add note: No list selected.")
         }
     }
 
     fun prepareRemoveItem(itemId: Int) {
-        val itemIndex = _allTaskItems.indexOfFirst { it.id == itemId }
+        val itemIndex = _allNotesItems.indexOfFirst { it.id == itemId }
         if (itemIndex != -1) {
-            recentlyDeletedItem = _allTaskItems[itemIndex]
+            recentlyDeletedItem = _allNotesItems[itemIndex]
             recentlyDeletedItemOriginalIndex = itemIndex
 
-            _allTaskItems.removeAt(itemIndex)
+            _allNotesItems.removeAt(itemIndex)
             applySortingAndFiltering(preserveRecentlyDeleted = true)
 
             viewModelScope.launch {
@@ -314,10 +314,10 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
 
     fun undoRemoveItem() {
         recentlyDeletedItem?.let { itemToRestore ->
-            if (recentlyDeletedItemOriginalIndex != -1 && recentlyDeletedItemOriginalIndex <= _allTaskItems.size) {
-                _allTaskItems.add(recentlyDeletedItemOriginalIndex, itemToRestore)
+            if (recentlyDeletedItemOriginalIndex != -1 && recentlyDeletedItemOriginalIndex <= _allNotesItems.size) {
+                _allNotesItems.add(recentlyDeletedItemOriginalIndex, itemToRestore)
             } else {
-                _allTaskItems.add(itemToRestore)
+                _allNotesItems.add(itemToRestore)
             }
             recentlyDeletedItem = null
             recentlyDeletedItemOriginalIndex = -1
@@ -327,36 +327,48 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
 
     fun confirmRemoveItem() {
         if (recentlyDeletedItem != null) {
-            saveAllTasks()
+            saveAllNotes()
             recentlyDeletedItem = null
             recentlyDeletedItemOriginalIndex = -1
         }
     }
 
     fun updateItem(
-        updatedItem: TaskItem,
+        updatedItem: NotesItems,
     ) {
-        val indexInAll = _allTaskItems.indexOfFirst { it.id == updatedItem.id }
+        val indexInAll = _allNotesItems.indexOfFirst { it.id == updatedItem.id }
         if (indexInAll != -1) {
-            val currentItem = _allTaskItems[indexInAll]
-            _allTaskItems[indexInAll] = updatedItem.copy(
+            val currentItem = _allNotesItems[indexInAll]
+            _allNotesItems[indexInAll] = updatedItem.copy(
                 listId = currentItem.listId,
                 creationTimestamp = currentItem.creationTimestamp,
                 displayOrder = currentItem.displayOrder
             )
-            saveAllTasks()
+            saveAllNotes()
             applySortingAndFiltering()
         }
     }
 
-    fun clearTasksForList(listIdToClear: String) {
+    fun deleteItems(itemIds: List<Int>) {
+        val itemsWereRemoved = _allNotesItems.removeAll { it.id in itemIds }
+        if (itemsWereRemoved) {
+            if (recentlyDeletedItem?.id in itemIds) {
+                recentlyDeletedItem = null
+                recentlyDeletedItemOriginalIndex = -1
+            }
+            saveAllNotes()
+            applySortingAndFiltering()
+        }
+    }
+
+    fun clearNotesForList(listIdToClear: String) {
         if (recentlyDeletedItem?.listId == listIdToClear) {
             recentlyDeletedItem = null
             recentlyDeletedItemOriginalIndex = -1
         }
-        val tasksWereRemoved = _allTaskItems.removeAll { it.listId == listIdToClear }
-        if (tasksWereRemoved) {
-            saveAllTasks()
+        val notesWereRemoved = _allNotesItems.removeAll { it.listId == listIdToClear }
+        if (notesWereRemoved) {
+            saveAllNotes()
             applySortingAndFiltering()
         }
     }
@@ -369,7 +381,7 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val listId = currentSelectedListId ?: return
-        val itemsInList = _allTaskItems.filter { it.listId == listId }.sortedBy { it.displayOrder }.toMutableList()
+        val itemsInList = _allNotesItems.filter { it.listId == listId }.sortedBy { it.displayOrder }.toMutableList()
 
         val itemToMoveIndex = itemsInList.indexOfFirst { it.id == itemIdToMove }
         if (itemToMoveIndex == -1) {
@@ -381,16 +393,16 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         val targetIndex = newDisplayOrderCandidate.coerceIn(0, itemsInList.size)
         itemsInList.add(targetIndex, item)
 
-        itemsInList.forEachIndexed { newOrder, taskItem ->
-            val originalTaskIndexInAll = _allTaskItems.indexOfFirst { it.id == taskItem.id }
-            if (originalTaskIndexInAll != -1) {
-                if (_allTaskItems[originalTaskIndexInAll].displayOrder != newOrder) {
-                    _allTaskItems[originalTaskIndexInAll] = _allTaskItems[originalTaskIndexInAll].copy(displayOrder = newOrder)
+        itemsInList.forEachIndexed { newOrder, noteItem ->
+            val originalNoteIndexInAll = _allNotesItems.indexOfFirst { it.id == noteItem.id }
+            if (originalNoteIndexInAll != -1) {
+                if (_allNotesItems[originalNoteIndexInAll].displayOrder != newOrder) {
+                    _allNotesItems[originalNoteIndexInAll] = _allNotesItems[originalNoteIndexInAll].copy(displayOrder = newOrder)
                 }
             }
         }
 
-        saveAllTasks()
+        saveAllNotes()
         applySortingAndFiltering()
     }
 

@@ -12,20 +12,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.xenonware.notes.R
-import com.xenonware.notes.viewmodel.classes.TaskItem
+import com.xenonware.notes.viewmodel.classes.NotesItems
 import com.xenonware.notes.viewmodel.classes.TaskStep // Import TaskStep
 
 @Composable
 fun DialogEditTaskItem(
-    taskItem: TaskItem,
+    notesItems: NotesItems,
     onDismissRequest: () -> Unit,
-    onConfirm: (TaskItem) -> Unit
+    onConfirm: (NotesItems) -> Unit
 
 ) {
-    var titleState by remember(taskItem.id) { mutableStateOf(taskItem.title) }
-    var descriptionState by remember(taskItem.id) { mutableStateOf(taskItem.description ?: "") }
+    var titleState by remember(notesItems.id) { mutableStateOf(notesItems.title) }
+    var descriptionState by remember(notesItems.id) { mutableStateOf(notesItems.description ?: "") }
 
-    val currentSteps = remember(taskItem.id) { mutableStateListOf<TaskStep>() }
+    val currentSteps = remember(notesItems.id) { mutableStateListOf<TaskStep>() }
 
     XenonDialog(
         onDismissRequest = onDismissRequest,
@@ -41,7 +41,7 @@ fun DialogEditTaskItem(
             onDescriptionChange = { descriptionState = it },
 
             onSaveTask = {
-                val updatedItem = taskItem.copy(
+                val updatedItem = notesItems.copy(
                     title = titleState.trim(),
                     description = descriptionState.trim().takeIf { it.isNotBlank() },
                 )

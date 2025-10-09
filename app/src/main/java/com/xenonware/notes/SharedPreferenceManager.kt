@@ -8,7 +8,7 @@ import androidx.core.content.edit // Ensure this import is present
 import com.xenonware.notes.viewmodel.SortOption
 import com.xenonware.notes.viewmodel.SortOrder
 import com.xenonware.notes.viewmodel.ThemeSetting
-import com.xenonware.notes.viewmodel.classes.TaskItem
+import com.xenonware.notes.viewmodel.classes.NotesItems
 import com.xenonware.notes.viewmodel.classes.TodoItem
 import kotlinx.serialization.json.Json
 import kotlin.math.max
@@ -62,12 +62,12 @@ class SharedPreferenceManager(context: Context) {
             }
         }
 
-    var taskItems: List<TaskItem>
+    var notesItems: List<NotesItems>
         get() {
             val jsonString = sharedPreferences.getString(taskListKey, null)
             return if (jsonString != null) {
                 try {
-                    json.decodeFromString<List<TaskItem>>(jsonString)
+                    json.decodeFromString<List<NotesItems>>(jsonString)
                 } catch (e: Exception) {
                     System.err.println("Error decoding task items, deleting old data: ${e.localizedMessage}")
                     sharedPreferences.edit { remove(taskListKey) }

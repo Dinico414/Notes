@@ -3,7 +3,7 @@ package com.xenonware.notes.viewmodel.classes
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class TaskItem(
+data class NotesItems(
     val id: Int,
     val title: String,
     val description: String? = null,

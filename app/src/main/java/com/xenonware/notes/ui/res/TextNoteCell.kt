@@ -39,16 +39,16 @@ import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
 import com.xenonware.notes.ui.values.ExtraLargestPadding
 import com.xenonware.notes.ui.values.MediumCornerRadius
 import com.xenonware.notes.ui.values.MediumSpacing
-import com.xenonware.notes.viewmodel.classes.TaskItem
+import com.xenonware.notes.viewmodel.classes.NotesItems
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TextNoteCell(
-    item: TaskItem,
+    item: NotesItems,
     isSelected: Boolean,
     isSelectionModeActive: Boolean,
     onSelectItem: () -> Unit,
-    onEditItem: (TaskItem) -> Unit,
+    onEditItem: (NotesItems) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val borderColor by animateColorAsState(

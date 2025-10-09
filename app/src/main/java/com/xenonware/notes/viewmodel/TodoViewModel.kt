@@ -17,7 +17,7 @@ const val DEFAULT_LIST_ID = "default_my_tasks_list_id"
 
 class TodoViewModel(
     application: Application,
-    private val taskViewModel: TaskViewModel
+    private val notesViewModel: NotesViewModel
 ) : AndroidViewModel(application) {
 
     private val prefsManager = SharedPreferenceManager(application.applicationContext)
@@ -198,12 +198,12 @@ class TodoViewModel(
                 if (defaultListIndex != -1) {
                     drawerItems[defaultListIndex] = drawerItems[defaultListIndex].copy(title = defaultListName, isSelectedForAction = false)
                 }
-                taskViewModel.clearTasksForList(DEFAULT_LIST_ID)
+                notesViewModel.clearNotesForList(DEFAULT_LIST_ID)
                 if(_selectedDrawerItemId.value == DEFAULT_LIST_ID) selectedListWasAlteredOrRemoved = true
 
             } else {
                 drawerItems.removeAll { it.id == item.id }
-                taskViewModel.clearTasksForList(item.id)
+                notesViewModel.clearNotesForList(item.id)
                 if (_selectedDrawerItemId.value == item.id) {
                     _selectedDrawerItemId.value = DEFAULT_LIST_ID
                     selectedListWasAlteredOrRemoved = true

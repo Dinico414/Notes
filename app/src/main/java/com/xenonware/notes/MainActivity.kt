@@ -17,11 +17,11 @@ import androidx.core.view.WindowCompat
 import com.xenonware.notes.ui.layouts.NotesListLayout
 import com.xenonware.notes.ui.theme.ScreenEnvironment
 import com.xenonware.notes.viewmodel.LayoutType
-import com.xenonware.notes.viewmodel.TaskViewModel
+import com.xenonware.notes.viewmodel.NotesViewModel
 
 class MainActivity : ComponentActivity() {
 
-    private val taskViewModel: TaskViewModel by viewModels()
+    private val notesViewModel: NotesViewModel by viewModels()
     private lateinit var sharedPreferenceManager: SharedPreferenceManager
 
     private var lastAppliedTheme: Int = -1
@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
                 blackedOutModeEnabled = lastAppliedBlackedOutMode
             ) { layoutType, isLandscape ->
                 TodolistApp(
-                    viewModel = taskViewModel,
+                    viewModel = notesViewModel,
                     layoutType = layoutType,
                     isLandscape = isLandscape,
                     appSize = currentContainerSize, // Pass currentContainerSize
@@ -112,7 +112,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun TodolistApp(
-    viewModel: TaskViewModel,
+    viewModel: NotesViewModel,
     layoutType: LayoutType,
     isLandscape: Boolean,
     onOpenSettings: () -> Unit,

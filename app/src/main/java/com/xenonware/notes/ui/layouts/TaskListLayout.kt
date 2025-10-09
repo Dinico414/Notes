@@ -7,12 +7,12 @@ import androidx.compose.ui.unit.IntSize
 import com.xenonware.notes.ui.layouts.notes.CompactNotes
 import com.xenonware.notes.ui.layouts.notes.CoverNotes
 import com.xenonware.notes.viewmodel.LayoutType
-import com.xenonware.notes.viewmodel.TaskViewModel
+import com.xenonware.notes.viewmodel.NotesViewModel
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun NotesListLayout(
-    viewModel: TaskViewModel,
+    viewModel: NotesViewModel,
     isLandscape: Boolean,
     modifier: Modifier = Modifier,
     layoutType: LayoutType,
@@ -25,7 +25,7 @@ fun NotesListLayout(
             if (isLandscape) {
                 CoverNotes(
                     onOpenSettings = onOpenSettings,
-                    taskViewModel = viewModel,
+                    notesViewModel = viewModel,
                     layoutType = layoutType,
                     isLandscape = true,
                     appSize = appSize,
@@ -33,7 +33,7 @@ fun NotesListLayout(
             } else {
                 CoverNotes(
                     onOpenSettings = onOpenSettings,
-                    taskViewModel = viewModel,
+                    notesViewModel = viewModel,
                     layoutType = layoutType,
                     isLandscape = false,
                     appSize = appSize,
@@ -45,7 +45,7 @@ fun NotesListLayout(
             if (isLandscape) {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    taskViewModel = viewModel,
+                    notesViewModel = viewModel,
                     layoutType = layoutType,
                     isLandscape = true,
                     appSize = appSize,
@@ -53,7 +53,7 @@ fun NotesListLayout(
             } else {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    taskViewModel = viewModel,
+                    notesViewModel = viewModel,
                     layoutType = layoutType,
                     isLandscape = false,
                     appSize = appSize,
@@ -65,7 +65,7 @@ fun NotesListLayout(
             if (isLandscape) {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    taskViewModel = viewModel,
+                    notesViewModel = viewModel,
                     layoutType = layoutType,
                     isLandscape = true,
                     appSize = appSize,
@@ -73,7 +73,7 @@ fun NotesListLayout(
             } else {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    taskViewModel = viewModel,
+                    notesViewModel = viewModel,
                     layoutType = layoutType,
                     isLandscape = false,
                     appSize = appSize,
@@ -85,7 +85,7 @@ fun NotesListLayout(
             if (isLandscape) {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    taskViewModel = viewModel,
+                    notesViewModel = viewModel,
                     layoutType = layoutType,
                     isLandscape = true,
                     appSize = appSize,
@@ -93,7 +93,7 @@ fun NotesListLayout(
             } else {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    taskViewModel = viewModel,
+                    notesViewModel = viewModel,
                     layoutType = layoutType,
                     isLandscape = false,
                     appSize = appSize,
@@ -105,7 +105,7 @@ fun NotesListLayout(
             if (isLandscape) {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    taskViewModel = viewModel,
+                    notesViewModel = viewModel,
                     layoutType = layoutType,
                     isLandscape = true,
                     appSize = appSize,
@@ -113,7 +113,7 @@ fun NotesListLayout(
             } else {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    taskViewModel = viewModel,
+                    notesViewModel = viewModel,
                     layoutType = layoutType,
                     isLandscape = false,
                     appSize = appSize,

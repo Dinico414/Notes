@@ -3,6 +3,7 @@ package com.xenonware.notes.ui.res
 import android.annotation.SuppressLint
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -17,6 +18,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -48,6 +50,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -115,8 +118,13 @@ fun FloatingToolbarContent(
     currentSearchQuery: String,
     lazyListState: LazyListState,
     allowToolbarScrollBehavior: Boolean,
+    selectedNoteIds: List<Int>,
+    onClearSelection: () -> Unit,
+    onDeleteConfirm: () -> Unit,
 ) {
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
+    val isSelectionActive = selectedNoteIds.isNotEmpty()
+
     var showActionIconsExceptSearch by rememberSaveable { mutableStateOf(true) }
     var canShowTextField by rememberSaveable { mutableStateOf(false) }
 
@@ -147,8 +155,16 @@ fun FloatingToolbarContent(
 
     var toolbarVisibleState by rememberSaveable { mutableStateOf(true) }
 
-    LaunchedEffect(lazyListState, isSearchActive, allowToolbarScrollBehavior) {
-        if (isSearchActive || !allowToolbarScrollBehavior) {
+    LaunchedEffect(isSelectionActive) {
+        if (isSelectionActive && isSearchActive) {
+            isSearchActive = false
+            onSearchQueryChanged("")
+            keyboardController?.hide()
+        }
+    }
+
+    LaunchedEffect(lazyListState, isSearchActive, allowToolbarScrollBehavior, isSelectionActive) {
+        if (isSearchActive || !allowToolbarScrollBehavior || isSelectionActive) {
             toolbarVisibleState = true
         } else {
             var previousOffset = lazyListState.firstVisibleItemScrollOffset
@@ -312,34 +328,27 @@ fun FloatingToolbarContent(
                     }
 
                     val rotationAngle = remember { Animatable(0f) }
-                    LaunchedEffect(isSearchActive) {
-                        if (isSearchActive) {
-                            delay(700)
-                            rotationAngle.animateTo(
-                                targetValue = 45f, animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow,
-                                )
+                    LaunchedEffect(isSearchActive, isSelectionActive) {
+                        val targetAngle = if (isSearchActive || isSelectionActive) 45f else 0f
+                        rotationAngle.animateTo(
+                            targetValue = targetAngle, animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow,
                             )
-                        } else {
-                            rotationAngle.animateTo(
-                                targetValue = 0f, animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow,
-                                )
-                            )
-                        }
+                        )
                     }
 
                     FloatingActionButton(
                         onClick = {
-                            val newSearchActiveState = !isSearchActive
-                            if (newSearchActiveState) {
-                                onShowBottomSheet()
-                            } else {
-                                onSearchQueryChanged("")
-                                keyboardController?.hide()
-                                isSearchActive = false
+                            when {
+                                isSelectionActive -> onClearSelection()
+                                isSearchActive -> {
+                                    onSearchQueryChanged("")
+                                    keyboardController?.hide()
+                                    isSearchActive = false
+                                }
+
+                                else -> onShowBottomSheet()
                             }
                         },
                         containerColor = Color.Transparent,
@@ -358,127 +367,148 @@ fun FloatingToolbarContent(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Add,
-                            contentDescription = if (isSearchActive) stringResource(R.string.cancel) else stringResource(
+                            contentDescription = if (isSearchActive || isSelectionActive) stringResource(R.string.cancel) else stringResource(
                                 R.string.add_task_description
                             ), tint = fabIconTint, modifier = Modifier.rotate(rotationAngle.value)
                         )
                     }
                 }
             },
-            colors = FloatingToolbarDefaults.standardFloatingToolbarColors(colorScheme.surfaceDim),
+            colors = FloatingToolbarDefaults.standardFloatingToolbarColors(if (isSelectionActive) colorScheme.errorContainer else colorScheme.surfaceDim),
             contentPadding = FloatingToolbarDefaults.ContentPadding,
         ) {
-            IconButton(onClick = {
-                isSearchActive = true
-            }) {
-                Icon(
-                    Icons.Filled.Search,
-                    contentDescription = stringResource(R.string.search_tasks_description),
-                    tint = colorScheme.onSurface
-                )
-            }
-            Box(
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AnimatedVisibility(
-                        visible = showActionIconsExceptSearch && !isSearchActive,
-                        enter = fadeIn(animationSpec = tween(durationMillis = 500)),
-                        exit = shrinkHorizontally(
-                            animationSpec = tween(
-                                durationMillis = iconGroupExitAnimationDuration,
-                                delayMillis = iconsClearanceTime
-                            )
-                        ) + fadeOut(
-                            animationSpec = tween(
-                                durationMillis = iconGroupExitAnimationDuration,
-                                delayMillis = iconsClearanceTime
-                            )
-                        )
+                if (selectionActive) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row {
-                            val iconAlphaTarget = if (isSearchActive) 0f else 1f
-
-                            val sortIconAlpha by animateFloatAsState(
-                                targetValue = iconAlphaTarget, animationSpec = tween(
-                                    durationMillis = iconsAlphaDuration,
-                                    delayMillis = if (isSearchActive) 0 else 0
-                                ), label = "SortIconAlpha"
+                        TextButton(onClick = onDeleteConfirm) {
+                            Text(stringResource(R.string.delete), color = colorScheme.onErrorContainer)
+                        }
+                    }
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = {
+                            isSearchActive = true
+                        }) {
+                            Icon(
+                                Icons.Filled.Search,
+                                contentDescription = stringResource(R.string.search_tasks_description),
+                                tint = colorScheme.onSurface
                             )
-                            IconButton(
-                                onClick = onOpenSortDialog,
-                                modifier = Modifier.alpha(sortIconAlpha),
-                                enabled = !isSearchActive && showActionIconsExceptSearch
-                            ) {
-                                Icon(
-                                    Icons.Filled.SortByAlpha,
-                                    contentDescription = stringResource(R.string.sort_tasks_description),
-                                    tint = colorScheme.onSurface
-                                )
+                        }
+                        Box(
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                AnimatedVisibility(
+                                    visible = showActionIconsExceptSearch && !isSearchActive,
+                                    enter = fadeIn(animationSpec = tween(durationMillis = 500)),
+                                    exit = shrinkHorizontally(
+                                        animationSpec = tween(
+                                            durationMillis = iconGroupExitAnimationDuration,
+                                            delayMillis = iconsClearanceTime
+                                        )
+                                    ) + fadeOut(
+                                        animationSpec = tween(
+                                            durationMillis = iconGroupExitAnimationDuration,
+                                            delayMillis = iconsClearanceTime
+                                        )
+                                    )
+                                ) {
+                                    Row {
+                                        val iconAlphaTarget = if (isSearchActive) 0f else 1f
+
+                                        val sortIconAlpha by animateFloatAsState(
+                                            targetValue = iconAlphaTarget,
+                                            animationSpec = tween(
+                                                durationMillis = iconsAlphaDuration,
+                                                delayMillis = if (isSearchActive) 0 else 0
+                                            ),
+                                            label = "SortIconAlpha"
+                                        )
+                                        IconButton(
+                                            onClick = onOpenSortDialog,
+                                            modifier = Modifier.alpha(sortIconAlpha),
+                                            enabled = !isSearchActive && showActionIconsExceptSearch
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.SortByAlpha,
+                                                contentDescription = stringResource(R.string.sort_tasks_description),
+                                                tint = colorScheme.onSurface
+                                            )
+                                        }
+
+                                        val filterIconAlpha by animateFloatAsState(
+                                            targetValue = iconAlphaTarget,
+                                            animationSpec = tween(
+                                                durationMillis = iconsAlphaDuration,
+                                                delayMillis = if (isSearchActive) 100 else 0
+                                            ),
+                                            label = "FilterIconAlpha"
+                                        )
+                                        IconButton(
+                                            onClick = onOpenFilterDialog,
+                                            modifier = Modifier.alpha(filterIconAlpha),
+                                            enabled = !isSearchActive && showActionIconsExceptSearch
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.FilterAlt,
+                                                contentDescription = stringResource(R.string.filter_tasks_description),
+                                                tint = colorScheme.onSurface
+                                            )
+                                        }
+
+                                        val settingsIconAlpha by animateFloatAsState(
+                                            targetValue = iconAlphaTarget,
+                                            animationSpec = tween(
+                                                durationMillis = iconsAlphaDuration,
+                                                delayMillis = if (isSearchActive) 200 else 0
+                                            ),
+                                            label = "SettingsIconAlpha"
+                                        )
+                                        IconButton(
+                                            onClick = onOpenSettings,
+                                            modifier = Modifier.alpha(settingsIconAlpha),
+                                            enabled = !isSearchActive && showActionIconsExceptSearch
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.Settings,
+                                                contentDescription = stringResource(R.string.settings),
+                                                tint = colorScheme.onSurface
+                                            )
+                                        }
+                                    }
+                                }
                             }
 
-                            val filterIconAlpha by animateFloatAsState(
-                                targetValue = iconAlphaTarget, animationSpec = tween(
-                                    durationMillis = iconsAlphaDuration,
-                                    delayMillis = if (isSearchActive) 100 else 0
-                                ), label = "FilterIconAlpha"
+                            val fraction by animateFloatAsState(
+                                targetValue = if (canShowTextField) 1F else 0F,
+                                animationSpec = tween(durationMillis = textFieldAnimationDuration),
+                                label = ""
                             )
-                            IconButton(
-                                onClick = onOpenFilterDialog,
-                                modifier = Modifier.alpha(filterIconAlpha),
-                                enabled = !isSearchActive && showActionIconsExceptSearch
-                            ) {
-                                Icon(
-                                    Icons.Filled.FilterAlt,
-                                    contentDescription = stringResource(R.string.filter_tasks_description),
-                                    tint = colorScheme.onSurface
-                                )
-                            }
-
-                            val settingsIconAlpha by animateFloatAsState(
-                                targetValue = iconAlphaTarget, animationSpec = tween(
-                                    durationMillis = iconsAlphaDuration,
-                                    delayMillis = if (isSearchActive) 200 else 0
-                                ), label = "SettingsIconAlpha"
+                            XenonTextFieldV2(
+                                value = currentSearchQuery,
+                                enabled = canShowTextField,
+                                onValueChange = {
+                                    onSearchQueryChanged(it)
+                                },
+                                modifier = Modifier
+                                    .width(maxTextFieldWidth.times(fraction))
+                                    .alpha(fraction * fraction)
+                                    .focusRequester(focusRequester),
+                                placeholder = { Text(stringResource(R.string.search)) },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = {
+                                    keyboardController?.hide()
+                                })
                             )
-                            IconButton(
-                                onClick = onOpenSettings,
-                                modifier = Modifier.alpha(settingsIconAlpha),
-                                enabled = !isSearchActive && showActionIconsExceptSearch
-                            ) {
-                                Icon(
-                                    Icons.Filled.Settings,
-                                    contentDescription = stringResource(R.string.settings),
-                                    tint = colorScheme.onSurface
-                                )
-                            }
                         }
                     }
                 }
-
-                val fraction by animateFloatAsState(
-                    targetValue = if (canShowTextField) 1F else 0F,
-                    animationSpec = tween(durationMillis = textFieldAnimationDuration)
-                )
-                XenonTextFieldV2(
-                    value = currentSearchQuery,
-                    enabled = canShowTextField,
-                    onValueChange = {
-                        onSearchQueryChanged(it)
-                    },
-                    modifier = Modifier
-                        .width(maxTextFieldWidth.times(fraction))
-                        .alpha(fraction * fraction)
-                        .focusRequester(focusRequester),
-                    placeholder = { Text(stringResource(R.string.search)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = {
-                        keyboardController?.hide()
-                    })
-                )
             }
         }
     }
 }
-

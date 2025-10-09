@@ -74,10 +74,10 @@ import com.xenonware.notes.ui.values.MediumSpacing
 import com.xenonware.notes.ui.values.SmallPadding
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.LayoutType
-import com.xenonware.notes.viewmodel.TaskViewModel
+import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.TodoViewModel
 import com.xenonware.notes.viewmodel.TodoViewModelFactory
-import com.xenonware.notes.viewmodel.classes.TaskItem
+import com.xenonware.notes.viewmodel.classes.NotesItems
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.rememberHazeState
@@ -91,7 +91,7 @@ import kotlinx.coroutines.launch
 )
 @Composable
 fun CompactNotes(
-    taskViewModel: TaskViewModel = viewModel(),
+    notesViewModel: NotesViewModel = viewModel(),
     devSettingsViewModel: DevSettingsViewModel = viewModel(),
     layoutType: LayoutType,
     isLandscape: Boolean,
@@ -101,20 +101,20 @@ fun CompactNotes(
     ) {
     val application = LocalContext.current.applicationContext as Application
     val todoViewModel: TodoViewModel = viewModel(
-        factory = TodoViewModelFactory(application, taskViewModel)
+        factory = TodoViewModelFactory(application, notesViewModel)
     )
 
-    var editingTaskId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var editingNoteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var titleState by rememberSaveable { mutableStateOf("") }
     var descriptionState by rememberSaveable { mutableStateOf("") }
 
     val selectedListId by todoViewModel.selectedDrawerItemId
 
     LaunchedEffect(selectedListId) {
-        taskViewModel.currentSelectedListId = selectedListId
+        notesViewModel.currentSelectedListId = selectedListId
     }
 
-    val todoItemsWithHeaders = taskViewModel.taskItems
+    val noteItemsWithHeaders = notesViewModel.noteItems
 
     val configuration = LocalConfiguration.current
 
@@ -154,12 +154,12 @@ fun CompactNotes(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val currentSearchQuery by taskViewModel.searchQuery.collectAsState()
+    val currentSearchQuery by notesViewModel.searchQuery.collectAsState()
 
     val lazyListState = rememberLazyListState()
 
-    var selectedTaskIds by remember { mutableStateOf(emptySet<Int>()) }
-    val isSelectionModeActive = selectedTaskIds.isNotEmpty()
+    var selectedNoteIds by remember { mutableStateOf(emptySet<Int>()) }
+    val isSelectionModeActive = selectedNoteIds.isNotEmpty()
 
     LaunchedEffect(drawerState.isClosed) {
         if (drawerState.isClosed) {
@@ -168,12 +168,12 @@ fun CompactNotes(
     }
 
     val undoActionLabel = stringResource(R.string.undo)
-    val taskTextSnackbar = stringResource(R.string.task_text)
+    val noteTextSnackbar = stringResource(R.string.task_text)
     val deletedTextSnackbar = stringResource(R.string.deleted_text)
 
 
     fun resetBottomSheetState() {
-        editingTaskId = null
+        editingNoteId = null
         titleState = ""
         descriptionState = ""
     }
@@ -217,10 +217,16 @@ fun CompactNotes(
                     onOpenFilterDialog = { showFilterDialog = true },
                     currentSearchQuery = currentSearchQuery,
                     onSearchQueryChanged = { newQuery ->
-                        taskViewModel.setSearchQuery(newQuery)
+                        notesViewModel.setSearchQuery(newQuery)
                     },
                     lazyListState = lazyListState,
-                    allowToolbarScrollBehavior = !isAppBarCollapsible
+                    allowToolbarScrollBehavior = !isAppBarCollapsible,
+                    selectedNoteIds = selectedNoteIds.toList(),
+                    onClearSelection = { selectedNoteIds = emptySet() },
+                    onDeleteConfirm = {
+                        notesViewModel.deleteItems(selectedNoteIds.toList())
+                        selectedNoteIds = emptySet()
+                    }
                 )
             },
         ) { scaffoldPadding ->
@@ -279,7 +285,7 @@ fun CompactNotes(
                             .fillMaxSize()
                             .padding(horizontal = ExtraLargeSpacing)
                     ) {
-                        if (todoItemsWithHeaders.isEmpty() && currentSearchQuery.isBlank()) {
+                        if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isBlank()) {
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -291,7 +297,7 @@ fun CompactNotes(
                                     style = MaterialTheme.typography.bodyLarge,
                                 )
                             }
-                        } else if (todoItemsWithHeaders.isEmpty() && currentSearchQuery.isNotBlank()) {
+                        } else if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isNotBlank()) {
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -313,8 +319,8 @@ fun CompactNotes(
                                 )
                             ) {
                                 itemsIndexed(
-                                    items = todoItemsWithHeaders,
-                                    key = { _, item -> if (item is TaskItem) item.id else item.hashCode() }) { index, item ->
+                                    items = noteItemsWithHeaders,
+                                    key = { _, item -> if (item is NotesItems) item.id else item.hashCode() }) { index, item ->
                                     when (item) {
                                         is String -> {
                                             Text(
@@ -336,28 +342,28 @@ fun CompactNotes(
                                             )
                                         }
 
-                                        is TaskItem -> {
-                                            val isSelected = selectedTaskIds.contains(item.id)
+                                        is NotesItems -> {
+                                            val isSelected = selectedNoteIds.contains(item.id)
                                             TextNoteCell(
                                                 item = item,
                                                 isSelected = isSelected,
                                                 isSelectionModeActive = isSelectionModeActive,
                                                 onSelectItem = {
                                                     if (isSelected) {
-                                                        selectedTaskIds -= item.id
+                                                        selectedNoteIds -= item.id
                                                     } else {
-                                                        selectedTaskIds += item.id
+                                                        selectedNoteIds += item.id
                                                     }
                                                 },
                                                 onEditItem = { itemToEdit ->
-                                                    editingTaskId = itemToEdit.id
+                                                    editingNoteId = itemToEdit.id
                                                     titleState = itemToEdit.title
                                                     descriptionState = itemToEdit.description ?: ""
                                                     showBottomSheet = true
                                                 }
                                             )
                                             val isLastItemInListOrNextIsHeader =
-                                                index == todoItemsWithHeaders.lastIndex || (index + 1 < todoItemsWithHeaders.size && todoItemsWithHeaders[index + 1] is String)
+                                                index == noteItemsWithHeaders.lastIndex || (index + 1 < noteItemsWithHeaders.size && noteItemsWithHeaders[index + 1] is String)
 
                                             if (!isLastItemInListOrNextIsHeader) {
                                                 Spacer(
@@ -390,16 +396,16 @@ fun CompactNotes(
                             onDescriptionChange = { descriptionState = it },
                             onSaveTask = {
                                 if (titleState.isNotBlank()) {
-                                    if (editingTaskId != null) {
-                                        val updatedTask = taskViewModel.taskItems.filterIsInstance<TaskItem>().find { it.id == editingTaskId }?.copy(
+                                    if (editingNoteId != null) {
+                                        val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
                                             title = titleState,
                                             description = descriptionState.takeIf { it.isNotBlank() },
                                         )
-                                        if (updatedTask != null) {
-                                            taskViewModel.updateItem(updatedTask)
+                                        if (updatedNote != null) {
+                                            notesViewModel.updateItem(updatedNote)
                                         }
                                     } else {
-                                        taskViewModel.addItem(
+                                        notesViewModel.addItem(
                                             title = titleState,
                                             description = descriptionState.takeIf { it.isNotBlank() },
                                         )
@@ -424,11 +430,11 @@ fun CompactNotes(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     DialogTaskItemSorting(
-                        currentSortOption = taskViewModel.currentSortOption,
-                        currentSortOrder = taskViewModel.currentSortOrder,
+                        currentSortOption = notesViewModel.currentSortOption,
+                        currentSortOrder = notesViewModel.currentSortOrder,
                         onDismissRequest = { showSortDialog = false },
                         onApplySort = { newOption, newOrder ->
-                            taskViewModel.setSortCriteria(newOption, newOrder)
+                            notesViewModel.setSortCriteria(newOption, newOrder)
                         })
                 }
             }
@@ -438,13 +444,13 @@ fun CompactNotes(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     DialogTaskItemFiltering(
-                        initialFilterStates = taskViewModel.filterStates.toMap(),
+                        initialFilterStates = notesViewModel.filterStates.toMap(),
                         onDismissRequest = { showFilterDialog = false },
                         onApplyFilters = { newStates ->
-                            taskViewModel.updateMultipleFilterStates(newStates)
+                            notesViewModel.updateMultipleFilterStates(newStates)
                         },
                         onResetFilters = {
-                            taskViewModel.resetAllFilters()
+                            notesViewModel.resetAllFilters()
                         })
                 }
             }
