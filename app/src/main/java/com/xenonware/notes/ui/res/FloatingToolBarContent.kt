@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -36,10 +37,14 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SortByAlpha
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
@@ -110,7 +115,6 @@ data class ScrollState(
 @Composable
 fun FloatingToolbarContent(
     hazeState: HazeState,
-    onShowBottomSheet: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenSortDialog: () -> Unit,
     onOpenFilterDialog: () -> Unit,
@@ -121,6 +125,12 @@ fun FloatingToolbarContent(
     selectedNoteIds: List<Int>,
     onClearSelection: () -> Unit,
     onDeleteConfirm: () -> Unit,
+    isAddModeActive: Boolean,
+    onAddModeToggle: () -> Unit,
+    onTextNoteClick: () -> Unit,
+    onPenNoteClick: () -> Unit,
+    onMicNoteClick: () -> Unit,
+    onListNoteClick: () -> Unit
 ) {
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
     val isSelectionActive = selectedNoteIds.isNotEmpty()
@@ -163,8 +173,8 @@ fun FloatingToolbarContent(
         }
     }
 
-    LaunchedEffect(lazyListState, isSearchActive, allowToolbarScrollBehavior, isSelectionActive) {
-        if (isSearchActive || !allowToolbarScrollBehavior || isSelectionActive) {
+    LaunchedEffect(lazyListState, isSearchActive, allowToolbarScrollBehavior, isSelectionActive, isAddModeActive) {
+        if (isSearchActive || !allowToolbarScrollBehavior || isSelectionActive || isAddModeActive) {
             toolbarVisibleState = true
         } else {
             var previousOffset = lazyListState.firstVisibleItemScrollOffset
@@ -275,6 +285,14 @@ fun FloatingToolbarContent(
             .padding(bottom = animatedBottomPadding)
             .offset(y = animatedToolbarOffset), contentAlignment = Alignment.Center
     ) {
+        val animatedToolbarColor by animateColorAsState(
+            targetValue = when {
+                isSelectionActive -> colorScheme.errorContainer
+                isAddModeActive -> colorScheme.secondaryContainer
+                else -> colorScheme.surfaceDim
+            },
+            animationSpec = tween(durationMillis = 500), label = "toolbarColor"
+        )
         HorizontalFloatingToolbar(
             modifier = Modifier.height(toolbarHeight),
             expanded = true,
@@ -328,8 +346,8 @@ fun FloatingToolbarContent(
                     }
 
                     val rotationAngle = remember { Animatable(0f) }
-                    LaunchedEffect(isSearchActive, isSelectionActive) {
-                        val targetAngle = if (isSearchActive || isSelectionActive) 45f else 0f
+                    LaunchedEffect(isSearchActive, isSelectionActive, isAddModeActive) {
+                        val targetAngle = if (isSearchActive || isSelectionActive || isAddModeActive) 45f else 0f
                         rotationAngle.animateTo(
                             targetValue = targetAngle, animationSpec = spring(
                                 dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -348,7 +366,7 @@ fun FloatingToolbarContent(
                                     isSearchActive = false
                                 }
 
-                                else -> onShowBottomSheet()
+                                else -> onAddModeToggle()
                             }
                         },
                         containerColor = Color.Transparent,
@@ -374,10 +392,10 @@ fun FloatingToolbarContent(
                     }
                 }
             },
-            colors = FloatingToolbarDefaults.standardFloatingToolbarColors(if (isSelectionActive) colorScheme.errorContainer else colorScheme.surfaceDim),
+            colors = FloatingToolbarDefaults.standardFloatingToolbarColors(animatedToolbarColor),
             contentPadding = FloatingToolbarDefaults.ContentPadding,
         ) {
-            Crossfade(targetState = isSelectionActive, label = "toolbar-content") { selectionActive ->
+            Crossfade(targetState = isSelectionActive to isAddModeActive, label = "toolbar-content-crossfade") { (selectionActive, addModeActive) ->
                 if (selectionActive) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -386,6 +404,41 @@ fun FloatingToolbarContent(
                     ) {
                         TextButton(onClick = onDeleteConfirm) {
                             Text(stringResource(R.string.delete), color = colorScheme.onErrorContainer)
+                        }
+                    }
+                } else if (addModeActive) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = onTextNoteClick) {
+                            Icon(
+                                Icons.Filled.Notes,
+                                contentDescription = stringResource(R.string.add_text_note),
+                                tint = colorScheme.onSecondaryContainer
+                            )
+                        }
+                        IconButton(onClick = onPenNoteClick) {
+                            Icon(
+                                Icons.Filled.Create,
+                                contentDescription = stringResource(R.string.add_pen_note),
+                                tint = colorScheme.onSecondaryContainer
+                            )
+                        }
+                        IconButton(onClick = onMicNoteClick) {
+                            Icon(
+                                Icons.Filled.Mic,
+                                contentDescription = stringResource(R.string.add_mic_note),
+                                tint = colorScheme.onSecondaryContainer
+                            )
+                        }
+                        IconButton(onClick = onListNoteClick) {
+                            Icon(
+                                Icons.Filled.List,
+                                contentDescription = stringResource(R.string.add_list_note),
+                                tint = colorScheme.onSecondaryContainer
+                            )
                         }
                     }
                 } else {

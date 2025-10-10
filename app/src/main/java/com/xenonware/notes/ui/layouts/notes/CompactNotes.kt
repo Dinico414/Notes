@@ -3,6 +3,8 @@ package com.xenonware.notes.ui.layouts.notes
 import android.annotation.SuppressLint
 import android.app.Application
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -160,6 +162,8 @@ fun CompactNotes(
 
     var selectedNoteIds by remember { mutableStateOf(emptySet<Int>()) }
     val isSelectionModeActive = selectedNoteIds.isNotEmpty()
+    var isAddModeActive by rememberSaveable { mutableStateOf(false) }
+
 
     LaunchedEffect(drawerState.isClosed) {
         if (drawerState.isClosed) {
@@ -208,10 +212,6 @@ fun CompactNotes(
             bottomBar = {
                 FloatingToolbarContent(
                     hazeState = hazeState,
-                    onShowBottomSheet = {
-                        resetBottomSheetState()
-                        showBottomSheet = true
-                    },
                     onOpenSettings = onOpenSettings,
                     onOpenSortDialog = { showSortDialog = true },
                     onOpenFilterDialog = { showFilterDialog = true },
@@ -226,6 +226,24 @@ fun CompactNotes(
                     onDeleteConfirm = {
                         notesViewModel.deleteItems(selectedNoteIds.toList())
                         selectedNoteIds = emptySet()
+                    },
+                    isAddModeActive = isAddModeActive,
+                    onAddModeToggle = { isAddModeActive = !isAddModeActive },
+                    onTextNoteClick = {
+                        showBottomSheet = true
+                        isAddModeActive = false
+                    },
+                    onPenNoteClick = {
+                        isAddModeActive = false
+                        /* TODO: Implement navigation */
+                    },
+                    onMicNoteClick = {
+                        isAddModeActive = false
+                        /* TODO: Implement navigation */
+                    },
+                    onListNoteClick = {
+                        isAddModeActive = false
+                        /* TODO: Implement navigation */
                     }
                 )
             },
@@ -280,102 +298,115 @@ fun CompactNotes(
                 actions = {},
 
                 content = {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = ExtraLargeSpacing)
-                    ) {
-                        if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isBlank()) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.no_tasks_message),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                )
-                            }
-                        } else if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isNotBlank()) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.no_search_results),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                )
-                            }
-                        } else {
-                            LazyColumn(
-                                state = lazyListState,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(
-                                    top = ExtraLargePadding,
-                                    bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding,
-                                )
-                            ) {
-                                itemsIndexed(
-                                    items = noteItemsWithHeaders,
-                                    key = { _, item -> if (item is NotesItems) item.id else item.hashCode() }) { index, item ->
-                                    when (item) {
-                                        is String -> {
-                                            Text(
-                                                text = item,
-                                                style = MaterialTheme.typography.titleMedium.copy(
-                                                    fontStyle = FontStyle.Italic
-                                                ),
-                                                fontWeight = FontWeight.Thin,
-                                                textAlign = TextAlign.Start,
-                                                fontFamily = QuicksandTitleVariable,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(
-                                                        top = if (index == 0) 0.dp else LargestPadding,
-                                                        bottom = SmallPadding,
-                                                        start = SmallPadding,
-                                                        end = LargestPadding
-                                                    )
-                                            )
-                                        }
-
-                                        is NotesItems -> {
-                                            val isSelected = selectedNoteIds.contains(item.id)
-                                            TextNoteCell(
-                                                item = item,
-                                                isSelected = isSelected,
-                                                isSelectionModeActive = isSelectionModeActive,
-                                                onSelectItem = {
-                                                    if (isSelected) {
-                                                        selectedNoteIds -= item.id
-                                                    } else {
-                                                        selectedNoteIds += item.id
-                                                    }
-                                                },
-                                                onEditItem = { itemToEdit ->
-                                                    editingNoteId = itemToEdit.id
-                                                    titleState = itemToEdit.title
-                                                    descriptionState = itemToEdit.description ?: ""
-                                                    showBottomSheet = true
-                                                }
-                                            )
-                                            val isLastItemInListOrNextIsHeader =
-                                                index == noteItemsWithHeaders.lastIndex || (index + 1 < noteItemsWithHeaders.size && noteItemsWithHeaders[index + 1] is String)
-
-                                            if (!isLastItemInListOrNextIsHeader) {
-                                                Spacer(
-                                                    modifier = Modifier.Companion.height(
-                                                        MediumPadding
-                                                    )
+                    Box(Modifier.fillMaxSize()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = ExtraLargeSpacing)
+                        ) {
+                            if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isBlank()) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.no_tasks_message),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                }
+                            } else if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isNotBlank()) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.no_search_results),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                    )
+                                }
+                            } else {
+                                LazyColumn(
+                                    state = lazyListState,
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = PaddingValues(
+                                        top = ExtraLargePadding,
+                                        bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding,
+                                    )
+                                ) {
+                                    itemsIndexed(
+                                        items = noteItemsWithHeaders,
+                                        key = { _, item -> if (item is NotesItems) item.id else item.hashCode() }) { index, item ->
+                                        when (item) {
+                                            is String -> {
+                                                Text(
+                                                    text = item,
+                                                    style = MaterialTheme.typography.titleMedium.copy(
+                                                        fontStyle = FontStyle.Italic
+                                                    ),
+                                                    fontWeight = FontWeight.Thin,
+                                                    textAlign = TextAlign.Start,
+                                                    fontFamily = QuicksandTitleVariable,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(
+                                                            top = if (index == 0) 0.dp else LargestPadding,
+                                                            bottom = SmallPadding,
+                                                            start = SmallPadding,
+                                                            end = LargestPadding
+                                                        )
                                                 )
+                                            }
+
+                                            is NotesItems -> {
+                                                val isSelected = selectedNoteIds.contains(item.id)
+                                                TextNoteCell(
+                                                    item = item,
+                                                    isSelected = isSelected,
+                                                    isSelectionModeActive = isSelectionModeActive,
+                                                    onSelectItem = {
+                                                        if (isSelected) {
+                                                            selectedNoteIds -= item.id
+                                                        } else {
+                                                            selectedNoteIds += item.id
+                                                        }
+                                                    },
+                                                    onEditItem = { itemToEdit ->
+                                                        editingNoteId = itemToEdit.id
+                                                        titleState = itemToEdit.title
+                                                        descriptionState = itemToEdit.description ?: ""
+                                                        showBottomSheet = true
+                                                    }
+                                                )
+                                                val isLastItemInListOrNextIsHeader =
+                                                    index == noteItemsWithHeaders.lastIndex || (index + 1 < noteItemsWithHeaders.size && noteItemsWithHeaders[index + 1] is String)
+
+                                                if (!isLastItemInListOrNextIsHeader) {
+                                                    Spacer(
+                                                        modifier = Modifier.Companion.height(
+                                                            MediumPadding
+                                                        )
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
+                        }
+                        if (isAddModeActive) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = { isAddModeActive = false }
+                                    )
+                            )
                         }
                     }
                 })

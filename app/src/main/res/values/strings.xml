@@ -116,4 +116,8 @@
     <string name="taps_remaining_to_developer">You are now %d steps away from being a developer.</string>
     <string name="show_dummy_profile_title">Enable Fake Google Profile</string>
     <string name="restart_app_description">restart app</string>
+    <string name="add_text_note">Add Text Note</string>
+    <string name="add_pen_note">Add Sketch</string>
+    <string name="add_mic_note">Add Recording</string>
+    <string name="add_list_note">Add List</string>
 </resources>

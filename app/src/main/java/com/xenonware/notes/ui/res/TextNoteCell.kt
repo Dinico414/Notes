@@ -100,16 +100,6 @@ fun TextNoteCell(
             }
         }
 
-        val density = LocalDensity.current
-        val gradientBrush = Brush.radialGradient(
-            colors = listOf(
-                MaterialTheme.colorScheme.surfaceContainerHighest,
-                Color.Transparent
-            ),
-            center = with(density) { Offset(32.dp.toPx(), 32.dp.toPx()) },
-            radius = with(density) { 24.dp.toPx() }
-        )
-
         AnimatedVisibility(
             visible = isSelectionModeActive,
             modifier = Modifier
@@ -119,8 +109,9 @@ fun TextNoteCell(
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .background(gradientBrush, CircleShape),
+                    .padding(4.dp)
+                    .size(28.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
@@ -151,8 +142,7 @@ fun TextNoteCell(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 4.dp, end = 4.dp)
-                .size(48.dp)
-                .background(gradientBrush, CircleShape),
+                .size(48.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
