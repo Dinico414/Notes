@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
                 coverTheme = applyCoverTheme, // Use the dynamically calculated value
                 blackedOutModeEnabled = lastAppliedBlackedOutMode
             ) { layoutType, isLandscape ->
-                TodolistApp(
+                XenonApp(
                     viewModel = notesViewModel,
                     layoutType = layoutType,
                     isLandscape = isLandscape,
@@ -111,7 +111,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun TodolistApp(
+fun XenonApp(
     viewModel: NotesViewModel,
     layoutType: LayoutType,
     isLandscape: Boolean,

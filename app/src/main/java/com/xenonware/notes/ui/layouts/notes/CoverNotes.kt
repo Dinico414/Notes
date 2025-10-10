@@ -2,6 +2,7 @@ package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
 import android.app.Application
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -59,6 +60,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xenonware.notes.R
 import com.xenonware.notes.ui.layouts.ActivityScreen
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
+import com.xenonware.notes.ui.res.AddAudioNoteCard
+import com.xenonware.notes.ui.res.AddListNoteCard
+import com.xenonware.notes.ui.res.AddSketchNoteCard
+import com.xenonware.notes.ui.res.AddTextNoteCard
 import com.xenonware.notes.ui.res.DialogTaskItemFiltering
 import com.xenonware.notes.ui.res.DialogTaskItemSorting
 import com.xenonware.notes.ui.res.FloatingToolbarContent
@@ -111,6 +116,11 @@ fun CoverNotes(
     var descriptionState by rememberSaveable { mutableStateOf("") }
 
     val selectedListId by todoViewModel.selectedDrawerItemId
+
+    var showTextNoteCard by rememberSaveable { mutableStateOf(false) }
+    var showSketchNoteCard by rememberSaveable { mutableStateOf(false) }
+    var showAudioNoteCard by rememberSaveable { mutableStateOf(false) }
+    var showListNoteCard by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(selectedListId) {
         notesViewModel.currentSelectedListId = selectedListId
@@ -223,22 +233,10 @@ fun CoverNotes(
                     onAddModeToggle = {
                         isAddModeActive = !isAddModeActive
                     },
-                    onTextNoteClick = {
-                        showBottomSheet = true
-                        isAddModeActive = false
-                    },
-                    onPenNoteClick = {
-                        isAddModeActive = false
-                        /* TODO: Implement navigation */
-                    },
-                    onMicNoteClick = {
-                        isAddModeActive = false
-                        /* TODO: Implement navigation */
-                    },
-                    onListNoteClick = {
-                        isAddModeActive = false
-                        /* TODO: Implement navigation */
-                    }
+                    onTextNoteClick = { showTextNoteCard = true },
+                    onPenNoteClick = { showSketchNoteCard = true },
+                    onMicNoteClick = { showAudioNoteCard = true },
+                    onListNoteClick = { showListNoteCard = true }
                 )
             },
         ) { scaffoldPadding ->
@@ -413,6 +411,26 @@ fun CoverNotes(
                     }
                 }
             )
+
+            if (showTextNoteCard) {
+                BackHandler { showTextNoteCard = false }
+                AddTextNoteCard(onDismiss = { showTextNoteCard = false })
+            }
+
+            if (showSketchNoteCard) {
+                BackHandler { showSketchNoteCard = false }
+                AddSketchNoteCard(onDismiss = { showSketchNoteCard = false })
+            }
+
+            if (showAudioNoteCard) {
+                BackHandler { showAudioNoteCard = false }
+                AddAudioNoteCard(onDismiss = { showAudioNoteCard = false })
+            }
+
+            if (showListNoteCard) {
+                BackHandler { showListNoteCard = false }
+                AddListNoteCard(onDismiss = { showListNoteCard = false })
+            }
 
             if (showBottomSheet) {
                 Box(

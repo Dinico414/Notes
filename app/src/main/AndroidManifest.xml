@@ -20,7 +20,7 @@
         android:label="@string/app_name"
         android:localeConfig="@xml/locale_config"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
+        android.supportsRtl="true"
         android:theme="@style/Theme.Xenon"
         tools:targetApi="33"
         android:enableOnBackInvokedCallback="true">

@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Abc
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.FilterAlt
@@ -412,28 +413,40 @@ fun FloatingToolbarContent(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = onTextNoteClick) {
+                        IconButton(onClick = {
+                            onTextNoteClick()
+                            onAddModeToggle()
+                        }) {
                             Icon(
-                                Icons.Filled.Notes,
+                                Icons.Default.Abc,
                                 contentDescription = stringResource(R.string.add_text_note),
                                 tint = colorScheme.onSecondaryContainer
                             )
                         }
-                        IconButton(onClick = onPenNoteClick) {
+                        IconButton(onClick = {
+                            onPenNoteClick()
+                            onAddModeToggle()
+                        }) {
                             Icon(
                                 Icons.Filled.Create,
                                 contentDescription = stringResource(R.string.add_pen_note),
                                 tint = colorScheme.onSecondaryContainer
                             )
                         }
-                        IconButton(onClick = onMicNoteClick) {
+                        IconButton(onClick = {
+                            onMicNoteClick()
+                            onAddModeToggle()
+                        }) {
                             Icon(
                                 Icons.Filled.Mic,
                                 contentDescription = stringResource(R.string.add_mic_note),
                                 tint = colorScheme.onSecondaryContainer
                             )
                         }
-                        IconButton(onClick = onListNoteClick) {
+                        IconButton(onClick = {
+                            onListNoteClick()
+                            onAddModeToggle()
+                        }) {
                             Icon(
                                 Icons.Filled.List,
                                 contentDescription = stringResource(R.string.add_list_note),
