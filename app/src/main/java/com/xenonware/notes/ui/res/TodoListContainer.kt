@@ -1,48 +1,42 @@
 package com.xenonware.notes.ui.res
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Abc
+import androidx.compose.material.icons.filled.Audiotrack
+import androidx.compose.material.icons.filled.Draw
+import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -50,29 +44,22 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xenonware.notes.R
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
-import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.ui.values.ExtraLargePadding
 import com.xenonware.notes.ui.values.LargerCornerRadius
-import com.xenonware.notes.ui.values.LargerPadding
 import com.xenonware.notes.ui.values.MediumPadding
 import com.xenonware.notes.ui.values.NoPadding
 import com.xenonware.notes.ui.values.SmallerCornerRadius
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
-import com.xenonware.notes.viewmodel.TodoViewModel
-import kotlinx.coroutines.delay
-import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
+import com.xenonware.notes.viewmodel.NoteFilterType
+import com.xenonware.notes.viewmodel.NotesViewModel
 
 @Composable
 fun TodoListContent(
-    viewModel: TodoViewModel,
+    notesViewModel: NotesViewModel = viewModel(),
     devSettingsViewModel: DevSettingsViewModel = viewModel(),
-    onDrawerItemClicked: (itemId: String) -> Unit,
+    onFilterSelected: (NoteFilterType) -> Unit,
 ) {
-
-    val drawerItems = viewModel.drawerItems
-    val currentSelectedItemIdValue = viewModel.selectedDrawerItemId.value
-    val isSelectionModeActive = viewModel.isDrawerSelectionModeActive
+    val currentFilter by notesViewModel.noteFilterType.collectAsState()
 
     ModalDrawerSheet(
         drawerContainerColor = Color.Transparent,
@@ -116,7 +103,7 @@ fun TodoListContent(
             ) {
                 Row(verticalAlignment = Alignment.Top) {
                     Text(
-                        text = stringResource(id = R.string.todo_sheet_title),
+                        text = stringResource(id = R.string.filter_tasks_description),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontFamily = QuicksandTitleVariable, color = colorScheme.onSurface
                         ),
@@ -140,163 +127,83 @@ fun TodoListContent(
                             )
                         }
                     }
-
-
                 }
                 HorizontalDivider(
                     thickness = 1.dp, color = colorScheme.outlineVariant
                 )
 
-                val lazyListState = rememberLazyListState()
-                val reorderableLazyListState = rememberReorderableLazyListState(lazyListState) { from, to ->
-                    // Update the list
-                    drawerItems.add(to.index, drawerItems.removeAt(from.index))
-                }
-
-                LazyColumn(
-                    state = lazyListState,
-                    contentPadding = PaddingValues(
-                        top = MediumPadding, bottom = MediumPadding
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
+                Column(
+                    modifier = Modifier.padding(vertical = MediumPadding)
                 ) {
-                    itemsIndexed(drawerItems, key = { _, item -> item.id }) { index, item ->
-                        ReorderableItem(
-                            reorderableLazyListState,
-                            item.id,
-                            enabled = index != 0
-                        ) { isDragging ->
-//                            val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
-                            TodoListCell(
-                                item = item,
-                                viewModel = viewModel,
-                                isSelectedForNavigation = currentSelectedItemIdValue == item.id,
-                                isSelectionModeActive = isSelectionModeActive,
-                                isFirstItem = index == 0,
-                                onClick = {
-                                    if (isSelectionModeActive) {
-                                        viewModel.onItemCheckedChanged(
-                                            item.id, !item.isSelectedForAction
-                                        )
-                                    } else {
-                                        viewModel.onDrawerItemClick(item.id)
-                                        onDrawerItemClicked(item.id)
-                                    }
-                                },
-                                onLongClick = {
-                                    viewModel.onItemLongClick(item.id)
-                                },
-                                onCheckedChanged = { isChecked ->
-                                    viewModel.onItemCheckedChanged(item.id, isChecked)
-                                },
-                                onRenameClick = {
-                                    viewModel.openRenameListDialog(item.id, item.title)
-                                },
-                                draggableModifier = Modifier.draggableHandle(
-                                    enabled = index != 0,
-                                    onDragStopped = { viewModel.saveDrawerItems() }
-                                )
-                            )
-                        }
-                    }
-                }
-
-                HorizontalDivider(
-                    thickness = 1.dp, color = colorScheme.outlineVariant
-                )
-
-                Spacer(Modifier.Companion.height(ExtraLargePadding))
-
-                val buttonText = if (isSelectionModeActive) {
-                    stringResource(R.string.delete_lists)
-                } else {
-                    stringResource(R.string.add_new_list)
-                }
-
-                val buttonContainerColor by animateColorAsState(
-                    targetValue = if (isSelectionModeActive) {
-                        extendedMaterialColorScheme.inverseErrorContainer
-                    } else {
-                        colorScheme.primary
-                    }, label = "Button Container Color Animation"
-                )
-
-                val buttonContentColor by animateColorAsState(
-                    targetValue = if (isSelectionModeActive) {
-                        extendedMaterialColorScheme.inverseOnErrorContainer
-                    } else {
-                        colorScheme.onPrimary
-                    }, label = "Button Content Color Animation"
-                )
-
-                var currentButtonPadding by remember { mutableStateOf(NoPadding) }
-                val pulsePadding = NoPadding + LargerPadding
-                val defaultPadding = NoPadding
-
-                val previousAnyItemSelectedForAction =
-                    remember { mutableStateOf(isSelectionModeActive) }
-
-
-                LaunchedEffect(isSelectionModeActive) {
-                    if (previousAnyItemSelectedForAction.value != isSelectionModeActive) {
-                        currentButtonPadding = pulsePadding
-                        delay(150)
-                        currentButtonPadding = defaultPadding
-                        previousAnyItemSelectedForAction.value = isSelectionModeActive
-                    } else {
-                        currentButtonPadding = defaultPadding
-                    }
-                }
-
-                val animatedButtonPadding by animateDpAsState(
-                    targetValue = currentButtonPadding,
-                    animationSpec = tween(durationMillis = 150),
-                    label = "Button Padding Pulse Animation"
-                )
-
-                FilledTonalButton(
-                    onClick = {
-                        if (isSelectionModeActive) {
-                            viewModel.openConfirmDeleteDialog()
-                        } else {
-                            viewModel.openAddListDialog()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = buttonContainerColor, contentColor = buttonContentColor
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(horizontal = animatedButtonPadding)
-                ) {
-                    Text(text = buttonText)
+                    FilterItem(
+                        icon = Icons.Default.Notes,
+                        label = "All Notes",
+                        isSelected = currentFilter == NoteFilterType.ALL,
+                        onClick = { onFilterSelected(NoteFilterType.ALL) }
+                    )
+                    FilterItem(
+                        icon = Icons.Default.Abc,
+                        label = "Text Notes",
+                        isSelected = currentFilter == NoteFilterType.TEXT,
+                        onClick = { onFilterSelected(NoteFilterType.TEXT) }
+                    )
+                    FilterItem(
+                        icon = Icons.Default.Audiotrack,
+                        label = "Audio Notes",
+                        isSelected = currentFilter == NoteFilterType.AUDIO,
+                        onClick = { onFilterSelected(NoteFilterType.AUDIO) }
+                    )
+                    FilterItem(
+                        icon = Icons.Default.FormatListBulleted,
+                        label = "List Notes",
+                        isSelected = currentFilter == NoteFilterType.LIST,
+                        onClick = { onFilterSelected(NoteFilterType.LIST) }
+                    )
+                    FilterItem(
+                        icon = Icons.Default.Draw,
+                        label = "Sketch Notes",
+                        isSelected = currentFilter == NoteFilterType.SKETCH,
+                        onClick = { onFilterSelected(NoteFilterType.SKETCH) }
+                    )
                 }
             }
         }
     }
+}
 
-    DialogCreateRenameList(
-        showDialog = viewModel.showAddListDialog,
-        onDismiss = { viewModel.closeAddListDialog() },
-        onSave = { listName -> viewModel.onConfirmAddNewList(listName) },
-        title = stringResource(R.string.add_new_list_dialog_title),
-        confirmButtonText = stringResource(R.string.save)
-    )
+@Composable
+private fun FilterItem(
+    icon: ImageVector,
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (isSelected) {
+        colorScheme.primaryContainer
+    } else {
+        Color.Transparent
+    }
 
-    DialogCreateRenameList(
-        showDialog = viewModel.showRenameListDialog,
-        onDismiss = { viewModel.closeRenameListDialog() },
-        onSave = { newName -> viewModel.onConfirmRenameList(newName) },
-        initialName = viewModel.itemToRenameCurrentName,
-        title = stringResource(R.string.rename_list_dialog_title),
-        confirmButtonText = stringResource(R.string.save)
-    )
-
-    DialogDeleteListConfirm(
-        showDialog = viewModel.showConfirmDeleteDialog,
-        onDismiss = { viewModel.closeConfirmDeleteDialog() },
-        onConfirm = { viewModel.onConfirmDeleteSelected() })
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(100f))
+            .background(backgroundColor)
+            .clickable { onClick() }
+            .padding(MediumPadding),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.size(24.dp),
+            tint = colorScheme.onSurface
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(start = MediumPadding),
+            color = colorScheme.onSurface
+        )
+    }
 }

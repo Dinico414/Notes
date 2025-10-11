@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
@@ -43,19 +44,22 @@ import dev.chrisbanes.haze.hazeChild
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddTextNoteCard(
+fun NoteTextCard(
+    initialTitle: String = "",
+    initialContent: String = "",
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit
+    onSave: (String, String) -> Unit,
 ) {
     val hazeState = remember { HazeState() }
-    var title by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf(initialTitle) }
+    var content by remember { mutableStateOf(initialContent) }
 
     Scaffold(
         topBar = {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -67,6 +71,7 @@ fun AddTextNoteCard(
                         .clip(RoundedCornerShape(100f))
                         .hazeChild(state = hazeState)
                         .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextField(
                         value = title,
@@ -82,7 +87,9 @@ fun AddTextNoteCard(
                         ),
                         modifier = Modifier.weight(1f),
                         singleLine = true,
-                        textStyle = TextStyle(fontFamily = QuicksandTitleVariable)
+                        textStyle = MaterialTheme.typography.titleLarge.merge(
+                            TextStyle(fontFamily = QuicksandTitleVariable)
+                        )
                     )
                     IconButton(onClick = { /*TODO*/ }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "More options")
@@ -101,11 +108,14 @@ fun AddTextNoteCard(
             onValueChange = { content = it },
             modifier = Modifier
                 .fillMaxSize()
+                .padding(horizontal = 16.dp)
                 .haze(state = hazeState)
                 // Apply the padding provided by Scaffold to the content
                 .padding(paddingValues),
-            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                color = MaterialTheme.colorScheme.onSurface
+            textStyle = MaterialTheme.typography.bodyLarge.merge(
+                TextStyle(
+                    color = MaterialTheme.colorScheme.onSurface, fontSize = 20.sp
+                )
             ),
             decorationBox = { innerTextField ->
                 // The decorationBox should not have its own padding
@@ -119,7 +129,6 @@ fun AddTextNoteCard(
                     }
                     innerTextField()
                 }
-            }
-        )
+            })
     }
 }

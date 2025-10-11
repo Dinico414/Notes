@@ -19,13 +19,13 @@ import androidx.compose.ui.text.style.TextAlign
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddAudioNoteCard(
+fun NoteListCard(
     onDismiss: () -> Unit
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Audio Note") },
+                title = { Text("New List Note") },
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -41,7 +41,7 @@ fun AddAudioNoteCard(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Audio Notes\n\ncoming soon...",
+                text = "List Notes\n\ncoming soon...",
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center
             )

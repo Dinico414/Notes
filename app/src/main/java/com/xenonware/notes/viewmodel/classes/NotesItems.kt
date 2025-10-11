@@ -2,6 +2,10 @@ package com.xenonware.notes.viewmodel.classes
 
 import kotlinx.serialization.Serializable
 
+enum class NoteType {
+    TEXT, AUDIO, LIST, SKETCH
+}
+
 @Serializable
 data class NotesItems(
     val id: Int,
@@ -11,7 +15,8 @@ data class NotesItems(
     val attachmentCount: Int = 0,
     var listId: String,
     val creationTimestamp: Long = System.currentTimeMillis(),
-    var displayOrder: Int = 0
+    var displayOrder: Int = 0,
+    val noteType: NoteType = NoteType.TEXT
 ) {
     var currentHeader = ""
 }

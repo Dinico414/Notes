@@ -2,6 +2,7 @@ package com.xenonware.notes.ui.res
 
 import android.annotation.SuppressLint
 import android.os.Build
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
@@ -39,12 +40,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Abc
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SortByAlpha
+import androidx.compose.material.icons.filled.ViewQuilt
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -81,6 +82,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -117,8 +119,6 @@ data class ScrollState(
 fun FloatingToolbarContent(
     hazeState: HazeState,
     onOpenSettings: () -> Unit,
-    onOpenSortDialog: () -> Unit,
-    onOpenFilterDialog: () -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     currentSearchQuery: String,
     lazyListState: LazyListState,
@@ -165,6 +165,8 @@ fun FloatingToolbarContent(
     val maxTextFieldWidth = (screenWidthDp - totalSubtractionInDp).coerceIn(0.dp, 280.dp)
 
     var toolbarVisibleState by rememberSaveable { mutableStateOf(true) }
+
+    val mContext = LocalContext.current
 
     LaunchedEffect(isSelectionActive) {
         if (isSelectionActive && isSearchActive) {
@@ -496,13 +498,13 @@ fun FloatingToolbarContent(
                                             label = "SortIconAlpha"
                                         )
                                         IconButton(
-                                            onClick = onOpenSortDialog,
+                                            onClick = { Toast.makeText(mContext, "Coming soon!", Toast.LENGTH_SHORT).show() },
                                             modifier = Modifier.alpha(sortIconAlpha),
                                             enabled = !isSearchActive && showActionIconsExceptSearch
                                         ) {
                                             Icon(
-                                                Icons.Filled.SortByAlpha,
-                                                contentDescription = stringResource(R.string.sort_tasks_description),
+                                                Icons.Filled.Dashboard,
+                                                contentDescription = "Change Layout",
                                                 tint = colorScheme.onSurface
                                             )
                                         }
@@ -516,12 +518,12 @@ fun FloatingToolbarContent(
                                             label = "FilterIconAlpha"
                                         )
                                         IconButton(
-                                            onClick = onOpenFilterDialog,
+                                            onClick = { Toast.makeText(mContext, "Coming soon!", Toast.LENGTH_SHORT).show() },
                                             modifier = Modifier.alpha(filterIconAlpha),
                                             enabled = !isSearchActive && showActionIconsExceptSearch
                                         ) {
                                             Icon(
-                                                Icons.Filled.FilterAlt,
+                                                Icons.Filled.Fullscreen,
                                                 contentDescription = stringResource(R.string.filter_tasks_description),
                                                 tint = colorScheme.onSurface
                                             )

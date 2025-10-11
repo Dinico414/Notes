@@ -3,12 +3,12 @@ package com.xenonware.notes.viewmodel
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xenonware.notes.SharedPreferenceManager
+import com.xenonware.notes.viewmodel.classes.NoteType
 import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,19 +33,12 @@ enum class SortOrder {
     DESCENDING
 }
 
-enum class FilterState {
-    INCLUDED,
-    EXCLUDED
-}
-
-enum class FilterableAttribute {
-    HAS_DESCRIPTION;
-
-    fun toDisplayString(): String {
-        return when (this) {
-            HAS_DESCRIPTION -> "Has Description"
-        }
-    }
+enum class NoteFilterType {
+    ALL,
+    TEXT,
+    AUDIO,
+    LIST,
+    SKETCH
 }
 
 sealed class SnackbarEvent {
@@ -69,20 +62,12 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     val snackbarEvent: SharedFlow<SnackbarEvent> = _snackbarEvent.asSharedFlow()
 
 
-    var currentSelectedListId: String? = DEFAULT_LIST_ID
-        set(value) {
-            if (field != value) {
-                field = value
-                applySortingAndFiltering()
-            }
-        }
+    private val _noteFilterType = MutableStateFlow(NoteFilterType.ALL)
+    val noteFilterType: StateFlow<NoteFilterType> = _noteFilterType.asStateFlow()
 
     var currentSortOption: SortOption by mutableStateOf(SortOption.FREE_SORTING)
         private set
     var currentSortOrder: SortOrder by mutableStateOf(SortOrder.ASCENDING)
-        private set
-
-    var filterStates = mutableStateMapOf<FilterableAttribute, FilterState>()
         private set
 
     private val _searchQuery = MutableStateFlow("")
@@ -92,6 +77,13 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     init {
         loadAllNotes()
         applySortingAndFiltering()
+    }
+
+    fun setNoteFilterType(filterType: NoteFilterType) {
+        if (_noteFilterType.value != filterType) {
+            _noteFilterType.value = filterType
+            applySortingAndFiltering()
+        }
     }
 
     fun setSearchQuery(query: String) {
@@ -126,11 +118,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
 
         _displayedNotesItems.clear()
-        var notesToDisplay = if (currentSelectedListId != null) {
-            _allNotesItems.filter { it.listId == currentSelectedListId }
-        } else {
-            emptyList()
-        }
+        var notesToDisplay = _allNotesItems.toList()
 
         val currentQuery = searchQuery.value
         if (currentQuery.isNotBlank()) {
@@ -140,23 +128,15 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        if (filterStates.isNotEmpty()) {
-            notesToDisplay = notesToDisplay.filter { note ->
-                val includedFilters = filterStates.filterValues { it == FilterState.INCLUDED }.keys
-                val matchesIncluded = if (includedFilters.isNotEmpty()) {
-                    includedFilters.any { attribute -> note.matchesAttribute(attribute) }
-                } else {
-                    true
-                }
-
-                val excludedFilters = filterStates.filterValues { it == FilterState.EXCLUDED }.keys
-                val matchesExcluded = excludedFilters.none { attribute -> note.matchesAttribute(attribute) }
-
-                matchesIncluded && matchesExcluded
-            }
+        notesToDisplay = when (noteFilterType.value) {
+            NoteFilterType.ALL -> notesToDisplay
+            NoteFilterType.TEXT -> notesToDisplay.filter { it.noteType == NoteType.TEXT }
+            NoteFilterType.AUDIO -> notesToDisplay.filter { it.noteType == NoteType.AUDIO }
+            NoteFilterType.LIST -> notesToDisplay.filter { it.noteType == NoteType.LIST }
+            NoteFilterType.SKETCH -> notesToDisplay.filter { it.noteType == NoteType.SKETCH }
         }
 
-        val sortedNotes = sortNotes (notesToDisplay, currentSortOption, currentSortOrder)
+        val sortedNotes = sortNotes(notesToDisplay, currentSortOption, currentSortOrder)
 
         if (currentSortOption != SortOption.FREE_SORTING && sortedNotes.isNotEmpty()) {
             val groupedItems = mutableListOf<Any>()
@@ -185,17 +165,12 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
                 sdf.format(Date(note.creationTimestamp))
             }
+
             SortOption.NAME -> {
                 note.title.firstOrNull()?.uppercaseChar()?.toString() ?: "Unknown"
             }
+
             SortOption.FREE_SORTING -> ""
-        }
-    }
-
-
-    private fun NotesItems.matchesAttribute(attribute: FilterableAttribute): Boolean {
-        return when (attribute) {
-            FilterableAttribute.HAS_DESCRIPTION -> this.description?.isNotBlank() == true
         }
     }
 
@@ -239,59 +214,28 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         _displayedNotesItems.add(to, _displayedNotesItems.removeAt(from))
     }
 
-    fun updateMultipleFilterStates(newStates: Map<FilterableAttribute, FilterState>) {
-        var changed = false
-
-        val attributesToRemove = filterStates.keys.filterNot { it in newStates.keys }
-        attributesToRemove.forEach { attribute ->
-            if (filterStates.remove(attribute) != null) {
-                changed = true
-            }
-        }
-
-        newStates.forEach { (attribute, newState) ->
-            if (filterStates[attribute] != newState) {
-                filterStates[attribute] = newState
-                changed = true
-            }
-        }
-
-        if (changed) {
-            applySortingAndFiltering()
-        }
-    }
-
-    fun resetAllFilters() {
-        if (filterStates.isNotEmpty()) {
-            filterStates.clear()
-            applySortingAndFiltering()
-        }
-    }
-    private fun determineNextDisplayOrder(forListId: String): Int {
-        return _allNotesItems
-            .filter { it.listId == forListId }
-            .maxOfOrNull { it.displayOrder }?.plus(1) ?: 0
+    private fun determineNextDisplayOrder(): Int {
+        return _allNotesItems.maxOfOrNull { it.displayOrder }?.plus(1) ?: 0
     }
 
     fun addItem(
         title: String,
-        description: String? = null
+        description: String? = null,
+        noteType: NoteType = NoteType.TEXT
     ) {
-        val listIdForNewNote = currentSelectedListId
-        if (title.isNotBlank() && listIdForNewNote != null) {
+        if (title.isNotBlank()) {
             val newItem = NotesItems(
                 id = currentNoteId++,
                 title = title.trim(),
                 description = description?.trim()?.takeIf { it.isNotBlank() },
-                listId = listIdForNewNote,
+                listId = "", // Not used anymore
                 creationTimestamp = System.currentTimeMillis(),
-                displayOrder = determineNextDisplayOrder(listIdForNewNote)
+                displayOrder = determineNextDisplayOrder(),
+                noteType = noteType
             )
             _allNotesItems.add(newItem)
             saveAllNotes()
             applySortingAndFiltering()
-        } else if (listIdForNewNote == null) {
-            System.err.println("Cannot add note: No list selected.")
         }
     }
 
@@ -375,13 +319,12 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
 
     fun moveItemInFreeSort(itemIdToMove: Int, newDisplayOrderCandidate: Int) {
-        if (currentSortOption != SortOption.FREE_SORTING || currentSelectedListId == null) {
-            System.err.println("Manual reordering only available in FREE_SORTING mode for a selected list.")
+        if (currentSortOption != SortOption.FREE_SORTING) {
+            System.err.println("Manual reordering only available in FREE_SORTING mode.")
             return
         }
 
-        val listId = currentSelectedListId ?: return
-        val itemsInList = _allNotesItems.filter { it.listId == listId }.sortedBy { it.displayOrder }.toMutableList()
+        val itemsInList = _allNotesItems.sortedBy { it.displayOrder }.toMutableList()
 
         val itemToMoveIndex = itemsInList.indexOfFirst { it.id == itemIdToMove }
         if (itemToMoveIndex == -1) {

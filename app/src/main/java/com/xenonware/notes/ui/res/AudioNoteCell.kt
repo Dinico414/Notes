@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Abc
+import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,7 +40,7 @@ import com.xenonware.notes.viewmodel.classes.NotesItems
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TextNoteCell(
+fun AudioNoteCell(
     item: NotesItems,
     isSelected: Boolean,
     isSelectionModeActive: Boolean,
@@ -143,8 +143,8 @@ fun TextNoteCell(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Abc,
-                contentDescription = "Text",
+                imageVector = Icons.Default.Audiotrack,
+                contentDescription = "Audio",
                 tint = MaterialTheme.colorScheme.surfaceContainerHighest,
                 modifier = Modifier
                     .size(28.dp)

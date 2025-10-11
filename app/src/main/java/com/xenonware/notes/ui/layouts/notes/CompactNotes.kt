@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,14 +25,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,19 +57,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xenonware.notes.R
 import com.xenonware.notes.ui.layouts.ActivityScreen
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
-import com.xenonware.notes.ui.res.AddAudioNoteCard
-import com.xenonware.notes.ui.res.AddListNoteCard
-import com.xenonware.notes.ui.res.AddSketchNoteCard
-import com.xenonware.notes.ui.res.AddTextNoteCard
-import com.xenonware.notes.ui.res.DialogTaskItemFiltering
-import com.xenonware.notes.ui.res.DialogTaskItemSorting
+import com.xenonware.notes.ui.res.AudioNoteCell
 import com.xenonware.notes.ui.res.FloatingToolbarContent
 import com.xenonware.notes.ui.res.GoogleProfilBorder
+import com.xenonware.notes.ui.res.ListNoteCell
+import com.xenonware.notes.ui.res.NoteAudioCard
+import com.xenonware.notes.ui.res.NoteListCard
+import com.xenonware.notes.ui.res.NoteSketchCard
+import com.xenonware.notes.ui.res.NoteTextCard
+import com.xenonware.notes.ui.res.SketchNoteCell
 import com.xenonware.notes.ui.res.TextNoteCell
-import com.xenonware.notes.ui.res.TextNoteEditor
 import com.xenonware.notes.ui.res.TodoListContent
 import com.xenonware.notes.ui.res.XenonSnackbar
-import com.xenonware.notes.ui.values.DialogPadding
 import com.xenonware.notes.ui.values.ExtraLargePadding
 import com.xenonware.notes.ui.values.ExtraLargeSpacing
 import com.xenonware.notes.ui.values.LargestPadding
@@ -81,9 +77,9 @@ import com.xenonware.notes.ui.values.MediumSpacing
 import com.xenonware.notes.ui.values.SmallPadding
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.LayoutType
+import com.xenonware.notes.viewmodel.NoteFilterType
 import com.xenonware.notes.viewmodel.NotesViewModel
-import com.xenonware.notes.viewmodel.TodoViewModel
-import com.xenonware.notes.viewmodel.TodoViewModelFactory
+import com.xenonware.notes.viewmodel.classes.NoteType
 import com.xenonware.notes.viewmodel.classes.NotesItems
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
@@ -107,24 +103,15 @@ fun CompactNotes(
 
     ) {
     val application = LocalContext.current.applicationContext as Application
-    val todoViewModel: TodoViewModel = viewModel(
-        factory = TodoViewModelFactory(application, notesViewModel)
-    )
 
     var editingNoteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var titleState by rememberSaveable { mutableStateOf("") }
     var descriptionState by rememberSaveable { mutableStateOf("") }
 
-    val selectedListId by todoViewModel.selectedDrawerItemId
-
     var showTextNoteCard by rememberSaveable { mutableStateOf(false) }
     var showSketchNoteCard by rememberSaveable { mutableStateOf(false) }
     var showAudioNoteCard by rememberSaveable { mutableStateOf(false) }
     var showListNoteCard by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(selectedListId) {
-        notesViewModel.currentSelectedListId = selectedListId
-    }
 
     val noteItemsWithHeaders = notesViewModel.noteItems
 
@@ -155,11 +142,8 @@ fun CompactNotes(
     }
 
     val hazeState = rememberHazeState()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var showBottomSheet by remember { mutableStateOf(false) }
 
     var showSortDialog by remember { mutableStateOf(false) }
-    var showFilterDialog by remember { mutableStateOf(false) }
 
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -175,18 +159,12 @@ fun CompactNotes(
     var isAddModeActive by rememberSaveable { mutableStateOf(false) }
 
 
-    LaunchedEffect(drawerState.isClosed) {
-        if (drawerState.isClosed) {
-            todoViewModel.clearAllSelections()
-        }
-    }
-
     val undoActionLabel = stringResource(R.string.undo)
     val noteTextSnackbar = stringResource(R.string.task_text)
     val deletedTextSnackbar = stringResource(R.string.deleted_text)
 
 
-    fun resetBottomSheetState() {
+    fun resetNoteState() {
         editingNoteId = null
         titleState = ""
         descriptionState = ""
@@ -195,15 +173,12 @@ fun CompactNotes(
     val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
     val isDeveloperModeEnabled by devSettingsViewModel.devModeToggleState.collectAsState()
 
-    LaunchedEffect(drawerState.isOpen) {
-        todoViewModel.drawerOpenFlow.emit(drawerState.isOpen)
-    }
-
     ModalNavigationDrawer(
         drawerContent = {
             TodoListContent(
-                viewModel = todoViewModel,
-                onDrawerItemClicked = { _ ->
+                notesViewModel = notesViewModel,
+                onFilterSelected = { filterType ->
+                    notesViewModel.setNoteFilterType(filterType)
                     scope.launch { drawerState.close() }
                 },
             )
@@ -223,8 +198,6 @@ fun CompactNotes(
                 FloatingToolbarContent(
                     hazeState = hazeState,
                     onOpenSettings = onOpenSettings,
-                    onOpenSortDialog = { showSortDialog = true },
-                    onOpenFilterDialog = { showFilterDialog = true },
                     currentSearchQuery = currentSearchQuery,
                     onSearchQueryChanged = { newQuery ->
                         notesViewModel.setSearchQuery(newQuery)
@@ -239,7 +212,10 @@ fun CompactNotes(
                     },
                     isAddModeActive = isAddModeActive,
                     onAddModeToggle = { isAddModeActive = !isAddModeActive },
-                    onTextNoteClick = { showTextNoteCard = true },
+                    onTextNoteClick = { 
+                        resetNoteState()
+                        showTextNoteCard = true 
+                    },
                     onPenNoteClick = { showSketchNoteCard = true },
                     onMicNoteClick = { showAudioNoteCard = true },
                     onListNoteClick = { showListNoteCard = true }
@@ -361,24 +337,80 @@ fun CompactNotes(
 
                                             is NotesItems -> {
                                                 val isSelected = selectedNoteIds.contains(item.id)
-                                                TextNoteCell(
-                                                    item = item,
-                                                    isSelected = isSelected,
-                                                    isSelectionModeActive = isSelectionModeActive,
-                                                    onSelectItem = {
-                                                        if (isSelected) {
-                                                            selectedNoteIds -= item.id
-                                                        } else {
-                                                            selectedNoteIds += item.id
+                                                when (item.noteType) {
+                                                    NoteType.TEXT -> TextNoteCell(
+                                                        item = item,
+                                                        isSelected = isSelected,
+                                                        isSelectionModeActive = isSelectionModeActive,
+                                                        onSelectItem = {
+                                                            if (isSelected) {
+                                                                selectedNoteIds -= item.id
+                                                            } else {
+                                                                selectedNoteIds += item.id
+                                                            }
+                                                        },
+                                                        onEditItem = { itemToEdit ->
+                                                            editingNoteId = itemToEdit.id
+                                                            titleState = itemToEdit.title
+                                                            descriptionState = itemToEdit.description ?: ""
+                                                            showTextNoteCard = true
                                                         }
-                                                    },
-                                                    onEditItem = { itemToEdit ->
-                                                        editingNoteId = itemToEdit.id
-                                                        titleState = itemToEdit.title
-                                                        descriptionState = itemToEdit.description ?: ""
-                                                        showBottomSheet = true
-                                                    }
-                                                )
+                                                    )
+                                                    NoteType.AUDIO -> AudioNoteCell(
+                                                        item = item,
+                                                        isSelected = isSelected,
+                                                        isSelectionModeActive = isSelectionModeActive,
+                                                        onSelectItem = {
+                                                            if (isSelected) {
+                                                                selectedNoteIds -= item.id
+                                                            } else {
+                                                                selectedNoteIds += item.id
+                                                            }
+                                                        },
+                                                        onEditItem = { itemToEdit ->
+                                                            editingNoteId = itemToEdit.id
+                                                            titleState = itemToEdit.title
+                                                            descriptionState = itemToEdit.description ?: ""
+                                                            showAudioNoteCard = true
+                                                        }
+                                                    )
+                                                    NoteType.LIST -> ListNoteCell(
+                                                        item = item,
+                                                        isSelected = isSelected,
+                                                        isSelectionModeActive = isSelectionModeActive,
+                                                        onSelectItem = {
+                                                            if (isSelected) {
+                                                                selectedNoteIds -= item.id
+                                                            } else {
+                                                                selectedNoteIds += item.id
+                                                            }
+                                                        },
+                                                        onEditItem = { itemToEdit ->
+                                                            editingNoteId = itemToEdit.id
+                                                            titleState = itemToEdit.title
+                                                            descriptionState = itemToEdit.description ?: ""
+                                                            showListNoteCard = true
+                                                        }
+                                                    )
+                                                    NoteType.SKETCH -> SketchNoteCell(
+                                                        item = item,
+                                                        isSelected = isSelected,
+                                                        isSelectionModeActive = isSelectionModeActive,
+                                                        onSelectItem = {
+                                                            if (isSelected) {
+                                                                selectedNoteIds -= item.id
+                                                            } else {
+                                                                selectedNoteIds += item.id
+                                                            }
+                                                        },
+                                                        onEditItem = { itemToEdit ->
+                                                            editingNoteId = itemToEdit.id
+                                                            titleState = itemToEdit.title
+                                                            descriptionState = itemToEdit.description ?: ""
+                                                            showSketchNoteCard = true
+                                                        }
+                                                    )
+                                                }
                                                 val isLastItemInListOrNextIsHeader =
                                                     index == noteItemsWithHeaders.lastIndex || (index + 1 < noteItemsWithHeaders.size && noteItemsWithHeaders[index + 1] is String)
 
@@ -411,108 +443,47 @@ fun CompactNotes(
 
             if (showTextNoteCard) {
                 BackHandler { showTextNoteCard = false }
-                AddTextNoteCard(
+                NoteTextCard(
+                    initialTitle = titleState,
+                    initialContent = descriptionState,
                     onDismiss = { showTextNoteCard = false },
                     onSave = { title, description ->
                         if (title.isNotBlank() || description.isNotBlank()) {
-                            notesViewModel.addItem(
-                                title = title,
-                                description = description.takeIf { it.isNotBlank() }
-                            )
+                            if (editingNoteId != null) {
+                                val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
+                                    title = title,
+                                    description = description.takeIf { it.isNotBlank() },
+                                )
+                                if (updatedNote != null) {
+                                    notesViewModel.updateItem(updatedNote)
+                                }
+                            } else {
+                                notesViewModel.addItem(
+                                    title = title,
+                                    description = description.takeIf { it.isNotBlank() },
+                                    noteType = NoteType.TEXT
+                                )
+                            }
                         }
                         showTextNoteCard = false
+                        resetNoteState()
                     }
                 )
             }
 
             if (showSketchNoteCard) {
                 BackHandler { showSketchNoteCard = false }
-                AddSketchNoteCard(onDismiss = { showSketchNoteCard = false })
+                NoteSketchCard(onDismiss = { showSketchNoteCard = false })
             }
 
             if (showAudioNoteCard) {
                 BackHandler { showAudioNoteCard = false }
-                AddAudioNoteCard(onDismiss = { showAudioNoteCard = false })
+                NoteAudioCard(onDismiss = { showAudioNoteCard = false })
             }
 
             if (showListNoteCard) {
                 BackHandler { showListNoteCard = false }
-                AddListNoteCard(onDismiss = { showListNoteCard = false })
-            }
-
-            if (showBottomSheet) {
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    ModalBottomSheet(
-                        onDismissRequest = {
-                            showBottomSheet = false
-                        }, sheetState = sheetState, modifier = Modifier.imePadding()
-                    ) {
-                        TextNoteEditor(
-                            textState = titleState,
-                            onTextChange = { titleState = it },
-                            descriptionState = descriptionState,
-                            onDescriptionChange = { descriptionState = it },
-                            onSaveTask = {
-                                if (titleState.isNotBlank()) {
-                                    if (editingNoteId != null) {
-                                        val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
-                                            title = titleState,
-                                            description = descriptionState.takeIf { it.isNotBlank() },
-                                        )
-                                        if (updatedNote != null) {
-                                            notesViewModel.updateItem(updatedNote)
-                                        }
-                                    } else {
-                                        notesViewModel.addItem(
-                                            title = titleState,
-                                            description = descriptionState.takeIf { it.isNotBlank() },
-                                        )
-                                    }
-                                    resetBottomSheetState()
-                                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                                        if (!sheetState.isVisible) {
-                                            showBottomSheet = false
-                                        }
-                                    }
-                                }
-                            },
-                            isSaveEnabled = titleState.isNotBlank(),
-                            horizontalContentPadding = DialogPadding,
-                            bottomContentPadding = DialogPadding
-                        )
-                    }
-                }
-            }
-            if (showSortDialog) {
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    DialogTaskItemSorting(
-                        currentSortOption = notesViewModel.currentSortOption,
-                        currentSortOrder = notesViewModel.currentSortOrder,
-                        onDismissRequest = { showSortDialog = false },
-                        onApplySort = { newOption, newOrder ->
-                            notesViewModel.setSortCriteria(newOption, newOrder)
-                        })
-                }
-            }
-
-            if (showFilterDialog) {
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    DialogTaskItemFiltering(
-                        initialFilterStates = notesViewModel.filterStates.toMap(),
-                        onDismissRequest = { showFilterDialog = false },
-                        onApplyFilters = { newStates ->
-                            notesViewModel.updateMultipleFilterStates(newStates)
-                        },
-                        onResetFilters = {
-                            notesViewModel.resetAllFilters()
-                        })
-                }
+                NoteListCard(onDismiss = { showListNoteCard = false })
             }
         }
     }
