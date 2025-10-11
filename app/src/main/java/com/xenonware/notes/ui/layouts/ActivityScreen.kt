@@ -12,12 +12,13 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-// import androidx.compose.material.ripple.rememberRipple // Deprecated
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -34,10 +35,10 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import com.xenonware.notes.ui.values.LargerCornerRadius
-import com.xenonware.notes.ui.values.LargestPadding
 import com.xenonware.notes.ui.values.SmallPadding
 import kotlin.math.roundToInt
 
@@ -57,7 +58,6 @@ fun ActivityScreen(
     screenBackgroundColor: Color = MaterialTheme.colorScheme.surfaceDim,
     contentBackgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     contentCornerRadius: Dp = LargerCornerRadius,
-    buttonPadding: Dp = LargestPadding,
     navigationIconStartPadding: Dp = SmallPadding,
     navigationIconPadding: Dp = SmallPadding,
     navigationIconSpacing: Dp = SmallPadding,
@@ -65,18 +65,14 @@ fun ActivityScreen(
     modifier: Modifier = Modifier,
     contentModifier: Modifier = Modifier,
     content: @Composable (PaddingValues) -> Unit,
-    dialogs: @Composable () -> Unit = {}
+    dialogs: @Composable () -> Unit = {},
 ) {
     CollapsingAppBarLayout(
         title = { fraction ->
             Text(
-                text = titleText,
-                fontFamily = QuicksandTitleVariable,
-                color = lerp(
+                text = titleText, fontFamily = QuicksandTitleVariable, color = lerp(
                     expandedAppBarTextColor, collapsedAppBarTextColor, fraction
-                ),
-                fontSize = lerp(32F, 22F, fraction).sp,
-                fontWeight = FontWeight(
+                ), fontSize = lerp(32F, 22F, fraction).sp, fontWeight = FontWeight(
                     lerp(700F, 100F, fraction).roundToInt()
                 )
             )
@@ -85,16 +81,13 @@ fun ActivityScreen(
             val iconButtonContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest
             val interactionSource = remember { MutableInteractionSource() }
 
-            val currentHorizontalPadding = if (!hasNavigationIconExtraContent) {
-                buttonPadding
-            } else {
-                buttonPadding / 2
-            }
+            val minButtonSize = 32.dp
 
-            var boxModifier = Modifier
-                .padding(horizontal = currentHorizontalPadding)
-                .clip(RoundedCornerShape(100.0f))
-                .background(iconButtonContainerColor)
+            var boxModifier =
+                Modifier
+                    .defaultMinSize(minWidth = minButtonSize)
+                    .clip(RoundedCornerShape(100.0f))
+                    .background(iconButtonContainerColor)
 
             if (onNavigationIconClick != null) {
                 boxModifier = boxModifier.clickable(
@@ -106,28 +99,33 @@ fun ActivityScreen(
             }
 
             Box(
-                modifier = boxModifier,
-                contentAlignment = Alignment.CenterStart
+                Modifier.width(72.dp), contentAlignment = Alignment.Center
             ) {
-                CompositionLocalProvider(LocalContentColor provides appBarNavigationIconContentColor) {
-                    Row(
-                        modifier = Modifier.padding(
-                            start = navigationIconStartPadding,
-                            end = navigationIconPadding
-                        ).padding(vertical = navigationIconPadding),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(navigationIconSpacing)
-                    ) {
-                        navigationIcon()
-                        if (hasNavigationIconExtraContent) {
-                            navigationIconExtraContent()
+                Box(
+                    modifier = boxModifier, contentAlignment = Alignment.Center
+                ) {
+                    CompositionLocalProvider(LocalContentColor provides appBarNavigationIconContentColor) {
+                        Row(
+                            modifier = Modifier.padding(
+                                start = navigationIconStartPadding,
+                                end = navigationIconPadding
+                            ).padding(vertical = navigationIconPadding),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(navigationIconSpacing)
+                        ) {
+                            navigationIcon()
+                            if (hasNavigationIconExtraContent) {
+                                navigationIconExtraContent()
+                            }
                         }
                     }
+
                 }
             }
         },
         actions = actions,
         expandable = expandable,
+        titleAlignment = if (onNavigationIconClick == null && !hasNavigationIconExtraContent) Alignment.Center else Alignment.CenterStart,
         collapsedContainerColor = screenBackgroundColor,
         expandedContainerColor = screenBackgroundColor,
         navigationIconContentColor = appBarNavigationIconContentColor,
@@ -149,8 +147,7 @@ fun ActivityScreen(
                     .then(contentModifier)
                     .clip(
                         RoundedCornerShape(
-                            topStart = contentCornerRadius,
-                            topEnd = contentCornerRadius
+                            topStart = contentCornerRadius, topEnd = contentCornerRadius
                         )
                     )
                     .background(contentBackgroundColor)
