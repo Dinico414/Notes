@@ -414,7 +414,18 @@ fun CoverNotes(
 
             if (showTextNoteCard) {
                 BackHandler { showTextNoteCard = false }
-                AddTextNoteCard(onDismiss = { showTextNoteCard = false })
+                AddTextNoteCard(
+                    onDismiss = { showTextNoteCard = false },
+                    onSave = { title, description ->
+                        if (title.isNotBlank() || description.isNotBlank()) {
+                            notesViewModel.addItem(
+                                title = title,
+                                description = description.takeIf { it.isNotBlank() }
+                            )
+                        }
+                        showTextNoteCard = false
+                    }
+                )
             }
 
             if (showSketchNoteCard) {
