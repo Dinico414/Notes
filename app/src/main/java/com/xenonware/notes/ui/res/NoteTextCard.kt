@@ -69,7 +69,7 @@ fun NoteTextCard(
             .background(colorScheme.surfaceContainer)
     ) {
         val topPadding = WindowInsets.safeDrawing.only(WindowInsetsSides.Top)
-            .asPaddingValues().calculateTopPadding() + 64.dp // 64.dp for the Row's approximate height
+            .asPaddingValues().calculateTopPadding() + 64.dp
         val scrollState = rememberScrollState()
 
         Column(
@@ -78,7 +78,7 @@ fun NoteTextCard(
                 .verticalScroll(scrollState)
                 .hazeSource(state = hazeState)
         ) {
-            // This spacer provides the initial offset, and scrolls with the content
+
             Spacer(modifier = Modifier.height(topPadding))
 
             BasicTextField(
@@ -107,6 +107,8 @@ fun NoteTextCard(
                         innerTextField()
                     }
                 })
+            Spacer(modifier = Modifier.height(80.dp))
+
         }
 
         Row(
