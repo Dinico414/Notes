@@ -1,5 +1,6 @@
 package com.xenonware.notes.ui.res
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -13,7 +14,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -21,9 +22,9 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,10 +40,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
-import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import dev.chrisbanes.haze.materials.HazeMaterials
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
 @Composable
 fun NoteTextCard(
     initialTitle: String = "",
@@ -53,49 +56,55 @@ fun NoteTextCard(
     val hazeState = remember { HazeState() }
     var title by remember { mutableStateOf(initialTitle) }
     var content by remember { mutableStateOf(initialContent) }
+    val hazeThinColor = colorScheme.surfaceDim
+
 
     Scaffold(
         topBar = {
             Row(
                 modifier = Modifier
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+                    )
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
-                verticalAlignment = Alignment.CenterVertically
+                    .clip(RoundedCornerShape(100f))
+                    .background(colorScheme.surfaceDim)
+                    .hazeEffect(
+                        state = hazeState,
+                        style = HazeMaterials.ultraThin(hazeThinColor),
+                    ), verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                }
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(100f))
-                        .hazeChild(state = hazeState)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                IconButton(onClick = onDismiss,
+                    Modifier.padding(4.dp)
                 ) {
-                    TextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        placeholder = { Text("Title") },
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            disabledContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent,
-                        ),
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.titleLarge.merge(
-                            TextStyle(fontFamily = QuicksandTitleVariable)
-                        )
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+                XenonTextFieldV2(
+                    value = title,
+                    onValueChange = { title = it },
+                    placeholder = { Text("Title") },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                    ),
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.titleLarge.merge(
+                        TextStyle(fontFamily = QuicksandTitleVariable)
                     )
-                    IconButton(onClick = { /*TODO*/ }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                    }
+                )
+                IconButton(onClick = { /*TODO*/ },
+                        Modifier.padding(4.dp)
+                ) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
                 }
             }
+
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { onSave(title, content) }) {
@@ -109,12 +118,11 @@ fun NoteTextCard(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
-                .haze(state = hazeState)
-                // Apply the padding provided by Scaffold to the content
+                .hazeSource(state = hazeState)
                 .padding(paddingValues),
             textStyle = MaterialTheme.typography.bodyLarge.merge(
                 TextStyle(
-                    color = MaterialTheme.colorScheme.onSurface, fontSize = 20.sp
+                    color = colorScheme.onSurface, fontSize = 20.sp
                 )
             ),
             decorationBox = { innerTextField ->
@@ -124,7 +132,7 @@ fun NoteTextCard(
                         Text(
                             text = "Note",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = colorScheme.onSurfaceVariant
                         )
                     }
                     innerTextField()
