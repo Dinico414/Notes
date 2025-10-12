@@ -29,8 +29,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +43,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
@@ -57,26 +58,45 @@ fun NoteTextCard(
     initialContent: String = "",
     onDismiss: () -> Unit,
     onSave: (String, String) -> Unit,
+    cardBackgroundColor: Color = colorScheme.surfaceContainer
 ) {
     val hazeState = remember { HazeState() }
     var title by remember { mutableStateOf(initialTitle) }
     var content by remember { mutableStateOf(initialContent) }
     val hazeThinColor = colorScheme.surfaceDim
 
+    val systemUiController = rememberSystemUiController()
+    val originalStatusBarColor = colorScheme.surface
+    DisposableEffect(systemUiController, cardBackgroundColor) {
+        systemUiController.setStatusBarColor(
+            color = cardBackgroundColor
+        )
+        onDispose {
+            systemUiController.setStatusBarColor(
+                color = originalStatusBarColor
+            )
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(colorScheme.surfaceContainer)
+            .background(cardBackgroundColor)
+
     ) {
-        val topPadding = WindowInsets.safeDrawing.only(WindowInsetsSides.Top)
-            .asPaddingValues().calculateTopPadding() + 64.dp
+        val topPadding = 68.dp
         val scrollState = rememberScrollState()
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(top = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+                    .asPaddingValues().calculateTopPadding() + 4.dp)
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                 .verticalScroll(scrollState)
                 .hazeSource(state = hazeState)
+
         ) {
 
             Spacer(modifier = Modifier.height(topPadding))
@@ -86,9 +106,6 @@ fun NoteTextCard(
                 onValueChange = { content = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    // This is the key: make the TextField grow with its content
-                    // and let the parent Column handle scrolling.
                     .height(IntrinsicSize.Min),
                 textStyle = MaterialTheme.typography.bodyLarge.merge(
                     TextStyle(
@@ -137,28 +154,26 @@ fun NoteTextCard(
                 TextStyle(fontFamily = QuicksandTitleVariable, textAlign = TextAlign.Center)
             )
 
-            XenonTextFieldV2(
+            BasicTextField(
                 value = title,
                 onValueChange = { title = it },
-                placeholder = {
-                    Text(
-                        "Title",
-                        style = titleTextStyle,
-                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
-                ),
                 modifier = Modifier.weight(1f),
                 singleLine = true,
-                textStyle = titleTextStyle
+                textStyle = titleTextStyle.copy(color = colorScheme.onSurface, textAlign = TextAlign.Center),
+                decorationBox = { innerTextField ->
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        if (title.isEmpty()) {
+                            Text(
+                                "Title",
+                                style = titleTextStyle,
+                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                        innerTextField()
+                    }
+                }
             )
             IconButton(
                 onClick = { /*TODO*/ }, Modifier.padding(4.dp)
