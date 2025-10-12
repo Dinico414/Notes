@@ -1,7 +1,6 @@
 package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
-import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -42,8 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -57,16 +54,16 @@ import com.xenonware.notes.R
 import com.xenonware.notes.ui.layouts.ActivityScreen
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
 import com.xenonware.notes.ui.res.CellAudioNote
+import com.xenonware.notes.ui.res.CellListNote
+import com.xenonware.notes.ui.res.CellSketchNote
+import com.xenonware.notes.ui.res.CellTextNote
 import com.xenonware.notes.ui.res.FloatingToolbarContent
 import com.xenonware.notes.ui.res.GoogleProfilBorder
-import com.xenonware.notes.ui.res.CellListNote
+import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.NoteAudioCard
 import com.xenonware.notes.ui.res.NoteListCard
 import com.xenonware.notes.ui.res.NoteSketchCard
 import com.xenonware.notes.ui.res.NoteTextCard
-import com.xenonware.notes.ui.res.CellSketchNote
-import com.xenonware.notes.ui.res.CellTextNote
-import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.XenonSnackbar
 import com.xenonware.notes.ui.values.ExtraLargePadding
 import com.xenonware.notes.ui.values.ExtraLargeSpacing
@@ -100,7 +97,6 @@ fun CompactNotes(
     appSize: IntSize,
 
     ) {
-    val application = LocalContext.current.applicationContext as Application
 
     var editingNoteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var titleState by rememberSaveable { mutableStateOf("") }
@@ -112,8 +108,6 @@ fun CompactNotes(
     var showListNoteCard by rememberSaveable { mutableStateOf(false) }
 
     val noteItemsWithHeaders = notesViewModel.noteItems
-
-    val configuration = LocalConfiguration.current
 
     val density = LocalDensity.current
     val appWidthDp = with(density) { appSize.width.toDp() }
@@ -141,9 +135,6 @@ fun CompactNotes(
 
     val hazeState = rememberHazeState()
 
-    var showSortDialog by remember { mutableStateOf(false) }
-
-
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -155,11 +146,6 @@ fun CompactNotes(
     var selectedNoteIds by remember { mutableStateOf(emptySet<Int>()) }
     val isSelectionModeActive = selectedNoteIds.isNotEmpty()
     var isAddModeActive by rememberSaveable { mutableStateOf(false) }
-
-
-    val undoActionLabel = stringResource(R.string.undo)
-    val noteTextSnackbar = stringResource(R.string.task_text)
-    val deletedTextSnackbar = stringResource(R.string.deleted_text)
 
 
     fun resetNoteState() {
@@ -210,9 +196,9 @@ fun CompactNotes(
                     },
                     isAddModeActive = isAddModeActive,
                     onAddModeToggle = { isAddModeActive = !isAddModeActive },
-                    onTextNoteClick = { 
+                    onTextNoteClick = {
                         resetNoteState()
-                        showTextNoteCard = true 
+                        showTextNoteCard = true
                     },
                     onPenNoteClick = { showSketchNoteCard = true },
                     onMicNoteClick = { showAudioNoteCard = true },

@@ -1,7 +1,6 @@
 package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
-import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -43,8 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
@@ -57,16 +54,16 @@ import com.xenonware.notes.R
 import com.xenonware.notes.ui.layouts.ActivityScreen
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
 import com.xenonware.notes.ui.res.CellAudioNote
+import com.xenonware.notes.ui.res.CellListNote
+import com.xenonware.notes.ui.res.CellSketchNote
+import com.xenonware.notes.ui.res.CellTextNote
 import com.xenonware.notes.ui.res.FloatingToolbarContent
 import com.xenonware.notes.ui.res.GoogleProfilBorder
-import com.xenonware.notes.ui.res.CellListNote
+import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.NoteAudioCard
 import com.xenonware.notes.ui.res.NoteListCard
 import com.xenonware.notes.ui.res.NoteSketchCard
 import com.xenonware.notes.ui.res.NoteTextCard
-import com.xenonware.notes.ui.res.CellSketchNote
-import com.xenonware.notes.ui.res.CellTextNote
-import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.XenonSnackbar
 import com.xenonware.notes.ui.values.LargestPadding
 import com.xenonware.notes.ui.values.MediumPadding
@@ -100,8 +97,6 @@ fun CoverNotes(
     appSize: IntSize,
 
     ) {
-    val application = LocalContext.current.applicationContext as Application
-
     var editingNoteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var titleState by rememberSaveable { mutableStateOf("") }
     var descriptionState by rememberSaveable { mutableStateOf("") }
@@ -113,16 +108,6 @@ fun CoverNotes(
 
     val noteItemsWithHeaders = notesViewModel.noteItems
 
-    val density = LocalDensity.current
-    val appWidthDp = with(density) { appSize.width.toDp() }
-    val appHeightDp = with(density) { appSize.height.toDp() }
-
-    val currentAspectRatio = if (isLandscape) {
-        appWidthDp / appHeightDp
-    } else {
-        appHeightDp / appWidthDp
-    }
-
     val isAppBarCollapsible = when (layoutType) {
         LayoutType.COVER -> false
         LayoutType.SMALL -> false
@@ -132,8 +117,6 @@ fun CoverNotes(
     }
 
     val hazeState = rememberHazeState()
-
-    var showSortDialog by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
