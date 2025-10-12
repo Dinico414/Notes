@@ -40,7 +40,7 @@ import com.xenonware.notes.viewmodel.classes.NotesItems
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SketchNoteCell(
+fun CellSketchNote(
     item: NotesItems,
     isSelected: Boolean,
     isSelectionModeActive: Boolean,

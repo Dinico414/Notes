@@ -56,16 +56,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xenonware.notes.R
 import com.xenonware.notes.ui.layouts.ActivityScreen
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
-import com.xenonware.notes.ui.res.AudioNoteCell
+import com.xenonware.notes.ui.res.CellAudioNote
 import com.xenonware.notes.ui.res.FloatingToolbarContent
 import com.xenonware.notes.ui.res.GoogleProfilBorder
-import com.xenonware.notes.ui.res.ListNoteCell
+import com.xenonware.notes.ui.res.CellListNote
 import com.xenonware.notes.ui.res.NoteAudioCard
 import com.xenonware.notes.ui.res.NoteListCard
 import com.xenonware.notes.ui.res.NoteSketchCard
 import com.xenonware.notes.ui.res.NoteTextCard
-import com.xenonware.notes.ui.res.SketchNoteCell
-import com.xenonware.notes.ui.res.TextNoteCell
+import com.xenonware.notes.ui.res.CellSketchNote
+import com.xenonware.notes.ui.res.CellTextNote
 import com.xenonware.notes.ui.res.TodoListContent
 import com.xenonware.notes.ui.res.XenonSnackbar
 import com.xenonware.notes.ui.values.LargestPadding
@@ -340,7 +340,7 @@ fun CoverNotes(
                                             is NotesItems -> {
                                                 val isSelected = selectedNoteIds.contains(item.id)
                                                 when (item.noteType) {
-                                                    NoteType.TEXT -> TextNoteCell(
+                                                    NoteType.TEXT -> CellTextNote(
                                                         item = item,
                                                         isSelected = isSelected,
                                                         isSelectionModeActive = isSelectionModeActive,
@@ -358,7 +358,7 @@ fun CoverNotes(
                                                             showTextNoteCard = true
                                                         }
                                                     )
-                                                    NoteType.AUDIO -> AudioNoteCell(
+                                                    NoteType.AUDIO -> CellAudioNote(
                                                         item = item,
                                                         isSelected = isSelected,
                                                         isSelectionModeActive = isSelectionModeActive,
@@ -376,7 +376,7 @@ fun CoverNotes(
                                                             showAudioNoteCard = true
                                                         }
                                                     )
-                                                    NoteType.LIST -> ListNoteCell(
+                                                    NoteType.LIST -> CellListNote(
                                                         item = item,
                                                         isSelected = isSelected,
                                                         isSelectionModeActive = isSelectionModeActive,
@@ -394,7 +394,7 @@ fun CoverNotes(
                                                             showListNoteCard = true
                                                         }
                                                     )
-                                                    NoteType.SKETCH -> SketchNoteCell(
+                                                    NoteType.SKETCH -> CellSketchNote(
                                                         item = item,
                                                         isSelected = isSelected,
                                                         isSelectionModeActive = isSelectionModeActive,

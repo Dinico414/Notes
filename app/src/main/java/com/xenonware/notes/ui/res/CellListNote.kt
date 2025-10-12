@@ -19,8 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Abc
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,7 +40,7 @@ import com.xenonware.notes.viewmodel.classes.NotesItems
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TextNoteCell(
+fun CellListNote(
     item: NotesItems,
     isSelected: Boolean,
     isSelectionModeActive: Boolean,
@@ -100,8 +100,8 @@ fun TextNoteCell(
         AnimatedVisibility(
             visible = isSelectionModeActive,
             modifier = Modifier
-                .align(Alignment.TopStart)
-           , enter = fadeIn(),
+                .align(Alignment.TopStart),
+            enter = fadeIn(),
             exit = fadeOut()
         ) {
             Box(
@@ -143,8 +143,8 @@ fun TextNoteCell(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Abc,
-                contentDescription = "Text",
+                imageVector = Icons.Default.FormatListBulleted,
+                contentDescription = "List",
                 tint = MaterialTheme.colorScheme.surfaceContainerHighest,
                 modifier = Modifier
                     .size(28.dp)
