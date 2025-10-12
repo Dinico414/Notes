@@ -66,7 +66,7 @@ import com.xenonware.notes.ui.res.NoteSketchCard
 import com.xenonware.notes.ui.res.NoteTextCard
 import com.xenonware.notes.ui.res.CellSketchNote
 import com.xenonware.notes.ui.res.CellTextNote
-import com.xenonware.notes.ui.res.TodoListContent
+import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.XenonSnackbar
 import com.xenonware.notes.ui.values.LargestPadding
 import com.xenonware.notes.ui.values.MediumPadding
@@ -158,7 +158,7 @@ fun CoverNotes(
 
     ModalNavigationDrawer(
         drawerContent = {
-            TodoListContent(
+            ListContent(
                 notesViewModel = notesViewModel,
                 onFilterSelected = { filterType ->
                     notesViewModel.setNoteFilterType(filterType)

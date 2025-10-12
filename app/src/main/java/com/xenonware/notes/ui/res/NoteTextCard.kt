@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
@@ -68,6 +69,7 @@ fun NoteTextCard(
                     )
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
+                    .padding(top = 4.dp)
                     .clip(RoundedCornerShape(100f))
                     .background(colorScheme.surfaceDim)
                     .hazeEffect(
@@ -75,15 +77,28 @@ fun NoteTextCard(
                         style = HazeMaterials.ultraThin(hazeThinColor),
                     ), verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onDismiss,
+                IconButton(
+                    onClick = onDismiss,
                     Modifier.padding(4.dp)
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
+
+                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
+                    TextStyle(fontFamily = QuicksandTitleVariable, textAlign = TextAlign.Center)
+                )
+
                 XenonTextFieldV2(
                     value = title,
                     onValueChange = { title = it },
-                    placeholder = { Text("Title") },
+                    placeholder = {
+                        Text(
+                            "Title",
+                            style = titleTextStyle,
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent,
@@ -94,12 +109,11 @@ fun NoteTextCard(
                     ),
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.titleLarge.merge(
-                        TextStyle(fontFamily = QuicksandTitleVariable)
-                    )
+                    textStyle = titleTextStyle
                 )
-                IconButton(onClick = { /*TODO*/ },
-                        Modifier.padding(4.dp)
+                IconButton(
+                    onClick = { /*TODO*/ },
+                    Modifier.padding(4.dp)
                 ) {
                     Icon(Icons.Default.MoreVert, contentDescription = "More options")
                 }

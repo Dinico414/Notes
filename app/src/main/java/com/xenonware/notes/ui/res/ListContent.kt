@@ -54,7 +54,7 @@ import com.xenonware.notes.viewmodel.NoteFilterType
 import com.xenonware.notes.viewmodel.NotesViewModel
 
 @Composable
-fun TodoListContent(
+fun ListContent(
     notesViewModel: NotesViewModel = viewModel(),
     devSettingsViewModel: DevSettingsViewModel = viewModel(),
     onFilterSelected: (NoteFilterType) -> Unit,
