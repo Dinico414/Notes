@@ -92,6 +92,7 @@ import androidx.compose.ui.unit.max
 import com.xenonware.notes.R
 import com.xenonware.notes.ui.values.LargePadding
 import com.xenonware.notes.ui.values.SmallElevation
+import com.xenonware.notes.viewmodel.NotesLayoutType
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
@@ -139,6 +140,8 @@ fun FloatingToolbarContent(
     addModeContentOverride: @Composable (RowScope.() -> Unit)? = null,
     defaultContentOverride: @Composable (RowScope.() -> Unit)? = null,
     textEditorContentOverride: @Composable (RowScope.() -> Unit)? = null,
+    notesLayoutType: NotesLayoutType,
+    onNotesLayoutTypeChange: (NotesLayoutType) -> Unit,
 ) {
     val isSelectionActive = selectedNoteIds.isNotEmpty()
     val isTextEditorActive = textEditorContentOverride != null
@@ -527,12 +530,15 @@ fun FloatingToolbarContent(
                                                     label = "SortIconAlpha"
                                                 )
                                                 IconButton(
-                                                    onClick = { Toast.makeText(mContext, "Coming soon!", Toast.LENGTH_SHORT).show() },
+                                                    onClick = {
+                                                        val newLayout = if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
+                                                        onNotesLayoutTypeChange(newLayout)
+                                                    },
                                                     modifier = Modifier.alpha(sortIconAlpha),
                                                     enabled = !isSearchActive && showActionIconsExceptSearch
                                                 ) {
                                                     Icon(
-                                                        Icons.Filled.Dashboard,
+                                                        imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Filled.Dashboard else Icons.Filled.List,
                                                         contentDescription = "Change Layout",
                                                         tint = colorScheme.onSurface
                                                     )

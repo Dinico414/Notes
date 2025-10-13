@@ -41,6 +41,11 @@ enum class NoteFilterType {
     SKETCH
 }
 
+enum class NotesLayoutType {
+    LIST,
+    GRID
+}
+
 sealed class SnackbarEvent {
     data class ShowUndoDeleteSnackbar(val notesItems: NotesItems) : SnackbarEvent()
 }
@@ -65,6 +70,9 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _noteFilterType = MutableStateFlow(NoteFilterType.ALL)
     val noteFilterType: StateFlow<NoteFilterType> = _noteFilterType.asStateFlow()
 
+    private val _notesLayoutType = MutableStateFlow(NotesLayoutType.LIST)
+    val notesLayoutType: StateFlow<NotesLayoutType> = _notesLayoutType.asStateFlow()
+
     var currentSortOption: SortOption by mutableStateOf(SortOption.FREE_SORTING)
         private set
     var currentSortOrder: SortOrder by mutableStateOf(SortOrder.ASCENDING)
@@ -77,6 +85,12 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     init {
         loadAllNotes()
         applySortingAndFiltering()
+    }
+
+    fun setNotesLayoutType(layoutType: NotesLayoutType) {
+        if (_notesLayoutType.value != layoutType) {
+            _notesLayoutType.value = layoutType
+        }
     }
 
     fun setNoteFilterType(filterType: NoteFilterType) {

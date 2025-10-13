@@ -87,6 +87,7 @@ import com.xenonware.notes.ui.values.NoSpacing
 import com.xenonware.notes.ui.values.SmallPadding
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.LayoutType
+import com.xenonware.notes.viewmodel.NotesLayoutType
 import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.classes.NoteType
 import com.xenonware.notes.viewmodel.classes.NotesItems
@@ -147,6 +148,7 @@ fun CoverNotes(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val currentSearchQuery by notesViewModel.searchQuery.collectAsState()
+    val notesLayoutType by notesViewModel.notesLayoutType.collectAsState()
 
     var selectedNoteIds by remember { mutableStateOf(emptySet<Int>()) }
     val isSelectionModeActive = selectedNoteIds.isNotEmpty()
@@ -227,7 +229,7 @@ fun CoverNotes(
                         notesViewModel.setSearchQuery(newQuery)
                     },
                     lazyListState = lazyListState,
-                    allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard,
+                    allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && notesLayoutType == NotesLayoutType.LIST,
                     selectedNoteIds = selectedNoteIds.toList(),
                     onClearSelection = { selectedNoteIds = emptySet() },
                     onDeleteConfirm = {
@@ -261,7 +263,9 @@ fun CoverNotes(
                         }
                     } else {
                         null
-                    }
+                    },
+                    notesLayoutType = notesLayoutType,
+                    onNotesLayoutTypeChange = { notesViewModel.setNotesLayoutType(it) }
                 )
             },
         ) { scaffoldPadding ->
