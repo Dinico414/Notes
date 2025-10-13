@@ -547,7 +547,7 @@ fun FloatingToolbarContent(
                                                 val filterIconAlpha by animateFloatAsState(
                                                     targetValue = iconAlphaTarget,
                                                     animationSpec = tween(
-                                                        durationMillis = iconsAlphaDuration,
+                                                         durationMillis = iconsAlphaDuration,
                                                         delayMillis = if (isSearchActive) 100 else 0
                                                     ),
                                                     label = "FilterIconAlpha"
@@ -559,7 +559,7 @@ fun FloatingToolbarContent(
                                                 ) {
                                                     Icon(
                                                         Icons.Filled.Fullscreen,
-                                                        contentDescription = stringResource(R.string.filter_tasks_description),
+                                                        contentDescription = stringResource(R.string.resize_notes),
                                                         tint = colorScheme.onSurface
                                                     )
                                                 }

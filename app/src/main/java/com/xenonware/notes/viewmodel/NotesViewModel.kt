@@ -73,6 +73,12 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _notesLayoutType = MutableStateFlow(NotesLayoutType.LIST)
     val notesLayoutType: StateFlow<NotesLayoutType> = _notesLayoutType.asStateFlow()
 
+    private val _gridColumnCount = MutableStateFlow(prefsManager.gridColumnCount)
+    val gridColumnCount: StateFlow<Int> = _gridColumnCount.asStateFlow()
+
+    private val _listItemLineCount = MutableStateFlow(prefsManager.listItemLineCount)
+    val listItemLineCount: StateFlow<Int> = _listItemLineCount.asStateFlow()
+
     var currentSortOption: SortOption by mutableStateOf(SortOption.FREE_SORTING)
         private set
     var currentSortOrder: SortOrder by mutableStateOf(SortOrder.ASCENDING)
@@ -90,6 +96,49 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     fun setNotesLayoutType(layoutType: NotesLayoutType) {
         if (_notesLayoutType.value != layoutType) {
             _notesLayoutType.value = layoutType
+            prefsManager.notesLayoutType = layoutType
+        }
+    }
+
+    fun cycleGridColumnCount(screenWidthDp: Int) {
+        val nextColumnCount = when (screenWidthDp) {
+            in 0 until 600 -> // Compact/Small (assuming < 600dp)
+                when (_gridColumnCount.value) {
+                    2 -> 3
+                    3 -> 2
+                    else -> 2 // Default if somehow outside expected range
+                }
+            in 600 until 840 -> // Medium (assuming 600dp to 839dp)
+                when (_gridColumnCount.value) {
+                    3 -> 4
+                    4 -> 5
+                    5 -> 3
+                    else -> 3
+                }
+            else -> // Expanded (assuming >= 840dp)
+                when (_gridColumnCount.value) {
+                    4 -> 5
+                    5 -> 6
+                    6 -> 4
+                    else -> 4
+                }
+        }
+        if (_gridColumnCount.value != nextColumnCount) {
+            _gridColumnCount.value = nextColumnCount
+            prefsManager.gridColumnCount = nextColumnCount
+        }
+    }
+
+    fun cycleListItemLineCount() {
+        val nextLineCount = when (_listItemLineCount.value) {
+            3 -> 9
+            9 -> MAX_LINES_FULL_NOTE // Representing "entire file"
+            MAX_LINES_FULL_NOTE -> 3
+            else -> 3
+        }
+        if (_listItemLineCount.value != nextLineCount) {
+            _listItemLineCount.value = nextLineCount
+            prefsManager.listItemLineCount = nextLineCount
         }
     }
 
@@ -365,5 +414,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         const val DEFAULT_LIST_ID = "default_list"
+        const val MAX_LINES_FULL_NOTE = -1
     }
 }

@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.unit.IntSize
 import androidx.core.content.edit // Ensure this import is present
+import com.xenonware.notes.viewmodel.NotesLayoutType
 import com.xenonware.notes.viewmodel.SortOption
 import com.xenonware.notes.viewmodel.SortOrder
 import com.xenonware.notes.viewmodel.ThemeSetting
@@ -27,8 +28,10 @@ class SharedPreferenceManager(context: Context) {
     private val drawerTodoItemsKey = "drawer_todo_items_json"
     private val blackedOutModeKey = "blacked_out_mode_enabled"
     private val developerModeKey = "developer_mode_enabled"
-    // New key for the dummy profile setting
     private val showDummyProfileKey = "show_dummy_profile_enabled"
+    private val notesLayoutTypeKey = "notes_layout_type"
+    private val gridColumnCountKey = "grid_column_count"
+    private val listItemLineCountKey = "list_item_line_count"
 
     internal val sharedPreferences: SharedPreferences =
         context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
@@ -145,6 +148,25 @@ class SharedPreferenceManager(context: Context) {
         get() = sharedPreferences.getBoolean(showDummyProfileKey, false)
         set(value) = sharedPreferences.edit { putBoolean(showDummyProfileKey, value) }
 
+    var notesLayoutType: NotesLayoutType
+        get() {
+            val type = sharedPreferences.getString(notesLayoutTypeKey, null)
+            try {
+                if (type != null) return NotesLayoutType.valueOf(type)
+            } catch (_: Exception) {}
+            return NotesLayoutType.LIST
+        }
+        set(value) {
+            sharedPreferences.edit { putString(notesLayoutTypeKey, value.name) }
+        }
+
+    var gridColumnCount: Int
+        get() = sharedPreferences.getInt(gridColumnCountKey, 2) // Default to 2 columns
+        set(value) = sharedPreferences.edit { putInt(gridColumnCountKey, value) }
+
+    var listItemLineCount: Int
+        get() = sharedPreferences.getInt(listItemLineCountKey, 3) // Default to 3 lines
+        set(value) = sharedPreferences.edit { putInt(listItemLineCountKey, value) }
 
     fun getBoolean(key: String, defaultValue: Boolean): Boolean {
         return sharedPreferences.getBoolean(key, defaultValue)
@@ -186,6 +208,9 @@ class SharedPreferenceManager(context: Context) {
             putBoolean(blackedOutModeKey, false)
             putBoolean(developerModeKey, false)
             putBoolean(showDummyProfileKey, false)
+            remove(notesLayoutTypeKey)
+            remove(gridColumnCountKey)
+            remove(listItemLineCountKey)
         }
     }
 }

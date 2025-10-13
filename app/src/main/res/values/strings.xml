@@ -120,4 +120,5 @@
     <string name="add_pen_note">Add Sketch</string>
     <string name="add_mic_note">Add Recording</string>
     <string name="add_list_note">Add List</string>
+    <string name="resize_notes">Resize Notes</string>
 </resources>

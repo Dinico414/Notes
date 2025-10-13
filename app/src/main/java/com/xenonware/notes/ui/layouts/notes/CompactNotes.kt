@@ -23,9 +23,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
@@ -431,20 +433,17 @@ fun CompactNotes(
                                         }
                                     }
                                     NotesLayoutType.GRID -> {
-                                        LazyVerticalGrid(
-                                            columns = GridCells.Fixed(2),
+                                        LazyVerticalStaggeredGrid(
+                                            columns = StaggeredGridCells.Fixed(2),
                                             modifier = Modifier.weight(1f),
                                             contentPadding = PaddingValues(
                                                 top = ExtraLargePadding,
                                                 bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding
                                             ),
                                             horizontalArrangement = Arrangement.spacedBy(MediumPadding),
-                                            verticalArrangement = Arrangement.spacedBy(MediumPadding)
+                                            verticalItemSpacing = MediumPadding
                                         ) {
-                                            items(
-                                                items = noteItemsWithHeaders.filterIsInstance<NotesItems>(),
-                                                key = { item -> item.id }
-                                            ) { item ->
+                                            items(noteItemsWithHeaders.filterIsInstance<NotesItems>()) { item ->
                                                 NoteCard(
                                                     item = item,
                                                     isSelected = selectedNoteIds.contains(item.id),
