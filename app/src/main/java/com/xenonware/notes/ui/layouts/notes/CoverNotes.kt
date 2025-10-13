@@ -130,6 +130,8 @@ fun CoverNotes(
     var selectedNoteIds by remember { mutableStateOf(emptySet<Int>()) }
     val isSelectionModeActive = selectedNoteIds.isNotEmpty()
     var isAddModeActive by rememberSaveable { mutableStateOf(false) }
+    var isSearchActive by rememberSaveable { mutableStateOf(false) }
+
 
     fun resetNoteState() {
         editingNoteId = null
@@ -172,7 +174,7 @@ fun CoverNotes(
                         notesViewModel.setSearchQuery(newQuery)
                     },
                     lazyListState = lazyListState,
-                    allowToolbarScrollBehavior = true,
+                    allowToolbarScrollBehavior = !isAppBarCollapsible,
                     selectedNoteIds = selectedNoteIds.toList(),
                     onClearSelection = { selectedNoteIds = emptySet() },
                     onDeleteConfirm = {
@@ -180,25 +182,16 @@ fun CoverNotes(
                         selectedNoteIds = emptySet()
                     },
                     isAddModeActive = isAddModeActive,
-                    onAddModeToggle = {
-                        isAddModeActive = !isAddModeActive
-                    },
-                    onTextNoteClick = { 
+                    onAddModeToggle = { isAddModeActive = !isAddModeActive },
+                    onTextNoteClick = {
                         resetNoteState()
-                        showTextNoteCard = true 
+                        showTextNoteCard = true
                     },
-                    onPenNoteClick = { 
-                        resetNoteState()
-                        showSketchNoteCard = true 
-                    },
-                    onMicNoteClick = { 
-                        resetNoteState()
-                        showAudioNoteCard = true 
-                    },
-                    onListNoteClick = { 
-                        resetNoteState()
-                        showListNoteCard = true 
-                    }
+                    onPenNoteClick = { showSketchNoteCard = true },
+                    onMicNoteClick = { showAudioNoteCard = true },
+                    onListNoteClick = { showListNoteCard = true },
+                    isSearchActive = isSearchActive,
+                    onIsSearchActiveChange = { isSearchActive = it }
                 )
             },
         ) { scaffoldPadding ->

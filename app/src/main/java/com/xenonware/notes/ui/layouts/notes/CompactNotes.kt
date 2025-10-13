@@ -149,6 +149,8 @@ fun CompactNotes(
     var selectedNoteIds by remember { mutableStateOf(emptySet<Int>()) }
     val isSelectionModeActive = selectedNoteIds.isNotEmpty()
     var isAddModeActive by rememberSaveable { mutableStateOf(false) }
+    var isSearchActive by rememberSaveable { mutableStateOf(false) }
+
 
 
     fun resetNoteState() {
@@ -205,7 +207,9 @@ fun CompactNotes(
                     },
                     onPenNoteClick = { showSketchNoteCard = true },
                     onMicNoteClick = { showAudioNoteCard = true },
-                    onListNoteClick = { showListNoteCard = true }
+                    onListNoteClick = { showListNoteCard = true },
+                    isSearchActive = isSearchActive,
+                    onIsSearchActiveChange = { isSearchActive = it }
                 )
             },
         ) { scaffoldPadding ->

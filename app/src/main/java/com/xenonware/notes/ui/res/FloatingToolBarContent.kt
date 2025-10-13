@@ -23,6 +23,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,11 +43,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ViewQuilt
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
@@ -131,9 +131,14 @@ fun FloatingToolbarContent(
     onTextNoteClick: () -> Unit,
     onPenNoteClick: () -> Unit,
     onMicNoteClick: () -> Unit,
-    onListNoteClick: () -> Unit
+    onListNoteClick: () -> Unit,
+    isSearchActive: Boolean,
+    onIsSearchActiveChange: (Boolean) -> Unit,
+    fabOverride: @Composable (() -> Unit)? = null,
+    selectionContentOverride: @Composable (RowScope.() -> Unit)? = null,
+    addModeContentOverride: @Composable (RowScope.() -> Unit)? = null,
+    defaultContentOverride: @Composable (RowScope.() -> Unit)? = null
 ) {
-    var isSearchActive by rememberSaveable { mutableStateOf(false) }
     val isSelectionActive = selectedNoteIds.isNotEmpty()
 
     var showActionIconsExceptSearch by rememberSaveable { mutableStateOf(true) }
@@ -170,7 +175,7 @@ fun FloatingToolbarContent(
 
     LaunchedEffect(isSelectionActive) {
         if (isSelectionActive && isSearchActive) {
-            isSearchActive = false
+            onIsSearchActiveChange(false)
             onSearchQueryChanged("")
             keyboardController?.hide()
         }
@@ -300,98 +305,102 @@ fun FloatingToolbarContent(
             modifier = Modifier.height(toolbarHeight),
             expanded = true,
             floatingActionButton = {
-                Box(contentAlignment = Alignment.Center) {
-                    val fabShape = FloatingActionButtonDefaults.shape
-                    val interactionSource = remember { MutableInteractionSource() }
-                    val isPressed by interactionSource.collectIsPressedAsState()
-                    val isHovered by interactionSource.collectIsHoveredAsState()
+                if (fabOverride != null) {
+                    fabOverride()
+                } else {
+                    Box(contentAlignment = Alignment.Center) {
+                        val fabShape = FloatingActionButtonDefaults.shape
+                        val interactionSource = remember { MutableInteractionSource() }
+                        val isPressed by interactionSource.collectIsPressedAsState()
+                        val isHovered by interactionSource.collectIsHoveredAsState()
 
-                    val fabIconTint = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        colorScheme.onPrimaryContainer
-                    } else {
-                        colorScheme.onPrimary
-                    }
-                    val hazeThinColor = colorScheme.primary
-                    val smallElevationPx = with(density) { SmallElevation.toPx() }
-                    val baseShadowAlpha = 0.7f
-                    val interactiveShadowAlpha = 0.9f
-                    val currentShadowRadius =
-                        if (isPressed || isHovered) smallElevationPx * 1.5f else smallElevationPx
-                    val currentShadowAlpha =
-                        if (isPressed || isHovered) interactiveShadowAlpha else baseShadowAlpha
-                    val currentShadowColor = colorScheme.scrim.copy(alpha = currentShadowAlpha)
-                    val currentYOffsetPx = with(density) { 1.dp.toPx() }
+                        val fabIconTint = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            colorScheme.onPrimaryContainer
+                        } else {
+                            colorScheme.onPrimary
+                        }
+                        val hazeThinColor = colorScheme.primary
+                        val smallElevationPx = with(density) { SmallElevation.toPx() }
+                        val baseShadowAlpha = 0.7f
+                        val interactiveShadowAlpha = 0.9f
+                        val currentShadowRadius =
+                            if (isPressed || isHovered) smallElevationPx * 1.5f else smallElevationPx
+                        val currentShadowAlpha =
+                            if (isPressed || isHovered) interactiveShadowAlpha else baseShadowAlpha
+                        val currentShadowColor = colorScheme.scrim.copy(alpha = currentShadowAlpha)
+                        val currentYOffsetPx = with(density) { 1.dp.toPx() }
 
-                    Canvas(
-                        modifier = Modifier.size(
-                            FloatingActionButtonDefaults.LargeIconSize + 24.dp + if (isPressed || isHovered) 8.dp else 5.dp
-                        )
-                    ) {
-                        val outline = fabShape.createOutline(this.size, layoutDirection, density)
-                        val composePath = Path().apply { addOutline(outline) }
-                        drawIntoCanvas { canvas ->
-                            val frameworkPaint = Paint().asFrameworkPaint().apply {
-                                isAntiAlias = true
-                                style = android.graphics.Paint.Style.STROKE
-                                strokeWidth = with(this@Canvas) { 0.5.dp.toPx() }
-                                color = Color.Transparent.toArgb()
-                                setShadowLayer(
-                                    currentShadowRadius,
-                                    0f,
-                                    currentYOffsetPx,
-                                    currentShadowColor.toArgb()
+                        Canvas(
+                            modifier = Modifier.size(
+                                FloatingActionButtonDefaults.LargeIconSize + 24.dp + if (isPressed || isHovered) 8.dp else 5.dp
+                            )
+                        ) {
+                            val outline = fabShape.createOutline(this.size, layoutDirection, density)
+                            val composePath = Path().apply { addOutline(outline) }
+                            drawIntoCanvas { canvas ->
+                                val frameworkPaint = Paint().asFrameworkPaint().apply {
+                                    isAntiAlias = true
+                                    style = android.graphics.Paint.Style.STROKE
+                                    strokeWidth = with(this@Canvas) { 0.5.dp.toPx() }
+                                    color = Color.Transparent.toArgb()
+                                    setShadowLayer(
+                                        currentShadowRadius,
+                                        0f,
+                                        currentYOffsetPx,
+                                        currentShadowColor.toArgb()
+                                    )
+                                }
+                                canvas.nativeCanvas.drawPath(
+                                    composePath.asAndroidPath(), frameworkPaint
                                 )
                             }
-                            canvas.nativeCanvas.drawPath(
-                                composePath.asAndroidPath(), frameworkPaint
+                        }
+
+                        val rotationAngle = remember { Animatable(0f) }
+                        LaunchedEffect(isSearchActive, isSelectionActive, isAddModeActive) {
+                            val targetAngle = if (isSearchActive || isSelectionActive || isAddModeActive) 45f else 0f
+                            rotationAngle.animateTo(
+                                targetValue = targetAngle, animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow,
+                                )
                             )
                         }
-                    }
 
-                    val rotationAngle = remember { Animatable(0f) }
-                    LaunchedEffect(isSearchActive, isSelectionActive, isAddModeActive) {
-                        val targetAngle = if (isSearchActive || isSelectionActive || isAddModeActive) 45f else 0f
-                        rotationAngle.animateTo(
-                            targetValue = targetAngle, animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessLow,
-                            )
-                        )
-                    }
+                        FloatingActionButton(
+                            onClick = {
+                                when {
+                                    isSelectionActive -> onClearSelection()
+                                    isSearchActive -> {
+                                        onSearchQueryChanged("")
+                                        keyboardController?.hide()
+                                        onIsSearchActiveChange(false)
+                                    }
 
-                    FloatingActionButton(
-                        onClick = {
-                            when {
-                                isSelectionActive -> onClearSelection()
-                                isSearchActive -> {
-                                    onSearchQueryChanged("")
-                                    keyboardController?.hide()
-                                    isSearchActive = false
+                                    else -> onAddModeToggle()
                                 }
-
-                                else -> onAddModeToggle()
-                            }
-                        },
-                        containerColor = Color.Transparent,
-                        shape = fabShape,
-                        elevation = FloatingActionButtonDefaults.elevation(
-                            0.dp, 0.dp, 0.dp, 0.dp
-                        ),
-                        interactionSource = interactionSource,
-                        modifier = Modifier
-                            .clip(FloatingActionButtonDefaults.shape)
-                            .background(colorScheme.primary)
-                            .hazeEffect(
-                                state = hazeState,
-                                style = HazeMaterials.ultraThin(hazeThinColor),
+                            },
+                            containerColor = Color.Transparent,
+                            shape = fabShape,
+                            elevation = FloatingActionButtonDefaults.elevation(
+                                0.dp, 0.dp, 0.dp, 0.dp
+                            ),
+                            interactionSource = interactionSource,
+                            modifier = Modifier
+                                .clip(FloatingActionButtonDefaults.shape)
+                                .background(colorScheme.primary)
+                                .hazeEffect(
+                                    state = hazeState,
+                                    style = HazeMaterials.ultraThin(hazeThinColor),
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = if (isSearchActive || isSelectionActive) stringResource(R.string.cancel) else stringResource(
+                                    R.string.add_task_description
+                                ), tint = fabIconTint, modifier = Modifier.rotate(rotationAngle.value)
                             )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = if (isSearchActive || isSelectionActive) stringResource(R.string.cancel) else stringResource(
-                                R.string.add_task_description
-                            ), tint = fabIconTint, modifier = Modifier.rotate(rotationAngle.value)
-                        )
+                        }
                     }
                 }
             },
@@ -399,181 +408,197 @@ fun FloatingToolbarContent(
             contentPadding = FloatingToolbarDefaults.ContentPadding,
         ) {
             Crossfade(targetState = isSelectionActive to isAddModeActive, label = "toolbar-content-crossfade") { (selectionActive, addModeActive) ->
-                if (selectionActive) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(onClick = onDeleteConfirm) {
-                            Text(stringResource(R.string.delete), color = colorScheme.onErrorContainer)
-                        }
-                    }
-                } else if (addModeActive) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = {
-                            onTextNoteClick()
-                            onAddModeToggle()
-                        }) {
-                            Icon(
-                                Icons.Default.Abc,
-                                contentDescription = stringResource(R.string.add_text_note),
-                                tint = colorScheme.onSecondaryContainer
-                            )
-                        }
-                        IconButton(onClick = {
-                            onPenNoteClick()
-                            onAddModeToggle()
-                        }) {
-                            Icon(
-                                Icons.Filled.Create,
-                                contentDescription = stringResource(R.string.add_pen_note),
-                                tint = colorScheme.onSecondaryContainer
-                            )
-                        }
-                        IconButton(onClick = {
-                            onMicNoteClick()
-                            onAddModeToggle()
-                        }) {
-                            Icon(
-                                Icons.Filled.Mic,
-                                contentDescription = stringResource(R.string.add_mic_note),
-                                tint = colorScheme.onSecondaryContainer
-                            )
-                        }
-                        IconButton(onClick = {
-                            onListNoteClick()
-                            onAddModeToggle()
-                        }) {
-                            Icon(
-                                Icons.Filled.List,
-                                contentDescription = stringResource(R.string.add_list_note),
-                                tint = colorScheme.onSecondaryContainer
-                            )
-                        }
-                    }
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = {
-                            isSearchActive = true
-                        }) {
-                            Icon(
-                                Icons.Filled.Search,
-                                contentDescription = stringResource(R.string.search_tasks_description),
-                                tint = colorScheme.onSurface
-                            )
-                        }
-                        Box(
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                AnimatedVisibility(
-                                    visible = showActionIconsExceptSearch && !isSearchActive,
-                                    enter = fadeIn(animationSpec = tween(durationMillis = 500)),
-                                    exit = shrinkHorizontally(
-                                        animationSpec = tween(
-                                            durationMillis = iconGroupExitAnimationDuration,
-                                            delayMillis = iconsClearanceTime
-                                        )
-                                    ) + fadeOut(
-                                        animationSpec = tween(
-                                            durationMillis = iconGroupExitAnimationDuration,
-                                            delayMillis = iconsClearanceTime
-                                        )
-                                    )
-                                ) {
-                                    Row {
-                                        val iconAlphaTarget = if (isSearchActive) 0f else 1f
-
-                                        val sortIconAlpha by animateFloatAsState(
-                                            targetValue = iconAlphaTarget,
-                                            animationSpec = tween(
-                                                durationMillis = iconsAlphaDuration,
-                                                delayMillis = if (isSearchActive) 0 else 0
-                                            ),
-                                            label = "SortIconAlpha"
-                                        )
-                                        IconButton(
-                                            onClick = { Toast.makeText(mContext, "Coming soon!", Toast.LENGTH_SHORT).show() },
-                                            modifier = Modifier.alpha(sortIconAlpha),
-                                            enabled = !isSearchActive && showActionIconsExceptSearch
-                                        ) {
-                                            Icon(
-                                                Icons.Filled.Dashboard,
-                                                contentDescription = "Change Layout",
-                                                tint = colorScheme.onSurface
-                                            )
-                                        }
-
-                                        val filterIconAlpha by animateFloatAsState(
-                                            targetValue = iconAlphaTarget,
-                                            animationSpec = tween(
-                                                durationMillis = iconsAlphaDuration,
-                                                delayMillis = if (isSearchActive) 100 else 0
-                                            ),
-                                            label = "FilterIconAlpha"
-                                        )
-                                        IconButton(
-                                            onClick = { Toast.makeText(mContext, "Coming soon!", Toast.LENGTH_SHORT).show() },
-                                            modifier = Modifier.alpha(filterIconAlpha),
-                                            enabled = !isSearchActive && showActionIconsExceptSearch
-                                        ) {
-                                            Icon(
-                                                Icons.Filled.Fullscreen,
-                                                contentDescription = stringResource(R.string.filter_tasks_description),
-                                                tint = colorScheme.onSurface
-                                            )
-                                        }
-
-                                        val settingsIconAlpha by animateFloatAsState(
-                                            targetValue = iconAlphaTarget,
-                                            animationSpec = tween(
-                                                durationMillis = iconsAlphaDuration,
-                                                delayMillis = if (isSearchActive) 200 else 0
-                                            ),
-                                            label = "SettingsIconAlpha"
-                                        )
-                                        IconButton(
-                                            onClick = onOpenSettings,
-                                            modifier = Modifier.alpha(settingsIconAlpha),
-                                            enabled = !isSearchActive && showActionIconsExceptSearch
-                                        ) {
-                                            Icon(
-                                                Icons.Filled.Settings,
-                                                contentDescription = stringResource(R.string.settings),
-                                                tint = colorScheme.onSurface
-                                            )
-                                        }
-                                    }
+                when {
+                    selectionActive -> {
+                        if (selectionContentOverride != null) {
+                            selectionContentOverride()
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                TextButton(onClick = onDeleteConfirm) {
+                                    Text(stringResource(R.string.delete), color = colorScheme.onErrorContainer)
                                 }
                             }
+                        }
+                    }
+                    addModeActive -> {
+                        if (addModeContentOverride != null) {
+                            addModeContentOverride()
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(onClick = {
+                                    onTextNoteClick()
+                                    onAddModeToggle()
+                                }) {
+                                    Icon(
+                                        Icons.Default.Abc,
+                                        contentDescription = stringResource(R.string.add_text_note),
+                                        tint = colorScheme.onSecondaryContainer
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    onPenNoteClick()
+                                    onAddModeToggle()
+                                }) {
+                                    Icon(
+                                        Icons.Filled.Create,
+                                        contentDescription = stringResource(R.string.add_pen_note),
+                                        tint = colorScheme.onSecondaryContainer
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    onMicNoteClick()
+                                    onAddModeToggle()
+                                }) {
+                                    Icon(
+                                        Icons.Filled.Mic,
+                                        contentDescription = stringResource(R.string.add_mic_note),
+                                        tint = colorScheme.onSecondaryContainer
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    onListNoteClick()
+                                    onAddModeToggle()
+                                }) {
+                                    Icon(
+                                        Icons.Filled.List,
+                                        contentDescription = stringResource(R.string.add_list_note),
+                                        tint = colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    else -> {
+                        if (defaultContentOverride != null) {
+                            defaultContentOverride()
+                        } else {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = {
+                                    onIsSearchActiveChange(true)
+                                }) {
+                                    Icon(
+                                        Icons.Filled.Search,
+                                        contentDescription = stringResource(R.string.search_tasks_description),
+                                        tint = colorScheme.onSurface
+                                    )
+                                }
+                                Box(
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        AnimatedVisibility(
+                                            visible = showActionIconsExceptSearch && !isSearchActive,
+                                            enter = fadeIn(animationSpec = tween(durationMillis = 500)),
+                                            exit = shrinkHorizontally(
+                                                animationSpec = tween(
+                                                    durationMillis = iconGroupExitAnimationDuration,
+                                                    delayMillis = iconsClearanceTime
+                                                )
+                                            ) + fadeOut(
+                                                animationSpec = tween(
+                                                    durationMillis = iconGroupExitAnimationDuration,
+                                                    delayMillis = iconsClearanceTime
+                                                )
+                                            )
+                                        ) {
+                                            Row {
+                                                val iconAlphaTarget = if (isSearchActive) 0f else 1f
 
-                            val fraction by animateFloatAsState(
-                                targetValue = if (canShowTextField) 1F else 0F,
-                                animationSpec = tween(durationMillis = textFieldAnimationDuration),
-                                label = ""
-                            )
-                            XenonTextFieldV2(
-                                value = currentSearchQuery,
-                                enabled = canShowTextField,
-                                onValueChange = {
-                                    onSearchQueryChanged(it)
-                                },
-                                modifier = Modifier
-                                    .width(maxTextFieldWidth.times(fraction))
-                                    .alpha(fraction * fraction)
-                                    .focusRequester(focusRequester),
-                                placeholder = { Text(stringResource(R.string.search)) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                keyboardActions = KeyboardActions(onSearch = {
-                                    keyboardController?.hide()
-                                })
-                            )
+                                                val sortIconAlpha by animateFloatAsState(
+                                                    targetValue = iconAlphaTarget,
+                                                    animationSpec = tween(
+                                                        durationMillis = iconsAlphaDuration,
+                                                        delayMillis = if (isSearchActive) 0 else 0
+                                                    ),
+                                                    label = "SortIconAlpha"
+                                                )
+                                                IconButton(
+                                                    onClick = { Toast.makeText(mContext, "Coming soon!", Toast.LENGTH_SHORT).show() },
+                                                    modifier = Modifier.alpha(sortIconAlpha),
+                                                    enabled = !isSearchActive && showActionIconsExceptSearch
+                                                ) {
+                                                    Icon(
+                                                        Icons.Filled.Dashboard,
+                                                        contentDescription = "Change Layout",
+                                                        tint = colorScheme.onSurface
+                                                    )
+                                                }
+
+                                                val filterIconAlpha by animateFloatAsState(
+                                                    targetValue = iconAlphaTarget,
+                                                    animationSpec = tween(
+                                                        durationMillis = iconsAlphaDuration,
+                                                        delayMillis = if (isSearchActive) 100 else 0
+                                                    ),
+                                                    label = "FilterIconAlpha"
+                                                )
+                                                IconButton(
+                                                    onClick = { Toast.makeText(mContext, "Coming soon!", Toast.LENGTH_SHORT).show() },
+                                                    modifier = Modifier.alpha(filterIconAlpha),
+                                                    enabled = !isSearchActive && showActionIconsExceptSearch
+                                                ) {
+                                                    Icon(
+                                                        Icons.Filled.Fullscreen,
+                                                        contentDescription = stringResource(R.string.filter_tasks_description),
+                                                        tint = colorScheme.onSurface
+                                                    )
+                                                }
+
+                                                val settingsIconAlpha by animateFloatAsState(
+                                                    targetValue = iconAlphaTarget,
+                                                    animationSpec = tween(
+                                                        durationMillis = iconsAlphaDuration,
+                                                        delayMillis = if (isSearchActive) 200 else 0
+                                                    ),
+                                                    label = "SettingsIconAlpha"
+                                                )
+                                                IconButton(
+                                                    onClick = onOpenSettings,
+                                                    modifier = Modifier.alpha(settingsIconAlpha),
+                                                    enabled = !isSearchActive && showActionIconsExceptSearch
+                                                ) {
+                                                    Icon(
+                                                        Icons.Filled.Settings,
+                                                        contentDescription = stringResource(R.string.settings),
+                                                        tint = colorScheme.onSurface
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    val fraction by animateFloatAsState(
+                                        targetValue = if (canShowTextField) 1F else 0F,
+                                        animationSpec = tween(durationMillis = textFieldAnimationDuration),
+                                        label = ""
+                                    )
+                                    XenonTextFieldV2(
+                                        value = currentSearchQuery,
+                                        enabled = canShowTextField,
+                                        onValueChange = {
+                                            onSearchQueryChanged(it)
+                                        },
+                                        modifier = Modifier
+                                            .width(maxTextFieldWidth.times(fraction))
+                                            .alpha(fraction * fraction)
+                                            .focusRequester(focusRequester),
+                                        placeholder = { Text(stringResource(R.string.search)) },
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                        keyboardActions = KeyboardActions(onSearch = {
+                                            keyboardController?.hide()
+                                        })
+                                    )
+                                }
+                            }
                         }
                     }
                 }
