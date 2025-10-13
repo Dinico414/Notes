@@ -106,7 +106,7 @@ data class ScrollState(
     val firstVisibleItemIndex: Int,
     val firstVisibleItemScrollOffset: Int,
     val isScrollInProgress: Boolean,
-    val canScrollForward: Boolean
+    val canScrollForward: Boolean,
 )
 
 @SuppressLint("ConfigurationScreenWidthHeight")
@@ -137,9 +137,11 @@ fun FloatingToolbarContent(
     fabOverride: @Composable (() -> Unit)? = null,
     selectionContentOverride: @Composable (RowScope.() -> Unit)? = null,
     addModeContentOverride: @Composable (RowScope.() -> Unit)? = null,
-    defaultContentOverride: @Composable (RowScope.() -> Unit)? = null
+    defaultContentOverride: @Composable (RowScope.() -> Unit)? = null,
+    textEditorContentOverride: @Composable (RowScope.() -> Unit)? = null,
 ) {
     val isSelectionActive = selectedNoteIds.isNotEmpty()
+    val isTextEditorActive = textEditorContentOverride != null
 
     var showActionIconsExceptSearch by rememberSaveable { mutableStateOf(true) }
     var canShowTextField by rememberSaveable { mutableStateOf(false) }
@@ -295,6 +297,7 @@ fun FloatingToolbarContent(
     ) {
         val animatedToolbarColor by animateColorAsState(
             targetValue = when {
+                isTextEditorActive -> colorScheme.surfaceDim
                 isSelectionActive -> colorScheme.errorContainer
                 isAddModeActive -> colorScheme.secondaryContainer
                 else -> colorScheme.surfaceDim
@@ -407,9 +410,12 @@ fun FloatingToolbarContent(
             colors = FloatingToolbarDefaults.standardFloatingToolbarColors(animatedToolbarColor),
             contentPadding = FloatingToolbarDefaults.ContentPadding,
         ) {
-            Crossfade(targetState = isSelectionActive to isAddModeActive, label = "toolbar-content-crossfade") { (selectionActive, addModeActive) ->
-                when {
+            Crossfade(targetState = Triple(isSelectionActive, isAddModeActive, isTextEditorActive), label = "toolbar-content-crossfade") { (selectionActive, addModeActive, textEditorActive) ->                when {
+                    textEditorActive -> {
+                        textEditorContentOverride?.invoke(this)
+                    }
                     selectionActive -> {
+
                         if (selectionContentOverride != null) {
                             selectionContentOverride()
                         } else {

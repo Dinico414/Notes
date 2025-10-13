@@ -11,6 +11,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,11 +23,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
@@ -52,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xenonware.notes.R
 import com.xenonware.notes.ui.layouts.ActivityScreen
@@ -104,8 +115,17 @@ fun CompactNotes(
     var editingNoteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var titleState by rememberSaveable { mutableStateOf("") }
     var descriptionState by rememberSaveable { mutableStateOf("") }
-
     var showTextNoteCard by rememberSaveable { mutableStateOf(false) }
+    var saveTrigger by remember { mutableStateOf(false) }
+
+    // States for the text editor
+    var isBold by remember { mutableStateOf(false) }
+    var isItalic by remember { mutableStateOf(false) }
+    var isUnderlined by remember { mutableStateOf(false) }
+    val textSizes = listOf(16.sp, 20.sp, 24.sp, 28.sp)
+    var currentSizeIndex by remember { mutableStateOf(1) }
+    val editorFontSize = textSizes[currentSizeIndex]
+
     var showSketchNoteCard by rememberSaveable { mutableStateOf(false) }
     var showAudioNoteCard by rememberSaveable { mutableStateOf(false) }
     var showListNoteCard by rememberSaveable { mutableStateOf(false) }
@@ -182,8 +202,30 @@ fun CompactNotes(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                     )
                 }
-            },
-            bottomBar = {
+            }, bottomBar = {
+                val textEditorContent: @Composable (RowScope.() -> Unit)? = if (showTextNoteCard) {
+                    @Composable {
+                        Row {
+                            val toggledColor = MaterialTheme.colorScheme.primary
+                            val defaultColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            IconButton(onClick = { isBold = !isBold }, colors = IconButtonDefaults.iconButtonColors(contentColor = if (isBold) toggledColor else defaultColor)) {
+                                Icon(Icons.Default.FormatBold, contentDescription = "Bold")
+                            }
+                            IconButton(onClick = { isItalic = !isItalic }, colors = IconButtonDefaults.iconButtonColors(contentColor = if (isItalic) toggledColor else defaultColor)) {
+                                Icon(Icons.Default.FormatItalic, contentDescription = "Italic")
+                            }
+                            IconButton(onClick = { isUnderlined = !isUnderlined }, colors = IconButtonDefaults.iconButtonColors(contentColor = if (isUnderlined) toggledColor else defaultColor)) {
+                                Icon(Icons.Default.FormatUnderlined, contentDescription = "Underline")
+                            }
+                            IconButton(onClick = { currentSizeIndex = (currentSizeIndex + 1) % textSizes.size }) {
+                                Icon(Icons.Default.FormatSize, contentDescription = "Change Text Size")
+                            }
+                        }
+                    }
+                } else {
+                    null
+                }
+
                 FloatingToolbarContent(
                     hazeState = hazeState,
                     onOpenSettings = onOpenSettings,
@@ -192,7 +234,7 @@ fun CompactNotes(
                         notesViewModel.setSearchQuery(newQuery)
                     },
                     lazyListState = lazyListState,
-                    allowToolbarScrollBehavior = !isAppBarCollapsible,
+                    allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard,
                     selectedNoteIds = selectedNoteIds.toList(),
                     onClearSelection = { selectedNoteIds = emptySet() },
                     onDeleteConfirm = {
@@ -209,7 +251,24 @@ fun CompactNotes(
                     onMicNoteClick = { showAudioNoteCard = true },
                     onListNoteClick = { showListNoteCard = true },
                     isSearchActive = isSearchActive,
-                    onIsSearchActiveChange = { isSearchActive = it }
+                    onIsSearchActiveChange = { isSearchActive = it },
+                    textEditorContentOverride = textEditorContent,
+                    fabOverride = if (showTextNoteCard) {
+                        {
+                            FloatingActionButton(
+                                onClick = { if (titleState.isNotBlank()) saveTrigger = true }
+                            ) {
+                                // The icon is greyed out when the title is blank.
+                                Icon(
+                                    imageVector = Icons.Default.Save,
+                                    contentDescription = "Save Note",
+                                    tint = if (titleState.isNotBlank()) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                            }
+                        }
+                    } else {
+                        null
+                    }
                 )
             },
         ) { scaffoldPadding ->
@@ -438,8 +497,14 @@ fun CompactNotes(
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler { showTextNoteCard = false }
+
+                if (saveTrigger) {
+                    // This will be handled inside NoteTextCard's LaunchedEffect
+                }
+
                 NoteTextCard(
-                    initialTitle = titleState,
+                    title = titleState, // Pass the state down
+                    onTitleChange = { titleState = it }, // Update the state from the child
                     initialContent = descriptionState,
                     onDismiss = { showTextNoteCard = false },
                     onSave = { title, description ->
@@ -462,7 +527,14 @@ fun CompactNotes(
                         }
                         showTextNoteCard = false
                         resetNoteState()
-                    }
+                    },
+                    saveTrigger = saveTrigger,
+                    onSaveTriggerConsumed = { saveTrigger = false },
+                    isBold = isBold,
+                    isItalic = isItalic,
+                    isUnderlined = isUnderlined,
+                    editorFontSize = editorFontSize,
+                    toolbarHeight = 72.dp // Approximate height of the toolbar
                 )
             }
 

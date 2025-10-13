@@ -24,7 +24,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,10 +43,17 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
 import dev.chrisbanes.haze.HazeState
@@ -56,26 +62,43 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
+@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun NoteTextCard(
-    initialTitle: String = "",
+    title: String,
+    onTitleChange: (String) -> Unit,
     initialContent: String = "",
     onDismiss: () -> Unit,
     onSave: (String, String) -> Unit,
     cardBackgroundColor: Color = colorScheme.surfaceContainer,
+    isBold: Boolean,
+    isItalic: Boolean,
+    isUnderlined: Boolean,
+    editorFontSize: TextUnit,
+    toolbarHeight: Dp,
+    saveTrigger: Boolean,
+    onSaveTriggerConsumed: () -> Unit
 ) {
     val hazeState = remember { HazeState() }
-    var title by remember { mutableStateOf(initialTitle) }
-    var content by remember { mutableStateOf(initialContent) }
+    var content by remember { mutableStateOf(TextFieldValue(initialContent)) }
     val hazeThinColor = colorScheme.surfaceDim
 
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-        keyboardController?.show()
+        if (content.text.isEmpty()) {
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
+
+    // This effect listens for the save trigger from the FAB
+    LaunchedEffect(saveTrigger) {
+        if (saveTrigger) {
+            onSave(title, content.text)
+            onSaveTriggerConsumed() // Reset the trigger
+        }
     }
 
     val systemUiController = rememberSystemUiController()
@@ -90,7 +113,6 @@ fun NoteTextCard(
             )
         }
     }
-    val toolbarHeight = 16.dp /*toolbar padding*/ + 64.dp /*toolbar height*/ + 8.dp /*text padding*/
     val bottomPadding =
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight
 
@@ -121,24 +143,42 @@ fun NoteTextCard(
         ) {
 
             Spacer(modifier = Modifier.height(topPadding))
-            val selectiveFontSize = 20.sp
             val noteTextStyle = MaterialTheme.typography.bodyLarge.merge(
                 TextStyle(
                     color = colorScheme.onSurface,
-                    fontSize = selectiveFontSize)
+                    fontSize = editorFontSize,
+                    fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
+                    fontStyle = if (isItalic) FontStyle.Italic else FontStyle.Normal,
+                    textDecoration = if (isUnderlined) TextDecoration.Underline else TextDecoration.None
+                )
             )
             //note area
             BasicTextField(
                 value = content,
-                onValueChange = { content = it },
+                onValueChange = {
+                    val newText = it.text
+                    val selection = it.selection
+                    val annotatedString = buildAnnotatedString {
+                        append(newText)
+                        val currentStyle = SpanStyle(
+                            fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
+                            fontStyle = if (isItalic) FontStyle.Italic else FontStyle.Normal,
+                            textDecoration = if (isUnderlined) TextDecoration.Underline else TextDecoration.None
+                        )
+                        if (selection.collapsed && selection.start > 0 && newText.length > content.text.length) {
+                            addStyle(currentStyle, selection.start - (newText.length - content.text.length), selection.start)
+                        }
+                    }
+                    content = TextFieldValue(annotatedString, selection)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min)
                     .focusRequester(focusRequester),
-                textStyle = noteTextStyle,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = colorScheme.onSurface, fontSize = editorFontSize),
                 decorationBox = { innerTextField ->
                     Box {
-                        if (content.isEmpty()) {
+                        if (content.text.isEmpty()) {
                             Text(
                                 text = "Note",
                                 style = noteTextStyle,
@@ -181,7 +221,7 @@ fun NoteTextCard(
             //title
             BasicTextField(
                 value = title,
-                onValueChange = { title = it },
+                onValueChange = { onTitleChange(it) },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 textStyle = titleTextStyle,
