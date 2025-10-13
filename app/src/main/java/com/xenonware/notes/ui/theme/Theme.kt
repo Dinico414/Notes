@@ -3,7 +3,9 @@ package com.xenonware.notes.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme.Companion.expressive
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -20,7 +22,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowCompat
-import com.xenonware.notes.ui.theme.Typography
 
 data class ExtendedMaterialColorScheme(
     val inverseError: Color,
@@ -129,6 +130,7 @@ fun ColorScheme.toBlackedOut(): ColorScheme {
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TodolistTheme(
     darkTheme: Boolean,
@@ -189,7 +191,7 @@ fun TodolistTheme(
 
     CompositionLocalProvider(LocalExtendedMaterialColorScheme provides extendedColorScheme) {
         MaterialTheme(
-            colorScheme = baseColorScheme, typography = Typography, content = content
+            colorScheme = baseColorScheme, typography = Typography, motionScheme = expressive(), content = content
         )
     }
 }
