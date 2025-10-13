@@ -43,9 +43,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -155,27 +153,12 @@ fun NoteTextCard(
             //note area
             BasicTextField(
                 value = content,
-                onValueChange = {
-                    val newText = it.text
-                    val selection = it.selection
-                    val annotatedString = buildAnnotatedString {
-                        append(newText)
-                        val currentStyle = SpanStyle(
-                            fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
-                            fontStyle = if (isItalic) FontStyle.Italic else FontStyle.Normal,
-                            textDecoration = if (isUnderlined) TextDecoration.Underline else TextDecoration.None
-                        )
-                        if (selection.collapsed && selection.start > 0 && newText.length > content.text.length) {
-                            addStyle(currentStyle, selection.start - (newText.length - content.text.length), selection.start)
-                        }
-                    }
-                    content = TextFieldValue(annotatedString, selection)
-                },
+                onValueChange = { content = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min)
                     .focusRequester(focusRequester),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = colorScheme.onSurface, fontSize = editorFontSize),
+                textStyle = noteTextStyle,
                 decorationBox = { innerTextField ->
                     Box {
                         if (content.text.isEmpty()) {
