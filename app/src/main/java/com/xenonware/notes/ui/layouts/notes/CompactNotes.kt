@@ -2,6 +2,9 @@ package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -425,7 +428,11 @@ fun CompactNotes(
                     }
                 })
 
-            if (showTextNoteCard) {
+            AnimatedVisibility(
+                visible = showTextNoteCard,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
                 BackHandler { showTextNoteCard = false }
                 NoteTextCard(
                     initialTitle = titleState,
@@ -455,17 +462,29 @@ fun CompactNotes(
                 )
             }
 
-            if (showSketchNoteCard) {
+            AnimatedVisibility(
+                visible = showSketchNoteCard,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
                 BackHandler { showSketchNoteCard = false }
                 NoteSketchCard(onDismiss = { showSketchNoteCard = false })
             }
 
-            if (showAudioNoteCard) {
+            AnimatedVisibility(
+                visible = showAudioNoteCard,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
                 BackHandler { showAudioNoteCard = false }
                 NoteAudioCard(onDismiss = { showAudioNoteCard = false })
             }
 
-            if (showListNoteCard) {
+            AnimatedVisibility(
+                visible = showListNoteCard,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
                 BackHandler { showListNoteCard = false }
                 NoteListCard(onDismiss = { showListNoteCard = false })
             }

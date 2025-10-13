@@ -63,6 +63,7 @@ fun NoteTextCard(
     initialContent: String = "",
     onDismiss: () -> Unit,
     onSave: (String, String) -> Unit,
+    cardBackgroundColor: Color = colorScheme.surfaceContainer,
 ) {
     val hazeState = remember { HazeState() }
     var title by remember { mutableStateOf(initialTitle) }
