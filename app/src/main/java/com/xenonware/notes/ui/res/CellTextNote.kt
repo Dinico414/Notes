@@ -57,7 +57,7 @@ fun CellTextNote(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(MediumCornerRadius))
-            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .background(MaterialTheme.colorScheme.surfaceBright)
             .border(
                 width = 2.dp,
                 color = borderColor,

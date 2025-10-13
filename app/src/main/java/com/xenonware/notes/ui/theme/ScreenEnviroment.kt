@@ -56,7 +56,7 @@ fun ScreenEnvironment(
             }
         }
 
-        TodolistTheme(
+        XenonTheme(
             darkTheme = appIsDarkTheme, // Use appIsDarkTheme here
             useBlackedOutDarkTheme = if (appIsDarkTheme) blackedOutModeEnabled else false, // Also use appIsDarkTheme here
             dynamicColor = useDynamicColor
@@ -73,7 +73,8 @@ fun ScreenEnvironment(
             if (!view.isInEditMode) {
                 SideEffect {
                     systemUiController.setStatusBarColor(
-                        color = systemBarColor, darkIcons = darkIconsForSystemBars
+                        color = Color.Transparent,
+                        darkIcons = darkIconsForSystemBars
                     )
                     systemUiController.setNavigationBarColor(
                         color = Color.Transparent,

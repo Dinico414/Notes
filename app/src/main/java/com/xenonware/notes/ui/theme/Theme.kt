@@ -129,12 +129,20 @@ fun ColorScheme.toBlackedOut(): ColorScheme {
         surfaceBright = surfaceDimDark
     )
 }
+fun ColorScheme.toCoverMode(): ColorScheme {
+    return this.copy(
+        background = Color.Black,
+        surfaceContainer = Color.Black,
+        surfaceBright = Color.Black
+    )
+}
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun TodolistTheme(
+fun XenonTheme(
     darkTheme: Boolean,
     useBlackedOutDarkTheme: Boolean = false,
+    isCoverMode: Boolean = false,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {
@@ -146,10 +154,10 @@ fun TodolistTheme(
         } else {
             DarkColorScheme
         }
-        if (useBlackedOutDarkTheme) {
-            baseDarkScheme.toBlackedOut()
-        } else {
-            baseDarkScheme
+        when {
+            isCoverMode -> baseDarkScheme.toCoverMode()
+            useBlackedOutDarkTheme -> baseDarkScheme.toBlackedOut()
+            else -> baseDarkScheme
         }
     } else {
         if (dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

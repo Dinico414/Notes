@@ -79,7 +79,7 @@ fun NoteTextCard(
     }
 
     val systemUiController = rememberSystemUiController()
-    val originalStatusBarColor = colorScheme.surface
+    val originalStatusBarColor = Color.Transparent
     DisposableEffect(systemUiController, cardBackgroundColor) {
         systemUiController.setStatusBarColor(
             color = cardBackgroundColor
