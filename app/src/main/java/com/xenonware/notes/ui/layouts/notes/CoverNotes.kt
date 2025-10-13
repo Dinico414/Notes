@@ -2,6 +2,9 @@ package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -252,7 +255,7 @@ fun CoverNotes(
 
                 actions = {},
 
-                content = { _ ->
+                content = {
                     Box(Modifier.fillMaxSize()) {
                         Column(
                             modifier = Modifier
@@ -269,7 +272,6 @@ fun CoverNotes(
                                     Text(
                                         text = stringResource(R.string.no_tasks_message),
                                         style = MaterialTheme.typography.bodyLarge,
-                                        color = coverScreenContentColor
                                     )
                                 }
                             } else if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isNotBlank()) {
@@ -282,7 +284,6 @@ fun CoverNotes(
                                     Text(
                                         text = stringResource(R.string.no_search_results),
                                         style = MaterialTheme.typography.bodyLarge,
-                                        color = coverScreenContentColor
                                     )
                                 }
                             } else {
@@ -291,13 +292,12 @@ fun CoverNotes(
                                     modifier = Modifier.weight(1f),
                                     contentPadding = PaddingValues(
                                         top = NoSpacing,
-                                        bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding
+                                        bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding,
                                     )
                                 ) {
                                     itemsIndexed(
                                         items = noteItemsWithHeaders,
-                                        key = { _, item -> if (item is NotesItems) item.id else item.hashCode() }
-                                    ) { index, item ->
+                                        key = { _, item -> if (item is NotesItems) item.id else item.hashCode() }) { index, item ->
                                         when (item) {
                                             is String -> {
                                                 Text(
@@ -308,7 +308,6 @@ fun CoverNotes(
                                                     fontWeight = FontWeight.Thin,
                                                     textAlign = TextAlign.Start,
                                                     fontFamily = QuicksandTitleVariable,
-                                                    color = coverScreenContentColor,
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .padding(
@@ -424,21 +423,18 @@ fun CoverNotes(
                             )
                         }
                     }
-                }
-            )
+                })
 
-            if (showTextNoteCard) {
-                BackHandler { 
-                    showTextNoteCard = false
-                    resetNoteState()
-                }
+            AnimatedVisibility(
+                visible = showTextNoteCard,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
+                BackHandler { showTextNoteCard = false }
                 NoteTextCard(
                     initialTitle = titleState,
                     initialContent = descriptionState,
-                    onDismiss = { 
-                        showTextNoteCard = false
-                        resetNoteState()
-                    },
+                    onDismiss = { showTextNoteCard = false },
                     onSave = { title, description ->
                         if (title.isNotBlank() || description.isNotBlank()) {
                             if (editingNoteId != null) {
@@ -463,37 +459,31 @@ fun CoverNotes(
                 )
             }
 
-            if (showSketchNoteCard) {
-                BackHandler { 
-                    showSketchNoteCard = false
-                    resetNoteState()
-                }
-                NoteSketchCard(onDismiss = { 
-                    showSketchNoteCard = false
-                    resetNoteState()
-                })
+            AnimatedVisibility(
+                visible = showSketchNoteCard,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
+                BackHandler { showSketchNoteCard = false }
+                NoteSketchCard(onDismiss = { showSketchNoteCard = false })
             }
 
-            if (showAudioNoteCard) {
-                BackHandler { 
-                    showAudioNoteCard = false
-                    resetNoteState()
-                 }
-                NoteAudioCard(onDismiss = { 
-                    showAudioNoteCard = false
-                    resetNoteState()
-                })
+            AnimatedVisibility(
+                visible = showAudioNoteCard,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
+                BackHandler { showAudioNoteCard = false }
+                NoteAudioCard(onDismiss = { showAudioNoteCard = false })
             }
 
-            if (showListNoteCard) {
-                BackHandler { 
-                    showListNoteCard = false
-                    resetNoteState()
-                }
-                NoteListCard(onDismiss = { 
-                    showListNoteCard = false
-                    resetNoteState()
-                })
+            AnimatedVisibility(
+                visible = showListNoteCard,
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
+            ) {
+                BackHandler { showListNoteCard = false }
+                NoteListCard(onDismiss = { showListNoteCard = false })
             }
         }
     }
