@@ -969,7 +969,6 @@ fun CompactNotes(
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
                     selectedAudioViewType = selectedAudioViewType, // Pass the selected view type
-                    onSelectedAudioViewTypeChange = { selectedAudioViewType = it } // Pass the callback
                 )
 
             }
