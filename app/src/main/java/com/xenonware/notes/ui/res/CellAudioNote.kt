@@ -11,16 +11,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
 import com.xenonware.notes.ui.values.ExtraLargestPadding
 import com.xenonware.notes.ui.values.MediumCornerRadius
-import com.xenonware.notes.ui.values.MediumSpacing
 import com.xenonware.notes.viewmodel.classes.NotesItems
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -86,17 +83,10 @@ fun CellAudioNote(
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface
             )
-
-            if (!item.description.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(MediumSpacing))
-                Text(
-                    text = item.description ?: "",
-                    style = MaterialTheme.typography.bodyLarge,
-                    overflow = TextOverflow.Ellipsis,
-                    maxLines = maxLines, // Apply maxLines here
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-            }
+            //TODO place audio content here
+            // -play/pause button
+            // -progress bar
+            // -timer
         }
 
         AnimatedVisibility(
@@ -141,18 +131,22 @@ fun CellAudioNote(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 4.dp, end = 4.dp)
-                .size(48.dp),
-            contentAlignment = Alignment.Center
+                .size(48.dp), contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Audiotrack,
-                contentDescription = "Audio",
-                tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+            Box(
                 modifier = Modifier
                     .size(28.dp)
-                    .padding(2.dp)
                     .background(MaterialTheme.colorScheme.onSurface, CircleShape)
-            )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = "Audio",
+                    tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(24.dp)
+                )
+            }
         }
     }
 }

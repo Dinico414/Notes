@@ -25,15 +25,18 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -76,30 +79,27 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 
-// Placeholder for AudioRecorderManager
-// This would ideally be a separate class responsible for handling MediaRecorder
-// and managing the audio file.
+enum class RecordingState {
+    IDLE, RECORDING, PAUSED, STOPPED_UNSAVED, PLAYING, VIEWING_SAVED_AUDIO
+}
+
 class AudioRecorderManager(private val context: Context) {
     private var mediaRecorder: MediaRecorder? = null
     var audioFilePath: String? = null
         private set
 
-    var isRecording: Boolean by mutableStateOf(false)
-        private set
-    var isPaused: Boolean by mutableStateOf(false)
-        private set
-    var hasRecording: Boolean by mutableStateOf(false)
-        private set
-    var recordingDurationMillis: Long by mutableLongStateOf(0L) // Added for recording duration
+    var recordingDurationMillis: Long by mutableLongStateOf(0L)
 
+    var currentRecordingState: RecordingState by mutableStateOf(RecordingState.IDLE)
+        private set
+    
+    private var _isInitialFile: Boolean by mutableStateOf(false)
 
     fun startRecording() {
-        if (isRecording) return
-        if (isPaused) {
+        if (currentRecordingState == RecordingState.RECORDING) return
+        if (currentRecordingState == RecordingState.PAUSED) {
             mediaRecorder?.resume()
-            isPaused = false
-            isRecording = true
-            // TODO: Resume the recording duration update
+            currentRecordingState = RecordingState.RECORDING
             println("Resumed recording")
             return
         }
@@ -109,6 +109,7 @@ class AudioRecorderManager(private val context: Context) {
     private fun startNewRecording() {
         val audioFile = File(context.cacheDir, "audio_note_${System.currentTimeMillis()}.mp3")
         audioFilePath = audioFile.absolutePath
+        _isInitialFile = false // This is a new, temporary recording
 
         mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             MediaRecorder(context)
@@ -124,100 +125,115 @@ class AudioRecorderManager(private val context: Context) {
             try {
                 prepare()
                 start()
-                isRecording = true
-                isPaused = false
-                hasRecording = true
+                currentRecordingState = RecordingState.RECORDING
                 recordingDurationMillis = 0L // Reset on new recording
-                // TODO: Start a coroutine or Handler here to update recordingDurationMillis every second
                 println("Started recording to: $audioFilePath")
             } catch (e: IOException) {
                 println("Failed to start recording: ${e.message}")
-                isRecording = false
-                isPaused = false
-                hasRecording = false
+                currentRecordingState = RecordingState.IDLE
             }
         }
     }
 
     fun pauseRecording() {
-        if (!isRecording) return
+        if (currentRecordingState != RecordingState.RECORDING) return
         mediaRecorder?.pause()
-        isPaused = true
-        isRecording = false
-        // TODO: Pause the recording duration update
+        currentRecordingState = RecordingState.PAUSED
         println("Paused recording")
     }
 
 
     fun stopRecording() {
-        if (isRecording || isPaused) {
+        if (currentRecordingState == RecordingState.RECORDING || currentRecordingState == RecordingState.PAUSED) {
             mediaRecorder?.apply {
                 stop()
                 release()
             }
             mediaRecorder = null
-            isRecording = false
-            isPaused = false
-            // TODO: Stop and reset the recording duration update
-            recordingDurationMillis = 0L
+            currentRecordingState = RecordingState.STOPPED_UNSAVED
             println("Stopped recording")
         }
+    }
+
+    fun setInitialAudioFilePath(filePath: String) {
+        audioFilePath = filePath
+        _isInitialFile = true
+        currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
+        // We don't know the duration here, the AudioPlayerManager will set it when played.
+        recordingDurationMillis = 0L 
+        println("Set initial audio file path: $filePath")
+    }
+
+    fun deleteRecording() {
+        if (!_isInitialFile) { // Only delete if it's a temporary file
+            audioFilePath?.let { File(it).delete() }
+            println("Temporary recording deleted")
+        } else {
+            println("Initial audio file not deleted (kept for persistence)")
+        }
+        audioFilePath = null
+        recordingDurationMillis = 0L
+        currentRecordingState = RecordingState.IDLE
+        _isInitialFile = false // Reset the flag
+    }
+
+    fun resetState() {
+        // Stop any ongoing recording/playback before resetting
+        if (currentRecordingState == RecordingState.RECORDING || currentRecordingState == RecordingState.PAUSED) {
+            mediaRecorder?.apply {
+                stop()
+                release()
+            }
+            mediaRecorder = null
+        }
+        deleteRecording() // This will now intelligently delete only temporary files
+        currentRecordingState = RecordingState.IDLE
+        _isInitialFile = false
     }
 
 
     fun dispose() {
         mediaRecorder?.release()
         mediaRecorder = null
-        // TODO: Cancel any active coroutine scopes for recording duration
+        // No explicit file deletion here, as deleteRecording() handles it when called on dispose from NoteAudioCard
     }
 }
 
 
-// Placeholder for AudioPlayerManager
-// This would ideally be a separate class responsible for handling MediaPlayer
-// and playing back the audio file.
 class AudioPlayerManager {
+    var currentRecordingState: RecordingState by mutableStateOf(RecordingState.IDLE)
+
     var isPlaying: Boolean by mutableStateOf(false)
-
-    // private set removed
-    var currentPlaybackPositionMillis: Long by mutableLongStateOf(0L) // Added for playback position
-
-    // private set removed
-    var totalAudioDurationMillis: Long by mutableLongStateOf(0L) // Added for total duration
-    // private set removed
+    var currentPlaybackPositionMillis: Long by mutableLongStateOf(0L)
+    var totalAudioDurationMillis: Long by mutableLongStateOf(0L)
 
     private var mediaPlayer: MediaPlayer? = null
-    // TODO: Add a CoroutineScope to manage playback timer updates
 
     fun playAudio(filePath: String) {
-        // TODO: Implement actual audio playback using MediaPlayer
-        // Initialize MediaPlayer, setDataSource, prepare, and start.
-        // Get total duration from mediaPlayer.duration
-        // Start a coroutine to update currentPlaybackPositionMillis periodically.
         try {
-            mediaPlayer?.release() // Release previous player if any
+            mediaPlayer?.release()
             mediaPlayer = MediaPlayer().apply {
                 setDataSource(filePath)
                 prepare()
                 start()
                 this@AudioPlayerManager.totalAudioDurationMillis = duration.toLong()
                 this@AudioPlayerManager.isPlaying = true
-                // TODO: Start a coroutine here to update currentPlaybackPositionMillis every 100ms
+                currentRecordingState = RecordingState.PLAYING
                 setOnCompletionListener {
-                    stopAudio() // Stop when playback completes
-                    this@AudioPlayerManager.currentPlaybackPositionMillis =
-                        0L // Reset position on completion
+                    stopAudio()
+                    this@AudioPlayerManager.currentPlaybackPositionMillis = 0L
+                    currentRecordingState = RecordingState.STOPPED_UNSAVED // After playing, it's stopped but unsaved
                 }
             }
             println("Playing audio from: $filePath")
         } catch (e: IOException) {
             println("Failed to play audio: ${e.message}")
             this@AudioPlayerManager.isPlaying = false
+            currentRecordingState = RecordingState.STOPPED_UNSAVED
         }
     }
 
     fun stopAudio() {
-        // TODO: Implement actual audio stopping
         mediaPlayer?.apply {
             stop()
             release()
@@ -225,14 +241,33 @@ class AudioPlayerManager {
         mediaPlayer = null
         isPlaying = false
         currentPlaybackPositionMillis = 0L
-        // TODO: Stop and reset the playback timer coroutine
+        if (currentRecordingState == RecordingState.PLAYING) {
+            // Determine next state based on context
+            // If we were playing a newly recorded temporary file, it's STOPPED_UNSAVED
+            // If we were playing an initially loaded saved file, it's VIEWING_SAVED_AUDIO
+            currentRecordingState = RecordingState.STOPPED_UNSAVED // This needs to be smarter or handled by the parent composable
+        }
         println("Stopping audio playback")
+    }
+
+    fun getAudioDuration(filePath: String): Long {
+        var duration: Long = 0L
+        val tempPlayer = MediaPlayer()
+        try {
+            tempPlayer.setDataSource(filePath)
+            tempPlayer.prepare()
+            duration = tempPlayer.duration.toLong()
+        } catch (e: IOException) {
+            println("Failed to get audio duration: ${e.message}")
+        } finally {
+            tempPlayer.release()
+        }
+        return duration
     }
 
     fun dispose() {
         mediaPlayer?.release()
         mediaPlayer = null
-        // TODO: Cancel the coroutine scope for playback
     }
 }
 
@@ -250,45 +285,82 @@ fun NoteAudioCard(
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
     selectedAudioViewType: AudioViewType, // Current selected view type from parent
+    initialAudioFilePath: String? = null, // New parameter for existing audio files
 ) {
     val hazeState = remember { HazeState() }
     val hazeThinColor = colorScheme.surfaceDim
-    val context = LocalContext.current // Get the current context
+    val context = LocalContext.current
 
-    // Initialize AudioRecorderManager and AudioPlayerManager
     val recorderManager = remember { AudioRecorderManager(context) }
     val playerManager = remember { AudioPlayerManager() }
 
-    // Use state from the manager directly or derive from it
-    val isRecording = recorderManager.isRecording
-    val isPaused = recorderManager.isPaused
-    val hasRecording = recorderManager.hasRecording
-    var isStopped by remember { mutableStateOf(false) } // Still need this for player control
+    var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
+
+    // Sync recordingState from managers
+    LaunchedEffect(recorderManager.currentRecordingState) {
+        recordingState = recorderManager.currentRecordingState
+        // When recorderManager stops (e.g., to STOPPED_UNSAVED), also update playerManager's state
+        if (recordingState == RecordingState.STOPPED_UNSAVED) {
+            playerManager.currentRecordingState = RecordingState.STOPPED_UNSAVED
+        } else if (recordingState == RecordingState.IDLE) {
+            playerManager.currentRecordingState = RecordingState.IDLE
+        } else if (recordingState == RecordingState.VIEWING_SAVED_AUDIO) {
+            playerManager.currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
+        }
+    }
+    LaunchedEffect(playerManager.currentRecordingState) {
+        // Only update if player manager is actively changing state to PLAYING, otherwise recorderManager is primary
+        if (playerManager.currentRecordingState == RecordingState.PLAYING) {
+            recordingState = playerManager.currentRecordingState
+        } else if (playerManager.currentRecordingState == RecordingState.STOPPED_UNSAVED && recordingState != RecordingState.RECORDING && recordingState != RecordingState.PAUSED) {
+            recordingState = playerManager.currentRecordingState
+        } else if (playerManager.currentRecordingState == RecordingState.VIEWING_SAVED_AUDIO && recordingState != RecordingState.RECORDING && recordingState != RecordingState.PAUSED) {
+            recordingState = playerManager.currentRecordingState
+        }
+    }
+
+    // Handle initial audio file loading
+    LaunchedEffect(initialAudioFilePath) {
+        if (initialAudioFilePath != null) {
+            recorderManager.setInitialAudioFilePath(initialAudioFilePath)
+            playerManager.totalAudioDurationMillis = playerManager.getAudioDuration(initialAudioFilePath)
+            playerManager.currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
+            recordingState = RecordingState.VIEWING_SAVED_AUDIO
+        } else {
+            // If initialAudioFilePath becomes null, reset to IDLE, e.g., if parent changes mind
+            if (recorderManager.currentRecordingState != RecordingState.IDLE) {
+                recorderManager.resetState()
+            }
+            if (playerManager.currentRecordingState != RecordingState.IDLE) {
+                playerManager.stopAudio() // Ensure player is stopped
+                playerManager.currentRecordingState = RecordingState.IDLE
+            }
+            recordingState = RecordingState.IDLE
+        }
+    }
+
 
     // Simulation for recording timer
-    LaunchedEffect(isRecording) {
-        if (isRecording) {
-            recorderManager.recordingDurationMillis = 0L // Reset on start
-            while (isActive) {
+    LaunchedEffect(recordingState) {
+        if (recordingState == RecordingState.RECORDING) {
+            // No reset here, as it's handled in startNewRecording
+            while (isActive && recordingState == RecordingState.RECORDING) {
                 delay(1000L)
                 recorderManager.recordingDurationMillis += 1000L
             }
-        } else {
-            if (!isPaused) recorderManager.recordingDurationMillis = 0L
         }
     }
 
     // Simulation for playback timer
-    LaunchedEffect(playerManager.isPlaying) {
-        if (playerManager.isPlaying) {
-            while (isActive && playerManager.isPlaying) {
-                // In a real scenario, you'd get this from MediaPlayer.currentPosition
+    LaunchedEffect(recordingState) {
+        if (recordingState == RecordingState.PLAYING) {
+            while (isActive && recordingState == RecordingState.PLAYING && playerManager.isPlaying) {
                 playerManager.currentPlaybackPositionMillis =
                     (playerManager.currentPlaybackPositionMillis + 1000L).coerceAtMost(playerManager.totalAudioDurationMillis)
                 delay(1000L)
             }
         } else {
-            playerManager.currentPlaybackPositionMillis = 0L
+            playerManager.currentPlaybackPositionMillis = 0L // Reset when not playing
         }
     }
 
@@ -298,30 +370,30 @@ fun NoteAudioCard(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            // Permission granted, start recording
             recorderManager.startRecording()
-            isStopped = false
         } else {
-            // Permission denied, handle accordingly (e.e., show a toast)
             println("Microphone permission denied")
         }
     }
 
-    // Handle saving: stop recording/playback and save the audio file path
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
             recorderManager.stopRecording()
             playerManager.stopAudio()
-            onSave(audioTitle, recorderManager.audioFilePath ?: "") // Pass the audio file path
+            onSave(audioTitle, recorderManager.audioFilePath ?: "")
             onSaveTriggerConsumed()
+            recordingState = RecordingState.VIEWING_SAVED_AUDIO // After saving, view it as a saved audio
+            // Do NOT delete the file here. It should be deleted via Redo or Discard actions, or when composable leaves composition
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            recorderManager.dispose() // Release recorder resources
-            playerManager.stopAudio() // Stop playback if any
-            playerManager.dispose() // Dispose player resources
+            recorderManager.dispose()
+            playerManager.stopAudio()
+            playerManager.dispose()
+            // Ensure temporary file is deleted when the composable leaves the composition
+            recorderManager.deleteRecording() // This is now intelligent (only deletes if _isInitialFile is false)
         }
     }
 
@@ -364,16 +436,15 @@ fun NoteAudioCard(
         ) {
             Spacer(modifier = Modifier.height(topPadding))
 
-            // New Timer Display at the top
             AudioTimerDisplay(
-                isRecording = isRecording,
-                isPlaying = playerManager.isPlaying,
+                isRecording = recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED,
+                isPlaying = recordingState == RecordingState.PLAYING,
                 recordingDurationMillis = recorderManager.recordingDurationMillis,
                 currentPlaybackPositionMillis = playerManager.currentPlaybackPositionMillis,
                 totalAudioDurationMillis = playerManager.totalAudioDurationMillis,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 8.dp) // Adjusted padding
+                    .padding(top = 8.dp, bottom = 8.dp)
                     .align(Alignment.CenterHorizontally)
             )
 
@@ -386,12 +457,11 @@ fun NoteAudioCard(
                 contentAlignment = Alignment.Center
             ) {
                 if (selectedAudioViewType == AudioViewType.Waveform) {
-                    // Placeholder for Waveform visualization
                     WaveformDisplay(
                         audioFilePath = recorderManager.audioFilePath,
                         modifier = Modifier.fillMaxSize()
                     )
-                } else { // Implicitly AudioViewType.Transcript
+                } else {
                     Text(
                         text = "Audio Transcript coming soon...",
                         style = MaterialTheme.typography.headlineMedium,
@@ -409,71 +479,122 @@ fun NoteAudioCard(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Start/Play Button
-                IconButton(
-                    onClick = {
-                        if (isStopped && hasRecording) {
-                            // Play recording
-                            recorderManager.audioFilePath?.let { path ->
-                                playerManager.playAudio(path)
-                                isStopped = false // Playing, not stopped
-                            }
-                        } else if (!isRecording && !isPaused) {
-                            // Check for permission before starting recording
-                            when {
-                                ContextCompat.checkSelfPermission(
-                                    context, Manifest.permission.RECORD_AUDIO
-                                ) == PackageManager.PERMISSION_GRANTED -> {
-                                    // Permission already granted, start recording
-                                    recorderManager.startRecording()
-                                    isStopped = false
-                                }
-
-                                else -> {
-                                    // Request permission
-                                    requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                when (recordingState) {
+                    RecordingState.IDLE -> {
+                        IconButton(
+                            onClick = {
+                                when {
+                                    ContextCompat.checkSelfPermission(
+                                        context, Manifest.permission.RECORD_AUDIO
+                                    ) == PackageManager.PERMISSION_GRANTED -> {
+                                        recorderManager.startRecording()
+                                    }
+                                    else -> {
+                                        requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                    }
                                 }
                             }
-                        } else if (isPaused) {
-                            // Resume recording
-                            recorderManager.startRecording() // startRecording also handles resume
-                            isStopped = false
+                        ) {
+                            Icon(Icons.Default.Mic, contentDescription = "Start recording")
                         }
-                    }, enabled = !isRecording || isPaused || (isStopped && hasRecording)
-                ) {
-                    if (isStopped && hasRecording) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Play recording")
-                    } else if (isRecording) {
-                        Icon(Icons.Default.Mic, contentDescription = "Recording in progress")
-                    } else {
-                        Icon(Icons.Default.Mic, contentDescription = "Start recording")
                     }
-                }
-
-                // Pause Button
-                IconButton(
-                    onClick = {
-                        if (isRecording) {
-                            recorderManager.pauseRecording()
+                    RecordingState.RECORDING -> {
+                        IconButton(
+                            onClick = { recorderManager.pauseRecording() }
+                        ) {
+                            Icon(Icons.Default.Pause, contentDescription = "Pause recording")
                         }
-                    }, enabled = isRecording
-                ) {
-                    Icon(Icons.Default.Pause, contentDescription = "Pause recording")
-                }
-
-                // Stop Button
-                IconButton(
-                    onClick = {
-                        if (isRecording || isPaused || playerManager.isPlaying) {
-                            recorderManager.stopRecording()
-                            playerManager.stopAudio()
-                            isStopped = true
-                            // If we stop during recording, we still have a recording.
-                            // If we stop during playback, we still have a recording.
+                        IconButton(
+                            onClick = {
+                                recorderManager.stopRecording()
+                                playerManager.stopAudio()
+                            }
+                        ) {
+                            Icon(Icons.Default.Stop, contentDescription = "Stop recording")
                         }
-                    }, enabled = isRecording || isPaused || playerManager.isPlaying || hasRecording
-                ) {
-                    Icon(Icons.Default.Stop, contentDescription = "Stop recording")
+                    }
+                    RecordingState.PAUSED -> {
+                        IconButton(
+                            onClick = { recorderManager.startRecording() } // Resumes recording
+                        ) {
+                            Icon(Icons.Default.Mic, contentDescription = "Resume recording")
+                        }
+                        IconButton(
+                            onClick = {
+                                recorderManager.stopRecording()
+                                playerManager.stopAudio()
+                            }
+                        ) {
+                            Icon(Icons.Default.Stop, contentDescription = "Stop recording")
+                        }
+                    }
+                    RecordingState.STOPPED_UNSAVED -> {
+                        IconButton(
+                            onClick = {
+                                recorderManager.audioFilePath?.let { path ->
+                                    playerManager.playAudio(path)
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = "Play recording")
+                        }
+                        IconButton(
+                            onClick = {
+                                recorderManager.deleteRecording() // This now only deletes temporary files
+                                playerManager.stopAudio()
+                                recordingState = RecordingState.IDLE
+                            }
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Redo recording")
+                        }
+                        IconButton(
+                            onClick = {
+                                recorderManager.deleteRecording() // Clear the recording if user just wants to discard
+                                onDismiss()
+                            }
+                        ) {
+                            Icon(Icons.Default.Clear, contentDescription = "Discard recording")
+                        }
+                    }
+                    RecordingState.PLAYING -> {
+                        IconButton(
+                            onClick = { playerManager.stopAudio() }
+                        ) {
+                            Icon(Icons.Default.Stop, contentDescription = "Stop playback")
+                        }
+                    }
+                    RecordingState.VIEWING_SAVED_AUDIO -> {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    recorderManager.audioFilePath?.let { path ->
+                                        playerManager.playAudio(path)
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = "Play saved recording")
+                            }
+                            IconButton(
+                                onClick = { playerManager.stopAudio() }
+                            ) {
+                                Icon(Icons.Default.Stop, contentDescription = "Stop playback")
+                            }
+                            Spacer(modifier = Modifier.width(16.dp)) // Add some space
+                            IconButton(
+                                onClick = {
+                                    recorderManager.resetState() // Clears the loaded file path and resets state to IDLE
+                                    playerManager.stopAudio()
+                                    recordingState = RecordingState.IDLE // Transition to IDLE to allow new recording
+                                }
+                            ) {
+                                Icon(Icons.Default.Mic, contentDescription = "Start new recording")
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -575,15 +696,10 @@ fun WaveformDisplay(audioFilePath: String?, modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         if (audioFilePath != null) {
             Text(
-                text = "Waveform visualization for $audioFilePath\n(requires custom drawing implementation)",
+                text = "Waveform visualization for $audioFilePath(requires custom drawing implementation)",
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
             )
-            // TODO: Implement actual waveform drawing here.
-            // This would typically involve:
-            // 1. Reading audio data (e.g., from the audioFilePath).
-            // 2. Processing audio data to extract amplitude values.
-            // 3. Using Canvas or custom Composables to draw the waveform.
         } else {
             Text(
                 text = "Start recording to see the waveform...",

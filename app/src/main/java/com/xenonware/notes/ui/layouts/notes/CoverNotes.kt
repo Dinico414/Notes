@@ -790,7 +790,7 @@ fun CoverNotes(
                     },
                     toolbarHeight = 72.dp,
                     saveTrigger = saveTrigger,
-                    onSaveTriggerConsumed = { saveTrigger = false }, 
+                    onSaveTriggerConsumed = { saveTrigger = false },
                     selectedAudioViewType = selectedAudioViewType, // Pass the selected view type
                 )
 
