@@ -220,16 +220,16 @@ class AudioPlayerManager {
                 this@AudioPlayerManager.isPlaying = true
                 currentRecordingState = RecordingState.PLAYING
                 setOnCompletionListener {
-                    stopAudio()
+                    stopAudio() // This will now correctly trigger the logic in NoteAudioCard
                     this@AudioPlayerManager.currentPlaybackPositionMillis = 0L
-                    currentRecordingState = RecordingState.STOPPED_UNSAVED // After playing, it's stopped but unsaved
+                    // Don't set currentRecordingState here, let NoteAudioCard handle the transition
                 }
             }
             println("Playing audio from: $filePath")
         } catch (e: IOException) {
             println("Failed to play audio: ${e.message}")
             this@AudioPlayerManager.isPlaying = false
-            currentRecordingState = RecordingState.STOPPED_UNSAVED
+            currentRecordingState = RecordingState.IDLE // If playback fails, player is idle
         }
     }
 
@@ -241,13 +241,8 @@ class AudioPlayerManager {
         mediaPlayer = null
         isPlaying = false
         currentPlaybackPositionMillis = 0L
-        if (currentRecordingState == RecordingState.PLAYING) {
-            // Determine next state based on context
-            // If we were playing a newly recorded temporary file, it's STOPPED_UNSAVED
-            // If we were playing an initially loaded saved file, it's VIEWING_SAVED_AUDIO
-            currentRecordingState = RecordingState.STOPPED_UNSAVED // This needs to be smarter or handled by the parent composable
-        }
-        println("Stopping audio playback")
+        currentRecordingState = RecordingState.IDLE // Player itself is now idle
+        println("Stopping audio playback. Player Manager state set to IDLE.")
     }
 
     fun getAudioDuration(filePath: String): Long {
@@ -279,7 +274,7 @@ fun NoteAudioCard(
     audioTitle: String,
     onAudioTitleChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit, // (title, description)
+    onSave: (String, String) -> Unit, // (title, description) - now also includes the file path
     cardBackgroundColor: Color = colorScheme.surfaceContainer,
     toolbarHeight: Dp,
     saveTrigger: Boolean,
@@ -312,15 +307,21 @@ fun NoteAudioCard(
         // Only update if player manager is actively changing state to PLAYING, otherwise recorderManager is primary
         if (playerManager.currentRecordingState == RecordingState.PLAYING) {
             recordingState = playerManager.currentRecordingState
-        } else if (playerManager.currentRecordingState == RecordingState.STOPPED_UNSAVED && recordingState != RecordingState.RECORDING && recordingState != RecordingState.PAUSED) {
-            recordingState = playerManager.currentRecordingState
-        } else if (playerManager.currentRecordingState == RecordingState.VIEWING_SAVED_AUDIO && recordingState != RecordingState.RECORDING && recordingState != RecordingState.PAUSED) {
-            recordingState = playerManager.currentRecordingState
+        } else if (playerManager.currentRecordingState == RecordingState.IDLE) {
+            // When player stops, determine the next overall card state based on recorder's state
+            if (recorderManager.currentRecordingState == RecordingState.VIEWING_SAVED_AUDIO) {
+                recordingState = RecordingState.VIEWING_SAVED_AUDIO
+            } else if (recorderManager.currentRecordingState == RecordingState.STOPPED_UNSAVED) {
+                recordingState = RecordingState.STOPPED_UNSAVED
+            } else {
+                recordingState = RecordingState.IDLE
+            }
         }
     }
 
     // Handle initial audio file loading
     LaunchedEffect(initialAudioFilePath) {
+        println("NoteAudioCard: LaunchedEffect(initialAudioFilePath) triggered with: $initialAudioFilePath")
         if (initialAudioFilePath != null) {
             recorderManager.setInitialAudioFilePath(initialAudioFilePath)
             playerManager.totalAudioDurationMillis = playerManager.getAudioDuration(initialAudioFilePath)
@@ -378,6 +379,7 @@ fun NoteAudioCard(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
+            println("NoteAudioCard: Save trigger activated. Temp path: ${recorderManager.audioFilePath}")
             recorderManager.stopRecording()
             playerManager.stopAudio()
             onSave(audioTitle, recorderManager.audioFilePath ?: "")
@@ -389,6 +391,7 @@ fun NoteAudioCard(
 
     DisposableEffect(Unit) {
         onDispose {
+            println("NoteAudioCard: DisposableEffect onDispose called.")
             recorderManager.dispose()
             playerManager.stopAudio()
             playerManager.dispose()
@@ -696,7 +699,7 @@ fun WaveformDisplay(audioFilePath: String?, modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         if (audioFilePath != null) {
             Text(
-                text = "Waveform visualization for $audioFilePath(requires custom drawing implementation)",
+                text = "Waveform visualization for $audioFilePath\n(requires custom drawing implementation)",
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
             )
