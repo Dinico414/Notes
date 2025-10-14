@@ -27,12 +27,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.FormatUnderlined
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.ButtonDefaults
@@ -112,6 +115,11 @@ import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.launch
 
+// Define an enum for the audio view types
+enum class AudioViewType {
+    Waveform, Transcript
+}
+
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -146,6 +154,7 @@ fun CompactNotes(
     var currentListSizeIndex by rememberSaveable { mutableIntStateOf(1) }
     val listEditorFontSize = listTextSizes[currentListSizeIndex]
 
+    var selectedAudioViewType by rememberSaveable { mutableStateOf(AudioViewType.Waveform) } // State for audio view
 
     var showSketchNoteCard by rememberSaveable { mutableStateOf(false) }
     var showAudioNoteCard by rememberSaveable { mutableStateOf(false) }
@@ -241,6 +250,7 @@ fun CompactNotes(
         listItemsState.clear()
         nextListItemId = 0L
         currentListSizeIndex = 1
+        selectedAudioViewType = AudioViewType.Waveform // Reset audio view type
     }
 
     val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
@@ -357,31 +367,50 @@ fun CompactNotes(
                     null
                 }
 
-                val audioEditorContent: @Composable (RowScope.() -> Unit)? = if (showListNoteCard) {
+                val audioEditorContent: @Composable (RowScope.() -> Unit)? = if (showAudioNoteCard) {
                     @Composable {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.Center
                         ) {
-                            FilledTonalButton(
-                                onClick = {
-                                    listItemsState.add(
-                                        ListItem(
-                                            nextListItemId++, "", false
-                                        )
-                                    )
-                                },
+                            val waveformShape = if (selectedAudioViewType == AudioViewType.Waveform) {
+                                RoundedCornerShape(100f)
+                            } else {
+                                RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp, topEnd = 8.dp, bottomEnd = 8.dp)
+                            }
+                            val transcriptShape = if (selectedAudioViewType == AudioViewType.Transcript) {
+                                RoundedCornerShape(100f)
+                            } else {
+                                RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 28.dp, bottomEnd = 28.dp)
+                            }
+
+                            FilledIconButton(
+                                onClick = { selectedAudioViewType = AudioViewType.Waveform },
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = if (selectedAudioViewType == AudioViewType.Waveform) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = if (selectedAudioViewType == AudioViewType.Waveform) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                                ),
+                                shape = waveformShape,
                                 modifier = Modifier
-                                    .width(140.dp)
-                                    .height(56.dp),
-                                colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiary,
-                                    contentColor = MaterialTheme.colorScheme.onTertiary
-                                )
+                                    .width(98.dp)
+                                    .height(56.dp)
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = "Add new item to list")
-                                Text(text = "Add")
+                                Icon(Icons.Default.GraphicEq, contentDescription = "Waveform view")
+                            }
+                            Spacer(Modifier.width(2.dp))
+                            FilledIconButton(
+                                onClick = { selectedAudioViewType = AudioViewType.Transcript },
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = if (selectedAudioViewType == AudioViewType.Transcript) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = if (selectedAudioViewType == AudioViewType.Transcript) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                                ),
+                                shape = transcriptShape,
+                                modifier = Modifier
+                                    .width(98.dp)
+                                    .height(56.dp)
+                            ) {
+                                Icon(Icons.Default.Article, contentDescription = "Transcript view")
                             }
                         }
                     }
@@ -437,7 +466,7 @@ fun CompactNotes(
                         notesViewModel.setSearchQuery(newQuery)
                     },
                     lazyListState = lazyListState,
-                    allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && !showListNoteCard && notesLayoutType == NotesLayoutType.LIST,
+                    allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && !showListNoteCard && !showAudioNoteCard && notesLayoutType == NotesLayoutType.LIST, // Added !showAudioNoteCard
                     selectedNoteIds = selectedNoteIds.toList(),
                     onClearSelection = { selectedNoteIds = emptySet() },
                     onDeleteConfirm = {
@@ -451,16 +480,20 @@ fun CompactNotes(
                         showTextNoteCard = true
                     },
                     onPenNoteClick = { showSketchNoteCard = true },
-                    onMicNoteClick = { showAudioNoteCard = true },
+                    onMicNoteClick = {
+                        resetNoteState() // Reset state when opening audio note
+                        showAudioNoteCard = true
+                    },
                     onListNoteClick = {
                         resetNoteState()
                         showListNoteCard = true
                     },
                     isSearchActive = isSearchActive,
                     onIsSearchActiveChange = { isSearchActive = it },
-                    textEditorContentOverride = when {
+                    editorContentOverride = when {
                         showTextNoteCard -> textEditorContent
                         showListNoteCard -> listEditorContent
+                        showAudioNoteCard -> audioEditorContent
                         else -> null
                     },
                     fabOverride = if (showTextNoteCard) {
@@ -492,7 +525,21 @@ fun CompactNotes(
                                 )
                             }
                         }
-                    } else {
+                    } else if (showAudioNoteCard) { // FAB for Audio Note
+                        {
+                            FloatingActionButton(
+                                onClick = { if (titleState.isNotBlank()) saveTrigger = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Save,
+                                    contentDescription = "Save Audio Note",
+                                    tint = if (titleState.isNotBlank()) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(
+                                        alpha = 0.38f
+                                    )
+                                )
+                            }
+                        }
+                    }
+                    else {
                         null
                     },
                     notesLayoutType = notesLayoutType,
@@ -671,8 +718,10 @@ fun CompactNotes(
                                                                     NoteType.TEXT -> showTextNoteCard =
                                                                         true
 
-                                                                    NoteType.AUDIO -> showAudioNoteCard =
-                                                                        true
+                                                                    NoteType.AUDIO -> {
+                                                                        showAudioNoteCard = true
+                                                                        selectedAudioViewType = AudioViewType.Waveform // Default for editing
+                                                                    }
 
                                                                     NoteType.LIST -> showListNoteCard =
                                                                         true
@@ -758,8 +807,10 @@ fun CompactNotes(
                                                         }
                                                         when (itemToEdit.noteType) {
                                                             NoteType.TEXT -> showTextNoteCard = true
-                                                            NoteType.AUDIO -> showAudioNoteCard =
-                                                                true
+                                                            NoteType.AUDIO -> {
+                                                                showAudioNoteCard = true
+                                                                selectedAudioViewType = AudioViewType.Waveform // Default for editing
+                                                            }
 
                                                             NoteType.LIST -> showListNoteCard = true
                                                             NoteType.SKETCH -> showSketchNoteCard =
@@ -855,7 +906,7 @@ fun CompactNotes(
                             if (editingNoteId != null) {
                                 val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
                                     title = title,
-                                    )
+                                )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
                                 }
@@ -872,6 +923,8 @@ fun CompactNotes(
                     toolbarHeight = 72.dp,
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
+                    selectedAudioViewType = selectedAudioViewType, // Pass the selected view type
+                    onSelectedAudioViewTypeChange = { selectedAudioViewType = it } // Pass the callback
                 )
 
             }

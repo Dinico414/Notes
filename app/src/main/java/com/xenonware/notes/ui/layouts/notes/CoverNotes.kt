@@ -27,18 +27,22 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.FormatUnderlined
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -140,6 +144,8 @@ fun CoverNotes(
     val listTextSizes = remember { listOf(16.sp, 20.sp, 24.sp, 28.sp) }
     var currentListSizeIndex by rememberSaveable { mutableIntStateOf(1) }
     val listEditorFontSize = listTextSizes[currentListSizeIndex]
+
+    var selectedAudioViewType by rememberSaveable { mutableStateOf(AudioViewType.Waveform) } // State for audio view
 
     var showSketchNoteCard by rememberSaveable { mutableStateOf(false) }
     var showAudioNoteCard by rememberSaveable { mutableStateOf(false) }
@@ -308,6 +314,7 @@ fun CoverNotes(
                 } else {
                     null
                 }
+
                 val listEditorContent: @Composable (RowScope.() -> Unit)? = if (showListNoteCard) {
                     @Composable {
                         Row(
@@ -333,6 +340,57 @@ fun CoverNotes(
                                 onClick = ::onListTextResizeClick,
                             ) {
                                 Icon(Icons.Default.FormatSize, contentDescription = "Change text size")
+                            }
+                        }
+                    }
+                } else {
+                    null
+                }
+
+                val audioEditorContent: @Composable (RowScope.() -> Unit)? = if (showAudioNoteCard) {
+                    @Composable {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            val waveformShape = if (selectedAudioViewType == AudioViewType.Waveform) {
+                                RoundedCornerShape(100f)
+                            } else {
+                                RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp, topEnd = 8.dp, bottomEnd = 8.dp)
+                            }
+                            val transcriptShape = if (selectedAudioViewType == AudioViewType.Transcript) {
+                                RoundedCornerShape(100f)
+                            } else {
+                                RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 28.dp, bottomEnd = 28.dp)
+                            }
+
+                            FilledIconButton(
+                                onClick = { selectedAudioViewType = AudioViewType.Waveform },
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = if (selectedAudioViewType == AudioViewType.Waveform) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = if (selectedAudioViewType == AudioViewType.Waveform) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                                ),
+                                shape = waveformShape,
+                                modifier = Modifier
+                                    .width(98.dp)
+                                    .height(56.dp)
+                            ) {
+                                Icon(Icons.Default.GraphicEq, contentDescription = "Waveform view")
+                            }
+                            Spacer(Modifier.width(2.dp))
+                            FilledIconButton(
+                                onClick = { selectedAudioViewType = AudioViewType.Transcript },
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = if (selectedAudioViewType == AudioViewType.Transcript) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = if (selectedAudioViewType == AudioViewType.Transcript) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                                ),
+                                shape = transcriptShape,
+                                modifier = Modifier
+                                    .width(98.dp)
+                                    .height(56.dp)
+                            ) {
+                                Icon(Icons.Default.Article, contentDescription = "Transcript view")
                             }
                         }
                     }
@@ -369,9 +427,10 @@ fun CoverNotes(
                     },
                     isSearchActive = isSearchActive,
                     onIsSearchActiveChange = { isSearchActive = it },
-                    textEditorContentOverride = when {
+                    editorContentOverride = when {
                         showTextNoteCard -> textEditorContent
                         showListNoteCard -> listEditorContent
+                        showAudioNoteCard -> audioEditorContent
                         else -> null
                     },
                     fabOverride = if (showTextNoteCard) {
@@ -689,7 +748,10 @@ fun CoverNotes(
                     toolbarHeight = 72.dp,
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
+                    selectedAudioViewType = selectedAudioViewType, // Pass the selected view type
+                    onSelectedAudioViewTypeChange = { selectedAudioViewType = it } // Pass the callback
                 )
+
             }
 
             AnimatedVisibility(

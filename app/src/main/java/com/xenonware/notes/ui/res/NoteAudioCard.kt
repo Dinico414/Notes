@@ -1,5 +1,7 @@
 package com.xenonware.notes.ui.res
 
+// Removed unused imports: SegmentedButton, SegmentedButtonDefaults, SingleChoiceSegmentedButtonRow
+// Removed mutableIntStateOf import as selectedView is removed
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,19 +29,16 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -54,12 +53,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
+import com.xenonware.notes.ui.layouts.notes.AudioViewType
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.HazeMaterials
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) // Add ExperimentalMaterial3ExpressiveApi
 @Composable
 fun NoteAudioCard(
     audioTitle: String,
@@ -70,6 +70,8 @@ fun NoteAudioCard(
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
+    selectedAudioViewType: AudioViewType, // Current selected view type from parent
+    onSelectedAudioViewTypeChange: (AudioViewType) -> Unit, // Callback to update parent
 ) {
     val hazeState = remember { HazeState() }
     val hazeThinColor = colorScheme.surfaceDim
@@ -78,7 +80,7 @@ fun NoteAudioCard(
     var isPaused by remember { mutableStateOf(false) }
     var isStopped by remember { mutableStateOf(false) }
     var hasRecording by remember { mutableStateOf(false) } // Indicates if an audio exists
-    var selectedView by remember { mutableIntStateOf(0) } // 0 for waveform, 1 for transcript
+    // Removed: var selectedView by remember { mutableIntStateOf(0) } // Now controlled by selectedAudioViewType parameter
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
@@ -126,27 +128,6 @@ fun NoteAudioCard(
         ) {
             Spacer(modifier = Modifier.height(topPadding))
 
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                SegmentedButton(
-                    selected = selectedView == 0,
-                    onClick = { selectedView = 0 },
-                    shape = SegmentedButtonDefaults.itemShape(0, 2),
-                ) {
-                    Text("Waveform")
-                }
-                SegmentedButton(
-                    selected = selectedView == 1,
-                    onClick = { selectedView = 1 },
-                    shape = SegmentedButtonDefaults.itemShape(1, 2),
-                ) {
-                    Text("Transcript")
-                }
-            }
-
             // Waveform/Transcript Display Area
             Box(
                 modifier = Modifier
@@ -155,13 +136,13 @@ fun NoteAudioCard(
                     .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (selectedView == 0) {
+                if (selectedAudioViewType == AudioViewType.Waveform) { // Use selectedAudioViewType here
                     Text(
                         text = "Waveform visualization coming soon...",
                         style = MaterialTheme.typography.headlineMedium,
                         textAlign = TextAlign.Center
                     )
-                } else {
+                } else { // Implicitly AudioViewType.Transcript
                     Text(
                         text = "Audio Transcript coming soon...",
                         style = MaterialTheme.typography.headlineMedium,

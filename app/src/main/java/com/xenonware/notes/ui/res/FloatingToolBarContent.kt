@@ -139,13 +139,13 @@ fun FloatingToolbarContent(
     selectionContentOverride: @Composable (RowScope.() -> Unit)? = null,
     addModeContentOverride: @Composable (RowScope.() -> Unit)? = null,
     defaultContentOverride: @Composable (RowScope.() -> Unit)? = null,
-    textEditorContentOverride: @Composable (RowScope.() -> Unit)? = null,
+    editorContentOverride: @Composable (RowScope.() -> Unit)? = null,
     notesLayoutType: NotesLayoutType,
     onNotesLayoutTypeChange: (NotesLayoutType) -> Unit,
     onResizeClick: () -> Unit,
 ) {
     val isSelectionActive = selectedNoteIds.isNotEmpty()
-    val isTextEditorActive = textEditorContentOverride != null
+    val isTextEditorActive = editorContentOverride != null
 
     var showActionIconsExceptSearch by rememberSaveable { mutableStateOf(true) }
     var canShowTextField by rememberSaveable { mutableStateOf(false) }
@@ -421,7 +421,7 @@ fun FloatingToolbarContent(
             ) { (selectionActive, addModeActive, textEditorActive) ->
                 when {
                     textEditorActive -> {
-                        textEditorContentOverride?.invoke(this)
+                        editorContentOverride?.invoke(this)
                     }
 
                     selectionActive -> {
