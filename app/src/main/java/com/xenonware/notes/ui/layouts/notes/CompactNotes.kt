@@ -207,7 +207,6 @@ fun CompactNotes(
     var isAddModeActive by rememberSaveable { mutableStateOf(false) }
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
 
-    // Resize Feature States
     var listNoteLineLimitIndex by rememberSaveable { mutableIntStateOf(0) } // 0: 3 lines, 1: 9 lines, 2: Unlimited
     var gridNoteColumnCountIndex by rememberSaveable { mutableIntStateOf(0) } // Cycles through column options
 

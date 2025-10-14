@@ -38,9 +38,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -571,7 +571,7 @@ fun FloatingToolbarContent(
                                                     enabled = !isSearchActive && showActionIconsExceptSearch
                                                 ) {
                                                     Icon(
-                                                        Icons.Filled.Fullscreen,
+                                                        Icons.Default.CenterFocusStrong,
                                                         contentDescription = stringResource(R.string.resize_notes),
                                                         tint = colorScheme.onSurface
                                                     )
