@@ -151,17 +151,14 @@ fun CompactNotes(
     var showAudioNoteCard by rememberSaveable { mutableStateOf(false) }
     var showListNoteCard by rememberSaveable { mutableStateOf(false) }
     var listTitleState by rememberSaveable { mutableStateOf("") }
-    val listItemsState = rememberSaveable(saver = listSaver(
-        save = { list: List<ListItem> ->
-            list.map { it.id.toString() + "," + it.text + "," + it.isChecked.toString() }
-        },
-        restore = { list: List<String> ->
-            list.map { itemString ->
-                val parts = itemString.split(",")
-                ListItem(parts[0].toLong(), parts[1], parts[2].toBoolean())
-            }.toMutableStateList()
-        }
-    )) { mutableStateListOf() }
+    val listItemsState = rememberSaveable(saver = listSaver(save = { list: List<ListItem> ->
+        list.map { it.id.toString() + "," + it.text + "," + it.isChecked.toString() }
+    }, restore = { list: List<String> ->
+        list.map { itemString ->
+            val parts = itemString.split(",")
+            ListItem(parts[0].toLong(), parts[1], parts[2].toBoolean())
+        }.toMutableStateList()
+    })) { mutableStateListOf() }
     var nextListItemId by rememberSaveable { mutableLongStateOf(0L) }
 
 
@@ -258,8 +255,7 @@ fun CompactNotes(
                     scope.launch { drawerState.close() }
                 },
             )
-        },
-        drawerState = drawerState
+        }, drawerState = drawerState
     ) {
         Scaffold(
             snackbarHost = {
@@ -269,7 +265,8 @@ fun CompactNotes(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                     )
                 }
-            }, bottomBar = {
+            },
+            bottomBar = {
                 val textEditorContent: @Composable (RowScope.() -> Unit)? = if (showTextNoteCard) {
                     @Composable {
                         Row {
@@ -277,33 +274,64 @@ fun CompactNotes(
                             val defaultColor = Color.Transparent
                             val toggledIconColor = MaterialTheme.colorScheme.onPrimary
                             val defaultIconColor = MaterialTheme.colorScheme.onSurface
-                            FilledIconButton(onClick = { isBold = !isBold }, colors = IconButtonDefaults.iconButtonColors(containerColor = if (isBold) toggledColor else defaultColor, contentColor = if (isBold) toggledIconColor else defaultIconColor)) {
+                            FilledIconButton(
+                                onClick = { isBold = !isBold },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = if (isBold) toggledColor else defaultColor,
+                                    contentColor = if (isBold) toggledIconColor else defaultIconColor
+                                )
+                            ) {
                                 Icon(Icons.Default.FormatBold, contentDescription = "Bold")
                             }
-                            FilledIconButton(onClick = { isItalic = !isItalic }, colors = IconButtonDefaults.iconButtonColors(containerColor = if (isItalic) toggledColor else defaultColor, contentColor = if (isItalic) toggledIconColor else defaultIconColor)) {
+                            FilledIconButton(
+                                onClick = { isItalic = !isItalic },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = if (isItalic) toggledColor else defaultColor,
+                                    contentColor = if (isItalic) toggledIconColor else defaultIconColor
+                                )
+                            ) {
                                 Icon(Icons.Default.FormatItalic, contentDescription = "Italic")
                             }
-                            FilledIconButton(onClick = { isUnderlined = !isUnderlined }, colors = IconButtonDefaults.iconButtonColors(containerColor = if (isUnderlined) toggledColor else defaultColor, contentColor = if (isUnderlined) toggledIconColor else defaultIconColor)) {
-                                Icon(Icons.Default.FormatUnderlined, contentDescription = "Underline")
+                            FilledIconButton(
+                                onClick = { isUnderlined = !isUnderlined },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = if (isUnderlined) toggledColor else defaultColor,
+                                    contentColor = if (isUnderlined) toggledIconColor else defaultIconColor
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.FormatUnderlined, contentDescription = "Underline"
+                                )
                             }
-                            IconButton(onClick = { currentSizeIndex = (currentSizeIndex + 1) % textSizes.size }) {
-                                Icon(Icons.Default.FormatSize, contentDescription = "Change Text Size")
+                            IconButton(onClick = {
+                                currentSizeIndex = (currentSizeIndex + 1) % textSizes.size
+                            }) {
+                                Icon(
+                                    Icons.Default.FormatSize,
+                                    contentDescription = "Change Text Size"
+                                )
                             }
                         }
                     }
                 } else {
                     null
                 }
+
                 val listEditorContent: @Composable (RowScope.() -> Unit)? = if (showListNoteCard) {
                     @Composable {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             FilledTonalButton(
-                                onClick = { listItemsState.add(ListItem(nextListItemId++, "", false)) },
+                                onClick = {
+                                    listItemsState.add(
+                                        ListItem(
+                                            nextListItemId++, "", false
+                                        )
+                                    )
+                                },
                                 modifier = Modifier
                                     .width(140.dp)
                                     .height(56.dp),
@@ -318,13 +346,88 @@ fun CompactNotes(
                             IconButton(
                                 onClick = ::onListTextResizeClick,
                             ) {
-                                Icon(Icons.Default.FormatSize, contentDescription = "Change text size")
+                                Icon(
+                                    Icons.Default.FormatSize,
+                                    contentDescription = "Change text size"
+                                )
                             }
                         }
                     }
                 } else {
                     null
                 }
+
+                val audioEditorContent: @Composable (RowScope.() -> Unit)? = if (showListNoteCard) {
+                    @Composable {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            FilledTonalButton(
+                                onClick = {
+                                    listItemsState.add(
+                                        ListItem(
+                                            nextListItemId++, "", false
+                                        )
+                                    )
+                                },
+                                modifier = Modifier
+                                    .width(140.dp)
+                                    .height(56.dp),
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiary,
+                                    contentColor = MaterialTheme.colorScheme.onTertiary
+                                )
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add new item to list")
+                                Text(text = "Add")
+                            }
+                        }
+                    }
+                } else {
+                    null
+                }
+
+//                val sketchEditorContent: @Composable (RowScope.() -> Unit)? = if (showSketchNoteCard) {
+//                    @Composable {
+//                        Row(
+//                            modifier = Modifier.fillMaxWidth(),
+//                            verticalAlignment = Alignment.CenterVertically,
+//                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+//                        ) {
+//                            FilledTonalButton(
+//                                onClick = {
+//                                    listItemsState.add(
+//                                        ListItem(
+//                                            nextListItemId++, "", false
+//                                        )
+//                                    )
+//                                },
+//                                modifier = Modifier
+//                                    .width(140.dp)
+//                                    .height(56.dp),
+//                                colors = ButtonDefaults.filledTonalButtonColors(
+//                                    containerColor = MaterialTheme.colorScheme.tertiary,
+//                                    contentColor = MaterialTheme.colorScheme.onTertiary
+//                                )
+//                            ) {
+//                                Icon(Icons.Default.Add, contentDescription = "Add new item to list")
+//                                Text(text = "Add")
+//                            }
+//                            IconButton(
+//                                onClick = ::onListTextResizeClick,
+//                            ) {
+//                                Icon(
+//                                    Icons.Default.FormatSize,
+//                                    contentDescription = "Change text size"
+//                                )
+//                            }
+//                        }
+//                    }
+//                } else {
+//                    null
+//                }
 
                 FloatingToolbarContent(
                     hazeState = hazeState,
@@ -363,24 +466,29 @@ fun CompactNotes(
                     fabOverride = if (showTextNoteCard) {
                         {
                             FloatingActionButton(
-                                onClick = { if (titleState.isNotBlank()) saveTrigger = true }
-                            ) {
+                                onClick = { if (titleState.isNotBlank()) saveTrigger = true }) {
                                 Icon(
                                     imageVector = Icons.Default.Save,
                                     contentDescription = "Save Note",
-                                    tint = if (titleState.isNotBlank()) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    tint = if (titleState.isNotBlank()) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(
+                                        alpha = 0.38f
+                                    )
                                 )
                             }
                         }
                     } else if (showListNoteCard) {
                         {
                             FloatingActionButton(
-                                onClick = { if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger = true }
-                            ) {
+                                onClick = {
+                                    if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
+                                        true
+                                }) {
                                 Icon(
                                     imageVector = Icons.Default.Save,
                                     contentDescription = "Save List Note",
-                                    tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(
+                                        alpha = 0.38f
+                                    )
                                 )
                             }
                         }
@@ -511,7 +619,9 @@ fun CompactNotes(
                                                     is NotesItems -> {
                                                         NoteCard(
                                                             item = item,
-                                                            isSelected = selectedNoteIds.contains(item.id),
+                                                            isSelected = selectedNoteIds.contains(
+                                                                item.id
+                                                            ),
                                                             isSelectionModeActive = isSelectionModeActive,
                                                             onSelectItem = {
                                                                 if (selectedNoteIds.contains(item.id)) {
@@ -523,27 +633,52 @@ fun CompactNotes(
                                                             onEditItem = { itemToEdit ->
                                                                 editingNoteId = itemToEdit.id
                                                                 titleState = itemToEdit.title
-                                                                descriptionState = itemToEdit.description ?: ""
+                                                                descriptionState =
+                                                                    itemToEdit.description ?: ""
                                                                 listTitleState = itemToEdit.title
                                                                 listItemsState.clear()
                                                                 nextListItemId = 0L
                                                                 currentListSizeIndex = 1
                                                                 itemToEdit.description?.let { desc ->
-                                                                    val parsedItems = desc.split("\n").mapNotNull { line ->
-                                                                        if (line.isBlank()) null
-                                                                        else {
-                                                                            val isChecked = line.startsWith("[x]")
-                                                                            val text = if (isChecked) line.substringAfter("[x] ").trim() else line.substringAfter("[ ] ").trim()
-                                                                            ListItem(nextListItemId++, text, isChecked)
-                                                                        }
-                                                                    }
-                                                                    listItemsState.addAll(parsedItems)
+                                                                    val parsedItems =
+                                                                        desc.split("\n")
+                                                                            .mapNotNull { line ->
+                                                                                if (line.isBlank()) null
+                                                                                else {
+                                                                                    val isChecked =
+                                                                                        line.startsWith(
+                                                                                            "[x]"
+                                                                                        )
+                                                                                    val text =
+                                                                                        if (isChecked) line.substringAfter(
+                                                                                            "[x] "
+                                                                                        )
+                                                                                            .trim() else line.substringAfter(
+                                                                                            "[ ] "
+                                                                                        ).trim()
+                                                                                    ListItem(
+                                                                                        nextListItemId++,
+                                                                                        text,
+                                                                                        isChecked
+                                                                                    )
+                                                                                }
+                                                                            }
+                                                                    listItemsState.addAll(
+                                                                        parsedItems
+                                                                    )
                                                                 }
                                                                 when (itemToEdit.noteType) {
-                                                                    NoteType.TEXT -> showTextNoteCard = true
-                                                                    NoteType.AUDIO -> showAudioNoteCard = true
-                                                                    NoteType.LIST -> showListNoteCard = true
-                                                                    NoteType.SKETCH -> showSketchNoteCard = true
+                                                                    NoteType.TEXT -> showTextNoteCard =
+                                                                        true
+
+                                                                    NoteType.AUDIO -> showAudioNoteCard =
+                                                                        true
+
+                                                                    NoteType.LIST -> showListNoteCard =
+                                                                        true
+
+                                                                    NoteType.SKETCH -> showSketchNoteCard =
+                                                                        true
                                                                 }
                                                             },
                                                             maxLines = currentListMaxLines
@@ -552,13 +687,18 @@ fun CompactNotes(
                                                             index == noteItemsWithHeaders.lastIndex || (index + 1 < noteItemsWithHeaders.size && noteItemsWithHeaders[index + 1] is String)
 
                                                         if (!isLastItemInListOrNextIsHeader) {
-                                                            Spacer(modifier = Modifier.height(MediumPadding))
+                                                            Spacer(
+                                                                modifier = Modifier.height(
+                                                                    MediumPadding
+                                                                )
+                                                            )
                                                         }
                                                     }
                                                 }
                                             }
                                         }
                                     }
+
                                     NotesLayoutType.GRID -> {
                                         LazyVerticalStaggeredGrid(
                                             columns = StaggeredGridCells.Fixed(currentGridColumns),
@@ -567,7 +707,9 @@ fun CompactNotes(
                                                 top = ExtraLargePadding,
                                                 bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding
                                             ),
-                                            horizontalArrangement = Arrangement.spacedBy(MediumPadding),
+                                            horizontalArrangement = Arrangement.spacedBy(
+                                                MediumPadding
+                                            ),
                                             verticalItemSpacing = MediumPadding
                                         ) {
                                             items(noteItemsWithHeaders.filterIsInstance<NotesItems>()) { item ->
@@ -585,27 +727,43 @@ fun CompactNotes(
                                                     onEditItem = { itemToEdit ->
                                                         editingNoteId = itemToEdit.id
                                                         titleState = itemToEdit.title
-                                                        descriptionState = itemToEdit.description ?: ""
+                                                        descriptionState =
+                                                            itemToEdit.description ?: ""
                                                         listTitleState = itemToEdit.title
                                                         listItemsState.clear()
                                                         nextListItemId = 0L
                                                         currentListSizeIndex = 1
                                                         itemToEdit.description?.let { desc ->
-                                                            val parsedItems = desc.split("\n").mapNotNull { line ->
-                                                                if (line.isBlank()) null
-                                                                else {
-                                                                    val isChecked = line.startsWith("[x]")
-                                                                    val text = if (isChecked) line.substringAfter("[x] ").trim() else line.substringAfter("[ ] ").trim()
-                                                                    ListItem(nextListItemId++, text, isChecked)
+                                                            val parsedItems = desc.split("\n")
+                                                                .mapNotNull { line ->
+                                                                    if (line.isBlank()) null
+                                                                    else {
+                                                                        val isChecked =
+                                                                            line.startsWith("[x]")
+                                                                        val text =
+                                                                            if (isChecked) line.substringAfter(
+                                                                                "[x] "
+                                                                            )
+                                                                                .trim() else line.substringAfter(
+                                                                                "[ ] "
+                                                                            ).trim()
+                                                                        ListItem(
+                                                                            nextListItemId++,
+                                                                            text,
+                                                                            isChecked
+                                                                        )
+                                                                    }
                                                                 }
-                                                            }
                                                             listItemsState.addAll(parsedItems)
                                                         }
                                                         when (itemToEdit.noteType) {
                                                             NoteType.TEXT -> showTextNoteCard = true
-                                                            NoteType.AUDIO -> showAudioNoteCard = true
+                                                            NoteType.AUDIO -> showAudioNoteCard =
+                                                                true
+
                                                             NoteType.LIST -> showListNoteCard = true
-                                                            NoteType.SKETCH -> showSketchNoteCard = true
+                                                            NoteType.SKETCH -> showSketchNoteCard =
+                                                                true
                                                         }
                                                     },
                                                     maxLines = gridMaxLines
@@ -623,9 +781,7 @@ fun CompactNotes(
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
-                                        onClick = { isAddModeActive = false }
-                                    )
-                            )
+                                        onClick = { isAddModeActive = false }))
                         }
                     }
                 })
@@ -637,10 +793,6 @@ fun CompactNotes(
             ) {
                 BackHandler { showTextNoteCard = false }
 
-//                if (saveTrigger) {
-//
-//                }
-
                 NoteTextCard(
                     title = titleState,
                     onTitleChange = { titleState = it },
@@ -649,10 +801,12 @@ fun CompactNotes(
                     onSave = { title, description ->
                         if (title.isNotBlank() || description.isNotBlank()) {
                             if (editingNoteId != null) {
-                                val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
-                                    title = title,
-                                    description = description.takeIf { it.isNotBlank() },
-                                )
+                                val updatedNote =
+                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
+                                        .find { it.id == editingNoteId }?.copy(
+                                            title = title,
+                                            description = description.takeIf { it.isNotBlank() },
+                                        )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
                                 }
@@ -692,7 +846,34 @@ fun CompactNotes(
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler { showAudioNoteCard = false }
-                NoteAudioCard(onDismiss = { showAudioNoteCard = false })
+                NoteAudioCard(
+                    audioTitle = titleState,
+                    onAudioTitleChange = { titleState = it },
+                    onDismiss = { showAudioNoteCard = false },
+                    onSave = { title, description ->
+                        if (title.isNotBlank()) {
+                            if (editingNoteId != null) {
+                                val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
+                                    title = title,
+                                    )
+                                if (updatedNote != null) {
+                                    notesViewModel.updateItem(updatedNote)
+                                }
+                            } else {
+                                notesViewModel.addItem(
+                                    title = title,
+                                    noteType = NoteType.AUDIO
+                                )
+                            }
+                        }
+                        showAudioNoteCard = false
+                        resetNoteState()
+                    },
+                    toolbarHeight = 72.dp,
+                    saveTrigger = saveTrigger,
+                    onSaveTriggerConsumed = { saveTrigger = false },
+                )
+
             }
 
             AnimatedVisibility(
@@ -712,10 +893,12 @@ fun CompactNotes(
                         }
                         if (title.isNotBlank() || description.isNotBlank()) {
                             if (editingNoteId != null) {
-                                val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
-                                    title = title,
-                                    description = description.takeIf { it.isNotBlank() },
-                                )
+                                val updatedNote =
+                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
+                                        .find { it.id == editingNoteId }?.copy(
+                                            title = title,
+                                            description = description.takeIf { it.isNotBlank() },
+                                        )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
                                 }
@@ -742,7 +925,8 @@ fun CompactNotes(
                     onToggleItemChecked = { item, isChecked ->
                         val index = listItemsState.indexOfFirst { it.id == item.id }
                         if (index != -1) {
-                            listItemsState[index] = listItemsState[index].copy(isChecked = isChecked)
+                            listItemsState[index] =
+                                listItemsState[index].copy(isChecked = isChecked)
                         }
                     },
                     onItemTextChange = { item, newText ->
@@ -758,8 +942,7 @@ fun CompactNotes(
                     onTextResizeClick = ::onListTextResizeClick,
                     editorFontSize = listEditorFontSize,
                     addItemTrigger = saveTrigger,
-                    onAddItemTriggerConsumed = { saveTrigger = false }
-                )
+                    onAddItemTriggerConsumed = { saveTrigger = false })
             }
         }
     }
@@ -772,7 +955,7 @@ fun NoteCard(
     isSelectionModeActive: Boolean,
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
-    maxLines: Int = Int.MAX_VALUE
+    maxLines: Int = Int.MAX_VALUE,
 ) {
     when (item.noteType) {
         NoteType.TEXT -> CellTextNote(
@@ -783,6 +966,7 @@ fun NoteCard(
             onEditItem = onEditItem,
             maxLines = maxLines
         )
+
         NoteType.AUDIO -> CellAudioNote(
             item = item,
             isSelected = isSelected,
@@ -790,6 +974,7 @@ fun NoteCard(
             onSelectItem = onSelectItem,
             onEditItem = onEditItem
         )
+
         NoteType.LIST -> CellListNote(
             item = item,
             isSelected = isSelected,
@@ -798,6 +983,7 @@ fun NoteCard(
             onEditItem = onEditItem,
             maxLines = maxLines
         )
+
         NoteType.SKETCH -> CellSketchNote(
             item = item,
             isSelected = isSelected,

@@ -663,7 +663,33 @@ fun CoverNotes(
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler { showAudioNoteCard = false }
-                NoteAudioCard(onDismiss = { showAudioNoteCard = false })
+                NoteAudioCard(
+                    audioTitle = titleState,
+                    onAudioTitleChange = { titleState = it },
+                    onDismiss = { showAudioNoteCard = false },
+                    onSave = { title, description ->
+                        if (title.isNotBlank()) {
+                            if (editingNoteId != null) {
+                                val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
+                                    title = title,
+                                )
+                                if (updatedNote != null) {
+                                    notesViewModel.updateItem(updatedNote)
+                                }
+                            } else {
+                                notesViewModel.addItem(
+                                    title = title,
+                                    noteType = NoteType.AUDIO
+                                )
+                            }
+                        }
+                        showAudioNoteCard = false
+                        resetNoteState()
+                    },
+                    toolbarHeight = 72.dp,
+                    saveTrigger = saveTrigger,
+                    onSaveTriggerConsumed = { saveTrigger = false },
+                )
             }
 
             AnimatedVisibility(

@@ -131,7 +131,6 @@ fun NoteTextCard(
 
         Column(
             modifier = Modifier
-
                 .padding(horizontal = 20.dp)
                 .fillMaxSize()
                 .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
