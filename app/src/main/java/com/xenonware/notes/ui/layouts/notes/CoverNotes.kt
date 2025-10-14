@@ -8,6 +8,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,6 +23,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
@@ -46,11 +50,15 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -74,6 +82,7 @@ import com.xenonware.notes.ui.res.CellTextNote
 import com.xenonware.notes.ui.res.FloatingToolbarContent
 import com.xenonware.notes.ui.res.GoogleProfilBorder
 import com.xenonware.notes.ui.res.ListContent
+import com.xenonware.notes.ui.res.ListItem
 import com.xenonware.notes.ui.res.NoteAudioCard
 import com.xenonware.notes.ui.res.NoteListCard
 import com.xenonware.notes.ui.res.NoteSketchCard
@@ -130,6 +139,19 @@ fun CoverNotes(
     var showSketchNoteCard by rememberSaveable { mutableStateOf(false) }
     var showAudioNoteCard by rememberSaveable { mutableStateOf(false) }
     var showListNoteCard by rememberSaveable { mutableStateOf(false) }
+    var listTitleState by rememberSaveable { mutableStateOf("") }
+    val listItemsState = rememberSaveable(saver = listSaver(
+        save = { list: List<ListItem> ->
+            list.map { it.id.toString() + "," + it.text + "," + it.isChecked.toString() }
+        },
+        restore = { list: List<String> ->
+            list.map { itemString ->
+                val parts = itemString.split(",")
+                ListItem(parts[0].toLong(), parts[1], parts[2].toBoolean())
+            }.toMutableStateList()
+        }
+    )) { mutableStateListOf<ListItem>() }
+    var nextListItemId by rememberSaveable { mutableLongStateOf(0L) }
 
     val noteItemsWithHeaders = notesViewModel.noteItems
 
@@ -155,11 +177,40 @@ fun CoverNotes(
     var isAddModeActive by rememberSaveable { mutableStateOf(false) }
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
 
+    // Resize Feature States
+    var listNoteLineLimitIndex by rememberSaveable { mutableStateOf(0) } // 0: 3 lines, 1: 9 lines, 2: Unlimited
+    var gridNoteColumnCountIndex by rememberSaveable { mutableStateOf(0) } // Cycles through column options
+
+    val listLineLimits = remember { listOf(3, 9, Int.MAX_VALUE) }
+
+    val gridColumnCountOptions = remember(layoutType) {
+        when (layoutType) {
+            LayoutType.COVER, LayoutType.SMALL, LayoutType.COMPACT -> listOf(2, 3)
+            LayoutType.MEDIUM -> listOf(3, 4, 5)
+            else -> listOf(4, 5, 6) // EXPANDED or any other case
+        }
+    }
+
+    val currentListMaxLines = listLineLimits[listNoteLineLimitIndex]
+    val currentGridColumns = gridColumnCountOptions[gridNoteColumnCountIndex]
+    val gridMaxLines = 20
+
+
+    fun onResizeClick() {
+        if (notesLayoutType == NotesLayoutType.LIST) {
+            listNoteLineLimitIndex = (listNoteLineLimitIndex + 1) % listLineLimits.size
+        } else { // Grid Layout
+            gridNoteColumnCountIndex = (gridNoteColumnCountIndex + 1) % gridColumnCountOptions.size
+        }
+    }
 
     fun resetNoteState() {
         editingNoteId = null
         titleState = ""
         descriptionState = ""
+        listTitleState = ""
+        listItemsState.clear()
+        nextListItemId = 0L
     }
 
     val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
@@ -229,7 +280,7 @@ fun CoverNotes(
                         notesViewModel.setSearchQuery(newQuery)
                     },
                     lazyListState = lazyListState,
-                    allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && notesLayoutType == NotesLayoutType.LIST,
+                    allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && !showListNoteCard && notesLayoutType == NotesLayoutType.LIST,
                     selectedNoteIds = selectedNoteIds.toList(),
                     onClearSelection = { selectedNoteIds = emptySet() },
                     onDeleteConfirm = {
@@ -244,7 +295,10 @@ fun CoverNotes(
                     },
                     onPenNoteClick = { showSketchNoteCard = true },
                     onMicNoteClick = { showAudioNoteCard = true },
-                    onListNoteClick = { showListNoteCard = true },
+                    onListNoteClick = {
+                        resetNoteState()
+                        showListNoteCard = true
+                    },
                     isSearchActive = isSearchActive,
                     onIsSearchActiveChange = { isSearchActive = it },
                     textEditorContentOverride = textEditorContent,
@@ -261,11 +315,24 @@ fun CoverNotes(
                                 )
                             }
                         }
+                    } else if (showListNoteCard) {
+                        {
+                            FloatingActionButton(
+                                onClick = { if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Save,
+                                    contentDescription = "Save List Note",
+                                    tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                            }
+                        }
                     } else {
                         null
                     },
                     notesLayoutType = notesLayoutType,
-                    onNotesLayoutTypeChange = { notesViewModel.setNotesLayoutType(it) }
+                    onNotesLayoutTypeChange = { notesViewModel.setNotesLayoutType(it) },
+                    onResizeClick = ::onResizeClick
                 )
             },
         ) { scaffoldPadding ->
@@ -356,40 +423,159 @@ fun CoverNotes(
                                     )
                                 }
                             } else {
-                                LazyColumn(
-                                    state = lazyListState,
-                                    modifier = Modifier.weight(1f),
-                                    contentPadding = PaddingValues(
-                                        top = NoSpacing,
-                                        bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding,
-                                    )
-                                ) {
-                                    itemsIndexed(
-                                        items = noteItemsWithHeaders,
-                                        key = { _, item -> if (item is NotesItems) item.id else item.hashCode() }) { index, item ->
-                                        when (item) {
-                                            is String -> {
-                                                Text(
-                                                    text = item,
-                                                    style = MaterialTheme.typography.titleMedium.copy(
-                                                        fontStyle = FontStyle.Italic,
-                                                        color = coverScreenContentColor
-                                                    ),
-                                                    fontWeight = FontWeight.Thin,
-                                                    textAlign = TextAlign.Start,
-                                                    fontFamily = QuicksandTitleVariable,
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(
-                                                            top = if (index == 0) 0.dp else LargestPadding,
-                                                            bottom = SmallPadding,
-                                                            start = SmallPadding,
-                                                            end = LargestPadding
+                                when (notesLayoutType) {
+                                    NotesLayoutType.LIST -> {
+                                        LazyColumn(
+                                            state = lazyListState,
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(
+                                                top = NoSpacing,
+                                                bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding,
+                                            )
+                                        ) {
+                                            itemsIndexed(
+                                                items = noteItemsWithHeaders,
+                                                key = { _, item -> if (item is NotesItems) item.id else item.hashCode() }) { index, item ->
+                                                when (item) {
+                                                    is String -> {
+                                                        Text(
+                                                            text = item,
+                                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                                fontStyle = FontStyle.Italic,
+                                                                color = coverScreenContentColor
+                                                            ),
+                                                            fontWeight = FontWeight.Thin,
+                                                            textAlign = TextAlign.Start,
+                                                            fontFamily = QuicksandTitleVariable,
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(
+                                                                    top = if (index == 0) 0.dp else LargestPadding,
+                                                                    bottom = SmallPadding,
+                                                                    start = SmallPadding,
+                                                                    end = LargestPadding
+                                                                )
                                                         )
-                                                )
-                                            }
+                                                    }
 
-                                            is NotesItems -> {
+                                                    is NotesItems -> {
+                                                        val isSelected = selectedNoteIds.contains(item.id)
+                                                        when (item.noteType) {
+                                                            NoteType.TEXT -> CellTextNote(
+                                                                item = item,
+                                                                isSelected = isSelected,
+                                                                isSelectionModeActive = isSelectionModeActive,
+                                                                onSelectItem = {
+                                                                    if (isSelected) {
+                                                                        selectedNoteIds -= item.id
+                                                                    } else {
+                                                                        selectedNoteIds += item.id
+                                                                    }
+                                                                },
+                                                                onEditItem = { itemToEdit ->
+                                                                    editingNoteId = itemToEdit.id
+                                                                    titleState = itemToEdit.title
+                                                                    descriptionState = itemToEdit.description ?: ""
+                                                                    showTextNoteCard = true
+                                                                },
+                                                                maxLines = currentListMaxLines
+                                                            )
+                                                            NoteType.AUDIO -> CellAudioNote(
+                                                                item = item,
+                                                                isSelected = isSelected,
+                                                                isSelectionModeActive = isSelectionModeActive,
+                                                                onSelectItem = {
+                                                                    if (isSelected) {
+                                                                        selectedNoteIds -= item.id
+                                                                    } else {
+                                                                        selectedNoteIds += item.id
+                                                                    }
+                                                                },
+                                                                onEditItem = { itemToEdit ->
+                                                                    editingNoteId = itemToEdit.id
+                                                                    titleState = itemToEdit.title
+                                                                    descriptionState = itemToEdit.description ?: ""
+                                                                    showAudioNoteCard = true
+                                                                }
+                                                            )
+                                                            NoteType.LIST -> CellListNote(
+                                                                item = item,
+                                                                isSelected = isSelected,
+                                                                isSelectionModeActive = isSelectionModeActive,
+                                                                onSelectItem = {
+                                                                    if (isSelected) {
+                                                                        selectedNoteIds -= item.id
+                                                                    } else {
+                                                                        selectedNoteIds += item.id
+                                                                    }
+                                                                },
+                                                                onEditItem = { itemToEdit ->
+                                                                    editingNoteId = itemToEdit.id
+                                                                    titleState = itemToEdit.title
+                                                                    descriptionState = itemToEdit.description ?: ""
+                                                                    listTitleState = itemToEdit.title
+                                                                    listItemsState.clear()
+                                                                    itemToEdit.description?.let { desc ->
+                                                                        val parsedItems = desc.split("\n").mapNotNull { line ->
+                                                                            if (line.isBlank()) null
+                                                                            else {
+                                                                                val isChecked = line.startsWith("[x]")
+                                                                                val text = if (isChecked) line.substringAfter("[x] ").trim() else line.substringAfter("[ ] ").trim()
+                                                                                ListItem(nextListItemId++, text, isChecked)
+                                                                            }
+                                                                        }
+                                                                        listItemsState.addAll(parsedItems)
+                                                                    }
+                                                                    showListNoteCard = true
+                                                                },
+                                                                maxLines = currentListMaxLines
+                                                            )
+                                                            NoteType.SKETCH -> CellSketchNote(
+                                                                item = item,
+                                                                isSelected = isSelected,
+                                                                isSelectionModeActive = isSelectionModeActive,
+                                                                onSelectItem = {
+                                                                    if (isSelected) {
+                                                                        selectedNoteIds -= item.id
+                                                                    } else {
+                                                                        selectedNoteIds += item.id
+                                                                    }
+                                                                },
+                                                                onEditItem = { itemToEdit ->
+                                                                    editingNoteId = itemToEdit.id
+                                                                    titleState = itemToEdit.title
+                                                                    descriptionState = itemToEdit.description ?: ""
+                                                                    showSketchNoteCard = true
+                                                                }
+                                                            )
+                                                        }
+                                                        val isLastItemInListOrNextIsHeader =
+                                                            index == noteItemsWithHeaders.lastIndex || (index + 1 < noteItemsWithHeaders.size && noteItemsWithHeaders[index + 1] is String)
+
+                                                        if (!isLastItemInListOrNextIsHeader) {
+                                                            Spacer(
+                                                                modifier = Modifier.Companion.height(
+                                                                    MediumPadding
+                                                                )
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    NotesLayoutType.GRID -> {
+                                        LazyVerticalStaggeredGrid(
+                                            columns = StaggeredGridCells.Fixed(currentGridColumns), // Use dynamic columns
+                                            modifier = Modifier.weight(1f),
+                                            contentPadding = PaddingValues(
+                                                top = NoSpacing,
+                                                bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding
+                                            ),
+                                            horizontalArrangement = Arrangement.spacedBy(MediumPadding),
+                                            verticalItemSpacing = MediumPadding
+                                        ) {
+                                            items(noteItemsWithHeaders.filterIsInstance<NotesItems>()) { item ->
                                                 val isSelected = selectedNoteIds.contains(item.id)
                                                 when (item.noteType) {
                                                     NoteType.TEXT -> CellTextNote(
@@ -408,7 +594,8 @@ fun CoverNotes(
                                                             titleState = itemToEdit.title
                                                             descriptionState = itemToEdit.description ?: ""
                                                             showTextNoteCard = true
-                                                        }
+                                                        },
+                                                        maxLines = gridMaxLines
                                                     )
                                                     NoteType.AUDIO -> CellAudioNote(
                                                         item = item,
@@ -443,6 +630,19 @@ fun CoverNotes(
                                                             editingNoteId = itemToEdit.id
                                                             titleState = itemToEdit.title
                                                             descriptionState = itemToEdit.description ?: ""
+                                                            listTitleState = itemToEdit.title
+                                                            listItemsState.clear()
+                                                            itemToEdit.description?.let { desc ->
+                                                                val parsedItems = desc.split("\n").mapNotNull { line ->
+                                                                    if (line.isBlank()) null
+                                                                    else {
+                                                                        val isChecked = line.startsWith("[x]")
+                                                                        val text = if (isChecked) line.substringAfter("[x] ").trim() else line.substringAfter("[ ] ").trim()
+                                                                        ListItem(nextListItemId++, text, isChecked)
+                                                                    }
+                                                                }
+                                                                listItemsState.addAll(parsedItems)
+                                                            }
                                                             showListNoteCard = true
                                                         }
                                                     )
@@ -463,16 +663,6 @@ fun CoverNotes(
                                                             descriptionState = itemToEdit.description ?: ""
                                                             showSketchNoteCard = true
                                                         }
-                                                    )
-                                                }
-                                                val isLastItemInListOrNextIsHeader =
-                                                    index == noteItemsWithHeaders.lastIndex || (index + 1 < noteItemsWithHeaders.size && noteItemsWithHeaders[index + 1] is String)
-
-                                                if (!isLastItemInListOrNextIsHeader) {
-                                                    Spacer(
-                                                        modifier = Modifier.Companion.height(
-                                                            MediumPadding
-                                                        )
                                                     )
                                                 }
                                             }
@@ -562,7 +752,57 @@ fun CoverNotes(
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler { showListNoteCard = false }
-                NoteListCard(onDismiss = { showListNoteCard = false })
+                NoteListCard(
+                    listTitle = listTitleState,
+                    onListTitleChange = { listTitleState = it },
+                    initialListItems = listItemsState,
+                    onDismiss = { showListNoteCard = false },
+                    onSave = { title, items ->
+                        val description = items.joinToString("\n") {
+                            "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
+                        }
+                        if (title.isNotBlank() || description.isNotBlank()) {
+                            if (editingNoteId != null) {
+                                val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
+                                    title = title,
+                                    description = description.takeIf { it.isNotBlank() },
+                                )
+                                if (updatedNote != null) {
+                                    notesViewModel.updateItem(updatedNote)
+                                }
+                            } else {
+                                notesViewModel.addItem(
+                                    title = title,
+                                    description = description.takeIf { it.isNotBlank() },
+                                    noteType = NoteType.LIST
+                                )
+                            }
+                        }
+                        showListNoteCard = false
+                        resetNoteState()
+                    },
+                    toolbarHeight = 72.dp, // Approximate height of the toolbar
+                    saveTrigger = saveTrigger,
+                    onSaveTriggerConsumed = { saveTrigger = false },
+                    onAddItem = {
+                        listItemsState.add(ListItem(nextListItemId++, "", false))
+                    },
+                    onDeleteItem = { itemToDelete ->
+                        listItemsState.remove(itemToDelete)
+                    },
+                    onToggleItemChecked = { item, isChecked ->
+                        val index = listItemsState.indexOfFirst { it.id == item.id }
+                        if (index != -1) {
+                            listItemsState[index] = listItemsState[index].copy(isChecked = isChecked)
+                        }
+                    },
+                    onItemTextChange = { item, newText ->
+                        val index = listItemsState.indexOfFirst { it.id == item.id }
+                        if (index != -1) {
+                            listItemsState[index] = listItemsState[index].copy(text = newText)
+                        }
+                    }
+                )
             }
         }
     }

@@ -47,6 +47,7 @@ fun CellAudioNote(
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
     modifier: Modifier = Modifier,
+    maxLines: Int = Int.MAX_VALUE // Add maxLines parameter
 ) {
     val borderColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
@@ -92,6 +93,7 @@ fun CellAudioNote(
                     text = item.description ?: "",
                     style = MaterialTheme.typography.bodyLarge,
                     overflow = TextOverflow.Ellipsis,
+                    maxLines = maxLines, // Apply maxLines here
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }

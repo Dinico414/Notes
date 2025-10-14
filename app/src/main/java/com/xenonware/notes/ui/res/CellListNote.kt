@@ -11,6 +11,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
@@ -47,6 +49,7 @@ fun CellListNote(
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
     modifier: Modifier = Modifier,
+    maxLines: Int = Int.MAX_VALUE // Add maxLines parameter with a default value
 ) {
     val borderColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
@@ -88,12 +91,40 @@ fun CellListNote(
 
             if (!item.description.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(MediumSpacing))
-                Text(
-                    text = item.description ?: "",
-                    style = MaterialTheme.typography.bodyLarge,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
+                val listItems = try {
+                    // Assuming description is a JSON string of List<ListItem>
+                    // A simple split for preview, actual parsing would need a JSON library
+                    // For now, let's assume each line is an item for display purposes.
+                    // This will need to be properly deserialized if `ListItem` objects are used directly.
+                    item.description?.split("\n")?.filter { it.isNotBlank() } ?: emptyList()
+                } catch (e: Exception) {
+                    listOf(item.description!!) // Fallback if not parsable as list
+                }
+
+                listItems.take(maxLines).forEach { listItemText ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // A placeholder for a checkbox visual, actual interactive checkbox is in NoteListCard
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), CircleShape)
+                                .clip(CircleShape)
+                                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape)
+                        )
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text(
+                            text = listItemText.trim(),
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                textDecoration = if (listItemText.startsWith("[x]")) TextDecoration.LineThrough else TextDecoration.None
+                            ),
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                }
             }
         }
 

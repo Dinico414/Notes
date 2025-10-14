@@ -2,7 +2,6 @@ package com.xenonware.notes.ui.res
 
 import android.annotation.SuppressLint
 import android.os.Build
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
@@ -142,6 +141,7 @@ fun FloatingToolbarContent(
     textEditorContentOverride: @Composable (RowScope.() -> Unit)? = null,
     notesLayoutType: NotesLayoutType,
     onNotesLayoutTypeChange: (NotesLayoutType) -> Unit,
+    onResizeClick: () -> Unit, // Add this new parameter
 ) {
     val isSelectionActive = selectedNoteIds.isNotEmpty()
     val isTextEditorActive = textEditorContentOverride != null
@@ -553,7 +553,7 @@ fun FloatingToolbarContent(
                                                     label = "FilterIconAlpha"
                                                 )
                                                 IconButton(
-                                                    onClick = { Toast.makeText(mContext, "Coming soon!", Toast.LENGTH_SHORT).show() },
+                                                    onClick = onResizeClick, // Use the new callback
                                                     modifier = Modifier.alpha(filterIconAlpha),
                                                     enabled = !isSearchActive && showActionIconsExceptSearch
                                                 ) {
