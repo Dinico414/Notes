@@ -3,6 +3,8 @@ package com.xenonware.notes.ui.layouts.notes
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
@@ -29,8 +31,8 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatSize
@@ -354,26 +356,67 @@ fun CoverNotes(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            val waveformShape = if (selectedAudioViewType == AudioViewType.Waveform) {
-                                RoundedCornerShape(100f)
-                            } else {
-                                RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp, topEnd = 8.dp, bottomEnd = 8.dp)
-                            }
-                            val transcriptShape = if (selectedAudioViewType == AudioViewType.Transcript) {
-                                RoundedCornerShape(100f)
-                            } else {
-                                RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 28.dp, bottomEnd = 28.dp)
-                            }
+                            val waveformCornerTopStart by animateDpAsState(targetValue = 28.dp, label = "waveformTopStart")
+                            val waveformCornerBottomStart by animateDpAsState(targetValue = 28.dp, label = "waveformBottomStart")
+                            val waveformCornerTopEnd by animateDpAsState(
+                                targetValue = if (selectedAudioViewType == AudioViewType.Waveform) 28.dp else 8.dp,
+                                label = "waveformTopEnd"
+                            )
+                            val waveformCornerBottomEnd by animateDpAsState(
+                                targetValue = if (selectedAudioViewType == AudioViewType.Waveform) 28.dp else 8.dp,
+                                label = "waveformBottomEnd"
+                            )
+                            val animatedWaveformShape = RoundedCornerShape(
+                                topStart = waveformCornerTopStart,
+                                bottomStart = waveformCornerBottomStart,
+                                topEnd = waveformCornerTopEnd,
+                                bottomEnd = waveformCornerBottomEnd
+                            )
+
+                            val transcriptCornerTopStart by animateDpAsState(
+                                targetValue = if (selectedAudioViewType == AudioViewType.Transcript) 28.dp else 8.dp,
+                                label = "transcriptTopStart"
+                            )
+                            val transcriptCornerBottomStart by animateDpAsState(
+                                targetValue = if (selectedAudioViewType == AudioViewType.Transcript) 28.dp else 8.dp,
+                                label = "transcriptBottomStart"
+                            )
+                            val transcriptCornerTopEnd by animateDpAsState(targetValue = 28.dp, label = "transcriptTopEnd")
+                            val transcriptCornerBottomEnd by animateDpAsState(targetValue = 28.dp, label = "transcriptBottomEnd")
+                            val animatedTranscriptShape = RoundedCornerShape(
+                                topStart = transcriptCornerTopStart,
+                                bottomStart = transcriptCornerBottomStart,
+                                topEnd = transcriptCornerTopEnd,
+                                bottomEnd = transcriptCornerBottomEnd
+                            )
+
+                            val waveformContainerColor by animateColorAsState(
+                                targetValue = if (selectedAudioViewType == AudioViewType.Waveform) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                label = "waveformContainerColor"
+                            )
+                            val waveformContentColor by animateColorAsState(
+                                targetValue = if (selectedAudioViewType == AudioViewType.Waveform) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
+                                label = "waveformContentColor"
+                            )
+
+                            val transcriptContainerColor by animateColorAsState(
+                                targetValue = if (selectedAudioViewType == AudioViewType.Transcript) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                label = "transcriptContainerColor"
+                            )
+                            val transcriptContentColor by animateColorAsState(
+                                targetValue = if (selectedAudioViewType == AudioViewType.Transcript) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
+                                label = "transcriptContentColor"
+                            )
 
                             FilledIconButton(
                                 onClick = { selectedAudioViewType = AudioViewType.Waveform },
                                 colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = if (selectedAudioViewType == AudioViewType.Waveform) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
-                                    contentColor = if (selectedAudioViewType == AudioViewType.Waveform) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                                    containerColor = waveformContainerColor,
+                                    contentColor = waveformContentColor
                                 ),
-                                shape = waveformShape,
+                                shape = animatedWaveformShape,
                                 modifier = Modifier
-                                    .width(98.dp)
+                                    .width(95.dp)
                                     .height(56.dp)
                             ) {
                                 Icon(Icons.Default.GraphicEq, contentDescription = "Waveform view")
@@ -382,15 +425,15 @@ fun CoverNotes(
                             FilledIconButton(
                                 onClick = { selectedAudioViewType = AudioViewType.Transcript },
                                 colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = if (selectedAudioViewType == AudioViewType.Transcript) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
-                                    contentColor = if (selectedAudioViewType == AudioViewType.Transcript) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                                    containerColor = transcriptContainerColor,
+                                    contentColor = transcriptContentColor
                                 ),
-                                shape = transcriptShape,
+                                shape = animatedTranscriptShape,
                                 modifier = Modifier
-                                    .width(98.dp)
+                                    .width(95.dp)
                                     .height(56.dp)
                             ) {
-                                Icon(Icons.Default.Article, contentDescription = "Transcript view")
+                                Icon(Icons.AutoMirrored.Default.Article, contentDescription = "Transcript view")
                             }
                         }
                     }
