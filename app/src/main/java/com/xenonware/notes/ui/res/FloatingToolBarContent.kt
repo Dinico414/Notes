@@ -142,7 +142,6 @@ fun FloatingToolbarContent(
     textEditorContentOverride: @Composable (RowScope.() -> Unit)? = null,
     notesLayoutType: NotesLayoutType,
     onNotesLayoutTypeChange: (NotesLayoutType) -> Unit,
-    onResizeClick: () -> Unit,
 ) {
     val isSelectionActive = selectedNoteIds.isNotEmpty()
     val isTextEditorActive = textEditorContentOverride != null
@@ -327,7 +326,7 @@ fun FloatingToolbarContent(
                             colorScheme.onPrimary
                         }
                         val hazeThinColor = colorScheme.primary
-                        val smallElevationPx = with(LocalDensity.current) { SmallElevation.toPx() }
+                        val smallElevationPx = with(density) { SmallElevation.toPx() }
                         val baseShadowAlpha = 0.7f
                         val interactiveShadowAlpha = 0.9f
                         val currentShadowRadius =
@@ -335,7 +334,7 @@ fun FloatingToolbarContent(
                         val currentShadowAlpha =
                             if (isPressed || isHovered) interactiveShadowAlpha else baseShadowAlpha
                         val currentShadowColor = colorScheme.scrim.copy(alpha = currentShadowAlpha)
-                        val currentYOffsetPx = with(LocalDensity.current) { 1.dp.toPx() }
+                        val currentYOffsetPx = with(density) { 1.dp.toPx() }
 
                         Canvas(
                             modifier = Modifier.size(
@@ -554,7 +553,7 @@ fun FloatingToolbarContent(
                                                     label = "FilterIconAlpha"
                                                 )
                                                 IconButton(
-                                                    onClick = { onResizeClick() },
+                                                    onClick = { Toast.makeText(mContext, "Coming soon!", Toast.LENGTH_SHORT).show() },
                                                     modifier = Modifier.alpha(filterIconAlpha),
                                                     enabled = !isSearchActive && showActionIconsExceptSearch
                                                 ) {

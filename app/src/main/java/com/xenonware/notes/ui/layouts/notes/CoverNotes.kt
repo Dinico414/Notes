@@ -55,7 +55,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
@@ -150,7 +149,6 @@ fun CoverNotes(
 
     val currentSearchQuery by notesViewModel.searchQuery.collectAsState()
     val notesLayoutType by notesViewModel.notesLayoutType.collectAsState()
-    val listItemLineCount by notesViewModel.listItemLineCount.collectAsState()
 
     var selectedNoteIds by remember { mutableStateOf(emptySet<Int>()) }
     val isSelectionModeActive = selectedNoteIds.isNotEmpty()
@@ -267,14 +265,7 @@ fun CoverNotes(
                         null
                     },
                     notesLayoutType = notesLayoutType,
-                    onNotesLayoutTypeChange = { notesViewModel.setNotesLayoutType(it) },
-                    onResizeClick = {
-                        if (notesLayoutType == NotesLayoutType.LIST) {
-                            notesViewModel.cycleListItemLineCount()
-                        } else {
-                            notesViewModel.cycleGridColumnCount(with(LocalDensity.current) { appSize.width.toDp().value.toInt() })
-                        }
-                    }
+                    onNotesLayoutTypeChange = { notesViewModel.setNotesLayoutType(it) }
                 )
             },
         ) { scaffoldPadding ->
@@ -417,8 +408,7 @@ fun CoverNotes(
                                                             titleState = itemToEdit.title
                                                             descriptionState = itemToEdit.description ?: ""
                                                             showTextNoteCard = true
-                                                        },
-                                                        maxLines = if (notesLayoutType == NotesLayoutType.LIST) listItemLineCount else 20
+                                                        }
                                                     )
                                                     NoteType.AUDIO -> CellAudioNote(
                                                         item = item,
