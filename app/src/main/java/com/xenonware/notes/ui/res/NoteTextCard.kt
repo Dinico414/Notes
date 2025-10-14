@@ -92,11 +92,10 @@ fun NoteTextCard(
         }
     }
 
-    // This effect listens for the save trigger from the FAB
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
             onSave(title, content.text)
-            onSaveTriggerConsumed() // Reset the trigger
+            onSaveTriggerConsumed()
         }
     }
 
@@ -151,7 +150,6 @@ fun NoteTextCard(
                     textDecoration = if (isUnderlined) TextDecoration.Underline else TextDecoration.None
                 )
             )
-            //note area
             BasicTextField(
                 value = content,
                 onValueChange = { content = it },
@@ -189,7 +187,6 @@ fun NoteTextCard(
                     style = HazeMaterials.ultraThin(hazeThinColor),
                 ), verticalAlignment = Alignment.CenterVertically
         ) {
-            //back button
             IconButton(
                 onClick = onDismiss, Modifier.padding(4.dp)
             ) {
@@ -203,7 +200,6 @@ fun NoteTextCard(
                     color = colorScheme.onSurface
                 )
             )
-            //title
             BasicTextField(
                 value = title,
                 onValueChange = { onTitleChange(it) },
@@ -224,7 +220,6 @@ fun NoteTextCard(
                         innerTextField()
                     }
                 })
-            //more options button
             IconButton(
                 onClick = { /*TODO*/ }, Modifier.padding(4.dp)
             ) {

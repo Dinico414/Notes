@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -27,15 +28,18 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +54,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -75,10 +80,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xenonware.notes.R
 import com.xenonware.notes.ui.layouts.ActivityScreen
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
-import com.xenonware.notes.ui.res.CellAudioNote
-import com.xenonware.notes.ui.res.CellListNote
-import com.xenonware.notes.ui.res.CellSketchNote
-import com.xenonware.notes.ui.res.CellTextNote
 import com.xenonware.notes.ui.res.FloatingToolbarContent
 import com.xenonware.notes.ui.res.GoogleProfilBorder
 import com.xenonware.notes.ui.res.ListContent
@@ -105,6 +106,7 @@ import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.launch
 
+@Suppress("unused")
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -128,13 +130,16 @@ fun CoverNotes(
     var saveTrigger by remember { mutableStateOf(false) }
 
 
-    // States for the text editor
     var isBold by remember { mutableStateOf(false) }
     var isItalic by remember { mutableStateOf(false) }
     var isUnderlined by remember { mutableStateOf(false) }
     val textSizes = listOf(16.sp, 20.sp, 24.sp, 28.sp)
-    var currentSizeIndex by remember { mutableStateOf(1) }
+    var currentSizeIndex by remember { mutableIntStateOf(1) }
     val editorFontSize = textSizes[currentSizeIndex]
+
+    val listTextSizes = remember { listOf(16.sp, 20.sp, 24.sp, 28.sp) }
+    var currentListSizeIndex by rememberSaveable { mutableIntStateOf(1) }
+    val listEditorFontSize = listTextSizes[currentListSizeIndex]
 
     var showSketchNoteCard by rememberSaveable { mutableStateOf(false) }
     var showAudioNoteCard by rememberSaveable { mutableStateOf(false) }
@@ -150,7 +155,7 @@ fun CoverNotes(
                 ListItem(parts[0].toLong(), parts[1], parts[2].toBoolean())
             }.toMutableStateList()
         }
-    )) { mutableStateListOf<ListItem>() }
+    )) { mutableStateListOf() }
     var nextListItemId by rememberSaveable { mutableLongStateOf(0L) }
 
     val noteItemsWithHeaders = notesViewModel.noteItems
@@ -177,9 +182,8 @@ fun CoverNotes(
     var isAddModeActive by rememberSaveable { mutableStateOf(false) }
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
 
-    // Resize Feature States
-    var listNoteLineLimitIndex by rememberSaveable { mutableStateOf(0) } // 0: 3 lines, 1: 9 lines, 2: Unlimited
-    var gridNoteColumnCountIndex by rememberSaveable { mutableStateOf(0) } // Cycles through column options
+    var listNoteLineLimitIndex by rememberSaveable { mutableIntStateOf(0) }
+    var gridNoteColumnCountIndex by rememberSaveable { mutableIntStateOf(0) }
 
     val listLineLimits = remember { listOf(3, 9, Int.MAX_VALUE) }
 
@@ -187,7 +191,7 @@ fun CoverNotes(
         when (layoutType) {
             LayoutType.COVER, LayoutType.SMALL, LayoutType.COMPACT -> listOf(2, 3)
             LayoutType.MEDIUM -> listOf(3, 4, 5)
-            else -> listOf(4, 5, 6) // EXPANDED or any other case
+            else -> listOf(4, 5, 6)
         }
     }
 
@@ -199,9 +203,13 @@ fun CoverNotes(
     fun onResizeClick() {
         if (notesLayoutType == NotesLayoutType.LIST) {
             listNoteLineLimitIndex = (listNoteLineLimitIndex + 1) % listLineLimits.size
-        } else { // Grid Layout
+        } else {
             gridNoteColumnCountIndex = (gridNoteColumnCountIndex + 1) % gridColumnCountOptions.size
         }
+    }
+
+    fun onListTextResizeClick() {
+        currentListSizeIndex = (currentListSizeIndex + 1) % listTextSizes.size
     }
 
     fun resetNoteState() {
@@ -211,7 +219,36 @@ fun CoverNotes(
         listTitleState = ""
         listItemsState.clear()
         nextListItemId = 0L
+        currentListSizeIndex = 1
     }
+
+    fun commonOnEditItem(itemToEdit: NotesItems) {
+        editingNoteId = itemToEdit.id
+        titleState = itemToEdit.title
+        descriptionState = itemToEdit.description ?: ""
+        listTitleState = itemToEdit.title
+        listItemsState.clear()
+        nextListItemId = 0L
+        currentListSizeIndex = 1
+        itemToEdit.description?.let { desc ->
+            val parsedItems = desc.split("\n").mapNotNull { line ->
+                if (line.isBlank()) null
+                else {
+                    val isChecked = line.startsWith("[x]")
+                    val text = if (isChecked) line.substringAfter("[x] ").trim() else line.substringAfter("[ ] ").trim()
+                    ListItem(nextListItemId++, text, isChecked)
+                }
+            }
+            listItemsState.addAll(parsedItems)
+        }
+        when (itemToEdit.noteType) {
+            NoteType.TEXT -> showTextNoteCard = true
+            NoteType.AUDIO -> showAudioNoteCard = true
+            NoteType.LIST -> showListNoteCard = true
+            NoteType.SKETCH -> showSketchNoteCard = true
+        }
+    }
+
 
     val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
     val isDeveloperModeEnabled by devSettingsViewModel.devModeToggleState.collectAsState()
@@ -271,6 +308,37 @@ fun CoverNotes(
                 } else {
                     null
                 }
+                val listEditorContent: @Composable (RowScope.() -> Unit)? = if (showListNoteCard) {
+                    @Composable {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            FilledTonalButton(
+                                onClick = { listItemsState.add(ListItem(nextListItemId++, "", false)) },
+                                modifier = Modifier
+                                    .width(140.dp)
+                                    .height(56.dp),
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiary,
+                                    contentColor = MaterialTheme.colorScheme.onTertiary
+                                )
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add new item to list")
+                                Text(text = "Add")
+                            }
+                            IconButton(
+                                onClick = ::onListTextResizeClick,
+                            ) {
+                                Icon(Icons.Default.FormatSize, contentDescription = "Change text size")
+                            }
+                        }
+                    }
+                } else {
+                    null
+                }
 
                 FloatingToolbarContent(
                     hazeState = hazeState,
@@ -301,13 +369,16 @@ fun CoverNotes(
                     },
                     isSearchActive = isSearchActive,
                     onIsSearchActiveChange = { isSearchActive = it },
-                    textEditorContentOverride = textEditorContent,
+                    textEditorContentOverride = when {
+                        showTextNoteCard -> textEditorContent
+                        showListNoteCard -> listEditorContent
+                        else -> null
+                    },
                     fabOverride = if (showTextNoteCard) {
                         {
                             FloatingActionButton(
                                 onClick = { if (titleState.isNotBlank()) saveTrigger = true }
                             ) {
-                                // The icon is greyed out when the title is blank.
                                 Icon(
                                     imageVector = Icons.Default.Save,
                                     contentDescription = "Save Note",
@@ -459,96 +530,20 @@ fun CoverNotes(
                                                     }
 
                                                     is NotesItems -> {
-                                                        val isSelected = selectedNoteIds.contains(item.id)
-                                                        when (item.noteType) {
-                                                            NoteType.TEXT -> CellTextNote(
-                                                                item = item,
-                                                                isSelected = isSelected,
-                                                                isSelectionModeActive = isSelectionModeActive,
-                                                                onSelectItem = {
-                                                                    if (isSelected) {
-                                                                        selectedNoteIds -= item.id
-                                                                    } else {
-                                                                        selectedNoteIds += item.id
-                                                                    }
-                                                                },
-                                                                onEditItem = { itemToEdit ->
-                                                                    editingNoteId = itemToEdit.id
-                                                                    titleState = itemToEdit.title
-                                                                    descriptionState = itemToEdit.description ?: ""
-                                                                    showTextNoteCard = true
-                                                                },
-                                                                maxLines = currentListMaxLines
-                                                            )
-                                                            NoteType.AUDIO -> CellAudioNote(
-                                                                item = item,
-                                                                isSelected = isSelected,
-                                                                isSelectionModeActive = isSelectionModeActive,
-                                                                onSelectItem = {
-                                                                    if (isSelected) {
-                                                                        selectedNoteIds -= item.id
-                                                                    } else {
-                                                                        selectedNoteIds += item.id
-                                                                    }
-                                                                },
-                                                                onEditItem = { itemToEdit ->
-                                                                    editingNoteId = itemToEdit.id
-                                                                    titleState = itemToEdit.title
-                                                                    descriptionState = itemToEdit.description ?: ""
-                                                                    showAudioNoteCard = true
+                                                        NoteCard(
+                                                            item = item,
+                                                            isSelected = selectedNoteIds.contains(item.id),
+                                                            isSelectionModeActive = isSelectionModeActive,
+                                                            onSelectItem = {
+                                                                if (selectedNoteIds.contains(item.id)) {
+                                                                    selectedNoteIds -= item.id
+                                                                } else {
+                                                                    selectedNoteIds += item.id
                                                                 }
-                                                            )
-                                                            NoteType.LIST -> CellListNote(
-                                                                item = item,
-                                                                isSelected = isSelected,
-                                                                isSelectionModeActive = isSelectionModeActive,
-                                                                onSelectItem = {
-                                                                    if (isSelected) {
-                                                                        selectedNoteIds -= item.id
-                                                                    } else {
-                                                                        selectedNoteIds += item.id
-                                                                    }
-                                                                },
-                                                                onEditItem = { itemToEdit ->
-                                                                    editingNoteId = itemToEdit.id
-                                                                    titleState = itemToEdit.title
-                                                                    descriptionState = itemToEdit.description ?: ""
-                                                                    listTitleState = itemToEdit.title
-                                                                    listItemsState.clear()
-                                                                    itemToEdit.description?.let { desc ->
-                                                                        val parsedItems = desc.split("\n").mapNotNull { line ->
-                                                                            if (line.isBlank()) null
-                                                                            else {
-                                                                                val isChecked = line.startsWith("[x]")
-                                                                                val text = if (isChecked) line.substringAfter("[x] ").trim() else line.substringAfter("[ ] ").trim()
-                                                                                ListItem(nextListItemId++, text, isChecked)
-                                                                            }
-                                                                        }
-                                                                        listItemsState.addAll(parsedItems)
-                                                                    }
-                                                                    showListNoteCard = true
-                                                                },
-                                                                maxLines = currentListMaxLines
-                                                            )
-                                                            NoteType.SKETCH -> CellSketchNote(
-                                                                item = item,
-                                                                isSelected = isSelected,
-                                                                isSelectionModeActive = isSelectionModeActive,
-                                                                onSelectItem = {
-                                                                    if (isSelected) {
-                                                                        selectedNoteIds -= item.id
-                                                                    } else {
-                                                                        selectedNoteIds += item.id
-                                                                    }
-                                                                },
-                                                                onEditItem = { itemToEdit ->
-                                                                    editingNoteId = itemToEdit.id
-                                                                    titleState = itemToEdit.title
-                                                                    descriptionState = itemToEdit.description ?: ""
-                                                                    showSketchNoteCard = true
-                                                                }
-                                                            )
-                                                        }
+                                                            },
+                                                            onEditItem = ::commonOnEditItem,
+                                                            maxLines = currentListMaxLines
+                                                        )
                                                         val isLastItemInListOrNextIsHeader =
                                                             index == noteItemsWithHeaders.lastIndex || (index + 1 < noteItemsWithHeaders.size && noteItemsWithHeaders[index + 1] is String)
 
@@ -566,7 +561,7 @@ fun CoverNotes(
                                     }
                                     NotesLayoutType.GRID -> {
                                         LazyVerticalStaggeredGrid(
-                                            columns = StaggeredGridCells.Fixed(currentGridColumns), // Use dynamic columns
+                                            columns = StaggeredGridCells.Fixed(currentGridColumns),
                                             modifier = Modifier.weight(1f),
                                             contentPadding = PaddingValues(
                                                 top = NoSpacing,
@@ -576,95 +571,20 @@ fun CoverNotes(
                                             verticalItemSpacing = MediumPadding
                                         ) {
                                             items(noteItemsWithHeaders.filterIsInstance<NotesItems>()) { item ->
-                                                val isSelected = selectedNoteIds.contains(item.id)
-                                                when (item.noteType) {
-                                                    NoteType.TEXT -> CellTextNote(
-                                                        item = item,
-                                                        isSelected = isSelected,
-                                                        isSelectionModeActive = isSelectionModeActive,
-                                                        onSelectItem = {
-                                                            if (isSelected) {
-                                                                selectedNoteIds -= item.id
-                                                            } else {
-                                                                selectedNoteIds += item.id
-                                                            }
-                                                        },
-                                                        onEditItem = { itemToEdit ->
-                                                            editingNoteId = itemToEdit.id
-                                                            titleState = itemToEdit.title
-                                                            descriptionState = itemToEdit.description ?: ""
-                                                            showTextNoteCard = true
-                                                        },
-                                                        maxLines = gridMaxLines
-                                                    )
-                                                    NoteType.AUDIO -> CellAudioNote(
-                                                        item = item,
-                                                        isSelected = isSelected,
-                                                        isSelectionModeActive = isSelectionModeActive,
-                                                        onSelectItem = {
-                                                            if (isSelected) {
-                                                                selectedNoteIds -= item.id
-                                                            } else {
-                                                                selectedNoteIds += item.id
-                                                            }
-                                                        },
-                                                        onEditItem = { itemToEdit ->
-                                                            editingNoteId = itemToEdit.id
-                                                            titleState = itemToEdit.title
-                                                            descriptionState = itemToEdit.description ?: ""
-                                                            showAudioNoteCard = true
+                                                NoteCard(
+                                                    item = item,
+                                                    isSelected = selectedNoteIds.contains(item.id),
+                                                    isSelectionModeActive = isSelectionModeActive,
+                                                    onSelectItem = {
+                                                        if (selectedNoteIds.contains(item.id)) {
+                                                            selectedNoteIds -= item.id
+                                                        } else {
+                                                            selectedNoteIds += item.id
                                                         }
-                                                    )
-                                                    NoteType.LIST -> CellListNote(
-                                                        item = item,
-                                                        isSelected = isSelected,
-                                                        isSelectionModeActive = isSelectionModeActive,
-                                                        onSelectItem = {
-                                                            if (isSelected) {
-                                                                selectedNoteIds -= item.id
-                                                            } else {
-                                                                selectedNoteIds += item.id
-                                                            }
-                                                        },
-                                                        onEditItem = { itemToEdit ->
-                                                            editingNoteId = itemToEdit.id
-                                                            titleState = itemToEdit.title
-                                                            descriptionState = itemToEdit.description ?: ""
-                                                            listTitleState = itemToEdit.title
-                                                            listItemsState.clear()
-                                                            itemToEdit.description?.let { desc ->
-                                                                val parsedItems = desc.split("\n").mapNotNull { line ->
-                                                                    if (line.isBlank()) null
-                                                                    else {
-                                                                        val isChecked = line.startsWith("[x]")
-                                                                        val text = if (isChecked) line.substringAfter("[x] ").trim() else line.substringAfter("[ ] ").trim()
-                                                                        ListItem(nextListItemId++, text, isChecked)
-                                                                    }
-                                                                }
-                                                                listItemsState.addAll(parsedItems)
-                                                            }
-                                                            showListNoteCard = true
-                                                        }
-                                                    )
-                                                    NoteType.SKETCH -> CellSketchNote(
-                                                        item = item,
-                                                        isSelected = isSelected,
-                                                        isSelectionModeActive = isSelectionModeActive,
-                                                        onSelectItem = {
-                                                            if (isSelected) {
-                                                                selectedNoteIds -= item.id
-                                                            } else {
-                                                                selectedNoteIds += item.id
-                                                            }
-                                                        },
-                                                        onEditItem = { itemToEdit ->
-                                                            editingNoteId = itemToEdit.id
-                                                            titleState = itemToEdit.title
-                                                            descriptionState = itemToEdit.description ?: ""
-                                                            showSketchNoteCard = true
-                                                        }
-                                                    )
-                                                }
+                                                    },
+                                                    onEditItem = ::commonOnEditItem,
+                                                    maxLines = gridMaxLines
+                                                )
                                             }
                                         }
                                     }
@@ -692,8 +612,8 @@ fun CoverNotes(
             ) {
                 BackHandler { showTextNoteCard = false }
                 NoteTextCard(
-                    title = titleState, // Pass the state down
-                    onTitleChange = { titleState = it }, // Update the state from the child
+                    title = titleState,
+                    onTitleChange = { titleState = it },
                     initialContent = descriptionState,
                     onDismiss = { showTextNoteCard = false },
                     onSave = { title, description ->
@@ -723,7 +643,7 @@ fun CoverNotes(
                     isItalic = isItalic,
                     isUnderlined = isUnderlined,
                     editorFontSize = editorFontSize,
-                    toolbarHeight = 72.dp // Approximate height of the toolbar
+                    toolbarHeight = 72.dp
                 )
             }
 
@@ -781,7 +701,7 @@ fun CoverNotes(
                         showListNoteCard = false
                         resetNoteState()
                     },
-                    toolbarHeight = 72.dp, // Approximate height of the toolbar
+                    toolbarHeight = 72.dp,
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
                     onAddItem = {
@@ -801,7 +721,14 @@ fun CoverNotes(
                         if (index != -1) {
                             listItemsState[index] = listItemsState[index].copy(text = newText)
                         }
-                    }
+                    },
+                    onAddItemClick = {
+                        listItemsState.add(ListItem(nextListItemId++, "", false))
+                    },
+                    onTextResizeClick = ::onListTextResizeClick,
+                    editorFontSize = listEditorFontSize,
+                    addItemTrigger = saveTrigger,
+                    onAddItemTriggerConsumed = { saveTrigger = false }
                 )
             }
         }

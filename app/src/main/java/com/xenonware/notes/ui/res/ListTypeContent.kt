@@ -17,11 +17,11 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Abc
-import androidx.compose.material.icons.filled.Audiotrack
-import androidx.compose.material.icons.filled.Draw
-import androidx.compose.material.icons.filled.FormatListBulleted
-import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.ViewComfy
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +46,7 @@ import com.xenonware.notes.R
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
 import com.xenonware.notes.ui.values.ExtraLargePadding
 import com.xenonware.notes.ui.values.LargerCornerRadius
+import com.xenonware.notes.ui.values.LargestPadding
 import com.xenonware.notes.ui.values.MediumPadding
 import com.xenonware.notes.ui.values.NoPadding
 import com.xenonware.notes.ui.values.SmallerCornerRadius
@@ -133,39 +134,43 @@ fun ListContent(
                 )
 
                 Column(
-                    modifier = Modifier.padding(vertical = MediumPadding)
+                    modifier = Modifier.padding(vertical = LargestPadding)
                 ) {
                     FilterItem(
-                        icon = Icons.Default.Notes,
+                        icon = Icons.Default.ViewComfy,
                         label = "All Notes",
                         isSelected = currentFilter == NoteFilterType.ALL,
                         onClick = { onFilterSelected(NoteFilterType.ALL) }
                     )
                     FilterItem(
-                        icon = Icons.Default.Abc,
+                        icon = Icons.Default.TextFields,
                         label = "Text Notes",
                         isSelected = currentFilter == NoteFilterType.TEXT,
                         onClick = { onFilterSelected(NoteFilterType.TEXT) }
                     )
+
                     FilterItem(
-                        icon = Icons.Default.Audiotrack,
-                        label = "Audio Notes",
-                        isSelected = currentFilter == NoteFilterType.AUDIO,
-                        onClick = { onFilterSelected(NoteFilterType.AUDIO) }
-                    )
-                    FilterItem(
-                        icon = Icons.Default.FormatListBulleted,
+                        icon = Icons.Default.Checklist,
                         label = "List Notes",
                         isSelected = currentFilter == NoteFilterType.LIST,
                         onClick = { onFilterSelected(NoteFilterType.LIST) }
                     )
                     FilterItem(
-                        icon = Icons.Default.Draw,
+                        icon = Icons.Default.Mic,
+                        label = "Audio Notes",
+                        isSelected = currentFilter == NoteFilterType.AUDIO,
+                        onClick = { onFilterSelected(NoteFilterType.AUDIO) }
+                    )
+                    FilterItem(
+                        icon = Icons.Default.Edit,
                         label = "Sketch Notes",
                         isSelected = currentFilter == NoteFilterType.SKETCH,
                         onClick = { onFilterSelected(NoteFilterType.SKETCH) }
                     )
                 }
+                HorizontalDivider(
+                        thickness = 1.dp, color = colorScheme.outlineVariant
+                )
             }
         }
     }
@@ -190,7 +195,7 @@ private fun FilterItem(
             .clip(RoundedCornerShape(100f))
             .background(backgroundColor)
             .clickable { onClick() }
-            .padding(MediumPadding),
+            .padding(LargestPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -201,8 +206,9 @@ private fun FilterItem(
         )
         Text(
             text = label,
+            fontFamily = QuicksandTitleVariable,
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(start = MediumPadding),
+            modifier = Modifier.padding(start = LargestPadding),
             color = colorScheme.onSurface
         )
     }

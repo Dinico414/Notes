@@ -1,9 +1,10 @@
+@file:Suppress("unused")
+
 package com.xenonware.notes.ui.res
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -23,8 +24,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,11 +46,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
@@ -62,7 +63,7 @@ import dev.chrisbanes.haze.materials.HazeMaterials
 data class ListItem(
     val id: Long,
     var text: String,
-    var isChecked: Boolean
+    var isChecked: Boolean,
 )
 
 @OptIn(ExperimentalHazeMaterialsApi::class)
@@ -77,23 +78,32 @@ fun NoteListCard(
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
+    addItemTrigger: Boolean,
+    onAddItemTriggerConsumed: () -> Unit,
     onAddItem: () -> Unit,
     onDeleteItem: (ListItem) -> Unit,
     onToggleItemChecked: (ListItem, Boolean) -> Unit,
-    onItemTextChange: (ListItem, String) -> Unit
+    onItemTextChange: (ListItem, String) -> Unit,
+    onAddItemClick: () -> Unit,
+    onTextResizeClick: () -> Unit,
+    editorFontSize: TextUnit
 ) {
     val hazeState = remember { HazeState() }
     var currentListItems by remember { mutableStateOf(initialListItems) }
 
     val hazeThinColor = colorScheme.surfaceDim
 
-    val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
+    val listTitleFocusRequester = remember { FocusRequester() }
+
+    var focusOnNewItemId by remember { mutableStateOf<Long?>(null) }
 
     LaunchedEffect(Unit) {
-        if (listTitle.isEmpty()) {
-            focusRequester.requestFocus()
-            keyboardController?.show()
+        if (initialListItems.isEmpty()) {
+            val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
+            currentListItems = listOf(newItem)
+            focusOnNewItemId = newItem.id
+        } else if (listTitle.isEmpty()) {
+            listTitleFocusRequester.requestFocus()
         }
     }
 
@@ -105,6 +115,16 @@ fun NoteListCard(
         if (saveTrigger) {
             onSave(listTitle, currentListItems)
             onSaveTriggerConsumed()
+        }
+    }
+
+    LaunchedEffect(addItemTrigger) {
+        if (addItemTrigger) {
+            val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
+            currentListItems = currentListItems + newItem
+            focusOnNewItemId = newItem.id
+            onAddItem()
+            onAddItemTriggerConsumed()
         }
     }
 
@@ -120,9 +140,8 @@ fun NoteListCard(
             )
         }
     }
-    val bottomPadding =
-        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight
 
+    val contentBottomPadding = toolbarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     Box(
         modifier = Modifier
@@ -150,7 +169,9 @@ fun NoteListCard(
 
             Spacer(modifier = Modifier.height(topPadding))
 
-            currentListItems.forEach { listItem ->
+            currentListItems.forEachIndexed { index, listItem ->
+                val itemFocusRequester = remember(listItem.id) { FocusRequester() }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -159,20 +180,22 @@ fun NoteListCard(
                 ) {
                     Checkbox(
                         checked = listItem.isChecked,
-                        onCheckedChange = { isChecked -> onToggleItemChecked(listItem, isChecked) }
-                    )
+                        onCheckedChange = { isChecked -> onToggleItemChecked(listItem, isChecked) })
 
                     val itemTextStyle = MaterialTheme.typography.bodyLarge.merge(
                         TextStyle(
                             color = colorScheme.onSurface,
-                            textDecoration = if (listItem.isChecked) TextDecoration.LineThrough else TextDecoration.None
+                            textDecoration = if (listItem.isChecked) TextDecoration.LineThrough else TextDecoration.None,
+                            fontSize = editorFontSize
                         )
                     )
 
                     BasicTextField(
                         value = listItem.text,
                         onValueChange = { newText -> onItemTextChange(listItem, newText) },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(itemFocusRequester),
                         textStyle = itemTextStyle,
                         cursorBrush = SolidColor(colorScheme.primary),
                         decorationBox = { innerTextField ->
@@ -186,17 +209,22 @@ fun NoteListCard(
                                 }
                                 innerTextField()
                             }
-                        }
-                    )
+                        })
 
                     IconButton(
-                        onClick = { onDeleteItem(listItem) }
-                    ) {
+                        onClick = { onDeleteItem(listItem) }) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete item")
                     }
                 }
+
+                LaunchedEffect(focusOnNewItemId, listItem.id) {
+                    if (focusOnNewItemId == listItem.id) {
+                        itemFocusRequester.requestFocus()
+                        focusOnNewItemId = null
+                    }
+                }
             }
-            Spacer(modifier = Modifier.height(bottomPadding))
+            Spacer(modifier = Modifier.height(contentBottomPadding))
 
         }
         Row(
@@ -229,7 +257,7 @@ fun NoteListCard(
                 onValueChange = { onListTitleChange(it) },
                 modifier = Modifier
                     .weight(1f)
-                    .focusRequester(focusRequester),
+                    .focusRequester(listTitleFocusRequester),
                 singleLine = true,
                 textStyle = titleTextStyle,
                 cursorBrush = SolidColor(colorScheme.primary),
@@ -246,10 +274,11 @@ fun NoteListCard(
                         innerTextField()
                     }
                 })
+
             IconButton(
-                onClick = onAddItem, Modifier.padding(4.dp)
+                onClick = { /*TODO*/ }, Modifier.padding(4.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add new item")
+                Icon(Icons.Default.MoreVert, contentDescription = "More options")
             }
         }
     }

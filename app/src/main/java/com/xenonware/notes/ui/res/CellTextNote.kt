@@ -19,8 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Abc
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -60,9 +60,7 @@ fun CellTextNote(
             .clip(RoundedCornerShape(MediumCornerRadius))
             .background(MaterialTheme.colorScheme.surfaceBright)
             .border(
-                width = 2.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(MediumCornerRadius)
+                width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
             )
             .combinedClickable(
                 onClick = {
@@ -71,8 +69,7 @@ fun CellTextNote(
                     } else {
                         onEditItem(item)
                     }
-                },
-                onLongClick = onSelectItem
+                }, onLongClick = onSelectItem
             )
     ) {
         Column(
@@ -90,7 +87,7 @@ fun CellTextNote(
             if (!item.description.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(MediumSpacing))
                 Text(
-                    text = item.description ?: "",
+                    text = item.description,
                     style = MaterialTheme.typography.bodyLarge,
                     overflow = TextOverflow.Ellipsis,
                     maxLines = maxLines, // Apply maxLines here
@@ -101,9 +98,8 @@ fun CellTextNote(
 
         AnimatedVisibility(
             visible = isSelectionModeActive,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-           , enter = fadeIn(),
+            modifier = Modifier.align(Alignment.TopStart),
+            enter = fadeIn(),
             exit = fadeOut()
         ) {
             Box(
@@ -119,8 +115,7 @@ fun CellTextNote(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Selected",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .size(24.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     } else {
                         Box(
@@ -141,18 +136,22 @@ fun CellTextNote(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 4.dp, end = 4.dp)
-                .size(48.dp),
-            contentAlignment = Alignment.Center
+                .size(48.dp), contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Abc,
-                contentDescription = "Text",
-                tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+            Box(
                 modifier = Modifier
                     .size(28.dp)
-                    .padding(2.dp)
                     .background(MaterialTheme.colorScheme.onSurface, CircleShape)
-            )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.TextFields,
+                    contentDescription = "Text",
+                    tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(24.dp)
+                )
+            }
         }
     }
 }

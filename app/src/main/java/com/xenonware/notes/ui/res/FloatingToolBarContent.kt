@@ -37,15 +37,16 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Abc
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.ViewModule
+import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
@@ -81,7 +82,6 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -113,7 +113,8 @@ data class ScrollState(
 @OptIn(
     ExperimentalMaterial3Api::class,
     ExperimentalHazeMaterialsApi::class,
-    ExperimentalMaterial3ExpressiveApi::class, FlowPreview::class
+    ExperimentalMaterial3ExpressiveApi::class,
+    FlowPreview::class
 )
 @Composable
 fun FloatingToolbarContent(
@@ -141,7 +142,7 @@ fun FloatingToolbarContent(
     textEditorContentOverride: @Composable (RowScope.() -> Unit)? = null,
     notesLayoutType: NotesLayoutType,
     onNotesLayoutTypeChange: (NotesLayoutType) -> Unit,
-    onResizeClick: () -> Unit, // Add this new parameter
+    onResizeClick: () -> Unit,
 ) {
     val isSelectionActive = selectedNoteIds.isNotEmpty()
     val isTextEditorActive = textEditorContentOverride != null
@@ -176,8 +177,6 @@ fun FloatingToolbarContent(
 
     var toolbarVisibleState by rememberSaveable { mutableStateOf(true) }
 
-    val mContext = LocalContext.current
-
     LaunchedEffect(isSelectionActive) {
         if (isSelectionActive && isSearchActive) {
             onIsSearchActiveChange(false)
@@ -186,7 +185,13 @@ fun FloatingToolbarContent(
         }
     }
 
-    LaunchedEffect(lazyListState, isSearchActive, allowToolbarScrollBehavior, isSelectionActive, isAddModeActive) {
+    LaunchedEffect(
+        lazyListState,
+        isSearchActive,
+        allowToolbarScrollBehavior,
+        isSelectionActive,
+        isAddModeActive
+    ) {
         if (isSearchActive || !allowToolbarScrollBehavior || isSelectionActive || isAddModeActive) {
             toolbarVisibleState = true
         } else {
@@ -200,9 +205,7 @@ fun FloatingToolbarContent(
                     isScrollInProgress = lazyListState.isScrollInProgress,
                     canScrollForward = lazyListState.canScrollForward
                 )
-            }
-                .distinctUntilChanged()
-                .map { currentState ->
+            }.distinctUntilChanged().map { currentState ->
                     val isAtBottom = !currentState.canScrollForward
                     val scrollingUp = if (currentState.firstVisibleItemIndex < previousIndex) {
                         true
@@ -215,8 +218,7 @@ fun FloatingToolbarContent(
                     previousIndex = currentState.firstVisibleItemIndex
 
                     Triple(scrollingUp, currentState.isScrollInProgress, isAtBottom)
-                }
-                .collect { (scrollingUp, isScrolling, isAtBottom) ->
+                }.collect { (scrollingUp, isScrolling, isAtBottom) ->
                     if (isScrolling) {
                         toolbarVisibleState = scrollingUp
                     }
@@ -229,8 +231,7 @@ fun FloatingToolbarContent(
 
     LaunchedEffect(lazyListState, allowToolbarScrollBehavior, isSearchActive) {
         if (!isSearchActive && allowToolbarScrollBehavior) {
-            snapshotFlow { lazyListState.isScrollInProgress }
-                .debounce(2000L)
+            snapshotFlow { lazyListState.isScrollInProgress }.debounce(2000L)
                 .collect { isScrolling ->
                     if (!isScrolling) {
                         toolbarVisibleState = true
@@ -272,14 +273,10 @@ fun FloatingToolbarContent(
     }
 
     val animatedBottomPadding by animateDpAsState(
-        targetValue = targetBottomPadding,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "bottomPaddingAnimation"
+        targetValue = targetBottomPadding, animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow
+        ), label = "bottomPaddingAnimation"
     )
-
 
 
     val toolbarHeight = 64.dp
@@ -304,8 +301,7 @@ fun FloatingToolbarContent(
                 isSelectionActive -> colorScheme.errorContainer
                 isAddModeActive -> colorScheme.secondaryContainer
                 else -> colorScheme.surfaceDim
-            },
-            animationSpec = tween(durationMillis = 500), label = "toolbarColor"
+            }, animationSpec = tween(durationMillis = 500), label = "toolbarColor"
         )
         HorizontalFloatingToolbar(
             modifier = Modifier.height(toolbarHeight),
@@ -341,7 +337,8 @@ fun FloatingToolbarContent(
                                 FloatingActionButtonDefaults.LargeIconSize + 24.dp + if (isPressed || isHovered) 8.dp else 5.dp
                             )
                         ) {
-                            val outline = fabShape.createOutline(this.size, layoutDirection, density)
+                            val outline =
+                                fabShape.createOutline(this.size, layoutDirection, density)
                             val composePath = Path().apply { addOutline(outline) }
                             drawIntoCanvas { canvas ->
                                 val frameworkPaint = Paint().asFrameworkPaint().apply {
@@ -364,7 +361,8 @@ fun FloatingToolbarContent(
 
                         val rotationAngle = remember { Animatable(0f) }
                         LaunchedEffect(isSearchActive, isSelectionActive, isAddModeActive) {
-                            val targetAngle = if (isSearchActive || isSelectionActive || isAddModeActive) 45f else 0f
+                            val targetAngle =
+                                if (isSearchActive || isSelectionActive || isAddModeActive) 45f else 0f
                             rotationAngle.animateTo(
                                 targetValue = targetAngle, animationSpec = spring(
                                     dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -402,9 +400,13 @@ fun FloatingToolbarContent(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
-                                contentDescription = if (isSearchActive || isSelectionActive) stringResource(R.string.cancel) else stringResource(
+                                contentDescription = if (isSearchActive || isSelectionActive) stringResource(
+                                    R.string.cancel
+                                ) else stringResource(
                                     R.string.add_task_description
-                                ), tint = fabIconTint, modifier = Modifier.rotate(rotationAngle.value)
+                                ),
+                                tint = fabIconTint,
+                                modifier = Modifier.rotate(rotationAngle.value)
                             )
                         }
                     }
@@ -413,10 +415,15 @@ fun FloatingToolbarContent(
             colors = FloatingToolbarDefaults.standardFloatingToolbarColors(animatedToolbarColor),
             contentPadding = FloatingToolbarDefaults.ContentPadding,
         ) {
-            Crossfade(targetState = Triple(isSelectionActive, isAddModeActive, isTextEditorActive), label = "toolbar-content-crossfade") { (selectionActive, addModeActive, textEditorActive) ->                when {
+            Crossfade(
+                targetState = Triple(isSelectionActive, isAddModeActive, isTextEditorActive),
+                label = "toolbar-content-crossfade"
+            ) { (selectionActive, addModeActive, textEditorActive) ->
+                when {
                     textEditorActive -> {
                         textEditorContentOverride?.invoke(this)
                     }
+
                     selectionActive -> {
 
                         if (selectionContentOverride != null) {
@@ -428,11 +435,15 @@ fun FloatingToolbarContent(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 TextButton(onClick = onDeleteConfirm) {
-                                    Text(stringResource(R.string.delete), color = colorScheme.onErrorContainer)
+                                    Text(
+                                        stringResource(R.string.delete),
+                                        color = colorScheme.onErrorContainer
+                                    )
                                 }
                             }
                         }
                     }
+
                     addModeActive -> {
                         if (addModeContentOverride != null) {
                             addModeContentOverride()
@@ -447,18 +458,18 @@ fun FloatingToolbarContent(
                                     onAddModeToggle()
                                 }) {
                                     Icon(
-                                        Icons.Default.Abc,
+                                        Icons.Default.TextFields,
                                         contentDescription = stringResource(R.string.add_text_note),
                                         tint = colorScheme.onSecondaryContainer
                                     )
                                 }
                                 IconButton(onClick = {
-                                    onPenNoteClick()
+                                    onListNoteClick()
                                     onAddModeToggle()
                                 }) {
                                     Icon(
-                                        Icons.Filled.Create,
-                                        contentDescription = stringResource(R.string.add_pen_note),
+                                        Icons.Default.Checklist,
+                                        contentDescription = stringResource(R.string.add_list_note),
                                         tint = colorScheme.onSecondaryContainer
                                     )
                                 }
@@ -473,18 +484,19 @@ fun FloatingToolbarContent(
                                     )
                                 }
                                 IconButton(onClick = {
-                                    onListNoteClick()
+                                    onPenNoteClick()
                                     onAddModeToggle()
                                 }) {
                                     Icon(
-                                        Icons.Filled.List,
-                                        contentDescription = stringResource(R.string.add_list_note),
+                                        Icons.Filled.Create,
+                                        contentDescription = stringResource(R.string.add_pen_note),
                                         tint = colorScheme.onSecondaryContainer
                                     )
                                 }
                             }
                         }
                     }
+
                     else -> {
                         if (defaultContentOverride != null) {
                             defaultContentOverride()
@@ -531,14 +543,15 @@ fun FloatingToolbarContent(
                                                 )
                                                 IconButton(
                                                     onClick = {
-                                                        val newLayout = if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
+                                                        val newLayout =
+                                                            if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
                                                         onNotesLayoutTypeChange(newLayout)
                                                     },
                                                     modifier = Modifier.alpha(sortIconAlpha),
                                                     enabled = !isSearchActive && showActionIconsExceptSearch
                                                 ) {
                                                     Icon(
-                                                        imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Filled.Dashboard else Icons.Filled.List,
+                                                        imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Default.ViewStream else Icons.Default.ViewModule,
                                                         contentDescription = "Change Layout",
                                                         tint = colorScheme.onSurface
                                                     )
@@ -547,7 +560,7 @@ fun FloatingToolbarContent(
                                                 val filterIconAlpha by animateFloatAsState(
                                                     targetValue = iconAlphaTarget,
                                                     animationSpec = tween(
-                                                         durationMillis = iconsAlphaDuration,
+                                                        durationMillis = iconsAlphaDuration,
                                                         delayMillis = if (isSearchActive) 100 else 0
                                                     ),
                                                     label = "FilterIconAlpha"

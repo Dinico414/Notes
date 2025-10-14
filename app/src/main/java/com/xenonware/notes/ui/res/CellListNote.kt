@@ -21,7 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,7 +49,7 @@ fun CellListNote(
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
     modifier: Modifier = Modifier,
-    maxLines: Int = Int.MAX_VALUE // Add maxLines parameter with a default value
+    maxLines: Int = Int.MAX_VALUE,
 ) {
     val borderColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
@@ -62,9 +62,7 @@ fun CellListNote(
             .clip(RoundedCornerShape(MediumCornerRadius))
             .background(MaterialTheme.colorScheme.surfaceBright)
             .border(
-                width = 2.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(MediumCornerRadius)
+                width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
             )
             .combinedClickable(
                 onClick = {
@@ -73,8 +71,7 @@ fun CellListNote(
                     } else {
                         onEditItem(item)
                     }
-                },
-                onLongClick = onSelectItem
+                }, onLongClick = onSelectItem
             )
     ) {
         Column(
@@ -92,26 +89,28 @@ fun CellListNote(
             if (!item.description.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(MediumSpacing))
                 val listItems = try {
-                    // Assuming description is a JSON string of List<ListItem>
-                    // A simple split for preview, actual parsing would need a JSON library
-                    // For now, let's assume each line is an item for display purposes.
-                    // This will need to be properly deserialized if `ListItem` objects are used directly.
-                    item.description?.split("\n")?.filter { it.isNotBlank() } ?: emptyList()
+                    item.description.split("\n").filter { it.isNotBlank() }
                 } catch (e: Exception) {
-                    listOf(item.description!!) // Fallback if not parsable as list
+                    listOf(item.description)
                 }
 
                 listItems.take(maxLines).forEach { listItemText ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // A placeholder for a checkbox visual, actual interactive checkbox is in NoteListCard
                         Box(
                             modifier = Modifier
                                 .size(16.dp)
-                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), CircleShape)
+                                .background(
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                                    CircleShape
+                                )
                                 .clip(CircleShape)
-                                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape)
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                    CircleShape
+                                )
                         )
                         Spacer(modifier = Modifier.size(8.dp))
                         Text(
@@ -130,8 +129,7 @@ fun CellListNote(
 
         AnimatedVisibility(
             visible = isSelectionModeActive,
-            modifier = Modifier
-                .align(Alignment.TopStart),
+            modifier = Modifier.align(Alignment.TopStart),
             enter = fadeIn(),
             exit = fadeOut()
         ) {
@@ -148,8 +146,7 @@ fun CellListNote(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Selected",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .size(24.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     } else {
                         Box(
@@ -170,18 +167,22 @@ fun CellListNote(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 4.dp, end = 4.dp)
-                .size(48.dp),
-            contentAlignment = Alignment.Center
+                .size(48.dp), contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.FormatListBulleted,
-                contentDescription = "List",
-                tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+            Box(
                 modifier = Modifier
                     .size(28.dp)
-                    .padding(2.dp)
                     .background(MaterialTheme.colorScheme.onSurface, CircleShape)
-            )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Checklist,
+                    contentDescription = "List",
+                    tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(24.dp)
+                )
+            }
         }
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -27,16 +28,19 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,6 +55,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -130,13 +135,17 @@ fun CompactNotes(
     var showTextNoteCard by rememberSaveable { mutableStateOf(false) }
     var saveTrigger by remember { mutableStateOf(false) }
 
-    // States for the text editor
     var isBold by remember { mutableStateOf(false) }
     var isItalic by remember { mutableStateOf(false) }
     var isUnderlined by remember { mutableStateOf(false) }
     val textSizes = listOf(16.sp, 20.sp, 24.sp, 28.sp)
-    var currentSizeIndex by remember { mutableStateOf(1) }
+    var currentSizeIndex by remember { mutableIntStateOf(1) }
     val editorFontSize = textSizes[currentSizeIndex]
+
+    val listTextSizes = remember { listOf(16.sp, 20.sp, 24.sp, 28.sp) }
+    var currentListSizeIndex by rememberSaveable { mutableIntStateOf(1) }
+    val listEditorFontSize = listTextSizes[currentListSizeIndex]
+
 
     var showSketchNoteCard by rememberSaveable { mutableStateOf(false) }
     var showAudioNoteCard by rememberSaveable { mutableStateOf(false) }
@@ -152,7 +161,7 @@ fun CompactNotes(
                 ListItem(parts[0].toLong(), parts[1], parts[2].toBoolean())
             }.toMutableStateList()
         }
-    )) { mutableStateListOf<ListItem>() }
+    )) { mutableStateListOf() }
     var nextListItemId by rememberSaveable { mutableLongStateOf(0L) }
 
 
@@ -199,16 +208,16 @@ fun CompactNotes(
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
 
     // Resize Feature States
-    var listNoteLineLimitIndex by rememberSaveable { mutableStateOf(0) } // 0: 3 lines, 1: 9 lines, 2: Unlimited
-    var gridNoteColumnCountIndex by rememberSaveable { mutableStateOf(0) } // Cycles through column options
+    var listNoteLineLimitIndex by rememberSaveable { mutableIntStateOf(0) } // 0: 3 lines, 1: 9 lines, 2: Unlimited
+    var gridNoteColumnCountIndex by rememberSaveable { mutableIntStateOf(0) } // Cycles through column options
 
     val listLineLimits = remember { listOf(3, 9, Int.MAX_VALUE) }
 
     val gridColumnCountOptions = remember(layoutType) {
         when (layoutType) {
             LayoutType.COVER, LayoutType.SMALL, LayoutType.COMPACT -> listOf(2, 3)
-            LayoutType.MEDIUM -> listOf(3, 4, 5)
-            else -> listOf(4, 5, 6) // EXPANDED or any other case
+            LayoutType.MEDIUM -> listOf(2, 3, 4)
+            else -> listOf(4, 5, 6)
         }
     }
 
@@ -219,9 +228,13 @@ fun CompactNotes(
     fun onResizeClick() {
         if (notesLayoutType == NotesLayoutType.LIST) {
             listNoteLineLimitIndex = (listNoteLineLimitIndex + 1) % listLineLimits.size
-        } else { // Grid Layout
+        } else {
             gridNoteColumnCountIndex = (gridNoteColumnCountIndex + 1) % gridColumnCountOptions.size
         }
+    }
+
+    fun onListTextResizeClick() {
+        currentListSizeIndex = (currentListSizeIndex + 1) % listTextSizes.size
     }
 
     fun resetNoteState() {
@@ -231,6 +244,7 @@ fun CompactNotes(
         listTitleState = ""
         listItemsState.clear()
         nextListItemId = 0L
+        currentListSizeIndex = 1
     }
 
     val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
@@ -281,6 +295,37 @@ fun CompactNotes(
                 } else {
                     null
                 }
+                val listEditorContent: @Composable (RowScope.() -> Unit)? = if (showListNoteCard) {
+                    @Composable {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            FilledTonalButton(
+                                onClick = { listItemsState.add(ListItem(nextListItemId++, "", false)) },
+                                modifier = Modifier
+                                    .width(140.dp)
+                                    .height(56.dp),
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiary,
+                                    contentColor = MaterialTheme.colorScheme.onTertiary
+                                )
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add new item to list")
+                                Text(text = "Add")
+                            }
+                            IconButton(
+                                onClick = ::onListTextResizeClick,
+                            ) {
+                                Icon(Icons.Default.FormatSize, contentDescription = "Change text size")
+                            }
+                        }
+                    }
+                } else {
+                    null
+                }
 
                 FloatingToolbarContent(
                     hazeState = hazeState,
@@ -311,13 +356,16 @@ fun CompactNotes(
                     },
                     isSearchActive = isSearchActive,
                     onIsSearchActiveChange = { isSearchActive = it },
-                    textEditorContentOverride = textEditorContent,
+                    textEditorContentOverride = when {
+                        showTextNoteCard -> textEditorContent
+                        showListNoteCard -> listEditorContent
+                        else -> null
+                    },
                     fabOverride = if (showTextNoteCard) {
                         {
                             FloatingActionButton(
                                 onClick = { if (titleState.isNotBlank()) saveTrigger = true }
                             ) {
-                                // The icon is greyed out when the title is blank.
                                 Icon(
                                     imageVector = Icons.Default.Save,
                                     contentDescription = "Save Note",
@@ -342,7 +390,7 @@ fun CompactNotes(
                     },
                     notesLayoutType = notesLayoutType,
                     onNotesLayoutTypeChange = { notesViewModel.setNotesLayoutType(it) },
-                    onResizeClick = ::onResizeClick // Pass the resize callback
+                    onResizeClick = ::onResizeClick
                 )
             },
         ) { scaffoldPadding ->
@@ -479,8 +527,9 @@ fun CompactNotes(
                                                                 descriptionState = itemToEdit.description ?: ""
                                                                 listTitleState = itemToEdit.title
                                                                 listItemsState.clear()
+                                                                nextListItemId = 0L
+                                                                currentListSizeIndex = 1
                                                                 itemToEdit.description?.let { desc ->
-                                                                    // Parse description back into ListItems
                                                                     val parsedItems = desc.split("\n").mapNotNull { line ->
                                                                         if (line.isBlank()) null
                                                                         else {
@@ -513,7 +562,7 @@ fun CompactNotes(
                                     }
                                     NotesLayoutType.GRID -> {
                                         LazyVerticalStaggeredGrid(
-                                            columns = StaggeredGridCells.Fixed(currentGridColumns), // Use dynamic columns
+                                            columns = StaggeredGridCells.Fixed(currentGridColumns),
                                             modifier = Modifier.weight(1f),
                                             contentPadding = PaddingValues(
                                                 top = ExtraLargePadding,
@@ -540,8 +589,9 @@ fun CompactNotes(
                                                         descriptionState = itemToEdit.description ?: ""
                                                         listTitleState = itemToEdit.title
                                                         listItemsState.clear()
+                                                        nextListItemId = 0L
+                                                        currentListSizeIndex = 1
                                                         itemToEdit.description?.let { desc ->
-                                                            // Parse description back into ListItems
                                                             val parsedItems = desc.split("\n").mapNotNull { line ->
                                                                 if (line.isBlank()) null
                                                                 else {
@@ -559,7 +609,7 @@ fun CompactNotes(
                                                             NoteType.SKETCH -> showSketchNoteCard = true
                                                         }
                                                     },
-                                                    maxLines = gridMaxLines // Always 20 for grid layout
+                                                    maxLines = gridMaxLines
                                                 )
                                             }
                                         }
@@ -588,13 +638,13 @@ fun CompactNotes(
             ) {
                 BackHandler { showTextNoteCard = false }
 
-                if (saveTrigger) {
-                    // This will be handled inside NoteTextCard's LaunchedEffect
-                }
+//                if (saveTrigger) {
+//
+//                }
 
                 NoteTextCard(
-                    title = titleState, // Pass the state down
-                    onTitleChange = { titleState = it }, // Update the state from the child
+                    title = titleState,
+                    onTitleChange = { titleState = it },
                     initialContent = descriptionState,
                     onDismiss = { showTextNoteCard = false },
                     onSave = { title, description ->
@@ -624,7 +674,7 @@ fun CompactNotes(
                     isItalic = isItalic,
                     isUnderlined = isUnderlined,
                     editorFontSize = editorFontSize,
-                    toolbarHeight = 72.dp // Approximate height of the toolbar
+                    toolbarHeight = 72.dp
                 )
             }
 
@@ -681,7 +731,7 @@ fun CompactNotes(
                         showListNoteCard = false
                         resetNoteState()
                     },
-                    toolbarHeight = 72.dp, // Approximate height of the toolbar
+                    toolbarHeight = 72.dp,
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
                     onAddItem = {
@@ -701,7 +751,15 @@ fun CompactNotes(
                         if (index != -1) {
                             listItemsState[index] = listItemsState[index].copy(text = newText)
                         }
-                    }
+                    },
+
+                    onAddItemClick = {
+                        listItemsState.add(ListItem(nextListItemId++, "", false))
+                    },
+                    onTextResizeClick = ::onListTextResizeClick,
+                    editorFontSize = listEditorFontSize,
+                    addItemTrigger = saveTrigger,
+                    onAddItemTriggerConsumed = { saveTrigger = false }
                 )
             }
         }
@@ -715,7 +773,7 @@ fun NoteCard(
     isSelectionModeActive: Boolean,
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
-    maxLines: Int = Int.MAX_VALUE // Add maxLines parameter with a default value
+    maxLines: Int = Int.MAX_VALUE
 ) {
     when (item.noteType) {
         NoteType.TEXT -> CellTextNote(
@@ -724,7 +782,7 @@ fun NoteCard(
             isSelectionModeActive = isSelectionModeActive,
             onSelectItem = onSelectItem,
             onEditItem = onEditItem,
-            maxLines = maxLines // Pass maxLines to CellTextNote
+            maxLines = maxLines
         )
         NoteType.AUDIO -> CellAudioNote(
             item = item,
