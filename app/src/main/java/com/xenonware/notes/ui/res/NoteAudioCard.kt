@@ -87,13 +87,16 @@ class AudioRecorderManager(private val context: Context) {
     private var mediaRecorder: MediaRecorder? = null
     var audioFilePath: String? = null
         private set
+    var uniqueAudioId: String? = null // New: To store the unique ID for the audio file
+        private set
 
     var recordingDurationMillis: Long by mutableLongStateOf(0L)
 
     var currentRecordingState: RecordingState by mutableStateOf(RecordingState.IDLE)
         private set
     
-    private var _isInitialFile: Boolean by mutableStateOf(false)
+    var isPersistentAudio: Boolean by mutableStateOf(false) // New: Flag to indicate if the audio is persistently saved
+        private set
 
     fun startRecording() {
         if (currentRecordingState == RecordingState.RECORDING) return
@@ -107,9 +110,10 @@ class AudioRecorderManager(private val context: Context) {
     }
 
     private fun startNewRecording() {
-        val audioFile = File(context.cacheDir, "audio_note_${System.currentTimeMillis()}.mp3")
+        uniqueAudioId = "audio_${System.currentTimeMillis()}" // Generate a unique ID
+        val audioFile = File(context.filesDir, "$uniqueAudioId.mp3") // Use ID in filename
         audioFilePath = audioFile.absolutePath
-        _isInitialFile = false // This is a new, temporary recording
+        isPersistentAudio = false // New recordings are not persistent until explicitly saved
 
         mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             MediaRecorder(context)
@@ -127,7 +131,7 @@ class AudioRecorderManager(private val context: Context) {
                 start()
                 currentRecordingState = RecordingState.RECORDING
                 recordingDurationMillis = 0L // Reset on new recording
-                println("Started recording to: $audioFilePath")
+                println("Started recording to: $audioFilePath with ID: $uniqueAudioId")
             } catch (e: IOException) {
                 println("Failed to start recording: ${e.message}")
                 currentRecordingState = RecordingState.IDLE
@@ -157,24 +161,38 @@ class AudioRecorderManager(private val context: Context) {
 
     fun setInitialAudioFilePath(filePath: String) {
         audioFilePath = filePath
-        _isInitialFile = true
+        // Extract uniqueAudioId from the filePath (assuming filename is uniqueId.mp3)
+        uniqueAudioId = File(filePath).nameWithoutExtension 
+        isPersistentAudio = true // Audio loaded from initial path is considered persistent
         currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
         // We don't know the duration here, the AudioPlayerManager will set it when played.
         recordingDurationMillis = 0L 
-        println("Set initial audio file path: $filePath")
+        println("Set initial audio file path: $filePath, extracted ID: $uniqueAudioId")
+    }
+
+    fun markAudioAsPersistent() {
+        isPersistentAudio = true
+        println("Audio with ID: $uniqueAudioId marked as persistent.")
     }
 
     fun deleteRecording() {
-        if (!_isInitialFile) { // Only delete if it's a temporary file
-            audioFilePath?.let { File(it).delete() }
-            println("Temporary recording deleted")
-        } else {
-            println("Initial audio file not deleted (kept for persistence)")
+        // Only delete the file if it's NOT marked as persistent.
+        // If isPersistentAudio is true, it means the app considers this file saved externally
+        // and won't delete it on cleanup of this manager instance.
+        if (!isPersistentAudio && audioFilePath != null) {
+            val fileToDelete = File(audioFilePath!!)
+            if (fileToDelete.exists()) {
+                fileToDelete.delete()
+                println("Temporary recording deleted: $audioFilePath")
+            }
+        } else if (isPersistentAudio) {
+            println("Persistent audio not deleted: $audioFilePath")
         }
         audioFilePath = null
+        uniqueAudioId = null // Reset the ID too
         recordingDurationMillis = 0L
         currentRecordingState = RecordingState.IDLE
-        _isInitialFile = false // Reset the flag
+        isPersistentAudio = false // Reset the flag for future uses
     }
 
     fun resetState() {
@@ -186,16 +204,17 @@ class AudioRecorderManager(private val context: Context) {
             }
             mediaRecorder = null
         }
-        deleteRecording() // This will now intelligently delete only temporary files
+        deleteRecording() // This will now intelligently delete only non-persistent files
         currentRecordingState = RecordingState.IDLE
-        _isInitialFile = false
+        isPersistentAudio = false // Reset the flag
+        uniqueAudioId = null // Ensure ID is reset here too
     }
 
 
     fun dispose() {
         mediaRecorder?.release()
         mediaRecorder = null
-        // No explicit file deletion here, as deleteRecording() handles it when called on dispose from NoteAudioCard
+        deleteRecording() // Intelligent deletion based on isPersistentAudio
     }
 }
 
@@ -274,13 +293,13 @@ fun NoteAudioCard(
     audioTitle: String,
     onAudioTitleChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit, // (title, description) - now also includes the file path
+    onSave: (String, String) -> Unit, // (title, uniqueAudioId) - now passes the unique ID
     cardBackgroundColor: Color = colorScheme.surfaceContainer,
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
     selectedAudioViewType: AudioViewType, // Current selected view type from parent
-    initialAudioFilePath: String? = null, // New parameter for existing audio files
+    initialAudioFilePath: String? = null, // New parameter for existing audio files (full path)
 ) {
     val hazeState = remember { HazeState() }
     val hazeThinColor = colorScheme.surfaceDim
@@ -323,6 +342,8 @@ fun NoteAudioCard(
     LaunchedEffect(initialAudioFilePath) {
         println("NoteAudioCard: LaunchedEffect(initialAudioFilePath) triggered with: $initialAudioFilePath")
         if (initialAudioFilePath != null) {
+            // initialAudioFilePath here is the full path.
+            // setInitialAudioFilePath will extract the ID, set audioFilePath internally, and mark as persistent.
             recorderManager.setInitialAudioFilePath(initialAudioFilePath)
             playerManager.totalAudioDurationMillis = playerManager.getAudioDuration(initialAudioFilePath)
             playerManager.currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
@@ -379,24 +400,23 @@ fun NoteAudioCard(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            println("NoteAudioCard: Save trigger activated. Temp path: ${recorderManager.audioFilePath}")
+            println("NoteAudioCard: Save trigger activated. Audio ID: ${recorderManager.uniqueAudioId}")
             recorderManager.stopRecording()
             playerManager.stopAudio()
-            onSave(audioTitle, recorderManager.audioFilePath ?: "")
+            onSave(audioTitle, recorderManager.uniqueAudioId ?: "") // Pass the unique ID
+            recorderManager.markAudioAsPersistent() // Mark the current recording as persistent
             onSaveTriggerConsumed()
             recordingState = RecordingState.VIEWING_SAVED_AUDIO // After saving, view it as a saved audio
-            // Do NOT delete the file here. It should be deleted via Redo or Discard actions, or when composable leaves composition
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
             println("NoteAudioCard: DisposableEffect onDispose called.")
+            // This will now only delete the file if it hasn't been marked as persistent.
             recorderManager.dispose()
             playerManager.stopAudio()
             playerManager.dispose()
-            // Ensure temporary file is deleted when the composable leaves the composition
-            recorderManager.deleteRecording() // This is now intelligent (only deletes if _isInitialFile is false)
         }
     }
 
@@ -543,7 +563,8 @@ fun NoteAudioCard(
                         }
                         IconButton(
                             onClick = {
-                                recorderManager.deleteRecording() // This now only deletes temporary files
+                                // This delete will work because the audio is not yet marked as persistent
+                                recorderManager.deleteRecording() 
                                 playerManager.stopAudio()
                                 recordingState = RecordingState.IDLE
                             }
@@ -552,7 +573,8 @@ fun NoteAudioCard(
                         }
                         IconButton(
                             onClick = {
-                                recorderManager.deleteRecording() // Clear the recording if user just wants to discard
+                                // This delete will work because the audio is not yet marked as persistent
+                                recorderManager.deleteRecording() 
                                 onDismiss()
                             }
                         ) {
@@ -586,12 +608,16 @@ fun NoteAudioCard(
                             ) {
                                 Icon(Icons.Default.Stop, contentDescription = "Stop playback")
                             }
-                            Spacer(modifier = Modifier.width(16.dp)) // Add some space
+                            Spacer(modifier = Modifier.width(16.dp)) 
                             IconButton(
                                 onClick = {
-                                    recorderManager.resetState() // Clears the loaded file path and resets state to IDLE
+                                    // User wants to start a new recording, so we delete the current (persistent) one
+                                    // if it's not being actively viewed in another part of the app.
+                                    // For simplicity here, we'll reset state, which will delete it IF not persistent.
+                                    // However, in a real app, you might want to confirm deletion of a persistent file.
+                                    recorderManager.resetState() 
                                     playerManager.stopAudio()
-                                    recordingState = RecordingState.IDLE // Transition to IDLE to allow new recording
+                                    recordingState = RecordingState.IDLE 
                                 }
                             ) {
                                 Icon(Icons.Default.Mic, contentDescription = "Start new recording")
@@ -625,8 +651,7 @@ fun NoteAudioCard(
                     fontFamily = QuicksandTitleVariable,
                     textAlign = TextAlign.Center,
                     color = colorScheme.onSurface
-                )
-            )
+                ) )
             BasicTextField(
                 value = audioTitle,
                 onValueChange = { onAudioTitleChange(it) },

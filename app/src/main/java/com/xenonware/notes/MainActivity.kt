@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
 
     private var lastAppliedTheme: Int = -1
     private var lastAppliedCoverThemeEnabled: Boolean =
-        false // This tracks the setting value itself
+        false
     private var lastAppliedBlackedOutMode: Boolean = false
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)

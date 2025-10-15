@@ -946,11 +946,12 @@ fun CompactNotes(
                     audioTitle = titleState,
                     onAudioTitleChange = { titleState = it },
                     onDismiss = { showAudioNoteCard = false },
-                    onSave = { title, description ->
-                        if (title.isNotBlank()) {
+                    onSave = { title, uniqueAudioId -> // Changed 'description' to 'uniqueAudioId' for clarity
+                        if (title.isNotBlank() || uniqueAudioId.isNotBlank()) { // Check for uniqueAudioId as well
                             if (editingNoteId != null) {
                                 val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
                                     title = title,
+                                    description = uniqueAudioId // Store the uniqueAudioId here!
                                 )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -958,6 +959,7 @@ fun CompactNotes(
                             } else {
                                 notesViewModel.addItem(
                                     title = title,
+                                    description = uniqueAudioId.takeIf { it.isNotBlank() }, // Store for new notes
                                     noteType = NoteType.AUDIO
                                 )
                             }
@@ -969,6 +971,7 @@ fun CompactNotes(
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
                     selectedAudioViewType = selectedAudioViewType, // Pass the selected view type
+                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() } // Pass existing audio ID for editing
                 )
 
             }
