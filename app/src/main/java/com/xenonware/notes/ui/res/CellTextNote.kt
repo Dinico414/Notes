@@ -33,7 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
-import com.xenonware.notes.ui.values.ExtraLargestPadding
+import com.xenonware.notes.ui.values.LargestPadding
 import com.xenonware.notes.ui.values.MediumCornerRadius
 import com.xenonware.notes.ui.values.MediumSpacing
 import com.xenonware.notes.viewmodel.classes.NotesItems
@@ -73,7 +73,7 @@ fun CellTextNote(
             )
     ) {
         Column(
-            modifier = Modifier.padding(ExtraLargestPadding)
+            modifier = Modifier.padding(LargestPadding)
         ) {
             Text(
                 text = item.title,
@@ -104,8 +104,8 @@ fun CellTextNote(
         ) {
             Box(
                 modifier = Modifier
-                    .padding(4.dp)
-                    .size(28.dp)
+                    .padding(6.dp)
+                    .size(24.dp)
                     .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -136,7 +136,7 @@ fun CellTextNote(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 4.dp, end = 4.dp)
-                .size(48.dp), contentAlignment = Alignment.Center
+                .size(32.dp), contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier

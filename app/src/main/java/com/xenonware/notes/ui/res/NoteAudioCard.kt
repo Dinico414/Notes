@@ -252,6 +252,26 @@ class AudioPlayerManager {
         }
     }
 
+    fun pauseAudio() {
+        mediaPlayer?.pause()
+        isPlaying = false
+        currentRecordingState = RecordingState.PAUSED
+        println("Paused audio playback.")
+    }
+
+    fun resumeAudio() {
+        mediaPlayer?.start()
+        isPlaying = true
+        currentRecordingState = RecordingState.PLAYING
+        println("Resumed audio playback.")
+    }
+
+    fun seekTo(positionMillis: Long) {
+        mediaPlayer?.seekTo(positionMillis.toInt())
+        currentPlaybackPositionMillis = positionMillis
+        println("Seeked to $positionMillis ms.")
+    }
+
     fun stopAudio() {
         mediaPlayer?.apply {
             stop()
@@ -265,7 +285,7 @@ class AudioPlayerManager {
     }
 
     fun getAudioDuration(filePath: String): Long {
-        var duration: Long = 0L
+        var duration = 0L
         val tempPlayer = MediaPlayer()
         try {
             tempPlayer.setDataSource(filePath)
@@ -273,7 +293,8 @@ class AudioPlayerManager {
             duration = tempPlayer.duration.toLong()
         } catch (e: IOException) {
             println("Failed to get audio duration: ${e.message}")
-        } finally {
+        }
+        finally {
             tempPlayer.release()
         }
         return duration
@@ -332,7 +353,8 @@ fun NoteAudioCard(
                 recordingState = RecordingState.VIEWING_SAVED_AUDIO
             } else if (recorderManager.currentRecordingState == RecordingState.STOPPED_UNSAVED) {
                 recordingState = RecordingState.STOPPED_UNSAVED
-            } else {
+            }
+            else {
                 recordingState = RecordingState.IDLE
             }
         }
@@ -724,7 +746,7 @@ fun WaveformDisplay(audioFilePath: String?, modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         if (audioFilePath != null) {
             Text(
-                text = "Waveform visualization for $audioFilePath\n(requires custom drawing implementation)",
+                text = "Waveform visualization for $audioFilePath(requires custom drawing implementation)",
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
             )

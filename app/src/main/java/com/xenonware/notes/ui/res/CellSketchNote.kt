@@ -11,16 +11,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Draw
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,9 +31,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
-import com.xenonware.notes.ui.values.ExtraLargestPadding
+import com.xenonware.notes.ui.values.LargestPadding
 import com.xenonware.notes.ui.values.MediumCornerRadius
-import com.xenonware.notes.ui.values.MediumSpacing
 import com.xenonware.notes.viewmodel.classes.NotesItems
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -75,7 +72,7 @@ fun CellSketchNote(
             )
     ) {
         Column(
-            modifier = Modifier.padding(ExtraLargestPadding)
+            modifier = Modifier.padding(LargestPadding)
         ) {
             Text(
                 text = item.title,
@@ -85,30 +82,19 @@ fun CellSketchNote(
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface
             )
-
-            if (!item.description.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(MediumSpacing))
-                Text(
-                    text = item.description ?: "",
-                    style = MaterialTheme.typography.bodyLarge,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-            }
         }
 
         AnimatedVisibility(
             visible = isSelectionModeActive,
-            modifier = Modifier
-                .align(Alignment.TopStart),
+            modifier = Modifier.align(Alignment.TopStart),
             enter = fadeIn(),
             exit = fadeOut()
         ) {
             Box(
                 modifier = Modifier
-                    .padding(4.dp)
-                    .size(28.dp)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
+                    .padding(6.dp)
+                    .size(24.dp)
+                    .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
@@ -117,8 +103,7 @@ fun CellSketchNote(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Selected",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .size(24.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     } else {
                         Box(
@@ -139,18 +124,22 @@ fun CellSketchNote(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 4.dp, end = 4.dp)
-                .size(48.dp),
-            contentAlignment = Alignment.Center
+                .size(32.dp), contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Draw,
-                contentDescription = "Sketch",
-                tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+            Box(
                 modifier = Modifier
                     .size(28.dp)
-                    .padding(2.dp)
                     .background(MaterialTheme.colorScheme.onSurface, CircleShape)
-            )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Sketch",
+                    tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(24.dp)
+                )
+            }
         }
     }
 }

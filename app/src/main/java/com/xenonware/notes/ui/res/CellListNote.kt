@@ -35,7 +35,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
-import com.xenonware.notes.ui.values.ExtraLargestPadding
+import com.xenonware.notes.ui.values.LargestPadding
 import com.xenonware.notes.ui.values.MediumCornerRadius
 import com.xenonware.notes.ui.values.MediumSpacing
 import com.xenonware.notes.viewmodel.classes.NotesItems
@@ -75,7 +75,7 @@ fun CellListNote(
             )
     ) {
         Column(
-            modifier = Modifier.padding(ExtraLargestPadding)
+            modifier = Modifier.padding(LargestPadding)
         ) {
             Text(
                 text = item.title,
@@ -90,7 +90,7 @@ fun CellListNote(
                 Spacer(modifier = Modifier.height(MediumSpacing))
                 val listItems = try {
                     item.description.split("\n").filter { it.isNotBlank() }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     listOf(item.description)
                 }
 
@@ -135,9 +135,9 @@ fun CellListNote(
         ) {
             Box(
                 modifier = Modifier
-                    .padding(4.dp)
-                    .size(28.dp)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
+                    .padding(6.dp)
+                    .size(24.dp)
+                    .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
@@ -167,7 +167,7 @@ fun CellListNote(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 4.dp, end = 4.dp)
-                .size(48.dp), contentAlignment = Alignment.Center
+                .size(32.dp), contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
