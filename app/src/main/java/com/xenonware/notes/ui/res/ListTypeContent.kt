@@ -42,8 +42,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.R
-import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
 import com.xenonware.notes.ui.values.ExtraLargePadding
 import com.xenonware.notes.ui.values.LargerCornerRadius
 import com.xenonware.notes.ui.values.LargestPadding

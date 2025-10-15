@@ -65,7 +65,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
+import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.layouts.notes.AudioViewType
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect

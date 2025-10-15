@@ -24,8 +24,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.xenon.mylibrary.ActivityScreen
 import com.xenonware.notes.R
-import com.xenonware.notes.ui.layouts.ActivityScreen
 import com.xenonware.notes.ui.res.DialogClearDataConfirmation
 import com.xenonware.notes.ui.res.DialogCoverDisplaySelection
 import com.xenonware.notes.ui.res.DialogLanguageSelection

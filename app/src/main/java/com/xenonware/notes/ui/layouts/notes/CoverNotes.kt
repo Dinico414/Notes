@@ -96,10 +96,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.xenon.mylibrary.ActivityScreen
+import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenon.mylibrary.res.FloatingToolbarContent
 import com.xenonware.notes.R
-import com.xenonware.notes.ui.layouts.ActivityScreen
-import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
-import com.xenonware.notes.ui.res.FloatingToolbarContent
 import com.xenonware.notes.ui.res.GoogleProfilBorder
 import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.ListItem

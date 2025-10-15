@@ -49,8 +49,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.R
-import com.xenonware.notes.ui.layouts.QuicksandTitleVariable
 import com.xenonware.notes.ui.values.DialogCornerRadius
 import com.xenonware.notes.ui.values.DialogPadding
 import com.xenonware.notes.ui.values.LargestPadding
