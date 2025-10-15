@@ -265,11 +265,12 @@ fun FloatingToolbarContent(
     val imeHeight = imePaddingValues.calculateBottomPadding()
 
     val targetBottomPadding = remember(imeHeight, bottomPaddingNavigationBar, imePaddingValues) {
-        if (imeHeight > bottomPaddingNavigationBar) {
+        val calculatedPadding = if (imeHeight > bottomPaddingNavigationBar) {
             imeHeight + LargePadding
         } else {
             max(bottomPaddingNavigationBar, imePaddingValues.calculateTopPadding()) + LargePadding
         }
+        max(calculatedPadding, 0.dp)
     }
 
     val animatedBottomPadding by animateDpAsState(
@@ -292,7 +293,7 @@ fun FloatingToolbarContent(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = animatedBottomPadding)
+            .padding(bottom = animatedBottomPadding.coerceAtLeast(0.dp))
             .offset(y = animatedToolbarOffset), contentAlignment = Alignment.Center
     ) {
         val animatedToolbarColor by animateColorAsState(
