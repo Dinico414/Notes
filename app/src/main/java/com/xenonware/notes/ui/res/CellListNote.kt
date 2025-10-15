@@ -177,7 +177,7 @@ fun CellListNote(
                 Icon(
                     imageVector = Icons.Default.Checklist,
                     contentDescription = "List",
-                    tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    tint = MaterialTheme.colorScheme.surfaceBright,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .size(24.dp)

@@ -270,7 +270,7 @@ fun CellAudioNote(
                 Icon(
                     imageVector = Icons.Default.Mic,
                     contentDescription = "Audio",
-                    tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    tint = MaterialTheme.colorScheme.surfaceBright,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .size(24.dp)

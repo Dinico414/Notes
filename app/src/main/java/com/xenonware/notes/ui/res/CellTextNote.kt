@@ -146,7 +146,7 @@ fun CellTextNote(
                 Icon(
                     imageVector = Icons.Default.TextFields,
                     contentDescription = "Text",
-                    tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    tint = MaterialTheme.colorScheme.surfaceBright,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .size(24.dp)

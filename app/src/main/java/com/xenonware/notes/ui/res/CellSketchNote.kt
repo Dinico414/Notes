@@ -134,7 +134,7 @@ fun CellSketchNote(
                 Icon(
                     imageVector = Icons.Default.Edit,
                     contentDescription = "Sketch",
-                    tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    tint = MaterialTheme.colorScheme.surfaceBright,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .size(24.dp)
