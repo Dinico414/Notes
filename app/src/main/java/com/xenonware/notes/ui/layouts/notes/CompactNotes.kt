@@ -6,6 +6,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
@@ -34,6 +36,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatSize
@@ -41,6 +44,9 @@ import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ViewModule
+import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,6 +58,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -73,6 +80,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -535,7 +543,77 @@ fun CompactNotes(
                     },
                     isSearchActive = isSearchActive,
                     onIsSearchActiveChange = { isSearchActive = it },
-                    editorContentOverride = when {
+                    defaultContent = { iconsAlphaDuration, showActionIconsExceptSearch ->
+                        Row {
+                            val iconAlphaTarget = if (isSearchActive) 0f else 1f
+
+                            val sortIconAlpha by animateFloatAsState(
+                                targetValue = iconAlphaTarget,
+                                animationSpec = tween(
+                                    durationMillis = iconsAlphaDuration,
+                                    delayMillis = if (isSearchActive) 0 else 0
+                                ),
+                                label = "SortIconAlpha"
+                            )
+                            IconButton(
+                                onClick = {
+                                    val newLayout =
+                                        if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
+                                    notesViewModel.setNotesLayoutType(newLayout)
+                                },
+                                modifier = Modifier.alpha(sortIconAlpha),
+                                enabled = !isSearchActive && showActionIconsExceptSearch
+                            ) {
+                                Icon(
+                                    imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Default.ViewStream else Icons.Default.ViewModule,
+                                    contentDescription = "Change Layout",
+                                    tint = colorScheme.onSurface
+                                )
+                            }
+
+                            val filterIconAlpha by animateFloatAsState(
+                                targetValue = iconAlphaTarget,
+                                animationSpec = tween(
+                                    durationMillis = iconsAlphaDuration,
+                                    delayMillis = if (isSearchActive) 100 else 0
+                                ),
+                                label = "FilterIconAlpha"
+                            )
+                            IconButton(
+                                onClick = ::onResizeClick, // Use the new callback
+                                modifier = Modifier.alpha(filterIconAlpha),
+                                enabled = !isSearchActive && showActionIconsExceptSearch
+                            ) {
+                                Icon(
+                                    Icons.Default.CenterFocusStrong,
+                                    contentDescription = stringResource(R.string.resize_notes),
+                                    tint = colorScheme.onSurface
+                                )
+                            }
+
+                            val settingsIconAlpha by animateFloatAsState(
+                                targetValue = iconAlphaTarget,
+                                animationSpec = tween(
+                                    durationMillis = iconsAlphaDuration,
+                                    delayMillis = if (isSearchActive) 200 else 0
+                                ),
+                                label = "SettingsIconAlpha"
+                            )
+                            IconButton(
+                                onClick = onOpenSettings,
+                                modifier = Modifier.alpha(settingsIconAlpha),
+                                enabled = !isSearchActive && showActionIconsExceptSearch
+                            ) {
+                                Icon(
+                                    Icons.Filled.Settings,
+                                    contentDescription = stringResource(R.string.settings),
+                                    tint = colorScheme.onSurface
+                                )
+                            }
+                        }
+
+                    },
+                    contentOverride = when {
                         showTextNoteCard -> textEditorContent
                         showListNoteCard -> listEditorContent
                         showAudioNoteCard -> audioEditorContent
@@ -587,9 +665,6 @@ fun CompactNotes(
                     else {
                         null
                     },
-                    notesLayoutType = notesLayoutType,
-                    onNotesLayoutTypeChange = { notesViewModel.setNotesLayoutType(it) },
-                    onResizeClick = ::onResizeClick
                 )
             },
         ) { scaffoldPadding ->

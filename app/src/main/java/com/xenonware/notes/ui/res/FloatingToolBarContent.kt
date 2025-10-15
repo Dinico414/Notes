@@ -38,15 +38,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TextFields
-import androidx.compose.material.icons.filled.ViewModule
-import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
@@ -91,7 +87,6 @@ import androidx.compose.ui.unit.max
 import com.xenonware.notes.R
 import com.xenonware.notes.ui.values.LargePadding
 import com.xenonware.notes.ui.values.SmallElevation
-import com.xenonware.notes.viewmodel.NotesLayoutType
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
@@ -135,17 +130,15 @@ fun FloatingToolbarContent(
     onListNoteClick: () -> Unit,
     isSearchActive: Boolean,
     onIsSearchActiveChange: (Boolean) -> Unit,
+    isSearchEnabled: Boolean = true,
     fabOverride: @Composable (() -> Unit)? = null,
     selectionContentOverride: @Composable (RowScope.() -> Unit)? = null,
     addModeContentOverride: @Composable (RowScope.() -> Unit)? = null,
-    defaultContentOverride: @Composable (RowScope.() -> Unit)? = null,
-    editorContentOverride: @Composable (RowScope.() -> Unit)? = null,
-    notesLayoutType: NotesLayoutType,
-    onNotesLayoutTypeChange: (NotesLayoutType) -> Unit,
-    onResizeClick: () -> Unit,
+    defaultContent: @Composable ((iconsAlphaDuration: Int, showActionIconsExceptSearch: Boolean) -> Unit)? = null,
+    contentOverride: @Composable (RowScope.() -> Unit)? = null,
 ) {
     val isSelectionActive = selectedNoteIds.isNotEmpty()
-    val isTextEditorActive = editorContentOverride != null
+    val isTextEditorActive = contentOverride != null
 
     var showActionIconsExceptSearch by rememberSaveable { mutableStateOf(true) }
     var canShowTextField by rememberSaveable { mutableStateOf(false) }
@@ -422,7 +415,7 @@ fun FloatingToolbarContent(
             ) { (selectionActive, addModeActive, textEditorActive) ->
                 when {
                     textEditorActive -> {
-                        editorContentOverride?.invoke(this)
+                        contentOverride?.invoke(this)
                     }
 
                     selectionActive -> {
@@ -499,18 +492,25 @@ fun FloatingToolbarContent(
                     }
 
                     else -> {
-                        if (defaultContentOverride != null) {
-                            defaultContentOverride()
-                        } else {
+
+
+
+
+
+
+
+
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = {
-                                    onIsSearchActiveChange(true)
-                                }) {
-                                    Icon(
-                                        Icons.Filled.Search,
-                                        contentDescription = stringResource(R.string.search_tasks_description),
-                                        tint = colorScheme.onSurface
-                                    )
+                                if (isSearchEnabled) {
+                                    IconButton(onClick = {
+                                        onIsSearchActiveChange(true)
+                                    }) {
+                                        Icon(
+                                            Icons.Filled.Search,
+                                            contentDescription = stringResource(R.string.search_tasks_description),
+                                            tint = colorScheme.onSurface
+                                        )
+                                    }
                                 }
                                 Box(
                                     contentAlignment = Alignment.Center
@@ -531,73 +531,8 @@ fun FloatingToolbarContent(
                                                 )
                                             )
                                         ) {
-                                            Row {
-                                                val iconAlphaTarget = if (isSearchActive) 0f else 1f
-
-                                                val sortIconAlpha by animateFloatAsState(
-                                                    targetValue = iconAlphaTarget,
-                                                    animationSpec = tween(
-                                                        durationMillis = iconsAlphaDuration,
-                                                        delayMillis = if (isSearchActive) 0 else 0
-                                                    ),
-                                                    label = "SortIconAlpha"
-                                                )
-                                                IconButton(
-                                                    onClick = {
-                                                        val newLayout =
-                                                            if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
-                                                        onNotesLayoutTypeChange(newLayout)
-                                                    },
-                                                    modifier = Modifier.alpha(sortIconAlpha),
-                                                    enabled = !isSearchActive && showActionIconsExceptSearch
-                                                ) {
-                                                    Icon(
-                                                        imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Default.ViewStream else Icons.Default.ViewModule,
-                                                        contentDescription = "Change Layout",
-                                                        tint = colorScheme.onSurface
-                                                    )
-                                                }
-
-                                                val filterIconAlpha by animateFloatAsState(
-                                                    targetValue = iconAlphaTarget,
-                                                    animationSpec = tween(
-                                                        durationMillis = iconsAlphaDuration,
-                                                        delayMillis = if (isSearchActive) 100 else 0
-                                                    ),
-                                                    label = "FilterIconAlpha"
-                                                )
-                                                IconButton(
-                                                    onClick = onResizeClick, // Use the new callback
-                                                    modifier = Modifier.alpha(filterIconAlpha),
-                                                    enabled = !isSearchActive && showActionIconsExceptSearch
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.CenterFocusStrong,
-                                                        contentDescription = stringResource(R.string.resize_notes),
-                                                        tint = colorScheme.onSurface
-                                                    )
-                                                }
-
-                                                val settingsIconAlpha by animateFloatAsState(
-                                                    targetValue = iconAlphaTarget,
-                                                    animationSpec = tween(
-                                                        durationMillis = iconsAlphaDuration,
-                                                        delayMillis = if (isSearchActive) 200 else 0
-                                                    ),
-                                                    label = "SettingsIconAlpha"
-                                                )
-                                                IconButton(
-                                                    onClick = onOpenSettings,
-                                                    modifier = Modifier.alpha(settingsIconAlpha),
-                                                    enabled = !isSearchActive && showActionIconsExceptSearch
-                                                ) {
-                                                    Icon(
-                                                        Icons.Filled.Settings,
-                                                        contentDescription = stringResource(R.string.settings),
-                                                        tint = colorScheme.onSurface
-                                                    )
-                                                }
-                                            }
+                                            if (defaultContent != null)
+                                                defaultContent(iconsAlphaDuration, showActionIconsExceptSearch)
                                         }
                                     }
 
@@ -625,7 +560,12 @@ fun FloatingToolbarContent(
                                     )
                                 }
                             }
-                        }
+
+
+
+
+
+
                     }
                 }
             }
