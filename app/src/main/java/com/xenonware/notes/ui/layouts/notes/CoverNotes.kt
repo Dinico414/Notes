@@ -36,14 +36,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.ButtonDefaults
@@ -63,6 +67,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -296,8 +301,8 @@ fun CoverNotes(
                 val textEditorContent: @Composable (RowScope.() -> Unit)? = if (showTextNoteCard) {
                     @Composable {
                         Row {
-                            val toggledColor = MaterialTheme.colorScheme.primary
-                            val defaultColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            val toggledColor = colorScheme.primary
+                            val defaultColor = colorScheme.onSurfaceVariant
                             IconButton(
                                 onClick = { isBold = !isBold },
                                 colors = IconButtonDefaults.iconButtonColors(contentColor = if (isBold) toggledColor else defaultColor)
@@ -339,8 +344,8 @@ fun CoverNotes(
                                     .width(140.dp)
                                     .height(56.dp),
                                 colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiary,
-                                    contentColor = MaterialTheme.colorScheme.onTertiary
+                                    containerColor = colorScheme.tertiary,
+                                    contentColor = colorScheme.onTertiary
                                 )
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = "Add new item to list")
@@ -399,20 +404,20 @@ fun CoverNotes(
                             )
 
                             val waveformContainerColor by animateColorAsState(
-                                targetValue = if (selectedAudioViewType == AudioViewType.Waveform) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.primary else colorScheme.secondaryContainer,
                                 label = "waveformContainerColor"
                             )
                             val waveformContentColor by animateColorAsState(
-                                targetValue = if (selectedAudioViewType == AudioViewType.Waveform) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
+                                targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.onPrimary else colorScheme.onSecondaryContainer,
                                 label = "waveformContentColor"
                             )
 
                             val transcriptContainerColor by animateColorAsState(
-                                targetValue = if (selectedAudioViewType == AudioViewType.Transcript) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.primary else colorScheme.secondaryContainer,
                                 label = "transcriptContainerColor"
                             )
                             val transcriptContentColor by animateColorAsState(
-                                targetValue = if (selectedAudioViewType == AudioViewType.Transcript) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
+                                targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.onPrimary else colorScheme.onSecondaryContainer,
                                 label = "transcriptContentColor"
                             )
 
@@ -449,6 +454,9 @@ fun CoverNotes(
                     null
                 }
 
+
+                val onAddModeToggle = { isAddModeActive = !isAddModeActive }
+
                 FloatingToolbarContent(
                     hazeState = hazeState,
                     onOpenSettings = onOpenSettings,
@@ -457,71 +465,21 @@ fun CoverNotes(
                         notesViewModel.setSearchQuery(newQuery)
                     },
                     lazyListState = lazyListState,
-                    allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && !showListNoteCard && notesLayoutType == NotesLayoutType.LIST,
+                    allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && !showListNoteCard && !showAudioNoteCard && notesLayoutType == NotesLayoutType.LIST, // Added !showAudioNoteCard
                     selectedNoteIds = selectedNoteIds.toList(),
                     onClearSelection = { selectedNoteIds = emptySet() },
-                    onDeleteConfirm = {
-                        notesViewModel.deleteItems(selectedNoteIds.toList())
-                        selectedNoteIds = emptySet()
-                    },
                     isAddModeActive = isAddModeActive,
-                    onAddModeToggle = { isAddModeActive = !isAddModeActive },
-                    onTextNoteClick = {
-                        resetNoteState()
-                        showTextNoteCard = true
-                    },
-                    onPenNoteClick = { showSketchNoteCard = true },
-                    onMicNoteClick = { showAudioNoteCard = true },
-                    onListNoteClick = {
-                        resetNoteState()
-                        showListNoteCard = true
-                    },
                     isSearchActive = isSearchActive,
                     onIsSearchActiveChange = { isSearchActive = it },
-                    contentOverride = when {
-                        showTextNoteCard -> textEditorContent
-                        showListNoteCard -> listEditorContent
-                        showAudioNoteCard -> audioEditorContent
-                        else -> null
-                    },
-                    fabOverride = if (showTextNoteCard) {
-                        {
-                            FloatingActionButton(
-                                onClick = { if (titleState.isNotBlank()) saveTrigger = true }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Save,
-                                    contentDescription = "Save Note",
-                                    tint = if (titleState.isNotBlank()) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                )
-                            }
-                        }
-                    } else if (showListNoteCard) {
-                        {
-                            FloatingActionButton(
-                                onClick = { if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger = true }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Save,
-                                    contentDescription = "Save List Note",
-                                    tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                )
-                            }
-                        }
-                    } else {
-                        null
-                    },
                     defaultContent = { iconsAlphaDuration, showActionIconsExceptSearch ->
                         Row {
                             val iconAlphaTarget = if (isSearchActive) 0f else 1f
 
                             val sortIconAlpha by animateFloatAsState(
-                                targetValue = iconAlphaTarget,
-                                animationSpec = tween(
+                                targetValue = iconAlphaTarget, animationSpec = tween(
                                     durationMillis = iconsAlphaDuration,
                                     delayMillis = if (isSearchActive) 0 else 0
-                                ),
-                                label = "SortIconAlpha"
+                                ), label = "SortIconAlpha"
                             )
                             IconButton(
                                 onClick = {
@@ -540,12 +498,10 @@ fun CoverNotes(
                             }
 
                             val filterIconAlpha by animateFloatAsState(
-                                targetValue = iconAlphaTarget,
-                                animationSpec = tween(
+                                targetValue = iconAlphaTarget, animationSpec = tween(
                                     durationMillis = iconsAlphaDuration,
                                     delayMillis = if (isSearchActive) 100 else 0
-                                ),
-                                label = "FilterIconAlpha"
+                                ), label = "FilterIconAlpha"
                             )
                             IconButton(
                                 onClick = ::onResizeClick, // Use the new callback
@@ -560,12 +516,10 @@ fun CoverNotes(
                             }
 
                             val settingsIconAlpha by animateFloatAsState(
-                                targetValue = iconAlphaTarget,
-                                animationSpec = tween(
+                                targetValue = iconAlphaTarget, animationSpec = tween(
                                     durationMillis = iconsAlphaDuration,
                                     delayMillis = if (isSearchActive) 200 else 0
-                                ),
-                                label = "SettingsIconAlpha"
+                                ), label = "SettingsIconAlpha"
                             )
                             IconButton(
                                 onClick = onOpenSettings,
@@ -580,6 +534,126 @@ fun CoverNotes(
                             }
                         }
 
+                    },
+                    onAddModeToggle = onAddModeToggle,
+                    selectionContentOverride = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(onClick = {
+                                notesViewModel.deleteItems(selectedNoteIds.toList())
+                                selectedNoteIds = emptySet()
+                            }) {
+                                Text(
+                                    stringResource(R.string.delete),
+                                    color = colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    },
+                    addModeContentOverride = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = {
+                                resetNoteState()
+                                showTextNoteCard = true
+                                onAddModeToggle()
+                            }) {
+                                Icon(
+                                    Icons.Default.TextFields,
+                                    contentDescription = stringResource(R.string.add_text_note),
+                                    tint = colorScheme.onSecondaryContainer
+                                )
+                            }
+                            IconButton(onClick = {
+                                resetNoteState()
+                                showListNoteCard = true
+                                onAddModeToggle()
+                            }) {
+                                Icon(
+                                    Icons.Default.Checklist,
+                                    contentDescription = stringResource(R.string.add_list_note),
+                                    tint = colorScheme.onSecondaryContainer
+                                )
+                            }
+                            IconButton(onClick = {
+                                resetNoteState() // Reset state when opening audio note
+                                showAudioNoteCard = true
+                                onAddModeToggle()
+                            }) {
+                                Icon(
+                                    Icons.Filled.Mic,
+                                    contentDescription = stringResource(R.string.add_mic_note),
+                                    tint = colorScheme.onSecondaryContainer
+                                )
+                            }
+                            IconButton(onClick = {
+                                showSketchNoteCard = true
+                                onAddModeToggle()
+                            }) {
+                                Icon(
+                                    Icons.Filled.Create,
+                                    contentDescription = stringResource(R.string.add_pen_note),
+                                    tint = colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    },
+                    contentOverride = when {
+                        showTextNoteCard -> textEditorContent
+                        showListNoteCard -> listEditorContent
+                        showAudioNoteCard -> audioEditorContent
+                        else -> null
+                    },
+                    fabOverride = if (showTextNoteCard) {
+                        {
+                            FloatingActionButton(
+                                onClick = { if (titleState.isNotBlank()) saveTrigger = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Save,
+                                    contentDescription = "Save Note",
+                                    tint = if (titleState.isNotBlank()) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
+                                        alpha = 0.38f
+                                    )
+                                )
+                            }
+                        }
+                    } else if (showListNoteCard) {
+                        {
+                            FloatingActionButton(
+                                onClick = {
+                                    if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
+                                        true
+                                }) {
+                                Icon(
+                                    imageVector = Icons.Default.Save,
+                                    contentDescription = "Save List Note",
+                                    tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
+                                        alpha = 0.38f
+                                    )
+                                )
+                            }
+                        }
+                    } else if (showAudioNoteCard) { // FAB for Audio Note
+                        {
+                            FloatingActionButton(
+                                onClick = { if (titleState.isNotBlank()) saveTrigger = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Save,
+                                    contentDescription = "Save Audio Note",
+                                    tint = if (titleState.isNotBlank()) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
+                                        alpha = 0.38f
+                                    )
+                                )
+                            }
+                        }
+                    } else {
+                        null
                     },
                 )
             },

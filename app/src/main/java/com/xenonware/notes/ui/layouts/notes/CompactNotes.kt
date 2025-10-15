@@ -37,14 +37,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.ButtonDefaults
@@ -64,6 +68,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -292,10 +297,10 @@ fun CompactNotes(
                 val textEditorContent: @Composable (RowScope.() -> Unit)? = if (showTextNoteCard) {
                     @Composable {
                         Row {
-                            val toggledColor = MaterialTheme.colorScheme.primary
+                            val toggledColor = colorScheme.primary
                             val defaultColor = Color.Transparent
-                            val toggledIconColor = MaterialTheme.colorScheme.onPrimary
-                            val defaultIconColor = MaterialTheme.colorScheme.onSurface
+                            val toggledIconColor = colorScheme.onPrimary
+                            val defaultIconColor = colorScheme.onSurface
                             FilledIconButton(
                                 onClick = { isBold = !isBold },
                                 colors = IconButtonDefaults.iconButtonColors(
@@ -358,8 +363,8 @@ fun CompactNotes(
                                     .width(140.dp)
                                     .height(56.dp),
                                 colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiary,
-                                    contentColor = MaterialTheme.colorScheme.onTertiary
+                                    containerColor = colorScheme.tertiary,
+                                    contentColor = colorScheme.onTertiary
                                 )
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = "Add new item to list")
@@ -379,97 +384,112 @@ fun CompactNotes(
                     null
                 }
 
-                val audioEditorContent: @Composable (RowScope.() -> Unit)? = if (showAudioNoteCard) {
-                    @Composable {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            val waveformCornerTopStart by animateDpAsState(targetValue = 28.dp, label = "waveformTopStart")
-                            val waveformCornerBottomStart by animateDpAsState(targetValue = 28.dp, label = "waveformBottomStart")
-                            val waveformCornerTopEnd by animateDpAsState(
-                                targetValue = if (selectedAudioViewType == AudioViewType.Waveform) 28.dp else 8.dp,
-                                label = "waveformTopEnd"
-                            )
-                            val waveformCornerBottomEnd by animateDpAsState(
-                                targetValue = if (selectedAudioViewType == AudioViewType.Waveform) 28.dp else 8.dp,
-                                label = "waveformBottomEnd"
-                            )
-                            val animatedWaveformShape = RoundedCornerShape(
-                                topStart = waveformCornerTopStart,
-                                bottomStart = waveformCornerBottomStart,
-                                topEnd = waveformCornerTopEnd,
-                                bottomEnd = waveformCornerBottomEnd
-                            )
-
-                            val transcriptCornerTopStart by animateDpAsState(
-                                targetValue = if (selectedAudioViewType == AudioViewType.Transcript) 28.dp else 8.dp,
-                                label = "transcriptTopStart"
-                            )
-                            val transcriptCornerBottomStart by animateDpAsState(
-                                targetValue = if (selectedAudioViewType == AudioViewType.Transcript) 28.dp else 8.dp,
-                                label = "transcriptBottomStart"
-                            )
-                            val transcriptCornerTopEnd by animateDpAsState(targetValue = 28.dp, label = "transcriptTopEnd")
-                            val transcriptCornerBottomEnd by animateDpAsState(targetValue = 28.dp, label = "transcriptBottomEnd")
-                            val animatedTranscriptShape = RoundedCornerShape(
-                                topStart = transcriptCornerTopStart,
-                                bottomStart = transcriptCornerBottomStart,
-                                topEnd = transcriptCornerTopEnd,
-                                bottomEnd = transcriptCornerBottomEnd
-                            )
-
-                            val waveformContainerColor by animateColorAsState(
-                                targetValue = if (selectedAudioViewType == AudioViewType.Waveform) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
-                                label = "waveformContainerColor"
-                            )
-                            val waveformContentColor by animateColorAsState(
-                                targetValue = if (selectedAudioViewType == AudioViewType.Waveform) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
-                                label = "waveformContentColor"
-                            )
-
-                            val transcriptContainerColor by animateColorAsState(
-                                targetValue = if (selectedAudioViewType == AudioViewType.Transcript) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
-                                label = "transcriptContainerColor"
-                            )
-                            val transcriptContentColor by animateColorAsState(
-                                targetValue = if (selectedAudioViewType == AudioViewType.Transcript) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
-                                label = "transcriptContentColor"
-                            )
-
-                            FilledIconButton(
-                                onClick = { selectedAudioViewType = AudioViewType.Waveform },
-                                colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = waveformContainerColor,
-                                    contentColor = waveformContentColor
-                                ),
-                                shape = animatedWaveformShape,
-                                modifier = Modifier
-                                    .width(95.dp)
-                                    .height(56.dp)
+                val audioEditorContent: @Composable (RowScope.() -> Unit)? =
+                    if (showAudioNoteCard) {
+                        @Composable {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
                             ) {
-                                Icon(Icons.Default.GraphicEq, contentDescription = "Waveform view")
-                            }
-                            Spacer(Modifier.width(2.dp))
-                            FilledIconButton(
-                                onClick = { selectedAudioViewType = AudioViewType.Transcript },
-                                colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = transcriptContainerColor,
-                                    contentColor = transcriptContentColor
-                                ),
-                                shape = animatedTranscriptShape,
-                                modifier = Modifier
-                                    .width(95.dp)
-                                    .height(56.dp)
-                            ) {
-                                Icon(Icons.AutoMirrored.Default.Article, contentDescription = "Transcript view")
+                                val waveformCornerTopStart by animateDpAsState(
+                                    targetValue = 28.dp, label = "waveformTopStart"
+                                )
+                                val waveformCornerBottomStart by animateDpAsState(
+                                    targetValue = 28.dp, label = "waveformBottomStart"
+                                )
+                                val waveformCornerTopEnd by animateDpAsState(
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) 28.dp else 8.dp,
+                                    label = "waveformTopEnd"
+                                )
+                                val waveformCornerBottomEnd by animateDpAsState(
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) 28.dp else 8.dp,
+                                    label = "waveformBottomEnd"
+                                )
+                                val animatedWaveformShape = RoundedCornerShape(
+                                    topStart = waveformCornerTopStart,
+                                    bottomStart = waveformCornerBottomStart,
+                                    topEnd = waveformCornerTopEnd,
+                                    bottomEnd = waveformCornerBottomEnd
+                                )
+
+                                val transcriptCornerTopStart by animateDpAsState(
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) 28.dp else 8.dp,
+                                    label = "transcriptTopStart"
+                                )
+                                val transcriptCornerBottomStart by animateDpAsState(
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) 28.dp else 8.dp,
+                                    label = "transcriptBottomStart"
+                                )
+                                val transcriptCornerTopEnd by animateDpAsState(
+                                    targetValue = 28.dp, label = "transcriptTopEnd"
+                                )
+                                val transcriptCornerBottomEnd by animateDpAsState(
+                                    targetValue = 28.dp, label = "transcriptBottomEnd"
+                                )
+                                val animatedTranscriptShape = RoundedCornerShape(
+                                    topStart = transcriptCornerTopStart,
+                                    bottomStart = transcriptCornerBottomStart,
+                                    topEnd = transcriptCornerTopEnd,
+                                    bottomEnd = transcriptCornerBottomEnd
+                                )
+
+                                val waveformContainerColor by animateColorAsState(
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.primary else colorScheme.secondaryContainer,
+                                    label = "waveformContainerColor"
+                                )
+                                val waveformContentColor by animateColorAsState(
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.onPrimary else colorScheme.onSecondaryContainer,
+                                    label = "waveformContentColor"
+                                )
+
+                                val transcriptContainerColor by animateColorAsState(
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.primary else colorScheme.secondaryContainer,
+                                    label = "transcriptContainerColor"
+                                )
+                                val transcriptContentColor by animateColorAsState(
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.onPrimary else colorScheme.onSecondaryContainer,
+                                    label = "transcriptContentColor"
+                                )
+
+                                FilledIconButton(
+                                    onClick = { selectedAudioViewType = AudioViewType.Waveform },
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = waveformContainerColor,
+                                        contentColor = waveformContentColor
+                                    ),
+                                    shape = animatedWaveformShape,
+                                    modifier = Modifier
+                                        .width(95.dp)
+                                        .height(56.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.GraphicEq,
+                                        contentDescription = "Waveform view"
+                                    )
+                                }
+                                Spacer(Modifier.width(2.dp))
+                                FilledIconButton(
+                                    onClick = { selectedAudioViewType = AudioViewType.Transcript },
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = transcriptContainerColor,
+                                        contentColor = transcriptContentColor
+                                    ),
+                                    shape = animatedTranscriptShape,
+                                    modifier = Modifier
+                                        .width(95.dp)
+                                        .height(56.dp)
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Default.Article,
+                                        contentDescription = "Transcript view"
+                                    )
+                                }
                             }
                         }
+                    } else {
+                        null
                     }
-                } else {
-                    null
-                }
 
 //                val sketchEditorContent: @Composable (RowScope.() -> Unit)? = if (showSketchNoteCard) {
 //                    @Composable {
@@ -511,6 +531,8 @@ fun CompactNotes(
 //                    null
 //                }
 
+                val onAddModeToggle = { isAddModeActive = !isAddModeActive }
+
                 FloatingToolbarContent(
                     hazeState = hazeState,
                     onOpenSettings = onOpenSettings,
@@ -522,25 +544,7 @@ fun CompactNotes(
                     allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && !showListNoteCard && !showAudioNoteCard && notesLayoutType == NotesLayoutType.LIST, // Added !showAudioNoteCard
                     selectedNoteIds = selectedNoteIds.toList(),
                     onClearSelection = { selectedNoteIds = emptySet() },
-                    onDeleteConfirm = {
-                        notesViewModel.deleteItems(selectedNoteIds.toList())
-                        selectedNoteIds = emptySet()
-                    },
                     isAddModeActive = isAddModeActive,
-                    onAddModeToggle = { isAddModeActive = !isAddModeActive },
-                    onTextNoteClick = {
-                        resetNoteState()
-                        showTextNoteCard = true
-                    },
-                    onPenNoteClick = { showSketchNoteCard = true },
-                    onMicNoteClick = {
-                        resetNoteState() // Reset state when opening audio note
-                        showAudioNoteCard = true
-                    },
-                    onListNoteClick = {
-                        resetNoteState()
-                        showListNoteCard = true
-                    },
                     isSearchActive = isSearchActive,
                     onIsSearchActiveChange = { isSearchActive = it },
                     defaultContent = { iconsAlphaDuration, showActionIconsExceptSearch ->
@@ -548,12 +552,10 @@ fun CompactNotes(
                             val iconAlphaTarget = if (isSearchActive) 0f else 1f
 
                             val sortIconAlpha by animateFloatAsState(
-                                targetValue = iconAlphaTarget,
-                                animationSpec = tween(
+                                targetValue = iconAlphaTarget, animationSpec = tween(
                                     durationMillis = iconsAlphaDuration,
                                     delayMillis = if (isSearchActive) 0 else 0
-                                ),
-                                label = "SortIconAlpha"
+                                ), label = "SortIconAlpha"
                             )
                             IconButton(
                                 onClick = {
@@ -572,12 +574,10 @@ fun CompactNotes(
                             }
 
                             val filterIconAlpha by animateFloatAsState(
-                                targetValue = iconAlphaTarget,
-                                animationSpec = tween(
+                                targetValue = iconAlphaTarget, animationSpec = tween(
                                     durationMillis = iconsAlphaDuration,
                                     delayMillis = if (isSearchActive) 100 else 0
-                                ),
-                                label = "FilterIconAlpha"
+                                ), label = "FilterIconAlpha"
                             )
                             IconButton(
                                 onClick = ::onResizeClick, // Use the new callback
@@ -592,12 +592,10 @@ fun CompactNotes(
                             }
 
                             val settingsIconAlpha by animateFloatAsState(
-                                targetValue = iconAlphaTarget,
-                                animationSpec = tween(
+                                targetValue = iconAlphaTarget, animationSpec = tween(
                                     durationMillis = iconsAlphaDuration,
                                     delayMillis = if (isSearchActive) 200 else 0
-                                ),
-                                label = "SettingsIconAlpha"
+                                ), label = "SettingsIconAlpha"
                             )
                             IconButton(
                                 onClick = onOpenSettings,
@@ -613,6 +611,75 @@ fun CompactNotes(
                         }
 
                     },
+                    onAddModeToggle = onAddModeToggle,
+                    selectionContentOverride = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(onClick = {
+                                notesViewModel.deleteItems(selectedNoteIds.toList())
+                                selectedNoteIds = emptySet()
+                            }) {
+                                Text(
+                                    stringResource(R.string.delete),
+                                    color = colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    },
+                    addModeContentOverride = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = {
+                                resetNoteState()
+                                showTextNoteCard = true
+                                onAddModeToggle()
+                            }) {
+                                Icon(
+                                    Icons.Default.TextFields,
+                                    contentDescription = stringResource(R.string.add_text_note),
+                                    tint = colorScheme.onSecondaryContainer
+                                )
+                            }
+                            IconButton(onClick = {
+                                resetNoteState()
+                                showListNoteCard = true
+                                onAddModeToggle()
+                            }) {
+                                Icon(
+                                    Icons.Default.Checklist,
+                                    contentDescription = stringResource(R.string.add_list_note),
+                                    tint = colorScheme.onSecondaryContainer
+                                )
+                            }
+                            IconButton(onClick = {
+                                resetNoteState() // Reset state when opening audio note
+                                showAudioNoteCard = true
+                                onAddModeToggle()
+                            }) {
+                                Icon(
+                                    Icons.Filled.Mic,
+                                    contentDescription = stringResource(R.string.add_mic_note),
+                                    tint = colorScheme.onSecondaryContainer
+                                )
+                            }
+                            IconButton(onClick = {
+                                showSketchNoteCard = true
+                                onAddModeToggle()
+                            }) {
+                                Icon(
+                                    Icons.Filled.Create,
+                                    contentDescription = stringResource(R.string.add_pen_note),
+                                    tint = colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    },
                     contentOverride = when {
                         showTextNoteCard -> textEditorContent
                         showListNoteCard -> listEditorContent
@@ -626,7 +693,7 @@ fun CompactNotes(
                                 Icon(
                                     imageVector = Icons.Default.Save,
                                     contentDescription = "Save Note",
-                                    tint = if (titleState.isNotBlank()) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(
+                                    tint = if (titleState.isNotBlank()) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
                                         alpha = 0.38f
                                     )
                                 )
@@ -642,7 +709,7 @@ fun CompactNotes(
                                 Icon(
                                     imageVector = Icons.Default.Save,
                                     contentDescription = "Save List Note",
-                                    tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(
+                                    tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
                                         alpha = 0.38f
                                     )
                                 )
@@ -655,14 +722,13 @@ fun CompactNotes(
                                 Icon(
                                     imageVector = Icons.Default.Save,
                                     contentDescription = "Save Audio Note",
-                                    tint = if (titleState.isNotBlank()) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(
+                                    tint = if (titleState.isNotBlank()) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
                                         alpha = 0.38f
                                     )
                                 )
                             }
                         }
-                    }
-                    else {
+                    } else {
                         null
                     },
                 )
@@ -840,7 +906,8 @@ fun CompactNotes(
 
                                                                     NoteType.AUDIO -> {
                                                                         showAudioNoteCard = true
-                                                                        selectedAudioViewType = AudioViewType.Waveform // Default for editing
+                                                                        selectedAudioViewType =
+                                                                            AudioViewType.Waveform // Default for editing
                                                                     }
 
                                                                     NoteType.LIST -> showListNoteCard =
@@ -929,7 +996,8 @@ fun CompactNotes(
                                                             NoteType.TEXT -> showTextNoteCard = true
                                                             NoteType.AUDIO -> {
                                                                 showAudioNoteCard = true
-                                                                selectedAudioViewType = AudioViewType.Waveform // Default for editing
+                                                                selectedAudioViewType =
+                                                                    AudioViewType.Waveform // Default for editing
                                                             }
 
                                                             NoteType.LIST -> showListNoteCard = true
@@ -952,7 +1020,8 @@ fun CompactNotes(
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
-                                        onClick = { isAddModeActive = false }))
+                                        onClick = { isAddModeActive = false })
+                            )
                         }
                     }
                 })
@@ -1024,10 +1093,12 @@ fun CompactNotes(
                     onSave = { title, uniqueAudioId -> // Changed 'description' to 'uniqueAudioId' for clarity
                         if (title.isNotBlank() || uniqueAudioId.isNotBlank()) { // Check for uniqueAudioId as well
                             if (editingNoteId != null) {
-                                val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
-                                    title = title,
-                                    description = uniqueAudioId // Store the uniqueAudioId here!
-                                )
+                                val updatedNote =
+                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
+                                        .find { it.id == editingNoteId }?.copy(
+                                            title = title,
+                                            description = uniqueAudioId // Store the uniqueAudioId here!
+                                        )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
                                 }

@@ -19,7 +19,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -38,11 +37,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
@@ -53,7 +48,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -114,23 +108,18 @@ data class ScrollState(
 @Composable
 fun FloatingToolbarContent(
     hazeState: HazeState,
-    onOpenSettings: () -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     currentSearchQuery: String,
     lazyListState: LazyListState,
     allowToolbarScrollBehavior: Boolean,
     selectedNoteIds: List<Int>,
     onClearSelection: () -> Unit,
-    onDeleteConfirm: () -> Unit,
     isAddModeActive: Boolean,
     onAddModeToggle: () -> Unit,
-    onTextNoteClick: () -> Unit,
-    onPenNoteClick: () -> Unit,
-    onMicNoteClick: () -> Unit,
-    onListNoteClick: () -> Unit,
     isSearchActive: Boolean,
     onIsSearchActiveChange: (Boolean) -> Unit,
     isSearchEnabled: Boolean = true,
+    isFabEnabled: Boolean = true,
     fabOverride: @Composable (() -> Unit)? = null,
     selectionContentOverride: @Composable (RowScope.() -> Unit)? = null,
     addModeContentOverride: @Composable (RowScope.() -> Unit)? = null,
@@ -199,26 +188,26 @@ fun FloatingToolbarContent(
                     canScrollForward = lazyListState.canScrollForward
                 )
             }.distinctUntilChanged().map { currentState ->
-                    val isAtBottom = !currentState.canScrollForward
-                    val scrollingUp = if (currentState.firstVisibleItemIndex < previousIndex) {
-                        true
-                    } else if (currentState.firstVisibleItemIndex > previousIndex) {
-                        false
-                    } else {
-                        currentState.firstVisibleItemScrollOffset < previousOffset
-                    }
-                    previousOffset = currentState.firstVisibleItemScrollOffset
-                    previousIndex = currentState.firstVisibleItemIndex
-
-                    Triple(scrollingUp, currentState.isScrollInProgress, isAtBottom)
-                }.collect { (scrollingUp, isScrolling, isAtBottom) ->
-                    if (isScrolling) {
-                        toolbarVisibleState = scrollingUp
-                    }
-                    if (isAtBottom) {
-                        toolbarVisibleState = true
-                    }
+                val isAtBottom = !currentState.canScrollForward
+                val scrollingUp = if (currentState.firstVisibleItemIndex < previousIndex) {
+                    true
+                } else if (currentState.firstVisibleItemIndex > previousIndex) {
+                    false
+                } else {
+                    currentState.firstVisibleItemScrollOffset < previousOffset
                 }
+                previousOffset = currentState.firstVisibleItemScrollOffset
+                previousIndex = currentState.firstVisibleItemIndex
+
+                Triple(scrollingUp, currentState.isScrollInProgress, isAtBottom)
+            }.collect { (scrollingUp, isScrolling, isAtBottom) ->
+                if (isScrolling) {
+                    toolbarVisibleState = scrollingUp
+                }
+                if (isAtBottom) {
+                    toolbarVisibleState = true
+                }
+            }
         }
     }
 
@@ -419,153 +408,80 @@ fun FloatingToolbarContent(
                     }
 
                     selectionActive -> {
-
                         if (selectionContentOverride != null) {
                             selectionContentOverride()
-                        } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                TextButton(onClick = onDeleteConfirm) {
-                                    Text(
-                                        stringResource(R.string.delete),
-                                        color = colorScheme.onErrorContainer
-                                    )
-                                }
-                            }
                         }
                     }
 
                     addModeActive -> {
                         if (addModeContentOverride != null) {
                             addModeContentOverride()
-                        } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                IconButton(onClick = {
-                                    onTextNoteClick()
-                                    onAddModeToggle()
-                                }) {
-                                    Icon(
-                                        Icons.Default.TextFields,
-                                        contentDescription = stringResource(R.string.add_text_note),
-                                        tint = colorScheme.onSecondaryContainer
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    onListNoteClick()
-                                    onAddModeToggle()
-                                }) {
-                                    Icon(
-                                        Icons.Default.Checklist,
-                                        contentDescription = stringResource(R.string.add_list_note),
-                                        tint = colorScheme.onSecondaryContainer
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    onMicNoteClick()
-                                    onAddModeToggle()
-                                }) {
-                                    Icon(
-                                        Icons.Filled.Mic,
-                                        contentDescription = stringResource(R.string.add_mic_note),
-                                        tint = colorScheme.onSecondaryContainer
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    onPenNoteClick()
-                                    onAddModeToggle()
-                                }) {
-                                    Icon(
-                                        Icons.Filled.Create,
-                                        contentDescription = stringResource(R.string.add_pen_note),
-                                        tint = colorScheme.onSecondaryContainer
-                                    )
-                                }
-                            }
                         }
                     }
 
                     else -> {
 
-
-
-
-
-
-
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (isSearchEnabled) {
-                                    IconButton(onClick = {
-                                        onIsSearchActiveChange(true)
-                                    }) {
-                                        Icon(
-                                            Icons.Filled.Search,
-                                            contentDescription = stringResource(R.string.search_tasks_description),
-                                            tint = colorScheme.onSurface
-                                        )
-                                    }
-                                }
-                                Box(
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        AnimatedVisibility(
-                                            visible = showActionIconsExceptSearch && !isSearchActive,
-                                            enter = fadeIn(animationSpec = tween(durationMillis = 500)),
-                                            exit = shrinkHorizontally(
-                                                animationSpec = tween(
-                                                    durationMillis = iconGroupExitAnimationDuration,
-                                                    delayMillis = iconsClearanceTime
-                                                )
-                                            ) + fadeOut(
-                                                animationSpec = tween(
-                                                    durationMillis = iconGroupExitAnimationDuration,
-                                                    delayMillis = iconsClearanceTime
-                                                )
-                                            )
-                                        ) {
-                                            if (defaultContent != null)
-                                                defaultContent(iconsAlphaDuration, showActionIconsExceptSearch)
-                                        }
-                                    }
-
-                                    val fraction by animateFloatAsState(
-                                        targetValue = if (canShowTextField) 1F else 0F,
-                                        animationSpec = tween(durationMillis = textFieldAnimationDuration),
-                                        label = ""
-                                    )
-                                    XenonTextFieldV2(
-                                        value = currentSearchQuery,
-                                        enabled = canShowTextField,
-                                        onValueChange = {
-                                            onSearchQueryChanged(it)
-                                        },
-                                        modifier = Modifier
-                                            .width(maxTextFieldWidth.times(fraction))
-                                            .alpha(fraction * fraction)
-                                            .focusRequester(focusRequester),
-                                        placeholder = { Text(stringResource(R.string.search)) },
-                                        singleLine = true,
-                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                        keyboardActions = KeyboardActions(onSearch = {
-                                            keyboardController?.hide()
-                                        })
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isSearchEnabled) {
+                                IconButton(onClick = {
+                                    onIsSearchActiveChange(true)
+                                }) {
+                                    Icon(
+                                        Icons.Filled.Search,
+                                        contentDescription = stringResource(R.string.search_tasks_description),
+                                        tint = colorScheme.onSurface
                                     )
                                 }
                             }
+                            Box(
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    AnimatedVisibility(
+                                        visible = showActionIconsExceptSearch && !isSearchActive,
+                                        enter = fadeIn(animationSpec = tween(durationMillis = 500)),
+                                        exit = shrinkHorizontally(
+                                            animationSpec = tween(
+                                                durationMillis = iconGroupExitAnimationDuration,
+                                                delayMillis = iconsClearanceTime
+                                            )
+                                        ) + fadeOut(
+                                            animationSpec = tween(
+                                                durationMillis = iconGroupExitAnimationDuration,
+                                                delayMillis = iconsClearanceTime
+                                            )
+                                        )
+                                    ) {
+                                        if (defaultContent != null) defaultContent(
+                                            iconsAlphaDuration, showActionIconsExceptSearch
+                                        )
+                                    }
+                                }
 
-
-
-
-
-
+                                val fraction by animateFloatAsState(
+                                    targetValue = if (canShowTextField) 1F else 0F,
+                                    animationSpec = tween(durationMillis = textFieldAnimationDuration),
+                                    label = ""
+                                )
+                                XenonTextFieldV2(
+                                    value = currentSearchQuery,
+                                    enabled = canShowTextField,
+                                    onValueChange = {
+                                        onSearchQueryChanged(it)
+                                    },
+                                    modifier = Modifier
+                                        .width(maxTextFieldWidth.times(fraction))
+                                        .alpha(fraction * fraction)
+                                        .focusRequester(focusRequester),
+                                    placeholder = { Text(stringResource(R.string.search)) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                    keyboardActions = KeyboardActions(onSearch = {
+                                        keyboardController?.hide()
+                                    })
+                                )
+                            }
+                        }
                     }
                 }
             }
