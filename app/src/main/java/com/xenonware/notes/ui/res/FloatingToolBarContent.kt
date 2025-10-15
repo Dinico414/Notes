@@ -14,6 +14,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -50,6 +52,7 @@ import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -272,6 +275,12 @@ fun FloatingToolbarContent(
         ), label = "toolbarOffsetAnimation"
     )
 
+    val textFieldFraction by animateFloatAsState(
+        targetValue = if (canShowTextField) 1F else 0F,
+        animationSpec = tween(durationMillis = textFieldAnimationDuration),
+        label = ""
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -286,117 +295,141 @@ fun FloatingToolbarContent(
                 else -> colorScheme.surfaceDim
             }, animationSpec = tween(durationMillis = 500), label = "toolbarColor"
         )
+        val floatingBtnWidth by remember {
+            derivedStateOf {
+                if (!isFabEnabled) 64.dp.times(1 - textFieldFraction)
+                else 0.dp
+            }
+        }
         HorizontalFloatingToolbar(
-            modifier = Modifier.height(toolbarHeight),
             expanded = true,
             floatingActionButton = {
                 if (fabOverride != null) {
                     fabOverride()
                 } else {
-                    Box(contentAlignment = Alignment.Center) {
-                        val fabShape = FloatingActionButtonDefaults.shape
-                        val interactionSource = remember { MutableInteractionSource() }
-                        val isPressed by interactionSource.collectIsPressedAsState()
-                        val isHovered by interactionSource.collectIsHoveredAsState()
+                    AnimatedVisibility(
+                        visible = isSearchActive || isFabEnabled,
+                        enter = slideInHorizontally { fullWidth -> -fullWidth / 2 } +
+                                fadeIn(animationSpec = tween(delayMillis = 600)),
+                        exit = slideOutHorizontally { fullWidth -> -fullWidth / 2 } + fadeOut()) {
 
-                        val fabIconTint = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            colorScheme.onPrimaryContainer
-                        } else {
-                            colorScheme.onPrimary
-                        }
-                        val hazeThinColor = colorScheme.primary
-                        val smallElevationPx = with(density) { SmallElevation.toPx() }
-                        val baseShadowAlpha = 0.7f
-                        val interactiveShadowAlpha = 0.9f
-                        val currentShadowRadius =
-                            if (isPressed || isHovered) smallElevationPx * 1.5f else smallElevationPx
-                        val currentShadowAlpha =
-                            if (isPressed || isHovered) interactiveShadowAlpha else baseShadowAlpha
-                        val currentShadowColor = colorScheme.scrim.copy(alpha = currentShadowAlpha)
-                        val currentYOffsetPx = with(density) { 1.dp.toPx() }
+                        Box(contentAlignment = Alignment.Center) {
+                            val fabShape = FloatingActionButtonDefaults.shape
+                            val interactionSource = remember { MutableInteractionSource() }
+                            val isPressed by interactionSource.collectIsPressedAsState()
+                            val isHovered by interactionSource.collectIsHoveredAsState()
 
-                        Canvas(
-                            modifier = Modifier.size(
-                                FloatingActionButtonDefaults.LargeIconSize + 24.dp + if (isPressed || isHovered) 8.dp else 5.dp
-                            )
-                        ) {
-                            val outline =
-                                fabShape.createOutline(this.size, layoutDirection, density)
-                            val composePath = Path().apply { addOutline(outline) }
-                            drawIntoCanvas { canvas ->
-                                val frameworkPaint = Paint().asFrameworkPaint().apply {
-                                    isAntiAlias = true
-                                    style = android.graphics.Paint.Style.STROKE
-                                    strokeWidth = with(this@Canvas) { 0.5.dp.toPx() }
-                                    color = Color.Transparent.toArgb()
-                                    setShadowLayer(
-                                        currentShadowRadius,
-                                        0f,
-                                        currentYOffsetPx,
-                                        currentShadowColor.toArgb()
+                            val fabIconTint = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                colorScheme.onPrimaryContainer
+                            } else {
+                                colorScheme.onPrimary
+                            }
+                            val hazeThinColor = colorScheme.primary
+                            val smallElevationPx = with(density) { SmallElevation.toPx() }
+                            val baseShadowAlpha = 0.7f
+                            val interactiveShadowAlpha = 0.9f
+                            val currentShadowRadius =
+                                if (isPressed || isHovered) smallElevationPx * 1.5f else smallElevationPx
+                            val currentShadowAlpha =
+                                if (isPressed || isHovered) interactiveShadowAlpha else baseShadowAlpha
+                            val currentShadowColor = colorScheme.scrim.copy(alpha = currentShadowAlpha)
+                            val currentYOffsetPx = with(density) { 1.dp.toPx() }
+
+                            Canvas(
+                                modifier = Modifier.size(
+                                    FloatingActionButtonDefaults.LargeIconSize + 24.dp + if (isPressed || isHovered) 8.dp else 5.dp
+                                )
+                            ) {
+                                val outline =
+                                    fabShape.createOutline(this.size, layoutDirection, density)
+                                val composePath = Path().apply { addOutline(outline) }
+                                drawIntoCanvas { canvas ->
+                                    val frameworkPaint = Paint().asFrameworkPaint().apply {
+                                        isAntiAlias = true
+                                        style = android.graphics.Paint.Style.STROKE
+                                        strokeWidth = with(this@Canvas) { 0.5.dp.toPx() }
+                                        color = Color.Transparent.toArgb()
+                                        setShadowLayer(
+                                            currentShadowRadius,
+                                            0f,
+                                            currentYOffsetPx,
+                                            currentShadowColor.toArgb()
+                                        )
+                                    }
+                                    canvas.nativeCanvas.drawPath(
+                                        composePath.asAndroidPath(), frameworkPaint
                                     )
                                 }
-                                canvas.nativeCanvas.drawPath(
-                                    composePath.asAndroidPath(), frameworkPaint
+                            }
+
+                            val rotationAngle = remember { Animatable(0f) }
+                            LaunchedEffect(isSearchActive, isSelectionActive, isAddModeActive) {
+                                if (isSearchActive || isSelectionActive || isAddModeActive) {
+                                    delay(
+                                        if (isSearchActive || isSelectionActive)700 else 0)
+                                    rotationAngle.animateTo(
+                                        targetValue = 45f, animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessLow,
+                                        )
+                                    )
+                                } else {
+                                    rotationAngle.animateTo(
+                                        targetValue = 0f, animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessLow,
+                                        )
+                                    )
+                                }
+                            }
+
+                            FloatingActionButton(
+                                onClick = {
+                                    when {
+                                        isSelectionActive -> onClearSelection()
+                                        isSearchActive -> {
+                                            onSearchQueryChanged("")
+                                            keyboardController?.hide()
+                                            onIsSearchActiveChange(false)
+                                        }
+
+                                        else -> onAddModeToggle()
+                                    }
+                                },
+                                containerColor = Color.Transparent,
+                                shape = fabShape,
+                                elevation = FloatingActionButtonDefaults.elevation(
+                                    0.dp, 0.dp, 0.dp, 0.dp
+                                ),
+                                interactionSource = interactionSource,
+                                modifier = Modifier
+                                    .clip(FloatingActionButtonDefaults.shape)
+                                    .background(colorScheme.primary)
+                                    .hazeEffect(
+                                        state = hazeState,
+                                        style = HazeMaterials.ultraThin(hazeThinColor),
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Add,
+                                    contentDescription = if (isSearchActive || isSelectionActive) stringResource(
+                                        R.string.cancel
+                                    ) else stringResource(
+                                        R.string.add_task_description
+                                    ),
+                                    tint = fabIconTint,
+                                    modifier = Modifier.rotate(rotationAngle.value)
                                 )
                             }
-                        }
-
-                        val rotationAngle = remember { Animatable(0f) }
-                        LaunchedEffect(isSearchActive, isSelectionActive, isAddModeActive) {
-                            val targetAngle =
-                                if (isSearchActive || isSelectionActive || isAddModeActive) 45f else 0f
-                            rotationAngle.animateTo(
-                                targetValue = targetAngle, animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow,
-                                )
-                            )
-                        }
-
-                        FloatingActionButton(
-                            onClick = {
-                                when {
-                                    isSelectionActive -> onClearSelection()
-                                    isSearchActive -> {
-                                        onSearchQueryChanged("")
-                                        keyboardController?.hide()
-                                        onIsSearchActiveChange(false)
-                                    }
-
-                                    else -> onAddModeToggle()
-                                }
-                            },
-                            containerColor = Color.Transparent,
-                            shape = fabShape,
-                            elevation = FloatingActionButtonDefaults.elevation(
-                                0.dp, 0.dp, 0.dp, 0.dp
-                            ),
-                            interactionSource = interactionSource,
-                            modifier = Modifier
-                                .clip(FloatingActionButtonDefaults.shape)
-                                .background(colorScheme.primary)
-                                .hazeEffect(
-                                    state = hazeState,
-                                    style = HazeMaterials.ultraThin(hazeThinColor),
-                                )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Add,
-                                contentDescription = if (isSearchActive || isSelectionActive) stringResource(
-                                    R.string.cancel
-                                ) else stringResource(
-                                    R.string.add_task_description
-                                ),
-                                tint = fabIconTint,
-                                modifier = Modifier.rotate(rotationAngle.value)
-                            )
                         }
                     }
                 }
             },
             colors = FloatingToolbarDefaults.standardFloatingToolbarColors(animatedToolbarColor),
             contentPadding = FloatingToolbarDefaults.ContentPadding,
+            modifier = Modifier
+                .height(toolbarHeight)
+                .padding(start = floatingBtnWidth)
         ) {
             Crossfade(
                 targetState = Triple(isSelectionActive, isAddModeActive, isTextEditorActive),
@@ -458,11 +491,6 @@ fun FloatingToolbarContent(
                                     }
                                 }
 
-                                val fraction by animateFloatAsState(
-                                    targetValue = if (canShowTextField) 1F else 0F,
-                                    animationSpec = tween(durationMillis = textFieldAnimationDuration),
-                                    label = ""
-                                )
                                 XenonTextFieldV2(
                                     value = currentSearchQuery,
                                     enabled = canShowTextField,
@@ -470,8 +498,10 @@ fun FloatingToolbarContent(
                                         onSearchQueryChanged(it)
                                     },
                                     modifier = Modifier
-                                        .width(maxTextFieldWidth.times(fraction))
-                                        .alpha(fraction * fraction)
+                                        .width(
+                                            maxTextFieldWidth.times(textFieldFraction)
+                                        )
+                                        .alpha(textFieldFraction * textFieldFraction)
                                         .focusRequester(focusRequester),
                                     placeholder = { Text(stringResource(R.string.search)) },
                                     singleLine = true,

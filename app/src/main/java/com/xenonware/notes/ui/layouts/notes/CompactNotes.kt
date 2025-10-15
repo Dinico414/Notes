@@ -535,7 +535,6 @@ fun CompactNotes(
 
                 FloatingToolbarContent(
                     hazeState = hazeState,
-                    onOpenSettings = onOpenSettings,
                     currentSearchQuery = currentSearchQuery,
                     onSearchQueryChanged = { newQuery ->
                         notesViewModel.setSearchQuery(newQuery)
