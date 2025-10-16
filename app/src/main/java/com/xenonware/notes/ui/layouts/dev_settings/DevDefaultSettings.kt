@@ -18,9 +18,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xenon.mylibrary.ActivityScreen
+import com.xenon.mylibrary.values.MediumPadding
+import com.xenon.mylibrary.values.NoSpacing
 import com.xenonware.notes.R
-import com.xenonware.notes.ui.values.MediumPadding
-import com.xenonware.notes.ui.values.NoSpacing
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.SettingsViewModel

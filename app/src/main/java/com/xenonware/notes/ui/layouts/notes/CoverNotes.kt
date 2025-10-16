@@ -99,6 +99,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xenon.mylibrary.ActivityScreen
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.res.FloatingToolbarContent
+import com.xenon.mylibrary.values.LargestPadding
+import com.xenon.mylibrary.values.MediumPadding
+import com.xenon.mylibrary.values.MediumSpacing
+import com.xenon.mylibrary.values.NoCornerRadius
+import com.xenon.mylibrary.values.NoSpacing
+import com.xenon.mylibrary.values.SmallPadding
 import com.xenonware.notes.R
 import com.xenonware.notes.ui.res.GoogleProfilBorder
 import com.xenonware.notes.ui.res.ListContent
@@ -108,12 +114,6 @@ import com.xenonware.notes.ui.res.NoteListCard
 import com.xenonware.notes.ui.res.NoteSketchCard
 import com.xenonware.notes.ui.res.NoteTextCard
 import com.xenonware.notes.ui.res.XenonSnackbar
-import com.xenonware.notes.ui.values.LargestPadding
-import com.xenonware.notes.ui.values.MediumPadding
-import com.xenonware.notes.ui.values.MediumSpacing
-import com.xenonware.notes.ui.values.NoCornerRadius
-import com.xenonware.notes.ui.values.NoSpacing
-import com.xenonware.notes.ui.values.SmallPadding
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.NotesLayoutType

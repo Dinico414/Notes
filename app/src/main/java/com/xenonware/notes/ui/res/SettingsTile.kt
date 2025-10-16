@@ -21,9 +21,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
-import com.xenonware.notes.ui.values.ExtraLargePadding
-import com.xenonware.notes.ui.values.LargeCornerRadius
-import com.xenonware.notes.ui.values.LargestPadding
+import com.xenon.mylibrary.values.ExtraLargePadding
+import com.xenon.mylibrary.values.LargeCornerRadius
+import com.xenon.mylibrary.values.LargestPadding
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

@@ -4,13 +4,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.unit.IntSize
-import androidx.core.content.edit // Ensure this import is present
+import androidx.core.content.edit
 import com.xenonware.notes.viewmodel.NotesLayoutType
 import com.xenonware.notes.viewmodel.SortOption
 import com.xenonware.notes.viewmodel.SortOrder
 import com.xenonware.notes.viewmodel.ThemeSetting
 import com.xenonware.notes.viewmodel.classes.NotesItems
-import com.xenonware.notes.viewmodel.classes.TodoItem
 import kotlinx.serialization.json.Json
 import kotlin.math.max
 import kotlin.math.min
@@ -113,29 +112,6 @@ class SharedPreferenceManager(context: Context) {
             sharedPreferences.edit { putString(taskSortOrderKey, value.name) }
         }
 
-    var drawerTodoItems: List<TodoItem>
-        get() {
-            val jsonString = sharedPreferences.getString(drawerTodoItemsKey, null)
-            return if (jsonString != null) {
-                try {
-                    json.decodeFromString<List<TodoItem>>(jsonString)
-                } catch (e: Exception) {
-                    System.err.println("Error decoding drawer todo items: ${e.localizedMessage}")
-                    emptyList()
-                }
-            } else {
-                emptyList()
-            }
-        }
-        set(value) {
-            try {
-                val jsonString = json.encodeToString(value)
-                sharedPreferences.edit { putString(drawerTodoItemsKey, jsonString) }
-            } catch (e: Exception) {
-                System.err.println("Error encoding drawer todo items: ${e.localizedMessage}")
-            }
-        }
-
     var blackedOutModeEnabled: Boolean
         get() = sharedPreferences.getBoolean(blackedOutModeKey, false)
         set(value) = sharedPreferences.edit { putBoolean(blackedOutModeKey, value) }
@@ -167,23 +143,6 @@ class SharedPreferenceManager(context: Context) {
     var listItemLineCount: Int
         get() = sharedPreferences.getInt(listItemLineCountKey, 3) // Default to 3 lines
         set(value) = sharedPreferences.edit { putInt(listItemLineCountKey, value) }
-
-    fun getBoolean(key: String, defaultValue: Boolean): Boolean {
-        return sharedPreferences.getBoolean(key, defaultValue)
-    }
-
-    fun putBoolean(key: String, value: Boolean) {
-        sharedPreferences.edit { putBoolean(key, value) }
-    }
-
-    fun getString(key: String, defaultValue: String?): String? {
-        return sharedPreferences.getString(key, defaultValue)
-    }
-
-    fun putString(key: String, value: String?) {
-        sharedPreferences.edit { putString(key, value) }
-    }
-
 
     fun isCoverThemeApplied(currentDisplaySize: IntSize): Boolean {
         if (!coverThemeEnabled) return false

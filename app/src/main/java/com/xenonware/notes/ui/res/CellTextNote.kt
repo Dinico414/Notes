@@ -33,9 +33,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.QuicksandTitleVariable
-import com.xenonware.notes.ui.values.LargestPadding
-import com.xenonware.notes.ui.values.MediumCornerRadius
-import com.xenonware.notes.ui.values.MediumSpacing
+import com.xenon.mylibrary.values.LargestPadding
+import com.xenon.mylibrary.values.MediumCornerRadius
+import com.xenon.mylibrary.values.MediumSpacing
 import com.xenonware.notes.viewmodel.classes.NotesItems
 
 @OptIn(ExperimentalFoundationApi::class)

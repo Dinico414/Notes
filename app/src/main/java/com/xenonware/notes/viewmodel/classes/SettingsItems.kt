@@ -23,17 +23,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.xenon.mylibrary.values.ExtraLargeSpacing
+import com.xenon.mylibrary.values.LargerPadding
+import com.xenon.mylibrary.values.MediumCornerRadius
+import com.xenon.mylibrary.values.NoCornerRadius
+import com.xenon.mylibrary.values.SmallSpacing
+import com.xenon.mylibrary.values.SmallestCornerRadius
 import com.xenonware.notes.R
 import com.xenonware.notes.ui.res.SettingsGoogleTile
 import com.xenonware.notes.ui.res.SettingsSwitchMenuTile
 import com.xenonware.notes.ui.res.SettingsSwitchTile
 import com.xenonware.notes.ui.res.SettingsTile
-import com.xenonware.notes.ui.values.ExtraLargeSpacing
-import com.xenonware.notes.ui.values.LargerPadding
-import com.xenonware.notes.ui.values.MediumCornerRadius
-import com.xenonware.notes.ui.values.NoCornerRadius
-import com.xenonware.notes.ui.values.SmallSpacing
-import com.xenonware.notes.ui.values.SmallestCornerRadius
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.SettingsViewModel
 
@@ -157,7 +157,6 @@ fun SettingsItems(
         backgroundColor = tileBackgroundColor,
         contentColor = tileContentColor,
         subtitleColor = tileSubtitleColor,
-        dividerColor = Color.Transparent,
         horizontalPadding = tileHorizontalPadding,
         verticalPadding = tileVerticalPadding,
         switchColors = switchColorsOverride ?: defaultSwitchColors

@@ -48,11 +48,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenon.mylibrary.values.DialogCornerRadius
+import com.xenon.mylibrary.values.DialogPadding
+import com.xenon.mylibrary.values.LargestPadding
+import com.xenon.mylibrary.values.MediumPadding
 import com.xenonware.notes.R
-import com.xenonware.notes.ui.values.DialogCornerRadius
-import com.xenonware.notes.ui.values.DialogPadding
-import com.xenonware.notes.ui.values.LargestPadding
-import com.xenonware.notes.ui.values.MediumPadding
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable

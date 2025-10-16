@@ -31,10 +31,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenon.mylibrary.values.ExtraLargePadding
+import com.xenon.mylibrary.values.LargeCornerRadius
+import com.xenon.mylibrary.values.LargestPadding
 import com.xenonware.notes.R
-import com.xenonware.notes.ui.values.ExtraLargePadding
-import com.xenonware.notes.ui.values.LargeCornerRadius
-import com.xenonware.notes.ui.values.LargestPadding
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
