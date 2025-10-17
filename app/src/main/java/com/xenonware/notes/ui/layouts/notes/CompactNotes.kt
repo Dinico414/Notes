@@ -60,8 +60,8 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -119,6 +119,7 @@ import com.xenonware.notes.ui.res.NoteListCard
 import com.xenonware.notes.ui.res.NoteSketchCard
 import com.xenonware.notes.ui.res.NoteTextCard
 import com.xenonware.notes.ui.res.XenonSnackbar
+import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.NotesLayoutType
@@ -616,13 +617,21 @@ fun CompactNotes(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TextButton(onClick = {
-                                notesViewModel.deleteItems(selectedNoteIds.toList())
-                                selectedNoteIds = emptySet()
-                            }) {
+                            TextButton(
+                                onClick = {
+                                    notesViewModel.deleteItems(selectedNoteIds.toList())
+                                    selectedNoteIds = emptySet()
+                                },
+                                modifier = Modifier.width(192.dp),
+                            ) {
                                 Text(
-                                    stringResource(R.string.delete),
-                                    color = colorScheme.onErrorContainer
+                                    text = stringResource(R.string.delete),
+                                    textAlign = TextAlign.Center,
+                                    style = typography.bodyLarge.copy(
+                                        fontFamily = QuicksandTitleVariable,
+                                        color = extendedMaterialColorScheme.inverseErrorContainer
+
+                                    )
                                 )
                             }
                         }
@@ -797,7 +806,7 @@ fun CompactNotes(
                                 ) {
                                     Text(
                                         text = stringResource(R.string.no_tasks_message),
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        style = typography.bodyLarge,
                                     )
                                 }
                             } else if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isNotBlank()) {
@@ -809,7 +818,7 @@ fun CompactNotes(
                                 ) {
                                     Text(
                                         text = stringResource(R.string.no_search_results),
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        style = typography.bodyLarge,
                                     )
                                 }
                             } else {
@@ -830,7 +839,7 @@ fun CompactNotes(
                                                     is String -> {
                                                         Text(
                                                             text = item,
-                                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                            style = typography.titleMedium.copy(
                                                                 fontStyle = FontStyle.Italic
                                                             ),
                                                             fontWeight = FontWeight.Thin,
