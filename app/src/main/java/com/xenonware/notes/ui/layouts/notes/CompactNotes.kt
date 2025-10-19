@@ -435,20 +435,20 @@ fun CompactNotes(
                                 )
 
                                 val waveformContainerColor by animateColorAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.primary else colorScheme.secondaryContainer,
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.primary else colorScheme.surfaceBright,
                                     label = "waveformContainerColor"
                                 )
                                 val waveformContentColor by animateColorAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.onPrimary else colorScheme.onSecondaryContainer,
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.onPrimary else colorScheme.onSurface,
                                     label = "waveformContentColor"
                                 )
 
                                 val transcriptContainerColor by animateColorAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.primary else colorScheme.secondaryContainer,
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.primary else colorScheme.surfaceBright,
                                     label = "transcriptContainerColor"
                                 )
                                 val transcriptContentColor by animateColorAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.onPrimary else colorScheme.onSecondaryContainer,
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.onPrimary else colorScheme.onSurface,
                                     label = "transcriptContentColor"
                                 )
 
