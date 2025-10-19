@@ -309,22 +309,22 @@ fun CoverNotes(
                                 onClick = { isBold = !isBold },
                                 colors = IconButtonDefaults.iconButtonColors(contentColor = if (isBold) toggledColor else defaultColor)
                             ) {
-                                Icon(Icons.Default.FormatBold, contentDescription = "Bold")
+                                Icon(Icons.Default.FormatBold, contentDescription = stringResource(R.string.bold_text))
                             }
                             IconButton(
                                 onClick = { isItalic = !isItalic },
                                 colors = IconButtonDefaults.iconButtonColors(contentColor = if (isItalic) toggledColor else defaultColor)
                             ) {
-                                Icon(Icons.Default.FormatItalic, contentDescription = "Italic")
+                                Icon(Icons.Default.FormatItalic, contentDescription = stringResource(R.string.italic_text))
                             }
                             IconButton(
                                 onClick = { isUnderlined = !isUnderlined },
                                 colors = IconButtonDefaults.iconButtonColors(contentColor = if (isUnderlined) toggledColor else defaultColor)
                             ) {
-                                Icon(Icons.Default.FormatUnderlined, contentDescription = "Underline")
+                                Icon(Icons.Default.FormatUnderlined, contentDescription = stringResource(R.string.underline_text))
                             }
                             IconButton(onClick = { currentSizeIndex = (currentSizeIndex + 1) % textSizes.size }) {
-                                Icon(Icons.Default.FormatSize, contentDescription = "Change Text Size")
+                                Icon(Icons.Default.FormatSize, contentDescription = stringResource(R.string.change_text_size))
                             }
                         }
                     }
@@ -350,13 +350,13 @@ fun CoverNotes(
                                     contentColor = colorScheme.onTertiary
                                 )
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = "Add new item to list")
-                                Text(text = "Add")
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_new_item_to_list))
+                                Text(text = stringResource(R.string.add))
                             }
                             IconButton(
                                 onClick = ::onListTextResizeClick,
                             ) {
-                                Icon(Icons.Default.FormatSize, contentDescription = "Change text size")
+                                Icon(Icons.Default.FormatSize, contentDescription = stringResource(R.string.change_text_size))
                             }
                         }
                     }
@@ -434,7 +434,7 @@ fun CoverNotes(
                                     .width(95.dp)
                                     .height(56.dp)
                             ) {
-                                Icon(Icons.Default.GraphicEq, contentDescription = "Waveform view")
+                                Icon(Icons.Default.GraphicEq, contentDescription = stringResource(R.string.waveform_view))
                             }
                             Spacer(Modifier.width(2.dp))
                             FilledIconButton(
@@ -448,7 +448,7 @@ fun CoverNotes(
                                     .width(95.dp)
                                     .height(56.dp)
                             ) {
-                                Icon(Icons.AutoMirrored.Default.Article, contentDescription = "Transcript view")
+                                Icon(Icons.AutoMirrored.Default.Article, contentDescription = stringResource(R.string.transcript_view))
                             }
                         }
                     }
@@ -493,7 +493,7 @@ fun CoverNotes(
                             ) {
                                 Icon(
                                     imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Default.ViewStream else Icons.Default.ViewModule,
-                                    contentDescription = "Change Layout",
+                                    contentDescription = stringResource(R.string.change_layout),
                                     tint = colorScheme.onSurface
                                 )
                             }
@@ -625,7 +625,7 @@ fun CoverNotes(
                                 onClick = { if (titleState.isNotBlank()) saveTrigger = true }) {
                                 Icon(
                                     imageVector = Icons.Default.Save,
-                                    contentDescription = "Save Note",
+                                    contentDescription = stringResource(R.string.save_note),
                                     tint = if (titleState.isNotBlank()) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
                                         alpha = 0.38f
                                     )
@@ -635,13 +635,10 @@ fun CoverNotes(
                     } else if (showListNoteCard) {
                         {
                             FloatingActionButton(
-                                onClick = {
-                                    if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
-                                        true
-                                }) {
+                                onClick = { if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger = true }) {
                                 Icon(
                                     imageVector = Icons.Default.Save,
-                                    contentDescription = "Save List Note",
+                                    contentDescription = stringResource(R.string.save_list_note),
                                     tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
                                         alpha = 0.38f
                                     )
@@ -654,7 +651,7 @@ fun CoverNotes(
                                 onClick = { if (titleState.isNotBlank()) saveTrigger = true }) {
                                 Icon(
                                     imageVector = Icons.Default.Save,
-                                    contentDescription = "Save Audio Note",
+                                    contentDescription = stringResource(R.string.save_audio_note),
                                     tint = if (titleState.isNotBlank()) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
                                         alpha = 0.38f
                                     )
@@ -735,7 +732,7 @@ fun CoverNotes(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = stringResource(R.string.no_tasks_message),
+                                        text = stringResource(R.string.no_notes_message),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = coverScreenContentColor
                                     )

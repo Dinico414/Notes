@@ -308,7 +308,7 @@ fun CompactNotes(
                                     contentColor = if (isBold) toggledIconColor else defaultIconColor
                                 )
                             ) {
-                                Icon(Icons.Default.FormatBold, contentDescription = "Bold")
+                                Icon(Icons.Default.FormatBold, contentDescription = stringResource(R.string.bold_text))
                             }
                             FilledIconButton(
                                 onClick = { isItalic = !isItalic },
@@ -317,7 +317,7 @@ fun CompactNotes(
                                     contentColor = if (isItalic) toggledIconColor else defaultIconColor
                                 )
                             ) {
-                                Icon(Icons.Default.FormatItalic, contentDescription = "Italic")
+                                Icon(Icons.Default.FormatItalic, contentDescription = stringResource(R.string.italic_text))
                             }
                             FilledIconButton(
                                 onClick = { isUnderlined = !isUnderlined },
@@ -327,7 +327,7 @@ fun CompactNotes(
                                 )
                             ) {
                                 Icon(
-                                    Icons.Default.FormatUnderlined, contentDescription = "Underline"
+                                    Icons.Default.FormatUnderlined, contentDescription = stringResource(R.string.underline_text)
                                 )
                             }
                             IconButton(onClick = {
@@ -335,7 +335,7 @@ fun CompactNotes(
                             }) {
                                 Icon(
                                     Icons.Default.FormatSize,
-                                    contentDescription = "Change Text Size"
+                                    contentDescription = stringResource(R.string.change_text_size)
                                 )
                             }
                         }
@@ -367,15 +367,14 @@ fun CompactNotes(
                                     contentColor = colorScheme.onTertiary
                                 )
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = "Add new item to list")
-                                Text(text = "Add")
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_new_item_to_list))
                             }
                             IconButton(
                                 onClick = ::onListTextResizeClick,
                             ) {
                                 Icon(
                                     Icons.Default.FormatSize,
-                                    contentDescription = "Change text size"
+                                    contentDescription = stringResource(R.string.change_text_size)
                                 )
                             }
                         }
@@ -465,7 +464,7 @@ fun CompactNotes(
                                 ) {
                                     Icon(
                                         Icons.Default.GraphicEq,
-                                        contentDescription = "Waveform view"
+                                        contentDescription = stringResource(R.string.waveform_view)
                                     )
                                 }
                                 Spacer(Modifier.width(2.dp))
@@ -482,7 +481,7 @@ fun CompactNotes(
                                 ) {
                                     Icon(
                                         Icons.AutoMirrored.Default.Article,
-                                        contentDescription = "Transcript view"
+                                        contentDescription = stringResource(R.string.transcript_view)
                                     )
                                 }
                             }
@@ -514,16 +513,15 @@ fun CompactNotes(
 //                                    contentColor = MaterialTheme.colorScheme.onTertiary
 //                                )
 //                            ) {
-//                                Icon(Icons.Default.Add, contentDescription = "Add new item to list")
-//                                Text(text = "Add")
+//                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_new_item_to_list))
+//                                Text(text = stringResource(R.string.add))
 //                            }
 //                            IconButton(
 //                                onClick = ::onListTextResizeClick,
 //                            ) {
 //                                Icon(
 //                                    Icons.Default.FormatSize,
-//                                    contentDescription = "Change text size"
-//                                )
+//                                    contentDescription = stringResource(R.string.change_text_size))
 //                            }
 //                        }
 //                    }
@@ -567,7 +565,7 @@ fun CompactNotes(
                             ) {
                                 Icon(
                                     imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Default.ViewStream else Icons.Default.ViewModule,
-                                    contentDescription = "Change Layout",
+                                    contentDescription = stringResource(R.string.change_layout),
                                     tint = colorScheme.onSurface
                                 )
                             }
@@ -699,7 +697,7 @@ fun CompactNotes(
                                 onClick = { if (titleState.isNotBlank()) saveTrigger = true }) {
                                 Icon(
                                     imageVector = Icons.Default.Save,
-                                    contentDescription = "Save Note",
+                                    contentDescription = stringResource(R.string.save_note),
                                     tint = if (titleState.isNotBlank()) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
                                         alpha = 0.38f
                                     )
@@ -709,13 +707,10 @@ fun CompactNotes(
                     } else if (showListNoteCard) {
                         {
                             FloatingActionButton(
-                                onClick = {
-                                    if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
-                                        true
-                                }) {
+                                onClick = { if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger = true }) {
                                 Icon(
                                     imageVector = Icons.Default.Save,
-                                    contentDescription = "Save List Note",
+                                    contentDescription = stringResource(R.string.save_list_note),
                                     tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
                                         alpha = 0.38f
                                     )
@@ -728,7 +723,7 @@ fun CompactNotes(
                                 onClick = { if (titleState.isNotBlank()) saveTrigger = true }) {
                                 Icon(
                                     imageVector = Icons.Default.Save,
-                                    contentDescription = "Save Audio Note",
+                                    contentDescription = stringResource(R.string.save_audio_note),
                                     tint = if (titleState.isNotBlank()) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
                                         alpha = 0.38f
                                     )
@@ -805,7 +800,7 @@ fun CompactNotes(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = stringResource(R.string.no_tasks_message),
+                                        text = stringResource(R.string.no_notes_message),
                                         style = typography.bodyLarge,
                                     )
                                 }
@@ -1098,13 +1093,13 @@ fun CompactNotes(
                     onAudioTitleChange = { titleState = it },
                     onDismiss = { showAudioNoteCard = false },
                     onSave = { title, uniqueAudioId -> // Changed 'description' to 'uniqueAudioId' for clarity
-                        if (title.isNotBlank() || uniqueAudioId.isNotBlank()) { // Check for uniqueAudioId as well
+                        if (title.isNotBlank() || uniqueAudioId.isNotBlank()) {
                             if (editingNoteId != null) {
                                 val updatedNote =
                                     notesViewModel.noteItems.filterIsInstance<NotesItems>()
                                         .find { it.id == editingNoteId }?.copy(
                                             title = title,
-                                            description = uniqueAudioId // Store the uniqueAudioId here!
+                                            description = uniqueAudioId
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1112,7 +1107,7 @@ fun CompactNotes(
                             } else {
                                 notesViewModel.addItem(
                                     title = title,
-                                    description = uniqueAudioId.takeIf { it.isNotBlank() }, // Store for new notes
+                                    description = uniqueAudioId.takeIf { it.isNotBlank() },
                                     noteType = NoteType.AUDIO
                                 )
                             }
@@ -1123,8 +1118,8 @@ fun CompactNotes(
                     toolbarHeight = 72.dp,
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
-                    selectedAudioViewType = selectedAudioViewType, // Pass the selected view type
-                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() } // Pass existing audio ID for editing
+                    selectedAudioViewType = selectedAudioViewType,
+                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() }
                 )
 
             }

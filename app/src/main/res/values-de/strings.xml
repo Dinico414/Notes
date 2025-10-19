@@ -39,37 +39,16 @@
 
 
     <string name="system_default">System</string>
-    <string name="delete_task_description">Aufgabe löschen</string>
-    <string name="add_task_description">Aufgabe hinzufügen</string>
-    <string name="new_task_label">Neue Aufgabe</string>
-    <string name="no_tasks_message">Keine Aufgaben</string>
+
+    <string name="no_notes_message">Keine Notizen</string>
     <string name="settings_menu_item_description">Öffne Einstellungen</string>
     <string name="settings_menu_item">Einstellungen</string>
     <string name="menu_description">Öffne Menü</string>
     <string name="checkbox">Checkbox</string>
-
-    <string name="save_task">Aufgabe speichern</string>
-    <string name="mark_complete_description">Als Vollständige markieren</string>
-    <string name="edit_task_label">Aufgabe bearbeiten</string>
-    <string name="sort_tasks_description">Aufgabe sortieren</string>
-    <string name="filter_tasks_description">Aufgabe filtern</string>
-    <string name="search_tasks_description">Aufgabe suchen</string>
     <string name="open_navigation_menu">Öffne Navigation</string>
-    <string name="less_options">weniger Optionen</string>
-    <string name="more_options">mehr Optionen</string>
-    <string name="task_description_label">Beschreibung</string>
-    <string name="task_has_description">Beschreibung vorhanden</string>
-    <string name="task_has_notification">Benachrichtigung vorhanden</string>
-    <string name="task_is_important">Ist Wichtig</string>
-    <string name="task_is_very_important">Ist sehr Wichtig</string>
-    <string name="task_has_steps">Schritte vorhanden</string>
-    <string name="task_has_attachments">Anhang vorhanden</string>
-    <string name="priority_label">Priorität</string>
-    <string name="priority_low">Niedrig</string>
-    <string name="priority_high">Hoch</string>
-    <string name="priority_highest">Höchste</string>
-    <string name="mark_incomplete_description">Als Unvollständig markieren</string>
-    <string name="my_tasklist">Meine Aufgabelisten</string>
+
+
+
     <string name="placeholder">Placeholder</string>
     <string name="add_new_list">Neue Liste hinzufügen</string>
     <string name="delete_lists">Lösche ausgewählte Liste(n)</string>
@@ -104,21 +83,36 @@
     <string name="remove_step">Schritt löschen</string>
     <string name="undo">Rückgängig</string>
     <string name="no_search_results">Keine Suchergebnisse</string>
-    <string name="task_text">Aufgabe</string>
     <string name="deleted_text">gelöscht</string>
-    <string name="task_name">Task Name</string>
-    <string name="developer_options_title">Developer Options</string>
-    <string name="dev_settings_description">Enable Alpha and Beta State Features</string>
-    <string name="developer_options">Developer Settings</string>
-    <string name="already_in_developer_mode">You are already in developer mode</string>
-    <string name="developer_mode_enabled">Developer mode enabled!</string>
-    <string name="taps_remaining_to_developer">You are now %d steps away from being a developer.</string>
-    <string name="show_dummy_profile_title">Enable Fake Google Profile</string>
-    <string name="restart_app_description">restart app</string>
-    <string name="add_text_note">Add Text Note</string>
-    <string name="add_pen_note">Add Sketch</string>
-    <string name="add_mic_note">Add Recording</string>
-    <string name="add_list_note">Add List</string>
-    <string name="resize_notes">Resize Notes</string>
+    <string name="developer_options_title">Entwickleroptionen</string>
+    <string name="dev_settings_description">Aktiviere Alpha- und Beta-Features</string>
+    <string name="developer_options">Entwicklereinstellungen</string>
+    <string name="already_in_developer_mode">Du bist bereits im Entwicklermodus</string>
+    <string name="developer_mode_enabled">Entwicklermodus aktiviert!</string>
+    <string name="taps_remaining_to_developer">Du bist jetzt noch %d Schritte davon entfernt, ein Entwickler zu sein.</string>
+    <string name="show_dummy_profile_title">Falsches Google-Profil aktivieren</string>
+    <string name="restart_app_description">App neustarten</string>
+    <string name="add_text_note">Textnotiz hinzufügen</string>
+    <string name="add_pen_note">Skizze hinzufügen</string>
+    <string name="add_mic_note">Aufnahme hinzufügen</string>
+    <string name="add_list_note">Liste hinzufügen</string>
+    <string name="resize_notes">Größe ändern</string>
+    <string name="all_notes">Alle Notizen</string>
+    <string name="text_notes">Textnotizen</string>
+    <string name="list_notes">Listnotizen</string>
+    <string name="audio_notes">Audionotizen</string>
+    <string name="sketch_notes">Skizzennotizen</string>
+    <string name="bold_text">Fettgedruckter Text</string>
+    <string name="italic_text">Kursiver Text</string>
+    <string name="underline_text">Unterstrichener Text</string>
+    <string name="change_text_size">Textgröße ändern</string>
+    <string name="add_new_item_to_list">Neues Element zur Liste hinzufügen</string>
+    <string name="add">Neu</string>
+    <string name="waveform_view">Wellenform-Ansicht</string>
+    <string name="transcript_view">Transkript-Ansicht</string>
+    <string name="change_layout">Layout ändern</string>
+    <string name="save_note">Notiz speichern</string>
+    <string name="save_list_note">Listennotiz speichern</string>
+    <string name="save_audio_note">Audionotiz speichern</string>
 
 </resources>

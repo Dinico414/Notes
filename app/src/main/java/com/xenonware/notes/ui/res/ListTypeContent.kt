@@ -35,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
@@ -45,8 +44,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.LargerCornerRadius
+import com.xenon.mylibrary.values.LargerPadding
 import com.xenon.mylibrary.values.LargestPadding
-import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoPadding
 import com.xenon.mylibrary.values.SmallerCornerRadius
 import com.xenonware.notes.R
@@ -69,11 +68,11 @@ fun ListContent(
         val safeDrawingInsets = WindowInsets.safeDrawing.asPaddingValues()
 
         val startPadding =
-            if (safeDrawingInsets.calculateStartPadding(layoutDirection) > 0.dp) NoPadding else MediumPadding
+            if (safeDrawingInsets.calculateStartPadding(layoutDirection) > 0.dp) NoPadding else LargerPadding
         val topPadding =
-            if (safeDrawingInsets.calculateTopPadding() > 0.dp) NoPadding else MediumPadding
+            if (safeDrawingInsets.calculateTopPadding() > 0.dp) NoPadding else LargerPadding
         val bottomPadding =
-            if (safeDrawingInsets.calculateBottomPadding() > 0.dp) NoPadding else MediumPadding
+            if (safeDrawingInsets.calculateBottomPadding() > 0.dp) NoPadding else LargerPadding
 
         val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
         val isDeveloperModeEnabled by devSettingsViewModel.devModeToggleState.collectAsState()
@@ -93,9 +92,8 @@ fun ListContent(
                         bottomEnd = LargerCornerRadius
                     )
                 )
-                .background(
-                    lerp(colorScheme.background, colorScheme.surfaceBright, 0.2f)
-                )
+                .background(colorScheme.surfaceContainerHigh)
+
         ) {
             Column(
                 modifier = Modifier
@@ -104,7 +102,7 @@ fun ListContent(
             ) {
                 Row(verticalAlignment = Alignment.Top) {
                     Text(
-                        text = stringResource(id = R.string.filter_tasks_description),
+                        text = stringResource(id = R.string.app_name),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontFamily = QuicksandTitleVariable, color = colorScheme.onSurface
                         ),
@@ -138,32 +136,32 @@ fun ListContent(
                 ) {
                     FilterItem(
                         icon = Icons.Default.ViewComfy,
-                        label = "All Notes",
+                        label = stringResource(R.string.all_notes),
                         isSelected = currentFilter == NoteFilterType.ALL,
                         onClick = { onFilterSelected(NoteFilterType.ALL) }
                     )
                     FilterItem(
                         icon = Icons.Default.TextFields,
-                        label = "Text Notes",
+                        label = stringResource(R.string.text_notes),
                         isSelected = currentFilter == NoteFilterType.TEXT,
                         onClick = { onFilterSelected(NoteFilterType.TEXT) }
                     )
 
                     FilterItem(
                         icon = Icons.Default.Checklist,
-                        label = "List Notes",
+                        label = stringResource(R.string.list_notes),
                         isSelected = currentFilter == NoteFilterType.LIST,
                         onClick = { onFilterSelected(NoteFilterType.LIST) }
                     )
                     FilterItem(
                         icon = Icons.Default.Mic,
-                        label = "Audio Notes",
+                        label = stringResource(R.string.audio_notes),
                         isSelected = currentFilter == NoteFilterType.AUDIO,
                         onClick = { onFilterSelected(NoteFilterType.AUDIO) }
                     )
                     FilterItem(
                         icon = Icons.Default.Edit,
-                        label = "Sketch Notes",
+                        label = stringResource(R.string.sketch_notes),
                         isSelected = currentFilter == NoteFilterType.SKETCH,
                         onClick = { onFilterSelected(NoteFilterType.SKETCH) }
                     )
@@ -184,7 +182,7 @@ private fun FilterItem(
     onClick: () -> Unit
 ) {
     val backgroundColor = if (isSelected) {
-        colorScheme.primaryContainer
+        colorScheme.inversePrimary
     } else {
         Color.Transparent
     }
