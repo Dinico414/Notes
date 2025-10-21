@@ -265,7 +265,7 @@ fun NoteListCard(
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         if (listTitle.isEmpty()) {
                             Text(
-                                text = "List Title",
+                                text = "Title",
                                 style = titleTextStyle,
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 modifier = Modifier.fillMaxWidth(),
