@@ -1119,8 +1119,7 @@ fun CompactNotes(
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
                     selectedAudioViewType = selectedAudioViewType,
-                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() },
-                    onDeleteNote = () -> notesViewModel.deleteIte
+                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() }
                 )
 
             }
