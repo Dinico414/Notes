@@ -476,11 +476,11 @@ fun CoverNotes(
                         Row {
                             val iconAlphaTarget = if (isSearchActive) 0f else 1f
 
-                            val sortIconAlpha by animateFloatAsState(
+                            val listIconAlpha by animateFloatAsState(
                                 targetValue = iconAlphaTarget, animationSpec = tween(
                                     durationMillis = iconsAlphaDuration,
                                     delayMillis = if (isSearchActive) 0 else 0
-                                ), label = "SortIconAlpha"
+                                ), label = "ListIconAlpha"
                             )
                             IconButton(
                                 onClick = {
@@ -488,7 +488,7 @@ fun CoverNotes(
                                         if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
                                     notesViewModel.setNotesLayoutType(newLayout)
                                 },
-                                modifier = Modifier.alpha(sortIconAlpha),
+                                modifier = Modifier.alpha(listIconAlpha),
                                 enabled = !isSearchActive && showActionIconsExceptSearch
                             ) {
                                 Icon(
@@ -498,15 +498,15 @@ fun CoverNotes(
                                 )
                             }
 
-                            val filterIconAlpha by animateFloatAsState(
+                            val resizeIconAlpha by animateFloatAsState(
                                 targetValue = iconAlphaTarget, animationSpec = tween(
                                     durationMillis = iconsAlphaDuration,
                                     delayMillis = if (isSearchActive) 100 else 0
-                                ), label = "FilterIconAlpha"
+                                ), label = "ResizeIconAlpha"
                             )
                             IconButton(
                                 onClick = ::onResizeClick, // Use the new callback
-                                modifier = Modifier.alpha(filterIconAlpha),
+                                modifier = Modifier.alpha(resizeIconAlpha),
                                 enabled = !isSearchActive && showActionIconsExceptSearch
                             ) {
                                 Icon(
