@@ -38,6 +38,8 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -94,7 +96,7 @@ class AudioRecorderManager(private val context: Context) {
 
     var currentRecordingState: RecordingState by mutableStateOf(RecordingState.IDLE)
         private set
-    
+
     var isPersistentAudio: Boolean by mutableStateOf(false) // New: Flag to indicate if the audio is persistently saved
         private set
 
@@ -162,11 +164,11 @@ class AudioRecorderManager(private val context: Context) {
     fun setInitialAudioFilePath(filePath: String) {
         audioFilePath = filePath
         // Extract uniqueAudioId from the filePath (assuming filename is uniqueId.mp3)
-        uniqueAudioId = File(filePath).nameWithoutExtension 
+        uniqueAudioId = File(filePath).nameWithoutExtension
         isPersistentAudio = true // Audio loaded from initial path is considered persistent
         currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
         // We don't know the duration here, the AudioPlayerManager will set it when played.
-        recordingDurationMillis = 0L 
+        recordingDurationMillis = 0L
         println("Set initial audio file path: $filePath, extracted ID: $uniqueAudioId")
     }
 
@@ -293,8 +295,7 @@ class AudioPlayerManager {
             duration = tempPlayer.duration.toLong()
         } catch (e: IOException) {
             println("Failed to get audio duration: ${e.message}")
-        }
-        finally {
+        } finally {
             tempPlayer.release()
         }
         return duration
@@ -306,7 +307,9 @@ class AudioPlayerManager {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class,
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class,
     ExperimentalHazeMaterialsApi::class
 )
 @Composable
@@ -324,6 +327,8 @@ fun NoteAudioCard(
 ) {
     val hazeState = remember { HazeState() }
     val hazeThinColor = colorScheme.surfaceDim
+    var showMenu by remember { mutableStateOf(false) }
+
     val context = LocalContext.current
 
     val recorderManager = remember { AudioRecorderManager(context) }
@@ -353,8 +358,7 @@ fun NoteAudioCard(
                 recordingState = RecordingState.VIEWING_SAVED_AUDIO
             } else if (recorderManager.currentRecordingState == RecordingState.STOPPED_UNSAVED) {
                 recordingState = RecordingState.STOPPED_UNSAVED
-            }
-            else {
+            } else {
                 recordingState = RecordingState.IDLE
             }
         }
@@ -367,7 +371,8 @@ fun NoteAudioCard(
             // initialAudioFilePath here is the full path.
             // setInitialAudioFilePath will extract the ID, set audioFilePath internally, and mark as persistent.
             recorderManager.setInitialAudioFilePath(initialAudioFilePath)
-            playerManager.totalAudioDurationMillis = playerManager.getAudioDuration(initialAudioFilePath)
+            playerManager.totalAudioDurationMillis =
+                playerManager.getAudioDuration(initialAudioFilePath)
             playerManager.currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
             recordingState = RecordingState.VIEWING_SAVED_AUDIO
         } else {
@@ -428,7 +433,8 @@ fun NoteAudioCard(
             onSave(audioTitle, recorderManager.uniqueAudioId ?: "") // Pass the unique ID
             recorderManager.markAudioAsPersistent() // Mark the current recording as persistent
             onSaveTriggerConsumed()
-            recordingState = RecordingState.VIEWING_SAVED_AUDIO // After saving, view it as a saved audio
+            recordingState =
+                RecordingState.VIEWING_SAVED_AUDIO // After saving, view it as a saved audio
         }
     }
 
@@ -534,33 +540,32 @@ fun NoteAudioCard(
                                     ) == PackageManager.PERMISSION_GRANTED -> {
                                         recorderManager.startRecording()
                                     }
+
                                     else -> {
                                         requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                     }
                                 }
-                            }
-                        ) {
+                            }) {
                             Icon(Icons.Default.Mic, contentDescription = "Start recording")
                         }
                     }
+
                     RecordingState.RECORDING -> {
                         IconButton(
-                            onClick = { recorderManager.pauseRecording() }
-                        ) {
+                            onClick = { recorderManager.pauseRecording() }) {
                             Icon(Icons.Default.Pause, contentDescription = "Pause recording")
                         }
                         IconButton(
                             onClick = {
                                 recorderManager.stopRecording()
                                 playerManager.stopAudio()
-                            }
-                        ) {
+                            }) {
                             Icon(Icons.Default.Stop, contentDescription = "Stop recording")
                         }
                     }
+
                     RecordingState.PAUSED -> {
-                        IconButton(
-                            onClick = { recorderManager.startRecording() } // Resumes recording
+                        IconButton(onClick = { recorderManager.startRecording() } // Resumes recording
                         ) {
                             Icon(Icons.Default.Mic, contentDescription = "Resume recording")
                         }
@@ -568,48 +573,46 @@ fun NoteAudioCard(
                             onClick = {
                                 recorderManager.stopRecording()
                                 playerManager.stopAudio()
-                            }
-                        ) {
+                            }) {
                             Icon(Icons.Default.Stop, contentDescription = "Stop recording")
                         }
                     }
+
                     RecordingState.STOPPED_UNSAVED -> {
                         IconButton(
                             onClick = {
                                 recorderManager.audioFilePath?.let { path ->
                                     playerManager.playAudio(path)
                                 }
-                            }
-                        ) {
+                            }) {
                             Icon(Icons.Default.PlayArrow, contentDescription = "Play recording")
                         }
                         IconButton(
                             onClick = {
                                 // This delete will work because the audio is not yet marked as persistent
-                                recorderManager.deleteRecording() 
+                                recorderManager.deleteRecording()
                                 playerManager.stopAudio()
                                 recordingState = RecordingState.IDLE
-                            }
-                        ) {
+                            }) {
                             Icon(Icons.Default.Refresh, contentDescription = "Redo recording")
                         }
                         IconButton(
                             onClick = {
                                 // This delete will work because the audio is not yet marked as persistent
-                                recorderManager.deleteRecording() 
+                                recorderManager.deleteRecording()
                                 onDismiss()
-                            }
-                        ) {
+                            }) {
                             Icon(Icons.Default.Clear, contentDescription = "Discard recording")
                         }
                     }
+
                     RecordingState.PLAYING -> {
                         IconButton(
-                            onClick = { playerManager.stopAudio() }
-                        ) {
+                            onClick = { playerManager.stopAudio() }) {
                             Icon(Icons.Default.Stop, contentDescription = "Stop playback")
                         }
                     }
+
                     RecordingState.VIEWING_SAVED_AUDIO -> {
                         Row(
                             horizontalArrangement = Arrangement.Center,
@@ -621,28 +624,33 @@ fun NoteAudioCard(
                                     recorderManager.audioFilePath?.let { path ->
                                         playerManager.playAudio(path)
                                     }
-                                }
-                            ) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = "Play saved recording")
+                                }) {
+                                Icon(
+                                    Icons.Default.PlayArrow,
+                                    contentDescription = "Play saved recording"
+                                )
                             }
                             IconButton(
-                                onClick = { playerManager.stopAudio() }
-                            ) {
+                                onClick = { playerManager.stopAudio() }) {
                                 Icon(Icons.Default.Stop, contentDescription = "Stop playback")
                             }
-                            Spacer(modifier = Modifier.width(16.dp)) 
-                            IconButton(
-                                onClick = {
-                                    // User wants to start a new recording, so we delete the current (persistent) one
-                                    // if it's not being actively viewed in another part of the app.
-                                    // For simplicity here, we'll reset state, which will delete it IF not persistent.
-                                    // However, in a real app, you might want to confirm deletion of a persistent file.
-                                    recorderManager.resetState() 
-                                    playerManager.stopAudio()
-                                    recordingState = RecordingState.IDLE 
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Box {
+                                IconButton(
+                                    onClick = { showMenu = !showMenu },
+                                    modifier = Modifier.padding(4.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.MoreVert, contentDescription = "More options"
+                                    )
                                 }
-                            ) {
-                                Icon(Icons.Default.Mic, contentDescription = "Start new recording")
+                                DropdownMenu(
+                                    expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                    DropdownMenuItem(text = { Text("Delete") }, onClick = {
+                                        // Handle delete
+                                        showMenu = false
+                                    })
+                                }
                             }
                         }
                     }
@@ -673,7 +681,8 @@ fun NoteAudioCard(
                     fontFamily = QuicksandTitleVariable,
                     textAlign = TextAlign.Center,
                     color = colorScheme.onSurface
-                ) )
+                )
+            )
             BasicTextField(
                 value = audioTitle,
                 onValueChange = { onAudioTitleChange(it) },
@@ -718,12 +727,11 @@ fun AudioTimerDisplay(
         else -> 0L
     }
 
-    val totalDurationDisplay =
-        if (totalAudioDurationMillis > 0L && (isPlaying || (!isRecording))) {
-            " / ${formatDuration(totalAudioDurationMillis)}"
-        } else {
-            ""
-        }
+    val totalDurationDisplay = if (totalAudioDurationMillis > 0L && (isPlaying || (!isRecording))) {
+        " / ${formatDuration(totalAudioDurationMillis)}"
+    } else {
+        ""
+    }
 
     Text(
         text = "${formatDuration(displayTime)}$totalDurationDisplay",

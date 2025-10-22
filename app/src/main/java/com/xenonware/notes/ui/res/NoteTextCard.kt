@@ -24,6 +24,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -81,6 +83,7 @@ fun NoteTextCard(
     val hazeState = remember { HazeState() }
     var content by remember { mutableStateOf(TextFieldValue(initialContent)) }
     val hazeThinColor = colorScheme.surfaceDim
+    var showMenu by remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -219,10 +222,25 @@ fun NoteTextCard(
                         innerTextField()
                     }
                 })
-            IconButton(
-                onClick = { /*TODO*/ }, Modifier.padding(4.dp)
-            ) {
-                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+            Box {
+                IconButton(
+                    onClick = { showMenu = !showMenu },
+                    modifier = Modifier.padding(4.dp)
+                ) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Delete") },
+                        onClick = {
+                            // Handle delete
+                            showMenu = false
+                        }
+                    )
+                }
             }
         }
     }
