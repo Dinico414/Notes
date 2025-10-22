@@ -24,11 +24,14 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -88,10 +91,13 @@ fun NoteListCard(
     onItemTextChange: (ListItem, String) -> Unit,
     onAddItemClick: () -> Unit,
     onTextResizeClick: () -> Unit,
-    editorFontSize: TextUnit
+    editorFontSize: TextUnit,
 ) {
     val hazeState = remember { HazeState() }
     var currentListItems by remember { mutableStateOf(initialListItems) }
+    var isOffline by remember { mutableStateOf(false) }
+    var isLabeled by remember { mutableStateOf(false) }
+    val labelColor = Color(0xFFFFC107)
 
     val hazeThinColor = colorScheme.surfaceDim
     var showMenu by remember { mutableStateOf(false) }
@@ -285,18 +291,44 @@ fun NoteListCard(
                 ) {
                     Icon(Icons.Default.MoreVert, contentDescription = "More options")
                 }
-                DropdownMenu(
+                NoteDropdownMenu(
                     expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Delete") },
-                        onClick = {
-                            // Handle delete
-                            showMenu = false
-                        }
-                    )
-                }
+                    onDismissRequest = { showMenu = false },
+                    items = listOf(
+                        MenuItem(
+                            text = "Label",
+                            onClick = { isLabeled = !isLabeled },
+                            dismissOnClick = false,
+                            textColor = if (isLabeled) labelColor else null,
+                            icon = {
+                                if (isLabeled) {
+                                    Icon(Icons.Default.Bookmark, contentDescription = "Label", tint = labelColor)
+                                } else {
+                                    Icon(Icons.Default.BookmarkBorder, contentDescription = "Label")
+                                }
+                            }
+                        ),
+                        MenuItem(
+                            text = "Color",
+                            onClick = {},
+                            icon = { Icon(Icons.Default.ColorLens, contentDescription = "Color") }
+                        ),
+                        MenuItem(
+                            text = if (isOffline) "Online note" else "Offline note",
+                            onClick = { isOffline = !isOffline },
+                            dismissOnClick = false,
+                            textColor = if (isOffline) colorScheme.error else null,
+                            icon = {
+                                if (isOffline) {
+                                    Icon(Icons.Default.CloudOff, contentDescription = "Offline note", tint = colorScheme.error)
+                                } else {
+                                    Icon(Icons.Default.Cloud, contentDescription = "Online note")
+                                }
+                            }
+                        )
+                    ),
+                    hazeState = hazeState
+                )
             }
         }
     }

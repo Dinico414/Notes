@@ -31,15 +31,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -322,13 +325,15 @@ fun NoteAudioCard(
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
-    selectedAudioViewType: AudioViewType, // Current selected view type from parent
-    initialAudioFilePath: String? = null, // New parameter for existing audio files (full path)
+    selectedAudioViewType: AudioViewType,
+    initialAudioFilePath: String? = null,
 ) {
     val hazeState = remember { HazeState() }
     val hazeThinColor = colorScheme.surfaceDim
     var showMenu by remember { mutableStateOf(false) }
-
+    var isOffline by remember { mutableStateOf(false) }
+    var isLabeled by remember { mutableStateOf(false) }
+    val labelColor = Color(0xFFFFC107)
     val context = LocalContext.current
 
     val recorderManager = remember { AudioRecorderManager(context) }
@@ -635,23 +640,6 @@ fun NoteAudioCard(
                                 Icon(Icons.Default.Stop, contentDescription = "Stop playback")
                             }
                             Spacer(modifier = Modifier.width(16.dp))
-                            Box {
-                                IconButton(
-                                    onClick = { showMenu = !showMenu },
-                                    modifier = Modifier.padding(4.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.MoreVert, contentDescription = "More options"
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                    DropdownMenuItem(text = { Text("Delete") }, onClick = {
-                                        // Handle delete
-                                        showMenu = false
-                                    })
-                                }
-                            }
                         }
                     }
                 }
@@ -703,10 +691,51 @@ fun NoteAudioCard(
                         innerTextField()
                     }
                 })
-            IconButton(
-                onClick = { /*TODO*/ }, Modifier.padding(4.dp)
-            ) {
-                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+            Box {
+                IconButton(
+                    onClick = { showMenu = !showMenu },
+                    modifier = Modifier.padding(4.dp)
+                ) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                }
+                NoteDropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    items = listOf(
+                        MenuItem(
+                            text = "Label",
+                            onClick = { isLabeled = !isLabeled },
+                            dismissOnClick = false,
+                            textColor = if (isLabeled) labelColor else null,
+                            icon = {
+                                if (isLabeled) {
+                                    Icon(Icons.Default.Bookmark, contentDescription = "Label", tint = labelColor)
+                                } else {
+                                    Icon(Icons.Default.BookmarkBorder, contentDescription = "Label")
+                                }
+                            }
+                        ),
+                        MenuItem(
+                            text = "Color",
+                            onClick = {},
+                            icon = { Icon(Icons.Default.ColorLens, contentDescription = "Color") }
+                        ),
+                        MenuItem(
+                            text = if (isOffline) "Online note" else "Offline note",
+                            onClick = { isOffline = !isOffline },
+                            dismissOnClick = false,
+                            textColor = if (isOffline) colorScheme.error else null,
+                            icon = {
+                                if (isOffline) {
+                                    Icon(Icons.Default.CloudOff, contentDescription = "Offline note", tint = colorScheme.error)
+                                } else {
+                                    Icon(Icons.Default.Cloud, contentDescription = "Online note")
+                                }
+                            }
+                        )
+                    ),
+                    hazeState = hazeState
+                )
             }
         }
     }
