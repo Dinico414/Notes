@@ -10,7 +10,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,7 +55,7 @@ fun NoteDropdownMenu(
         Popup(
             alignment = Alignment.TopEnd,
             onDismissRequest = onDismissRequest,
-            properties = PopupProperties(focusable = true)
+            properties = PopupProperties(focusable = true),
         ) {
             AnimatedVisibility(
                 visibleState = transitionState,
@@ -75,7 +74,7 @@ fun NoteDropdownMenu(
                 Column(
                     modifier = Modifier
                         .padding(end = 4.dp, top = 64.dp)
-                        .width(IntrinsicSize.Max)
+                        .width(150.dp)
                         .clip(RoundedCornerShape(24.dp))
                         .hazeEffect(
                             state = hazeState,

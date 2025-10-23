@@ -72,6 +72,7 @@ import androidx.core.content.ContextCompat
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.layouts.notes.AudioViewType
+import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -333,7 +334,7 @@ fun NoteAudioCard(
     var showMenu by remember { mutableStateOf(false) }
     var isOffline by remember { mutableStateOf(false) }
     var isLabeled by remember { mutableStateOf(false) }
-    val labelColor = Color(0xFFFFC107)
+    val labelColor = extendedMaterialColorScheme.label
     val context = LocalContext.current
 
     val recorderManager = remember { AudioRecorderManager(context) }
@@ -453,7 +454,7 @@ fun NoteAudioCard(
         }
     }
 
-    val systemUiController = rememberSystemUiController()
+    @Suppress("DEPRECATION") val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
     DisposableEffect(systemUiController, cardBackgroundColor) {
         systemUiController.setStatusBarColor(
@@ -706,7 +707,6 @@ fun NoteAudioCard(
                             text = "Label",
                             onClick = { isLabeled = !isLabeled },
                             dismissOnClick = false,
-                            textColor = if (isLabeled) labelColor else null,
                             icon = {
                                 if (isLabeled) {
                                     Icon(Icons.Default.Bookmark, contentDescription = "Label", tint = labelColor)

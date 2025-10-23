@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -97,7 +98,7 @@ fun NoteListCard(
     var currentListItems by remember { mutableStateOf(initialListItems) }
     var isOffline by remember { mutableStateOf(false) }
     var isLabeled by remember { mutableStateOf(false) }
-    val labelColor = Color(0xFFFFC107)
+    val labelColor = extendedMaterialColorScheme.label
 
     val hazeThinColor = colorScheme.surfaceDim
     var showMenu by remember { mutableStateOf(false) }
@@ -299,7 +300,6 @@ fun NoteListCard(
                             text = "Label",
                             onClick = { isLabeled = !isLabeled },
                             dismissOnClick = false,
-                            textColor = if (isLabeled) labelColor else null,
                             icon = {
                                 if (isLabeled) {
                                     Icon(Icons.Default.Bookmark, contentDescription = "Label", tint = labelColor)
@@ -317,7 +317,7 @@ fun NoteListCard(
                             text = if (isOffline) "Online note" else "Offline note",
                             onClick = { isOffline = !isOffline },
                             dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else null,
+                            textColor = if (isOffline) colorScheme.error else colorScheme.onSurface,
                             icon = {
                                 if (isOffline) {
                                     Icon(Icons.Default.CloudOff, contentDescription = "Offline note", tint = colorScheme.error)
@@ -325,6 +325,11 @@ fun NoteListCard(
                                     Icon(Icons.Default.Cloud, contentDescription = "Online note")
                                 }
                             }
+                        ),
+                        MenuItem(
+                            text = "Delete",
+                            onClick = {}/*todo*/,
+                            icon = { Icon(Icons.Default.Delete, contentDescription = "Delete") }
                         )
                     ),
                     hazeState = hazeState
