@@ -334,15 +334,15 @@ fun NoteAudioCard(
     var cardColor by remember(extendedColors, initialColor) { mutableStateOf(initialColor?.let { Color(it) } ?: extendedColors.noteDefault) }
     val noteColors = remember(extendedColors) {
         listOf(
-            extendedColors.noteDefault,
             extendedColors.noteRed,
             extendedColors.noteOrange,
             extendedColors.noteYellow,
             extendedColors.noteGreen,
             extendedColors.noteTurquoise,
             extendedColors.noteBlue,
-            extendedColors.notePurple
-        )
+            extendedColors.notePurple,
+            extendedColors.noteDefault
+            )
     }
     val hazeThinColor = colorScheme.surfaceDim
     var showMenu by remember { mutableStateOf(false) }

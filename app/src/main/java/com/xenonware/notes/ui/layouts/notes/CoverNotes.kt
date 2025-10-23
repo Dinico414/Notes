@@ -147,6 +147,7 @@ fun CoverNotes(
     var editingNoteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var titleState by rememberSaveable { mutableStateOf("") }
     var descriptionState by rememberSaveable { mutableStateOf("") }
+    var editingNoteColor by rememberSaveable { mutableStateOf<Long?>(null) }
     var showTextNoteCard by rememberSaveable { mutableStateOf(false) }
     var saveTrigger by remember { mutableStateOf(false) }
 
@@ -924,21 +925,26 @@ fun CoverNotes(
                     audioTitle = titleState,
                     onAudioTitleChange = { titleState = it },
                     onDismiss = { showAudioNoteCard = false },
-                    onSave = { title, uniqueAudioId -> // Changed 'description' to 'uniqueAudioId' for clarity
-                        if (title.isNotBlank() || uniqueAudioId.isNotBlank()) { // Check for uniqueAudioId as well
+                    initialColor = editingNoteColor,
+                    onSave = { title, uniqueAudioId, color ->
+                        if (title.isNotBlank() || uniqueAudioId.isNotBlank()) {
                             if (editingNoteId != null) {
-                                val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
-                                    title = title,
-                                    description = uniqueAudioId // Store the uniqueAudioId here!
-                                )
+                                val updatedNote =
+                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
+                                        .find { it.id == editingNoteId }?.copy(
+                                            title = title,
+                                            description = uniqueAudioId,
+                                            color = color
+                                        )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
                                 }
                             } else {
                                 notesViewModel.addItem(
                                     title = title,
-                                    description = uniqueAudioId.takeIf { it.isNotBlank() }, // Store for new notes
-                                    noteType = NoteType.AUDIO
+                                    description = uniqueAudioId.takeIf { it.isNotBlank() },
+                                    noteType = NoteType.AUDIO,
+                                    color = color
                                 )
                             }
                         }
@@ -948,9 +954,9 @@ fun CoverNotes(
                     toolbarHeight = 72.dp,
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
-                    selectedAudioViewType = selectedAudioViewType, // Pass the selected view type
-                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() } // Pass existing audio ID for editing
-                )
+                    selectedAudioViewType = selectedAudioViewType,
+                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() })
+
 
             }
 

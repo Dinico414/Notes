@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumCornerRadius
+import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -64,6 +65,7 @@ fun CellAudioNote(
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
     modifier: Modifier = Modifier,
+    initialColor: Long? = null
 ) {
     val borderColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
@@ -73,6 +75,21 @@ fun CellAudioNote(
     val context = LocalContext.current
     val playerManager = remember { AudioPlayerManager() }
     var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
+
+    val extendedColors = extendedMaterialColorScheme
+    var cardColor by remember(extendedColors, initialColor) { mutableStateOf(initialColor?.let { Color(it) } ?: extendedColors.noteDefault) }
+    val noteColors = remember(extendedColors) {
+        listOf(
+            extendedColors.noteDefault,
+            extendedColors.noteRed,
+            extendedColors.noteOrange,
+            extendedColors.noteYellow,
+            extendedColors.noteGreen,
+            extendedColors.noteTurquoise,
+            extendedColors.noteBlue,
+            extendedColors.notePurple
+        )
+    }
 
     LaunchedEffect(playerManager.currentRecordingState) {
         recordingState = playerManager.currentRecordingState
