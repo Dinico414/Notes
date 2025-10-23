@@ -28,6 +28,16 @@ android {
             )
             signingConfig = signingConfigs.getByName("debug")
         }
+create("prerelease") {
+            applicationIdSuffix = ".beta"
+            versionNameSuffix = "-b"
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            )
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = true
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(
