@@ -102,8 +102,7 @@ fun CellAudioNote(
         }
     }
 
-    // Correctly interpret the saved Long as a ULong for the Color constructor
-    val backgroundColor = item.color?.toULong()?.let { Color(it) } ?: MaterialTheme.colorScheme.surfaceBright
+    val backgroundColor = item.color?.let { Color(it.toULong()) } ?: MaterialTheme.colorScheme.surfaceBright
 
     Box(
         modifier = modifier

@@ -78,6 +78,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -153,11 +154,15 @@ fun CompactNotes(
     appSize: IntSize,
 
     ) {
+    val ULongSaver = Saver<ULong?, String>(
+        save = { it?.toString() ?: "null" },
+        restore = { if (it == "null") null else it.toULong() }
+    )
 
     var editingNoteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var titleState by rememberSaveable { mutableStateOf("") }
     var descriptionState by rememberSaveable { mutableStateOf("") }
-    var editingNoteColor by rememberSaveable { mutableStateOf<Long?>(null) }
+    var editingNoteColor by rememberSaveable(stateSaver = ULongSaver) { mutableStateOf<ULong?>(null) }
     var showTextNoteCard by rememberSaveable { mutableStateOf(false) }
     var saveTrigger by remember { mutableStateOf(false) }
 
@@ -912,7 +917,7 @@ fun CompactNotes(
                                                                         showAudioNoteCard = true
                                                                         selectedAudioViewType =
                                                                             AudioViewType.Waveform // Default for editing
-                                                                        editingNoteColor = itemToEdit.color
+                                                                        editingNoteColor = itemToEdit.color?.toULong()
                                                                     }
 
                                                                     NoteType.LIST -> showListNoteCard =
@@ -1003,7 +1008,7 @@ fun CompactNotes(
                                                                 showAudioNoteCard = true
                                                                 selectedAudioViewType =
                                                                     AudioViewType.Waveform // Default for editing
-                                                                editingNoteColor = itemToEdit.color
+                                                                editingNoteColor = itemToEdit.color?.toULong()
                                                             }
 
                                                             NoteType.LIST -> showListNoteCard = true
@@ -1035,7 +1040,7 @@ fun CompactNotes(
             AnimatedVisibility(
                 visible = showTextNoteCard,
                 enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it })
+                exit = slideOutVertically(targetOffsetY = {it })
             ) {
                 BackHandler { showTextNoteCard = false }
 
@@ -1105,7 +1110,7 @@ fun CompactNotes(
                                         .find { it.id == editingNoteId }?.copy(
                                             title = title,
                                             description = uniqueAudioId,
-                                            color = color
+                                            color = color?.toLong()
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1115,7 +1120,7 @@ fun CompactNotes(
                                     title = title,
                                     description = uniqueAudioId.takeIf { it.isNotBlank() },
                                     noteType = NoteType.AUDIO,
-                                    color = color
+                                    color = color?.toLong()
                                 )
                             }
                         }

@@ -57,6 +57,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -323,31 +324,36 @@ fun NoteAudioCard(
     audioTitle: String,
     onAudioTitleChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onSave: (String, String, Long?) -> Unit,
+    onSave: (String, String, ULong?) -> Unit,
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
     selectedAudioViewType: AudioViewType,
     initialAudioFilePath: String? = null,
-    initialColor: Long? = null
+    initialColor: ULong? = null
 ) {
+    val ULongSaver = Saver<ULong?, String>(
+        save = { it?.toString() ?: "null" },
+        restore = { if (it == "null") null else it.toULong() }
+    )
+
     val hazeState = remember { HazeState() }
     val extendedColors = extendedMaterialColorScheme
 
-    var selectedColorArgb by rememberSaveable { mutableStateOf(initialColor?.let { Color(it).toArgb() }) }
+    var selectedColor by rememberSaveable(stateSaver = ULongSaver) { mutableStateOf(initialColor) }
 
-    val cardColor = selectedColorArgb?.let { Color(it) } ?: colorScheme.surfaceContainer
+    val cardColor = selectedColor?.let { Color(it) } ?: colorScheme.surfaceContainer
 
-    val noteColorsArgb = remember(extendedColors) {
+    val noteColors = remember(extendedColors) {
         listOf(
             null, // Default
-            extendedColors.noteRed.toArgb(),
-            extendedColors.noteOrange.toArgb(),
-            extendedColors.noteYellow.toArgb(),
-            extendedColors.noteGreen.toArgb(),
-            extendedColors.noteTurquoise.toArgb(),
-            extendedColors.noteBlue.toArgb(),
-            extendedColors.notePurple.toArgb()
+            extendedColors.noteRed.value,
+            extendedColors.noteOrange.value,
+            extendedColors.noteYellow.value,
+            extendedColors.noteGreen.value,
+            extendedColors.noteTurquoise.value,
+            extendedColors.noteBlue.value,
+            extendedColors.notePurple.value
         )
     }
     val hazeThinColor = colorScheme.surfaceDim
@@ -447,8 +453,7 @@ fun NoteAudioCard(
         if (saveTrigger) {
             recorderManager.stopRecording()
             playerManager.stopAudio()
-            val colorToSave = selectedColorArgb?.let { Color(it).value.toLong() }
-            onSave(audioTitle, recorderManager.uniqueAudioId ?: "", colorToSave)
+            onSave(audioTitle, recorderManager.uniqueAudioId ?: "", selectedColor)
             recorderManager.markAudioAsPersistent()
             onSaveTriggerConsumed()
             recordingState =
@@ -717,9 +722,9 @@ fun NoteAudioCard(
                         MenuItem(
                             text = "Color",
                             onClick = {
-                                val currentIndex = noteColorsArgb.indexOf(selectedColorArgb)
-                                val nextIndex = (currentIndex + 1) % noteColorsArgb.size
-                                selectedColorArgb = noteColorsArgb[nextIndex]
+                                val currentIndex = noteColors.indexOf(selectedColor)
+                                val nextIndex = (currentIndex + 1) % noteColors.size
+                                selectedColor = noteColors[nextIndex]
                             },
                             icon = { Icon(Icons.Default.ColorLens, contentDescription = "Color") }
                         ),
