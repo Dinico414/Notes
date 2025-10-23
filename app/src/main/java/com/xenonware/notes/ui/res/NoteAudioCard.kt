@@ -57,12 +57,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -321,7 +323,7 @@ fun NoteAudioCard(
     audioTitle: String,
     onAudioTitleChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onSave: (String, String, Long) -> Unit, // (title, uniqueAudioId, color) - now passes the color
+    onSave: (String, String, Long?) -> Unit,
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
@@ -331,18 +333,22 @@ fun NoteAudioCard(
 ) {
     val hazeState = remember { HazeState() }
     val extendedColors = extendedMaterialColorScheme
-    var cardColor by remember(extendedColors, initialColor) { mutableStateOf(initialColor?.let { Color(it) } ?: extendedColors.noteDefault) }
-    val noteColors = remember(extendedColors) {
+
+    var selectedColorArgb by rememberSaveable { mutableStateOf(initialColor?.let { Color(it).toArgb() }) }
+
+    val cardColor = selectedColorArgb?.let { Color(it) } ?: colorScheme.surfaceContainer
+
+    val noteColorsArgb = remember(extendedColors) {
         listOf(
-            extendedColors.noteRed,
-            extendedColors.noteOrange,
-            extendedColors.noteYellow,
-            extendedColors.noteGreen,
-            extendedColors.noteTurquoise,
-            extendedColors.noteBlue,
-            extendedColors.notePurple,
-            extendedColors.noteDefault
-            )
+            null, // Default
+            extendedColors.noteRed.toArgb(),
+            extendedColors.noteOrange.toArgb(),
+            extendedColors.noteYellow.toArgb(),
+            extendedColors.noteGreen.toArgb(),
+            extendedColors.noteTurquoise.toArgb(),
+            extendedColors.noteBlue.toArgb(),
+            extendedColors.notePurple.toArgb()
+        )
     }
     val hazeThinColor = colorScheme.surfaceDim
     var showMenu by remember { mutableStateOf(false) }
@@ -359,7 +365,6 @@ fun NoteAudioCard(
     // Sync recordingState from managers
     LaunchedEffect(recorderManager.currentRecordingState) {
         recordingState = recorderManager.currentRecordingState
-        // When recorderManager stops (e.g., to STOPPED_UNSAVED), also update playerManager's state
         if (recordingState == RecordingState.STOPPED_UNSAVED) {
             playerManager.currentRecordingState = RecordingState.STOPPED_UNSAVED
         } else if (recordingState == RecordingState.IDLE) {
@@ -369,11 +374,9 @@ fun NoteAudioCard(
         }
     }
     LaunchedEffect(playerManager.currentRecordingState) {
-        // Only update if player manager is actively changing state to PLAYING, otherwise recorderManager is primary
         if (playerManager.currentRecordingState == RecordingState.PLAYING) {
             recordingState = playerManager.currentRecordingState
         } else if (playerManager.currentRecordingState == RecordingState.IDLE) {
-            // When player stops, determine the next overall card state based on recorder's state
             if (recorderManager.currentRecordingState == RecordingState.VIEWING_SAVED_AUDIO) {
                 recordingState = RecordingState.VIEWING_SAVED_AUDIO
             } else if (recorderManager.currentRecordingState == RecordingState.STOPPED_UNSAVED) {
@@ -386,22 +389,18 @@ fun NoteAudioCard(
 
     // Handle initial audio file loading
     LaunchedEffect(initialAudioFilePath) {
-        println("NoteAudioCard: LaunchedEffect(initialAudioFilePath) triggered with: $initialAudioFilePath")
         if (initialAudioFilePath != null) {
-            // initialAudioFilePath here is the full path.
-            // setInitialAudioFilePath will extract the ID, set audioFilePath internally, and mark as persistent.
             recorderManager.setInitialAudioFilePath(initialAudioFilePath)
             playerManager.totalAudioDurationMillis =
                 playerManager.getAudioDuration(initialAudioFilePath)
             playerManager.currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
             recordingState = RecordingState.VIEWING_SAVED_AUDIO
         } else {
-            // If initialAudioFilePath becomes null, reset to IDLE, e.g., if parent changes mind
             if (recorderManager.currentRecordingState != RecordingState.IDLE) {
                 recorderManager.resetState()
             }
             if (playerManager.currentRecordingState != RecordingState.IDLE) {
-                playerManager.stopAudio() // Ensure player is stopped
+                playerManager.stopAudio()
                 playerManager.currentRecordingState = RecordingState.IDLE
             }
             recordingState = RecordingState.IDLE
@@ -412,7 +411,6 @@ fun NoteAudioCard(
     // Simulation for recording timer
     LaunchedEffect(recordingState) {
         if (recordingState == RecordingState.RECORDING) {
-            // No reset here, as it's handled in startNewRecording
             while (isActive && recordingState == RecordingState.RECORDING) {
                 delay(1000L)
                 recorderManager.recordingDurationMillis += 1000L
@@ -447,21 +445,19 @@ fun NoteAudioCard(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            println("NoteAudioCard: Save trigger activated. Audio ID: ${recorderManager.uniqueAudioId}")
             recorderManager.stopRecording()
             playerManager.stopAudio()
-            onSave(audioTitle, recorderManager.uniqueAudioId ?: "", cardColor.value.toLong()) // Pass the unique ID and color
-            recorderManager.markAudioAsPersistent() // Mark the current recording as persistent
+            val colorToSave = selectedColorArgb?.let { Color(it).value.toLong() }
+            onSave(audioTitle, recorderManager.uniqueAudioId ?: "", colorToSave)
+            recorderManager.markAudioAsPersistent()
             onSaveTriggerConsumed()
             recordingState =
-                RecordingState.VIEWING_SAVED_AUDIO // After saving, view it as a saved audio
+                RecordingState.VIEWING_SAVED_AUDIO
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            println("NoteAudioCard: DisposableEffect onDispose called.")
-            // This will now only delete the file if it hasn't been marked as persistent.
             recorderManager.dispose()
             playerManager.stopAudio()
             playerManager.dispose()
@@ -571,15 +567,13 @@ fun NoteAudioCard(
                     }
 
                     RecordingState.RECORDING -> {
-                        IconButton(
-                            onClick = { recorderManager.pauseRecording() }) {
+                        IconButton(onClick = { recorderManager.pauseRecording() }) {
                             Icon(Icons.Default.Pause, contentDescription = "Pause recording")
                         }
-                        IconButton(
-                            onClick = {
-                                recorderManager.stopRecording()
-                                playerManager.stopAudio()
-                            }) {
+                        IconButton(onClick = {
+                            recorderManager.stopRecording()
+                            playerManager.stopAudio()
+                        }) {
                             Icon(Icons.Default.Stop, contentDescription = "Stop recording")
                         }
                     }
@@ -589,46 +583,39 @@ fun NoteAudioCard(
                         ) {
                             Icon(Icons.Default.Mic, contentDescription = "Resume recording")
                         }
-                        IconButton(
-                            onClick = {
-                                recorderManager.stopRecording()
-                                playerManager.stopAudio()
-                            }) {
+                        IconButton(onClick = {
+                            recorderManager.stopRecording()
+                            playerManager.stopAudio()
+                        }) {
                             Icon(Icons.Default.Stop, contentDescription = "Stop recording")
                         }
                     }
 
                     RecordingState.STOPPED_UNSAVED -> {
-                        IconButton(
-                            onClick = {
-                                recorderManager.audioFilePath?.let { path ->
-                                    playerManager.playAudio(path)
-                                }
-                            }) {
+                        IconButton(onClick = {
+                            recorderManager.audioFilePath?.let { path ->
+                                playerManager.playAudio(path)
+                            }
+                        }) {
                             Icon(Icons.Default.PlayArrow, contentDescription = "Play recording")
                         }
-                        IconButton(
-                            onClick = {
-                                // This delete will work because the audio is not yet marked as persistent
-                                recorderManager.deleteRecording()
-                                playerManager.stopAudio()
-                                recordingState = RecordingState.IDLE
-                            }) {
+                        IconButton(onClick = {
+                            recorderManager.deleteRecording()
+                            playerManager.stopAudio()
+                            recordingState = RecordingState.IDLE
+                        }) {
                             Icon(Icons.Default.Refresh, contentDescription = "Redo recording")
                         }
-                        IconButton(
-                            onClick = {
-                                // This delete will work because the audio is not yet marked as persistent
-                                recorderManager.deleteRecording()
-                                onDismiss()
-                            }) {
+                        IconButton(onClick = {
+                            recorderManager.deleteRecording()
+                            onDismiss()
+                        }) {
                             Icon(Icons.Default.Clear, contentDescription = "Discard recording")
                         }
                     }
 
                     RecordingState.PLAYING -> {
-                        IconButton(
-                            onClick = { playerManager.stopAudio() }) {
+                        IconButton(onClick = { playerManager.stopAudio() }) {
                             Icon(Icons.Default.Stop, contentDescription = "Stop playback")
                         }
                     }
@@ -639,19 +626,17 @@ fun NoteAudioCard(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            IconButton(
-                                onClick = {
-                                    recorderManager.audioFilePath?.let { path ->
-                                        playerManager.playAudio(path)
-                                    }
-                                }) {
+                            IconButton(onClick = {
+                                recorderManager.audioFilePath?.let { path ->
+                                    playerManager.playAudio(path)
+                                }
+                            }) {
                                 Icon(
                                     Icons.Default.PlayArrow,
                                     contentDescription = "Play saved recording"
                                 )
                             }
-                            IconButton(
-                                onClick = { playerManager.stopAudio() }) {
+                            IconButton(onClick = { playerManager.stopAudio() }) {
                                 Icon(Icons.Default.Stop, contentDescription = "Stop playback")
                             }
                             Spacer(modifier = Modifier.width(16.dp))
@@ -732,9 +717,9 @@ fun NoteAudioCard(
                         MenuItem(
                             text = "Color",
                             onClick = {
-                                val currentIndex = noteColors.indexOf(cardColor)
-                                val nextIndex = (currentIndex + 1) % noteColors.size
-                                cardColor = noteColors[nextIndex]
+                                val currentIndex = noteColorsArgb.indexOf(selectedColorArgb)
+                                val nextIndex = (currentIndex + 1) % noteColorsArgb.size
+                                selectedColorArgb = noteColorsArgb[nextIndex]
                             },
                             icon = { Icon(Icons.Default.ColorLens, contentDescription = "Color") }
                         ),

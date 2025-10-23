@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumCornerRadius
-import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -65,7 +64,6 @@ fun CellAudioNote(
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
     modifier: Modifier = Modifier,
-    initialColor: Long? = null
 ) {
     val borderColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
@@ -76,21 +74,6 @@ fun CellAudioNote(
     val playerManager = remember { AudioPlayerManager() }
     var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
 
-    val extendedColors = extendedMaterialColorScheme
-    var cardColor by remember(extendedColors, initialColor) { mutableStateOf(initialColor?.let { Color(it) } ?: extendedColors.noteDefault) }
-    val noteColors = remember(extendedColors) {
-        listOf(
-            extendedColors.noteDefault,
-            extendedColors.noteRed,
-            extendedColors.noteOrange,
-            extendedColors.noteYellow,
-            extendedColors.noteGreen,
-            extendedColors.noteTurquoise,
-            extendedColors.noteBlue,
-            extendedColors.notePurple
-        )
-    }
-
     LaunchedEffect(playerManager.currentRecordingState) {
         recordingState = playerManager.currentRecordingState
     }
@@ -100,11 +83,12 @@ fun CellAudioNote(
     ) {
         if (recordingState == RecordingState.PLAYING && playerManager.isPlaying) {
             while (isActive && playerManager.isPlaying) {
-                playerManager.currentPlaybackPositionMillis =
+                playerManager.currentPlaybackPositionMillis = 
                     (playerManager.currentPlaybackPositionMillis + 10L).coerceAtMost(playerManager.totalAudioDurationMillis)
                 delay(10L)
             }
         } else if (recordingState == RecordingState.PAUSED) {
+            // Do nothing, just keep the current position
         } else {
             if (playerManager.currentPlaybackPositionMillis > 0L && playerManager.currentPlaybackPositionMillis >= playerManager.totalAudioDurationMillis) {
                 playerManager.currentPlaybackPositionMillis = 0L
@@ -118,11 +102,14 @@ fun CellAudioNote(
         }
     }
 
+    // Correctly interpret the saved Long as a ULong for the Color constructor
+    val backgroundColor = item.color?.toULong()?.let { Color(it) } ?: MaterialTheme.colorScheme.surfaceBright
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(MediumCornerRadius))
-            .background(item.color?.let { Color(it) } ?: MaterialTheme.colorScheme.surfaceBright)
+            .background(backgroundColor) // Apply the correct background
             .border(
                 width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
             )
@@ -250,8 +237,8 @@ fun CellAudioNote(
                     .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Crossfade(targetState = isSelected, label = "Selection Animation") {
-                    if (it) {
+                Crossfade(targetState = isSelected, label = "Selection Animation") { isSelected ->
+                    if (isSelected) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Selected",

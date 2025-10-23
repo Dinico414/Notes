@@ -310,10 +310,7 @@ fun CompactNotes(
                                     contentColor = if (isBold) toggledIconColor else defaultIconColor
                                 )
                             ) {
-                                Icon(
-                                    Icons.Default.FormatBold,
-                                    contentDescription = stringResource(R.string.bold_text)
-                                )
+                                Icon(Icons.Default.FormatBold, contentDescription = stringResource(R.string.bold_text))
                             }
                             FilledIconButton(
                                 onClick = { isItalic = !isItalic },
@@ -322,10 +319,7 @@ fun CompactNotes(
                                     contentColor = if (isItalic) toggledIconColor else defaultIconColor
                                 )
                             ) {
-                                Icon(
-                                    Icons.Default.FormatItalic,
-                                    contentDescription = stringResource(R.string.italic_text)
-                                )
+                                Icon(Icons.Default.FormatItalic, contentDescription = stringResource(R.string.italic_text))
                             }
                             FilledIconButton(
                                 onClick = { isUnderlined = !isUnderlined },
@@ -335,8 +329,7 @@ fun CompactNotes(
                                 )
                             ) {
                                 Icon(
-                                    Icons.Default.FormatUnderlined,
-                                    contentDescription = stringResource(R.string.underline_text)
+                                    Icons.Default.FormatUnderlined, contentDescription = stringResource(R.string.underline_text)
                                 )
                             }
                             IconButton(onClick = {
@@ -376,10 +369,7 @@ fun CompactNotes(
                                     contentColor = colorScheme.onTertiary
                                 )
                             ) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = stringResource(R.string.add_new_item_to_list)
-                                )
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_new_item_to_list))
                             }
                             IconButton(
                                 onClick = ::onListTextResizeClick,
@@ -719,10 +709,7 @@ fun CompactNotes(
                     } else if (showListNoteCard) {
                         {
                             FloatingActionButton(
-                                onClick = {
-                                    if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
-                                        true
-                                }) {
+                                onClick = { if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger = true }) {
                                 Icon(
                                     imageVector = Icons.Default.Save,
                                     contentDescription = stringResource(R.string.save_list_note),
@@ -925,8 +912,7 @@ fun CompactNotes(
                                                                         showAudioNoteCard = true
                                                                         selectedAudioViewType =
                                                                             AudioViewType.Waveform // Default for editing
-                                                                        editingNoteColor =
-                                                                            itemToEdit.color
+                                                                        editingNoteColor = itemToEdit.color
                                                                     }
 
                                                                     NoteType.LIST -> showListNoteCard =
@@ -1140,7 +1126,8 @@ fun CompactNotes(
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
                     selectedAudioViewType = selectedAudioViewType,
-                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() })
+                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() }
+                )
 
             }
 
