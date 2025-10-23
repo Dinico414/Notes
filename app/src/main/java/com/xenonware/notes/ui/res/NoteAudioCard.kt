@@ -321,15 +321,29 @@ fun NoteAudioCard(
     audioTitle: String,
     onAudioTitleChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit, // (title, uniqueAudioId) - now passes the unique ID
-    cardBackgroundColor: Color = colorScheme.surfaceContainer,
+    onSave: (String, String, Long) -> Unit, // (title, uniqueAudioId, color) - now passes the color
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
     selectedAudioViewType: AudioViewType,
     initialAudioFilePath: String? = null,
+    initialColor: Long? = null
 ) {
     val hazeState = remember { HazeState() }
+    val extendedColors = extendedMaterialColorScheme
+    var cardColor by remember(extendedColors, initialColor) { mutableStateOf(initialColor?.let { Color(it) } ?: extendedColors.noteDefault) }
+    val noteColors = remember(extendedColors) {
+        listOf(
+            extendedColors.noteDefault,
+            extendedColors.noteRed,
+            extendedColors.noteOrange,
+            extendedColors.noteYellow,
+            extendedColors.noteGreen,
+            extendedColors.noteTurquoise,
+            extendedColors.noteBlue,
+            extendedColors.notePurple
+        )
+    }
     val hazeThinColor = colorScheme.surfaceDim
     var showMenu by remember { mutableStateOf(false) }
     var isOffline by remember { mutableStateOf(false) }
@@ -436,7 +450,7 @@ fun NoteAudioCard(
             println("NoteAudioCard: Save trigger activated. Audio ID: ${recorderManager.uniqueAudioId}")
             recorderManager.stopRecording()
             playerManager.stopAudio()
-            onSave(audioTitle, recorderManager.uniqueAudioId ?: "") // Pass the unique ID
+            onSave(audioTitle, recorderManager.uniqueAudioId ?: "", cardColor.value.toLong()) // Pass the unique ID and color
             recorderManager.markAudioAsPersistent() // Mark the current recording as persistent
             onSaveTriggerConsumed()
             recordingState =
@@ -456,9 +470,9 @@ fun NoteAudioCard(
 
     @Suppress("DEPRECATION") val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
-    DisposableEffect(systemUiController, cardBackgroundColor) {
+    DisposableEffect(systemUiController, cardColor) {
         systemUiController.setStatusBarColor(
-            color = cardBackgroundColor
+            color = cardColor
         )
         onDispose {
             systemUiController.setStatusBarColor(
@@ -472,7 +486,7 @@ fun NoteAudioCard(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(cardBackgroundColor)
+            .background(cardColor)
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(
                     WindowInsetsSides.Top + WindowInsetsSides.Horizontal
@@ -717,7 +731,11 @@ fun NoteAudioCard(
                         ),
                         MenuItem(
                             text = "Color",
-                            onClick = {},
+                            onClick = {
+                                val currentIndex = noteColors.indexOf(cardColor)
+                                val nextIndex = (currentIndex + 1) % noteColors.size
+                                cardColor = noteColors[nextIndex]
+                            },
                             icon = { Icon(Icons.Default.ColorLens, contentDescription = "Color") }
                         ),
                         MenuItem(

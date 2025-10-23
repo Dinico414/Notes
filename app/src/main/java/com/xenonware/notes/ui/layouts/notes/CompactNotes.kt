@@ -1092,7 +1092,7 @@ fun CompactNotes(
                     audioTitle = titleState,
                     onAudioTitleChange = { titleState = it },
                     onDismiss = { showAudioNoteCard = false },
-                    onSave = { title, uniqueAudioId -> // Changed 'description' to 'uniqueAudioId' for clarity
+                    onSave = { title, uniqueAudioId ->
                         if (title.isNotBlank() || uniqueAudioId.isNotBlank()) {
                             if (editingNoteId != null) {
                                 val updatedNote =

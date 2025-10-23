@@ -105,7 +105,7 @@ fun CellAudioNote(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(MediumCornerRadius))
-            .background(MaterialTheme.colorScheme.surfaceBright)
+            .background(item.color?.let { Color(it) } ?: MaterialTheme.colorScheme.surfaceBright)
             .border(
                 width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
             )

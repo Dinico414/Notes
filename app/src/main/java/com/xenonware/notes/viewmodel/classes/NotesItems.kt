@@ -16,7 +16,8 @@ data class NotesItems(
     var listId: String,
     val creationTimestamp: Long = System.currentTimeMillis(),
     var displayOrder: Int = 0,
-    val noteType: NoteType = NoteType.TEXT
+    val noteType: NoteType = NoteType.TEXT,
+    val color: Long? = null
 ) {
     var currentHeader = ""
 }
