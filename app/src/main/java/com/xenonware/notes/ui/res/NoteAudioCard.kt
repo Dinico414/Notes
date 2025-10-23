@@ -65,7 +65,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -76,6 +75,20 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.layouts.notes.AudioViewType
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.ui.theme.noteBlueDark
+import com.xenonware.notes.ui.theme.noteBlueLight
+import com.xenonware.notes.ui.theme.noteGreenDark
+import com.xenonware.notes.ui.theme.noteGreenLight
+import com.xenonware.notes.ui.theme.noteOrangeDark
+import com.xenonware.notes.ui.theme.noteOrangeLight
+import com.xenonware.notes.ui.theme.notePurpleDark
+import com.xenonware.notes.ui.theme.notePurpleLight
+import com.xenonware.notes.ui.theme.noteRedDark
+import com.xenonware.notes.ui.theme.noteRedLight
+import com.xenonware.notes.ui.theme.noteTurquoiseDark
+import com.xenonware.notes.ui.theme.noteTurquoiseLight
+import com.xenonware.notes.ui.theme.noteYellowDark
+import com.xenonware.notes.ui.theme.noteYellowLight
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -342,7 +355,26 @@ fun NoteAudioCard(
 
     var selectedColor by rememberSaveable(stateSaver = ULongSaver) { mutableStateOf(initialColor) }
 
-    val cardColor = selectedColor?.let { Color(it) } ?: colorScheme.surfaceContainer
+    val noteColorMap = remember(extendedColors) {
+        mapOf(
+            noteRedLight.value to extendedColors.noteRed,
+            noteRedDark.value to extendedColors.noteRed,
+            noteOrangeLight.value to extendedColors.noteOrange,
+            noteOrangeDark.value to extendedColors.noteOrange,
+            noteYellowLight.value to extendedColors.noteYellow,
+            noteYellowDark.value to extendedColors.noteYellow,
+            noteGreenLight.value to extendedColors.noteGreen,
+            noteGreenDark.value to extendedColors.noteGreen,
+            noteTurquoiseLight.value to extendedColors.noteTurquoise,
+            noteTurquoiseDark.value to extendedColors.noteTurquoise,
+            noteBlueLight.value to extendedColors.noteBlue,
+            noteBlueDark.value to extendedColors.noteBlue,
+            notePurpleLight.value to extendedColors.notePurple,
+            notePurpleDark.value to extendedColors.notePurple
+        )
+    }
+
+    val cardColor = selectedColor?.let { noteColorMap[it] } ?: colorScheme.surfaceContainer
 
     val noteColors = remember(extendedColors) {
         listOf(
@@ -356,6 +388,7 @@ fun NoteAudioCard(
             extendedColors.notePurple.value
         )
     }
+
     val hazeThinColor = colorScheme.surfaceDim
     var showMenu by remember { mutableStateOf(false) }
     var isOffline by remember { mutableStateOf(false) }
