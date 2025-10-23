@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,7 +84,7 @@ fun CellAudioNote(
     ) {
         if (recordingState == RecordingState.PLAYING && playerManager.isPlaying) {
             while (isActive && playerManager.isPlaying) {
-                playerManager.currentPlaybackPositionMillis = 
+                playerManager.currentPlaybackPositionMillis =
                     (playerManager.currentPlaybackPositionMillis + 10L).coerceAtMost(playerManager.totalAudioDurationMillis)
                 delay(10L)
             }
@@ -102,7 +103,14 @@ fun CellAudioNote(
         }
     }
 
-    val backgroundColor = item.color?.let { Color(it.toULong()) } ?: MaterialTheme.colorScheme.surfaceBright
+    val backgroundColor = item.color?.let {
+        val originalColor = Color(it.toULong())
+        val colorInt = originalColor.toArgb()
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(colorInt, hsv)
+        hsv[1] = (hsv[1] * 2f).coerceAtMost(1.0f) // Increase saturation by 20%
+        Color(android.graphics.Color.HSVToColor(hsv))
+    } ?: MaterialTheme.colorScheme.surfaceBright
 
     Box(
         modifier = modifier
@@ -111,6 +119,17 @@ fun CellAudioNote(
             .background(backgroundColor) // Apply the correct background
             .border(
                 width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
+            )
+            .then(
+                if (backgroundColor != MaterialTheme.colorScheme.surfaceBright) {
+                    Modifier.border(
+                        width = 0.5.dp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
+                        shape = RoundedCornerShape(MediumCornerRadius)
+                    )
+                } else {
+                    Modifier
+                }
             )
             .combinedClickable(
                 onClick = {
