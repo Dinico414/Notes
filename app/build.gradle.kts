@@ -62,9 +62,9 @@ create("prerelease") {
             val outputFileName = if (buildType.name == "release") {
                 "Notes.apk"
             } else if (buildType.name == "debug") {
-                "Notes-debug.apk"
+                "Notes-${buildType.name}.apk"
             } else {
-                "${project.name}-${buildType.name}.apk"
+                "Notes-${buildType.name}.apk"
             }
             (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
                 outputFileName
