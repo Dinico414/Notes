@@ -87,6 +87,9 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    private val _editingAudioNoteColor = MutableStateFlow<Long?>(null)
+    val editingAudioNoteColor: StateFlow<Long?> = _editingAudioNoteColor.asStateFlow()
+
 
     init {
         loadAllNotes()
@@ -284,7 +287,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     fun addItem(
         title: String,
         description: String? = null,
-        noteType: NoteType = NoteType.TEXT
+        noteType: NoteType = NoteType.TEXT,
+        color: Long? = null
     ) {
         if (title.isNotBlank()) {
             val newItem = NotesItems(
@@ -294,7 +298,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 listId = "", // Not used anymore
                 creationTimestamp = System.currentTimeMillis(),
                 displayOrder = determineNextDisplayOrder(),
-                noteType = noteType
+                noteType = noteType,
+                color = color
             )
             _allNotesItems.add(newItem)
             saveAllNotes()
@@ -349,7 +354,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             _allNotesItems[indexInAll] = updatedItem.copy(
                 listId = currentItem.listId,
                 creationTimestamp = currentItem.creationTimestamp,
-                displayOrder = currentItem.displayOrder
+                displayOrder = currentItem.displayOrder,
+                color = updatedItem.color // Explicitly include color from updatedItem
             )
             saveAllNotes()
             applySortingAndFiltering()
@@ -378,6 +384,10 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             saveAllNotes()
             applySortingAndFiltering()
         }
+    }
+
+    fun updateEditingAudioNoteColor(color: Long?) {
+        _editingAudioNoteColor.value = color
     }
 
 

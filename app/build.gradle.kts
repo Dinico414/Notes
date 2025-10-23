@@ -28,7 +28,7 @@ android {
             )
             signingConfig = signingConfigs.getByName("debug")
         }
-create("prerelease") {
+        create("prerelease") {
             applicationIdSuffix = ".beta"
             versionNameSuffix = "-b"
             isMinifyEnabled = true
@@ -110,8 +110,8 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.material.icons.extended)
 
-    implementation (libs.firebase.auth.ktx)
-    implementation (libs.play.services.auth)
-    implementation (libs.androidx.navigation.compose)
-    implementation (libs.coil.compose)
+    implementation(libs.firebase.auth.ktx)
+    implementation(libs.play.services.auth)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.coil.compose)
 }
