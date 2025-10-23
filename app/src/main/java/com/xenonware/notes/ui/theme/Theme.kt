@@ -28,7 +28,15 @@ data class ExtendedMaterialColorScheme(
     val inverseOnError: Color,
     val inverseErrorContainer: Color,
     val inverseOnErrorContainer: Color,
-    val label: Color
+    val label: Color,
+    val noteDefault: Color,
+    val noteRed: Color,
+    val noteOrange: Color,
+    val noteYellow: Color,
+    val noteGreen: Color,
+    val noteBlue: Color,
+    val noteTurquoise: Color,
+    val notePurple: Color,
 )
 
 val LocalExtendedMaterialColorScheme = staticCompositionLocalOf<ExtendedMaterialColorScheme> {
@@ -175,7 +183,15 @@ fun XenonTheme(
                 inverseOnError = inverseOnErrorDark,
                 inverseErrorContainer = inverseErrorContainerDark,
                 inverseOnErrorContainer = inverseOnErrorContainerDark,
-                label = labelDark
+                label = labelDark,
+                noteDefault = surfaceContainerDark,
+                noteRed = noteRedDark,
+                noteOrange = noteOrangeDark,
+                noteYellow = noteYellowDark,
+                noteGreen = noteGreenDark,
+                noteBlue = noteBlueDark,
+                noteTurquoise = noteTurquoiseDark,
+                notePurple = notePurpleDark,
             )
         } else {
             ExtendedMaterialColorScheme(
@@ -183,7 +199,15 @@ fun XenonTheme(
                 inverseOnError = inverseOnErrorLight,
                 inverseErrorContainer = inverseErrorContainerLight,
                 inverseOnErrorContainer = inverseOnErrorContainerLight,
-                label = labelLight
+                label = labelLight,
+                noteDefault = surfaceContainerLight,
+                noteRed = noteRedLight,
+                noteOrange = noteOrangeLight,
+                noteYellow = noteYellowLight,
+                noteGreen = noteGreenLight,
+                noteBlue = noteBlueLight,
+                noteTurquoise = noteTurquoiseLight,
+                notePurple = notePurpleLight,
             )
         }
     }

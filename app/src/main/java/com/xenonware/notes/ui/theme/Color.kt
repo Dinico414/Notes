@@ -220,6 +220,23 @@ val surfaceContainerHighDarkHighContrast = Color(0xFF383C40)
 val surfaceContainerHighestDarkHighContrast = Color(0xFF43474B)
 
 
+val noteRedLight = Color(0xFFFFCDD2)
+val noteOrangeLight = Color(0xFFFFE0B2)
+val noteYellowLight = Color(0xFFFFF9C4)
+val noteGreenLight = Color(0xFFC8E6C9)
+val noteTurquoiseLight = Color(0xFFB2EBF2)
+val noteBlueLight = Color(0xFFBBDEFB)
+val notePurpleLight = Color(0xFFD1C4E9)
+
+val noteRedDark = Color(0xFF633434)
+val noteOrangeDark = Color(0xFF654C34)
+val noteYellowDark = Color(0xFF67653E)
+val noteGreenDark = Color(0xFF3D563D)
+val noteTurquoiseDark = Color(0xFF345B5D)
+val noteBlueDark = Color(0xFF354B62)
+val notePurpleDark = Color(0xFF4A415A)
+
+
 val inverseErrorLight: Color = errorDark
 val inverseOnErrorLight: Color = onErrorDark
 val inverseErrorContainerLight: Color = errorContainerDark
