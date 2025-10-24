@@ -236,6 +236,21 @@ val noteTurquoiseDark = Color(0xFF374041)
 val noteBlueDark = Color(0xFF353A42)
 val notePurpleDark = Color(0xFF3C3A3F)
 
+val invertNoteRedLight = Color(0xFF423838)
+val invertNoteOrangeLight = Color(0xFF47413A)
+val invertNoteYellowLight = Color(0xFF4C4C3E)
+val invertNoteGreenLight = Color(0xFF383C38)
+val invertNoteTurquoiseLight = Color(0xFF374041)
+val invertNoteBlueLight = Color(0xFF353A42)
+val invertNotePurpleLight = Color(0xFF3C3A3F)
+
+val invertNoteRedDark = Color(0xFFFCEAEF)
+val invertNoteOrangeDark = Color(0xFFFBEFE2)
+val invertNoteYellowDark = Color(0xFFFCFBEA)
+val invertNoteGreenDark = Color(0xFFE7F0E8)
+val invertNoteTurquoiseDark = Color(0xFFE2F1F3)
+val invertNoteBlueDark = Color(0xFFE4EEFA)
+val invertNotePurpleDark = Color(0xFFEBE8F1)
 
 val inverseErrorLight: Color = errorDark
 val inverseOnErrorLight: Color = onErrorDark
