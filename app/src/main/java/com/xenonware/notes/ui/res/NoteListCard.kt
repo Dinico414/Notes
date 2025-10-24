@@ -43,6 +43,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +62,20 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.ui.theme.noteBlueDark
+import com.xenonware.notes.ui.theme.noteBlueLight
+import com.xenonware.notes.ui.theme.noteGreenDark
+import com.xenonware.notes.ui.theme.noteGreenLight
+import com.xenonware.notes.ui.theme.noteOrangeDark
+import com.xenonware.notes.ui.theme.noteOrangeLight
+import com.xenonware.notes.ui.theme.notePurpleDark
+import com.xenonware.notes.ui.theme.notePurpleLight
+import com.xenonware.notes.ui.theme.noteRedDark
+import com.xenonware.notes.ui.theme.noteRedLight
+import com.xenonware.notes.ui.theme.noteTurquoiseDark
+import com.xenonware.notes.ui.theme.noteTurquoiseLight
+import com.xenonware.notes.ui.theme.noteYellowDark
+import com.xenonware.notes.ui.theme.noteYellowLight
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -79,8 +95,7 @@ fun NoteListCard(
     onListTitleChange: (String) -> Unit,
     initialListItems: List<ListItem> = emptyList(),
     onDismiss: () -> Unit,
-    onSave: (String, List<ListItem>) -> Unit,
-    cardBackgroundColor: Color = colorScheme.surfaceContainer,
+    onSave: (String, List<ListItem>, ULong?) -> Unit,
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
@@ -93,15 +108,59 @@ fun NoteListCard(
     onAddItemClick: () -> Unit,
     onTextResizeClick: () -> Unit,
     editorFontSize: TextUnit,
+    initialColor: ULong? = null
 ) {
+    val ULongSaver = Saver<ULong?, String>(
+        save = { it?.toString() ?: "null" },
+        restore = { if (it == "null") null else it.toULong() }
+    )
+
     val hazeState = remember { HazeState() }
+
+    val extendedColors = extendedMaterialColorScheme
+
+    var selectedColor by rememberSaveable(stateSaver = ULongSaver) { mutableStateOf(initialColor) }
+
+    val noteColorMap = remember(extendedColors) {
+        mapOf(
+            noteRedLight.value to extendedColors.noteRed,
+            noteRedDark.value to extendedColors.noteRed,
+            noteOrangeLight.value to extendedColors.noteOrange,
+            noteOrangeDark.value to extendedColors.noteOrange,
+            noteYellowLight.value to extendedColors.noteYellow,
+            noteYellowDark.value to extendedColors.noteYellow,
+            noteGreenLight.value to extendedColors.noteGreen,
+            noteGreenDark.value to extendedColors.noteGreen,
+            noteTurquoiseLight.value to extendedColors.noteTurquoise,
+            noteTurquoiseDark.value to extendedColors.noteTurquoise,
+            noteBlueLight.value to extendedColors.noteBlue,
+            noteBlueDark.value to extendedColors.noteBlue,
+            notePurpleLight.value to extendedColors.notePurple,
+            notePurpleDark.value to extendedColors.notePurple
+        )
+    }
+
+    val cardColor = selectedColor?.let { noteColorMap[it] } ?: colorScheme.surfaceContainer
+
+    val noteColors = remember(extendedColors) {
+        listOf(
+            null, // Default
+            extendedColors.noteRed.value,
+            extendedColors.noteOrange.value,
+            extendedColors.noteYellow.value,
+            extendedColors.noteGreen.value,
+            extendedColors.noteTurquoise.value,
+            extendedColors.noteBlue.value,
+            extendedColors.notePurple.value
+        )
+    }
+
+    val hazeThinColor = colorScheme.surfaceDim
+    var showMenu by remember { mutableStateOf(false) }
     var currentListItems by remember { mutableStateOf(initialListItems) }
     var isOffline by remember { mutableStateOf(false) }
     var isLabeled by remember { mutableStateOf(false) }
     val labelColor = extendedMaterialColorScheme.label
-
-    val hazeThinColor = colorScheme.surfaceDim
-    var showMenu by remember { mutableStateOf(false) }
 
     val listTitleFocusRequester = remember { FocusRequester() }
 
@@ -123,7 +182,7 @@ fun NoteListCard(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(listTitle, currentListItems)
+            onSave(listTitle, currentListItems, selectedColor)
             onSaveTriggerConsumed()
         }
     }
@@ -140,9 +199,9 @@ fun NoteListCard(
 
     val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
-    DisposableEffect(systemUiController, cardBackgroundColor) {
+    DisposableEffect(systemUiController, cardColor) {
         systemUiController.setStatusBarColor(
-            color = cardBackgroundColor
+            color = cardColor
         )
         onDispose {
             systemUiController.setStatusBarColor(
@@ -150,13 +209,13 @@ fun NoteListCard(
             )
         }
     }
-
-    val contentBottomPadding = toolbarHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val bottomPadding =
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(cardBackgroundColor)
+            .background(cardColor)
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(
                     WindowInsetsSides.Top + WindowInsetsSides.Horizontal
@@ -234,7 +293,7 @@ fun NoteListCard(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(contentBottomPadding))
+            Spacer(modifier = Modifier.height(bottomPadding))
 
         }
         Row(
@@ -310,14 +369,18 @@ fun NoteListCard(
                         ),
                         MenuItem(
                             text = "Color",
-                            onClick = {},
+                            onClick = {
+                                val currentIndex = noteColors.indexOf(selectedColor)
+                                val nextIndex = (currentIndex + 1) % noteColors.size
+                                selectedColor = noteColors[nextIndex]
+                            },
                             icon = { Icon(Icons.Default.ColorLens, contentDescription = "Color") }
                         ),
                         MenuItem(
                             text = if (isOffline) "Online note" else "Offline note",
                             onClick = { isOffline = !isOffline },
                             dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else colorScheme.onSurface,
+                            textColor = if (isOffline) colorScheme.error else null,
                             icon = {
                                 if (isOffline) {
                                     Icon(Icons.Default.CloudOff, contentDescription = "Offline note", tint = colorScheme.error)
@@ -325,11 +388,6 @@ fun NoteListCard(
                                     Icon(Icons.Default.Cloud, contentDescription = "Online note")
                                 }
                             }
-                        ),
-                        MenuItem(
-                            text = "Delete",
-                            onClick = {}/*todo*/,
-                            icon = { Icon(Icons.Default.Delete, contentDescription = "Delete") }
                         )
                     ),
                     hazeState = hazeState

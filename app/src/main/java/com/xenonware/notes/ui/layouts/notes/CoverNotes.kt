@@ -60,7 +60,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.ModalNavigationDrawer
@@ -145,7 +144,7 @@ fun CoverNotes(
     appSize: IntSize,
 
     ) {
-    val ULongSaver = Saver<ULong?, String>(
+    val uLongSaver = Saver<ULong?, String>(
         save = { it?.toString() ?: "null" },
         restore = { if (it == "null") null else it.toULong() }
     )
@@ -153,7 +152,7 @@ fun CoverNotes(
     var editingNoteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var titleState by rememberSaveable { mutableStateOf("") }
     var descriptionState by rememberSaveable { mutableStateOf("") }
-    var editingNoteColor by rememberSaveable(stateSaver = ULongSaver) { mutableStateOf<ULong?>(null) }
+    var editingNoteColor by rememberSaveable(stateSaver = uLongSaver) { mutableStateOf(null) }
     var showTextNoteCard by rememberSaveable { mutableStateOf(false) }
     var saveTrigger by remember { mutableStateOf(false) }
 
@@ -246,6 +245,7 @@ fun CoverNotes(
         editingNoteId = null
         titleState = ""
         descriptionState = ""
+        editingNoteColor = null
         listTitleState = ""
         listItemsState.clear()
         nextListItemId = 0L
@@ -257,6 +257,7 @@ fun CoverNotes(
         titleState = itemToEdit.title
         descriptionState = itemToEdit.description ?: ""
         listTitleState = itemToEdit.title
+        editingNoteColor = itemToEdit.color?.toULong()
         listItemsState.clear()
         nextListItemId = 0L
         currentListSizeIndex = 1
@@ -743,7 +744,7 @@ fun CoverNotes(
                                 ) {
                                     Text(
                                         text = stringResource(R.string.no_notes_message),
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        style = typography.bodyLarge,
                                         color = coverScreenContentColor
                                     )
                                 }
@@ -756,7 +757,7 @@ fun CoverNotes(
                                 ) {
                                     Text(
                                         text = stringResource(R.string.no_search_results),
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        style = typography.bodyLarge,
                                         color = coverScreenContentColor
                                     )
                                 }
@@ -778,7 +779,7 @@ fun CoverNotes(
                                                     is String -> {
                                                         Text(
                                                             text = item,
-                                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                            style = typography.titleMedium.copy(
                                                                 fontStyle = FontStyle.Italic,
                                                                 color = coverScreenContentColor
                                                             ),
@@ -883,13 +884,17 @@ fun CoverNotes(
                     onTitleChange = { titleState = it },
                     initialContent = descriptionState,
                     onDismiss = { showTextNoteCard = false },
-                    onSave = { title, description ->
+                    initialColor = editingNoteColor,
+                    onSave = { title, description, color ->
                         if (title.isNotBlank() || description.isNotBlank()) {
                             if (editingNoteId != null) {
-                                val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
-                                    title = title,
-                                    description = description.takeIf { it.isNotBlank() },
-                                )
+                                val updatedNote =
+                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
+                                        .find { it.id == editingNoteId }?.copy(
+                                            title = title,
+                                            description = description.takeIf { it.isNotBlank() },
+                                            color = color?.toLong()
+                                        )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
                                 }
@@ -897,7 +902,8 @@ fun CoverNotes(
                                 notesViewModel.addItem(
                                     title = title,
                                     description = description.takeIf { it.isNotBlank() },
-                                    noteType = NoteType.TEXT
+                                    noteType = NoteType.TEXT,
+                                    color = color?.toLong()
                                 )
                             }
                         }
@@ -980,16 +986,20 @@ fun CoverNotes(
                     onListTitleChange = { listTitleState = it },
                     initialListItems = listItemsState,
                     onDismiss = { showListNoteCard = false },
-                    onSave = { title, items ->
+                    initialColor = editingNoteColor,
+                    onSave = { title, items, color ->
                         val description = items.joinToString("\n") {
                             "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
                         }
                         if (title.isNotBlank() || description.isNotBlank()) {
                             if (editingNoteId != null) {
-                                val updatedNote = notesViewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.copy(
-                                    title = title,
-                                    description = description.takeIf { it.isNotBlank() },
-                                )
+                                val updatedNote =
+                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
+                                        .find { it.id == editingNoteId }?.copy(
+                                            title = title,
+                                            description = description.takeIf { it.isNotBlank() },
+                                            color = color?.toLong()
+                                        )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
                                 }
@@ -997,7 +1007,8 @@ fun CoverNotes(
                                 notesViewModel.addItem(
                                     title = title,
                                     description = description.takeIf { it.isNotBlank() },
-                                    noteType = NoteType.LIST
+                                    noteType = NoteType.LIST,
+                                    color = color?.toLong()
                                 )
                             }
                         }
@@ -1016,7 +1027,8 @@ fun CoverNotes(
                     onToggleItemChecked = { item, isChecked ->
                         val index = listItemsState.indexOfFirst { it.id == item.id }
                         if (index != -1) {
-                            listItemsState[index] = listItemsState[index].copy(isChecked = isChecked)
+                            listItemsState[index] =
+                                listItemsState[index].copy(isChecked = isChecked)
                         }
                     },
                     onItemTextChange = { item, newText ->
@@ -1025,6 +1037,7 @@ fun CoverNotes(
                             listItemsState[index] = listItemsState[index].copy(text = newText)
                         }
                     },
+
                     onAddItemClick = {
                         listItemsState.add(ListItem(nextListItemId++, "", false))
                     },

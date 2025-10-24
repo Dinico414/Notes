@@ -502,7 +502,7 @@ fun NoteAudioCard(
         }
     }
 
-    @Suppress("DEPRECATION") val systemUiController = rememberSystemUiController()
+    val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
     DisposableEffect(systemUiController, cardColor) {
         systemUiController.setStatusBarColor(

@@ -40,6 +40,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +63,20 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.ui.theme.noteBlueDark
+import com.xenonware.notes.ui.theme.noteBlueLight
+import com.xenonware.notes.ui.theme.noteGreenDark
+import com.xenonware.notes.ui.theme.noteGreenLight
+import com.xenonware.notes.ui.theme.noteOrangeDark
+import com.xenonware.notes.ui.theme.noteOrangeLight
+import com.xenonware.notes.ui.theme.notePurpleDark
+import com.xenonware.notes.ui.theme.notePurpleLight
+import com.xenonware.notes.ui.theme.noteRedDark
+import com.xenonware.notes.ui.theme.noteRedLight
+import com.xenonware.notes.ui.theme.noteTurquoiseDark
+import com.xenonware.notes.ui.theme.noteTurquoiseLight
+import com.xenonware.notes.ui.theme.noteYellowDark
+import com.xenonware.notes.ui.theme.noteYellowLight
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -74,8 +90,7 @@ fun NoteTextCard(
     onTitleChange: (String) -> Unit,
     initialContent: String = "",
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit,
-    cardBackgroundColor: Color = colorScheme.surfaceContainer,
+    onSave: (String, String, ULong?) -> Unit,
     isBold: Boolean,
     isItalic: Boolean,
     isUnderlined: Boolean,
@@ -83,10 +98,54 @@ fun NoteTextCard(
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
+    initialColor: ULong? = null
 ) {
+    val ULongSaver = Saver<ULong?, String>(
+        save = { it?.toString() ?: "null" },
+        restore = { if (it == "null") null else it.toULong() }
+    )
+
     val hazeState = remember { HazeState() }
-    var content by remember { mutableStateOf(TextFieldValue(initialContent)) }
+    val extendedColors = extendedMaterialColorScheme
+
+    var selectedColor by rememberSaveable(stateSaver = ULongSaver) { mutableStateOf(initialColor) }
+
+    val noteColorMap = remember(extendedColors) {
+        mapOf(
+            noteRedLight.value to extendedColors.noteRed,
+            noteRedDark.value to extendedColors.noteRed,
+            noteOrangeLight.value to extendedColors.noteOrange,
+            noteOrangeDark.value to extendedColors.noteOrange,
+            noteYellowLight.value to extendedColors.noteYellow,
+            noteYellowDark.value to extendedColors.noteYellow,
+            noteGreenLight.value to extendedColors.noteGreen,
+            noteGreenDark.value to extendedColors.noteGreen,
+            noteTurquoiseLight.value to extendedColors.noteTurquoise,
+            noteTurquoiseDark.value to extendedColors.noteTurquoise,
+            noteBlueLight.value to extendedColors.noteBlue,
+            noteBlueDark.value to extendedColors.noteBlue,
+            notePurpleLight.value to extendedColors.notePurple,
+            notePurpleDark.value to extendedColors.notePurple
+        )
+    }
+
+    val cardColor = selectedColor?.let { noteColorMap[it] } ?: colorScheme.surfaceContainer
+
+    val noteColors = remember(extendedColors) {
+        listOf(
+            null, // Default
+            extendedColors.noteRed.value,
+            extendedColors.noteOrange.value,
+            extendedColors.noteYellow.value,
+            extendedColors.noteGreen.value,
+            extendedColors.noteTurquoise.value,
+            extendedColors.noteBlue.value,
+            extendedColors.notePurple.value
+        )
+    }
+
     val hazeThinColor = colorScheme.surfaceDim
+    var content by remember { mutableStateOf(TextFieldValue(initialContent)) }
     var showMenu by remember { mutableStateOf(false) }
     var isOffline by remember { mutableStateOf(false) }
     var isLabeled by remember { mutableStateOf(false) }
@@ -104,16 +163,17 @@ fun NoteTextCard(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(title, content.text)
+            onSave(title, content.text, selectedColor)
             onSaveTriggerConsumed()
         }
     }
 
+
     val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
-    DisposableEffect(systemUiController, cardBackgroundColor) {
+    DisposableEffect(systemUiController, cardColor) {
         systemUiController.setStatusBarColor(
-            color = cardBackgroundColor
+            color = cardColor
         )
         onDispose {
             systemUiController.setStatusBarColor(
@@ -128,7 +188,7 @@ fun NoteTextCard(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(cardBackgroundColor)
+            .background(cardColor)
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(
                     WindowInsetsSides.Top + WindowInsetsSides.Horizontal
@@ -254,14 +314,18 @@ fun NoteTextCard(
                         ),
                         MenuItem(
                             text = "Color",
-                            onClick = {},
+                            onClick = {
+                                val currentIndex = noteColors.indexOf(selectedColor)
+                                val nextIndex = (currentIndex + 1) % noteColors.size
+                                selectedColor = noteColors[nextIndex]
+                            },
                             icon = { Icon(Icons.Default.ColorLens, contentDescription = "Color") }
                         ),
                         MenuItem(
                             text = if (isOffline) "Online note" else "Offline note",
                             onClick = { isOffline = !isOffline },
                             dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else colorScheme.onSurface,
+                            textColor = if (isOffline) colorScheme.error else null,
                             icon = {
                                 if (isOffline) {
                                     Icon(Icons.Default.CloudOff, contentDescription = "Offline note", tint = colorScheme.error)

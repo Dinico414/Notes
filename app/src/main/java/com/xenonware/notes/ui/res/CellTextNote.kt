@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +37,21 @@ import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumCornerRadius
 import com.xenon.mylibrary.values.MediumSpacing
+import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.ui.theme.noteBlueDark
+import com.xenonware.notes.ui.theme.noteBlueLight
+import com.xenonware.notes.ui.theme.noteGreenDark
+import com.xenonware.notes.ui.theme.noteGreenLight
+import com.xenonware.notes.ui.theme.noteOrangeDark
+import com.xenonware.notes.ui.theme.noteOrangeLight
+import com.xenonware.notes.ui.theme.notePurpleDark
+import com.xenonware.notes.ui.theme.notePurpleLight
+import com.xenonware.notes.ui.theme.noteRedDark
+import com.xenonware.notes.ui.theme.noteRedLight
+import com.xenonware.notes.ui.theme.noteTurquoiseDark
+import com.xenonware.notes.ui.theme.noteTurquoiseLight
+import com.xenonware.notes.ui.theme.noteYellowDark
+import com.xenonware.notes.ui.theme.noteYellowLight
 import com.xenonware.notes.viewmodel.classes.NotesItems
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -54,13 +70,48 @@ fun CellTextNote(
         label = "Border Color Animation"
     )
 
+    val extendedColors = extendedMaterialColorScheme
+    val noteColorMap = remember(extendedColors) {
+        mapOf<ULong, Color>(
+            noteRedLight.value to extendedColors.noteRed,
+            noteRedDark.value to extendedColors.noteRed,
+            noteOrangeLight.value to extendedColors.noteOrange,
+            noteOrangeDark.value to extendedColors.noteOrange,
+            noteYellowLight.value to extendedColors.noteYellow,
+            noteYellowDark.value to extendedColors.noteYellow,
+            noteGreenLight.value to extendedColors.noteGreen,
+            noteGreenDark.value to extendedColors.noteGreen,
+            noteTurquoiseLight.value to extendedColors.noteTurquoise,
+            noteTurquoiseDark.value to extendedColors.noteTurquoise,
+            noteBlueLight.value to extendedColors.noteBlue,
+            noteBlueDark.value to extendedColors.noteBlue,
+            notePurpleLight.value to extendedColors.notePurple,
+            notePurpleDark.value to extendedColors.notePurple
+        )
+    }
+
+    val backgroundColor = item.color?.let {
+        noteColorMap[it.toULong()]
+    } ?: MaterialTheme.colorScheme.surfaceBright
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(MediumCornerRadius))
-            .background(MaterialTheme.colorScheme.surfaceBright)
+            .background(backgroundColor)
             .border(
                 width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
+            )
+            .then(
+                if (backgroundColor != MaterialTheme.colorScheme.surfaceBright) {
+                    Modifier.border(
+                        width = 0.5.dp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
+                        shape = RoundedCornerShape(MediumCornerRadius)
+                    )
+                } else {
+                    Modifier
+                }
             )
             .combinedClickable(
                 onClick = {

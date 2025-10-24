@@ -878,6 +878,7 @@ fun CompactNotes(
                                                                 descriptionState =
                                                                     itemToEdit.description ?: ""
                                                                 listTitleState = itemToEdit.title
+                                                                editingNoteColor = itemToEdit.color?.toULong()
                                                                 listItemsState.clear()
                                                                 nextListItemId = 0L
                                                                 currentListSizeIndex = 1
@@ -910,9 +911,7 @@ fun CompactNotes(
                                                                     )
                                                                 }
                                                                 when (itemToEdit.noteType) {
-                                                                    NoteType.TEXT -> showTextNoteCard =
-                                                                        true
-
+                                                                    NoteType.TEXT -> showTextNoteCard = true
                                                                     NoteType.AUDIO -> {
                                                                         showAudioNoteCard = true
                                                                         selectedAudioViewType =
@@ -920,11 +919,8 @@ fun CompactNotes(
                                                                         editingNoteColor = itemToEdit.color?.toULong()
                                                                     }
 
-                                                                    NoteType.LIST -> showListNoteCard =
-                                                                        true
-
-                                                                    NoteType.SKETCH -> showSketchNoteCard =
-                                                                        true
+                                                                    NoteType.LIST -> showListNoteCard = true
+                                                                    NoteType.SKETCH -> showSketchNoteCard = true
                                                                 }
                                                             },
                                                             maxLines = currentListMaxLines
@@ -976,6 +972,7 @@ fun CompactNotes(
                                                         descriptionState =
                                                             itemToEdit.description ?: ""
                                                         listTitleState = itemToEdit.title
+                                                        editingNoteColor = itemToEdit.color?.toULong()
                                                         listItemsState.clear()
                                                         nextListItemId = 0L
                                                         currentListSizeIndex = 1
@@ -1003,7 +1000,9 @@ fun CompactNotes(
                                                             listItemsState.addAll(parsedItems)
                                                         }
                                                         when (itemToEdit.noteType) {
-                                                            NoteType.TEXT -> showTextNoteCard = true
+                                                            NoteType.TEXT -> {
+                                                                showTextNoteCard = true
+                                                            }
                                                             NoteType.AUDIO -> {
                                                                 showAudioNoteCard = true
                                                                 selectedAudioViewType =
@@ -1011,7 +1010,9 @@ fun CompactNotes(
                                                                 editingNoteColor = itemToEdit.color?.toULong()
                                                             }
 
-                                                            NoteType.LIST -> showListNoteCard = true
+                                                            NoteType.LIST -> {
+                                                                showListNoteCard = true
+                                                            }
                                                             NoteType.SKETCH -> showSketchNoteCard =
                                                                 true
                                                         }
@@ -1049,7 +1050,8 @@ fun CompactNotes(
                     onTitleChange = { titleState = it },
                     initialContent = descriptionState,
                     onDismiss = { showTextNoteCard = false },
-                    onSave = { title, description ->
+                    initialColor = editingNoteColor,
+                    onSave = { title, description, color ->
                         if (title.isNotBlank() || description.isNotBlank()) {
                             if (editingNoteId != null) {
                                 val updatedNote =
@@ -1057,6 +1059,7 @@ fun CompactNotes(
                                         .find { it.id == editingNoteId }?.copy(
                                             title = title,
                                             description = description.takeIf { it.isNotBlank() },
+                                            color = color?.toLong()
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1065,7 +1068,8 @@ fun CompactNotes(
                                 notesViewModel.addItem(
                                     title = title,
                                     description = description.takeIf { it.isNotBlank() },
-                                    noteType = NoteType.TEXT
+                                    noteType = NoteType.TEXT,
+                                    color = color?.toLong()
                                 )
                             }
                         }
@@ -1147,7 +1151,8 @@ fun CompactNotes(
                     onListTitleChange = { listTitleState = it },
                     initialListItems = listItemsState,
                     onDismiss = { showListNoteCard = false },
-                    onSave = { title, items ->
+                    initialColor = editingNoteColor,
+                    onSave = { title, items, color ->
                         val description = items.joinToString("\n") {
                             "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
                         }
@@ -1158,6 +1163,7 @@ fun CompactNotes(
                                         .find { it.id == editingNoteId }?.copy(
                                             title = title,
                                             description = description.takeIf { it.isNotBlank() },
+                                            color = color?.toLong()
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1166,7 +1172,8 @@ fun CompactNotes(
                                 notesViewModel.addItem(
                                     title = title,
                                     description = description.takeIf { it.isNotBlank() },
-                                    noteType = NoteType.LIST
+                                    noteType = NoteType.LIST,
+                                    color = color?.toLong()
                                 )
                             }
                         }
@@ -1202,7 +1209,8 @@ fun CompactNotes(
                     onTextResizeClick = ::onListTextResizeClick,
                     editorFontSize = listEditorFontSize,
                     addItemTrigger = saveTrigger,
-                    onAddItemTriggerConsumed = { saveTrigger = false })
+                    onAddItemTriggerConsumed = { saveTrigger = false }
+                )
             }
         }
     }

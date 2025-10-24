@@ -14,7 +14,7 @@ android {
         minSdk = 29
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -29,8 +29,6 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
         create("prerelease") {
-            applicationIdSuffix = ".beta"
-            versionNameSuffix = "-b"
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
@@ -64,7 +62,7 @@ android {
             } else if (buildType.name == "debug") {
                 "Notes-${buildType.name}.apk"
             } else {
-                "Notes-${buildType.name}.apk"
+                "Notes.apk"
             }
             (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
                 outputFileName

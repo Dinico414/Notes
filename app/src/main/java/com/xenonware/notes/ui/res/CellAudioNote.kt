@@ -85,6 +85,30 @@ fun CellAudioNote(
         label = "Border Color Animation"
     )
 
+    val extendedColors = extendedMaterialColorScheme
+    val noteColorMap = remember(extendedColors) {
+        mapOf<ULong, Color>(
+            noteRedLight.value to extendedColors.noteRed,
+            noteRedDark.value to extendedColors.noteRed,
+            noteOrangeLight.value to extendedColors.noteOrange,
+            noteOrangeDark.value to extendedColors.noteOrange,
+            noteYellowLight.value to extendedColors.noteYellow,
+            noteYellowDark.value to extendedColors.noteYellow,
+            noteGreenLight.value to extendedColors.noteGreen,
+            noteGreenDark.value to extendedColors.noteGreen,
+            noteTurquoiseLight.value to extendedColors.noteTurquoise,
+            noteTurquoiseDark.value to extendedColors.noteTurquoise,
+            noteBlueLight.value to extendedColors.noteBlue,
+            noteBlueDark.value to extendedColors.noteBlue,
+            notePurpleLight.value to extendedColors.notePurple,
+            notePurpleDark.value to extendedColors.notePurple
+        )
+    }
+
+    val backgroundColor = item.color?.let {
+        noteColorMap[it.toULong()]
+    } ?: MaterialTheme.colorScheme.surfaceBright
+
     val context = LocalContext.current
     val playerManager = remember { AudioPlayerManager() }
     var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
@@ -117,29 +141,6 @@ fun CellAudioNote(
         }
     }
 
-    val extendedColors = extendedMaterialColorScheme
-    val noteColorMap = remember(extendedColors) {
-        mapOf<ULong, Color>(
-            noteRedLight.value to extendedColors.noteRed,
-            noteRedDark.value to extendedColors.noteRed,
-            noteOrangeLight.value to extendedColors.noteOrange,
-            noteOrangeDark.value to extendedColors.noteOrange,
-            noteYellowLight.value to extendedColors.noteYellow,
-            noteYellowDark.value to extendedColors.noteYellow,
-            noteGreenLight.value to extendedColors.noteGreen,
-            noteGreenDark.value to extendedColors.noteGreen,
-            noteTurquoiseLight.value to extendedColors.noteTurquoise,
-            noteTurquoiseDark.value to extendedColors.noteTurquoise,
-            noteBlueLight.value to extendedColors.noteBlue,
-            noteBlueDark.value to extendedColors.noteBlue,
-            notePurpleLight.value to extendedColors.notePurple,
-            notePurpleDark.value to extendedColors.notePurple
-        )
-    }
-
-    val backgroundColor = item.color?.let {
-        noteColorMap[it.toULong()]
-    } ?: MaterialTheme.colorScheme.surfaceBright
 
     Box(
         modifier = modifier
