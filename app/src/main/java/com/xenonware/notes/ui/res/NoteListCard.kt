@@ -3,6 +3,7 @@
 package com.xenonware.notes.ui.res
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,6 +63,20 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.ui.theme.invertNoteBlueDark
+import com.xenonware.notes.ui.theme.invertNoteBlueLight
+import com.xenonware.notes.ui.theme.invertNoteGreenDark
+import com.xenonware.notes.ui.theme.invertNoteGreenLight
+import com.xenonware.notes.ui.theme.invertNoteOrangeDark
+import com.xenonware.notes.ui.theme.invertNoteOrangeLight
+import com.xenonware.notes.ui.theme.invertNotePurpleDark
+import com.xenonware.notes.ui.theme.invertNotePurpleLight
+import com.xenonware.notes.ui.theme.invertNoteRedDark
+import com.xenonware.notes.ui.theme.invertNoteRedLight
+import com.xenonware.notes.ui.theme.invertNoteTurquoiseDark
+import com.xenonware.notes.ui.theme.invertNoteTurquoiseLight
+import com.xenonware.notes.ui.theme.invertNoteYellowDark
+import com.xenonware.notes.ui.theme.invertNoteYellowLight
 import com.xenonware.notes.ui.theme.noteBlueDark
 import com.xenonware.notes.ui.theme.noteBlueLight
 import com.xenonware.notes.ui.theme.noteGreenDark
@@ -116,45 +131,76 @@ fun NoteListCard(
     )
 
     val hazeState = remember { HazeState() }
+    val isDarkTheme = isSystemInDarkTheme()
 
-    val extendedColors = extendedMaterialColorScheme
 
     var selectedColor by rememberSaveable(stateSaver = ULongSaver) { mutableStateOf(initialColor) }
 
-    val noteColorMap = remember(extendedColors) {
-        mapOf(
-            noteRedLight.value to extendedColors.noteRed,
-            noteRedDark.value to extendedColors.noteRed,
-            noteOrangeLight.value to extendedColors.noteOrange,
-            noteOrangeDark.value to extendedColors.noteOrange,
-            noteYellowLight.value to extendedColors.noteYellow,
-            noteYellowDark.value to extendedColors.noteYellow,
-            noteGreenLight.value to extendedColors.noteGreen,
-            noteGreenDark.value to extendedColors.noteGreen,
-            noteTurquoiseLight.value to extendedColors.noteTurquoise,
-            noteTurquoiseDark.value to extendedColors.noteTurquoise,
-            noteBlueLight.value to extendedColors.noteBlue,
-            noteBlueDark.value to extendedColors.noteBlue,
-            notePurpleLight.value to extendedColors.notePurple,
-            notePurpleDark.value to extendedColors.notePurple
-        )
+    // Map for card background to provide the theme-aware color
+    val cardColorMap = remember(isDarkTheme) {
+        if (isDarkTheme) {
+            mapOf(
+                noteRedLight.value to Color(noteRedDark.value),
+                noteOrangeLight.value to Color(noteOrangeDark.value),
+                noteYellowLight.value to Color(noteYellowDark.value),
+                noteGreenLight.value to Color(noteGreenDark.value),
+                noteTurquoiseLight.value to Color(noteTurquoiseDark.value),
+                noteBlueLight.value to Color(noteBlueDark.value),
+                notePurpleLight.value to Color(notePurpleDark.value)
+            )
+        } else {
+            mapOf(
+                noteRedLight.value to Color(noteRedLight.value),
+                noteOrangeLight.value to Color(noteOrangeLight.value),
+                noteYellowLight.value to Color(noteYellowLight.value),
+                noteGreenLight.value to Color(noteGreenLight.value),
+                noteTurquoiseLight.value to Color(noteTurquoiseLight.value),
+                noteBlueLight.value to Color(noteBlueLight.value),
+                notePurpleLight.value to Color(notePurpleLight.value)
+            )
+        }
     }
 
-    val cardColor = selectedColor?.let { noteColorMap[it] } ?: colorScheme.surfaceContainer
+    // Map for icon tinting to provide the visually opposite color
+    val iconTintInvertMap = remember(isDarkTheme) {
+        if (isDarkTheme) {
+            mapOf(
+                noteRedLight.value to Color(invertNoteRedDark.value),
+                noteOrangeLight.value to Color(invertNoteOrangeDark.value),
+                noteYellowLight.value to Color(invertNoteYellowDark.value),
+                noteGreenLight.value to Color(invertNoteGreenDark.value),
+                noteTurquoiseLight.value to Color(invertNoteTurquoiseDark.value),
+                noteBlueLight.value to Color(invertNoteBlueDark.value),
+                notePurpleLight.value to Color(invertNotePurpleDark.value)
+            )
+        } else {
+            mapOf(
+                noteRedLight.value to Color(invertNoteRedLight.value),
+                noteOrangeLight.value to Color(invertNoteOrangeLight.value),
+                noteYellowLight.value to Color(invertNoteYellowLight.value),
+                noteGreenLight.value to Color(invertNoteGreenLight.value),
+                noteTurquoiseLight.value to Color(invertNoteTurquoiseLight.value),
+                noteBlueLight.value to Color(invertNoteBlueLight.value),
+                notePurpleLight.value to Color(invertNotePurpleLight.value)
+            )
+        }
+    }
 
-    val noteColors = remember(extendedColors) {
+
+    val cardColor = selectedColor?.let { cardColorMap[it] } ?: colorScheme.surfaceContainer
+
+    val noteColors = remember {
         listOf(
             null, // Default
-            extendedColors.noteRed.value,
-            extendedColors.noteOrange.value,
-            extendedColors.noteYellow.value,
-            extendedColors.noteGreen.value,
-            extendedColors.noteTurquoise.value,
-            extendedColors.noteBlue.value,
-            extendedColors.notePurple.value
+            noteRedLight.value,
+            noteOrangeLight.value,
+            noteYellowLight.value,
+            noteGreenLight.value,
+            noteTurquoiseLight.value,
+            noteBlueLight.value,
+            notePurpleLight.value
         )
     }
-
     val hazeThinColor = colorScheme.surfaceDim
     var showMenu by remember { mutableStateOf(false) }
     var currentListItems by remember { mutableStateOf(initialListItems) }
@@ -361,22 +407,26 @@ fun NoteListCard(
                             dismissOnClick = false,
                             icon = {
                                 if (isLabeled) {
-                                    Icon(Icons.Default.Bookmark, contentDescription = "Label", tint = labelColor)
+                                    Icon(
+                                        Icons.Default.Bookmark,
+                                        contentDescription = "Label",
+                                        tint = labelColor
+                                    )
                                 } else {
                                     Icon(Icons.Default.BookmarkBorder, contentDescription = "Label")
                                 }
-                            }
-                        ),
-                        MenuItem(
-                            text = "Color",
-                            onClick = {
-                                val currentIndex = noteColors.indexOf(selectedColor)
-                                val nextIndex = (currentIndex + 1) % noteColors.size
-                                selectedColor = noteColors[nextIndex]
-                            },
-                            dismissOnClick = false,
-                            icon = { Icon(Icons.Default.ColorLens, contentDescription = "Color") }
-                        ),
+                            }),
+                        MenuItem(text = "Color", onClick = {
+                            val currentIndex = noteColors.indexOf(selectedColor)
+                            val nextIndex = (currentIndex + 1) % noteColors.size
+                            selectedColor = noteColors[nextIndex]
+                        }, dismissOnClick = false, icon = {
+                            Icon(
+                                Icons.Default.ColorLens,
+                                contentDescription = "Color",
+                                tint = selectedColor?.let { iconTintInvertMap[it] }
+                                    ?: colorScheme.onSurfaceVariant)
+                        }),
                         MenuItem(
                             text = if (isOffline) "Online note" else "Offline note",
                             onClick = { isOffline = !isOffline },
@@ -384,12 +434,15 @@ fun NoteListCard(
                             textColor = if (isOffline) colorScheme.error else null,
                             icon = {
                                 if (isOffline) {
-                                    Icon(Icons.Default.CloudOff, contentDescription = "Offline note", tint = colorScheme.error)
+                                    Icon(
+                                        Icons.Default.CloudOff,
+                                        contentDescription = "Offline note",
+                                        tint = colorScheme.error
+                                    )
                                 } else {
                                     Icon(Icons.Default.Cloud, contentDescription = "Online note")
                                 }
-                            }
-                        )
+                            })
                     ),
                     hazeState = hazeState
                 )
