@@ -759,6 +759,7 @@ fun NoteAudioCard(
                                 val nextIndex = (currentIndex + 1) % noteColors.size
                                 selectedColor = noteColors[nextIndex]
                             },
+                            dismissOnClick = false,
                             icon = { Icon(Icons.Default.ColorLens, contentDescription = "Color") }
                         ),
                         MenuItem(
