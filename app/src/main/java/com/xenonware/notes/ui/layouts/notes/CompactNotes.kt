@@ -1002,6 +1002,7 @@ fun CompactNotes(
                                                         when (itemToEdit.noteType) {
                                                             NoteType.TEXT -> {
                                                                 showTextNoteCard = true
+                                                                editingNoteColor = itemToEdit.color?.toULong()
                                                             }
                                                             NoteType.AUDIO -> {
                                                                 showAudioNoteCard = true
@@ -1012,6 +1013,7 @@ fun CompactNotes(
 
                                                             NoteType.LIST -> {
                                                                 showListNoteCard = true
+                                                                editingNoteColor = itemToEdit.color?.toULong()
                                                             }
                                                             NoteType.SKETCH -> showSketchNoteCard =
                                                                 true
