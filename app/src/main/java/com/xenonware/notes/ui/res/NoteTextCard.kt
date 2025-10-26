@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.ui.theme.invertNoteBlueDark
 import com.xenonware.notes.ui.theme.invertNoteBlueLight
@@ -121,7 +122,7 @@ fun NoteTextCard(
     )
 
     val hazeState = remember { HazeState() }
-    val isDarkTheme = isSystemInDarkTheme()
+    val isDarkTheme = LocalIsDarkTheme.current
 
     var selectedColor by rememberSaveable(stateSaver = ULongSaver) { mutableStateOf(initialColor) }
 

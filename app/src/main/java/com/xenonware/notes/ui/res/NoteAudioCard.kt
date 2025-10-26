@@ -10,7 +10,6 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -75,6 +74,7 @@ import androidx.core.content.ContextCompat
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.layouts.notes.AudioViewType
+import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.ui.theme.invertNoteBlueDark
 import com.xenonware.notes.ui.theme.invertNoteBlueLight
@@ -365,7 +365,7 @@ fun NoteAudioCard(
         restore = { if (it == "null") null else it.toULong() })
 
     val hazeState = remember { HazeState() }
-    val isDarkTheme = isSystemInDarkTheme()
+    val isDarkTheme = LocalIsDarkTheme.current
 
     var selectedColor by rememberSaveable(stateSaver = ULongSaver) { mutableStateOf(initialColor) }
 
@@ -822,7 +822,7 @@ fun NoteAudioCard(
                                         contentDescription = "Offline note",
                                         tint = colorScheme.error
                                     )
-                                } else {
+                                 } else {
                                     Icon(Icons.Default.Cloud, contentDescription = "Online note")
                                 }
                             })

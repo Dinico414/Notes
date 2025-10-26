@@ -3,7 +3,6 @@
 package com.xenonware.notes.ui.res
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,6 +61,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.ui.theme.invertNoteBlueDark
 import com.xenonware.notes.ui.theme.invertNoteBlueLight
@@ -131,7 +131,7 @@ fun NoteListCard(
     )
 
     val hazeState = remember { HazeState() }
-    val isDarkTheme = isSystemInDarkTheme()
+    val isDarkTheme = LocalIsDarkTheme.current
 
 
     var selectedColor by rememberSaveable(stateSaver = ULongSaver) { mutableStateOf(initialColor) }

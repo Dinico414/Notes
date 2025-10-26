@@ -50,6 +50,10 @@ val LocalExtendedMaterialColorScheme = staticCompositionLocalOf<ExtendedMaterial
     error("No ExtendedMaterialColorScheme provided. Did you forget to wrap your Composable in TodolistTheme?")
 }
 
+val LocalIsDarkTheme = staticCompositionLocalOf<Boolean> {
+    error("No IsDarkTheme provided")
+}
+
 val extendedMaterialColorScheme: ExtendedMaterialColorScheme
     @Composable @ReadOnlyComposable get() = LocalExtendedMaterialColorScheme.current
 
@@ -247,7 +251,10 @@ fun XenonTheme(
         }
     }
 
-    CompositionLocalProvider(LocalExtendedMaterialColorScheme provides extendedColorScheme) {
+    CompositionLocalProvider(
+        LocalExtendedMaterialColorScheme provides extendedColorScheme,
+        LocalIsDarkTheme provides darkTheme
+    ) {
         MaterialTheme(
             colorScheme = baseColorScheme, typography = Typography, motionScheme = expressive(), content = content
         )
