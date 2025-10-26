@@ -17,7 +17,8 @@ data class NotesItems(
     val creationTimestamp: Long = System.currentTimeMillis(),
     var displayOrder: Int = 0,
     val noteType: NoteType = NoteType.TEXT,
-    val color: Long? = null // Reverted to nullable, `null` means use default
+    val color: Long? = null,
+    val themeName: String? = null
 ) {
     var currentHeader = ""
 }

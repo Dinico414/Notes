@@ -92,7 +92,7 @@ fun CellTextNote(
 
     val backgroundColor = item.color?.let {
         noteColorMap[it.toULong()]
-    } ?: MaterialTheme.colorScheme.surfaceBright
+    } ?: MaterialTheme.colorScheme.surfaceContainer
 
     Box(
         modifier = modifier
@@ -103,7 +103,7 @@ fun CellTextNote(
                 width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
             )
             .then(
-                if (backgroundColor != MaterialTheme.colorScheme.surfaceBright) {
+                if (backgroundColor != MaterialTheme.colorScheme.surfaceContainer) {
                     Modifier.border(
                         width = 0.5.dp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
@@ -157,7 +157,7 @@ fun CellTextNote(
                 modifier = Modifier
                     .padding(6.dp)
                     .size(24.dp)
-                    .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
+                    .background(MaterialTheme.colorScheme.surfaceContainer, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
@@ -197,7 +197,7 @@ fun CellTextNote(
                 Icon(
                     imageVector = Icons.Default.TextFields,
                     contentDescription = "Text",
-                    tint = MaterialTheme.colorScheme.surfaceBright,
+                    tint = MaterialTheme.colorScheme.surfaceContainer,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .size(24.dp)

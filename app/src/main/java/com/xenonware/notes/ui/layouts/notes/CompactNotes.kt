@@ -121,6 +121,20 @@ import com.xenonware.notes.ui.res.NoteSketchCard
 import com.xenonware.notes.ui.res.NoteTextCard
 import com.xenonware.notes.ui.res.XenonSnackbar
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.ui.theme.noteBlueDark
+import com.xenonware.notes.ui.theme.noteBlueLight
+import com.xenonware.notes.ui.theme.noteGreenDark
+import com.xenonware.notes.ui.theme.noteGreenLight
+import com.xenonware.notes.ui.theme.noteOrangeDark
+import com.xenonware.notes.ui.theme.noteOrangeLight
+import com.xenonware.notes.ui.theme.notePurpleDark
+import com.xenonware.notes.ui.theme.notePurpleLight
+import com.xenonware.notes.ui.theme.noteRedDark
+import com.xenonware.notes.ui.theme.noteRedLight
+import com.xenonware.notes.ui.theme.noteTurquoiseDark
+import com.xenonware.notes.ui.theme.noteTurquoiseLight
+import com.xenonware.notes.ui.theme.noteYellowDark
+import com.xenonware.notes.ui.theme.noteYellowLight
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.NotesLayoutType
@@ -279,6 +293,37 @@ fun CompactNotes(
 
     val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
     val isDeveloperModeEnabled by devSettingsViewModel.devModeToggleState.collectAsState()
+
+    val colorThemeMap = remember {
+        mapOf(
+            noteRedLight.value to "Red",
+            noteRedDark.value to "Red",
+            noteOrangeLight.value to "Orange",
+            noteOrangeDark.value to "Orange",
+            noteYellowLight.value to "Yellow",
+            noteYellowDark.value to "Yellow",
+            noteGreenLight.value to "Green",
+            noteGreenDark.value to "Green",
+            noteTurquoiseLight.value to "Turquoise",
+            noteTurquoiseDark.value to "Turquoise",
+            noteBlueLight.value to "Blue",
+            noteBlueDark.value to "Blue",
+            notePurpleLight.value to "Purple",
+            notePurpleDark.value to "Purple"
+        )
+    }
+
+    val themeColorMap = remember {
+        mapOf(
+            "Red" to noteRedLight.value,
+            "Orange" to noteOrangeLight.value,
+            "Yellow" to noteYellowLight.value,
+            "Green" to noteGreenLight.value,
+            "Turquoise" to noteTurquoiseLight.value,
+            "Blue" to noteBlueLight.value,
+            "Purple" to notePurpleLight.value
+        )
+    }
 
     ModalNavigationDrawer(
         drawerContent = {
@@ -884,7 +929,7 @@ fun CompactNotes(
                                                                 currentListSizeIndex = 1
                                                                 itemToEdit.description?.let { desc ->
                                                                     val parsedItems =
-                                                                        desc.split("\n")
+                                                                        desc.split("")
                                                                             .mapNotNull { line ->
                                                                                 if (line.isBlank()) null
                                                                                 else {
@@ -977,7 +1022,7 @@ fun CompactNotes(
                                                         nextListItemId = 0L
                                                         currentListSizeIndex = 1
                                                         itemToEdit.description?.let { desc ->
-                                                            val parsedItems = desc.split("\n")
+                                                            val parsedItems = desc.split("")
                                                                 .mapNotNull { line ->
                                                                     if (line.isBlank()) null
                                                                     else {
@@ -1052,9 +1097,10 @@ fun CompactNotes(
                     onTitleChange = { titleState = it },
                     initialContent = descriptionState,
                     onDismiss = { showTextNoteCard = false },
-                    initialColor = editingNoteColor,
-                    onSave = { title, description, color ->
+                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
+                    onSave = { title, description, theme ->
                         if (title.isNotBlank() || description.isNotBlank()) {
+                            val color = themeColorMap[theme]
                             if (editingNoteId != null) {
                                 val updatedNote =
                                     notesViewModel.noteItems.filterIsInstance<NotesItems>()
