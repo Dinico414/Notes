@@ -1,5 +1,7 @@
 package com.xenonware.notes.ui.res
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -41,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +72,9 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
@@ -86,11 +92,16 @@ fun NoteTextCard(
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
     initialTheme: String = "Default", // New parameter
+    onThemeChange: (String) -> Unit // New callback for theme changes
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = isSystemInDarkTheme() // Use system dark theme for the inner XenonTheme
 
     var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) } // New state
+    var colorMenuItemText by remember { mutableStateOf("Color") }
+    val scope = rememberCoroutineScope()
+    var isFadingOut by remember { mutableStateOf(false) }
+    var colorChangeJob by remember { mutableStateOf<Job?>(null) }
 
     val availableThemes = remember {
         listOf("Default", "Blue", "Green", "Orange", "Purple", "Red", "Turquoise", "Yellow")
@@ -133,11 +144,17 @@ fun NoteTextCard(
         useYellowTheme = selectedTheme == "Yellow",
         dynamicColor = false // Assuming dynamic color is not desired when explicitly setting a theme
     ) {
+        val animatedTextColor by animateColorAsState(
+            targetValue = if (isFadingOut) colorScheme.onSurface.copy(alpha = 0f) else colorScheme.onSurface,
+            animationSpec = tween(durationMillis = 500),
+            label = "animatedTextColor"
+        )
+
         // Extract colorScheme.surfaceContainer into a local variable before DisposableEffect
         val statusBarColor = colorScheme.surfaceContainer
         DisposableEffect(systemUiController, statusBarColor) {
             systemUiController.setStatusBarColor(
-                color = statusBarColor // Use color from current theme
+                color = statusBarColor
             )
             onDispose {
                 systemUiController.setStatusBarColor(
@@ -154,7 +171,7 @@ fun NoteTextCard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colorScheme.background) // Use background color from current theme
+                .background(colorScheme.surfaceContainer) // Use background color from current theme
                 .windowInsetsPadding(
                     WindowInsets.safeDrawing.only(
                         WindowInsetsSides.Top + WindowInsetsSides.Horizontal
@@ -281,16 +298,27 @@ fun NoteTextCard(
                                         Icon(Icons.Default.BookmarkBorder, contentDescription = "Label")
                                     }
                                 }),
-                            MenuItem(text = "Color", onClick = {
+                            MenuItem(text = colorMenuItemText, onClick = {
                                 val currentIndex = availableThemes.indexOf(selectedTheme)
                                 val nextIndex = (currentIndex + 1) % availableThemes.size
                                 selectedTheme = availableThemes[nextIndex]
+                                onThemeChange(selectedTheme) // Call the callback here
+                                colorChangeJob?.cancel()
+                                colorChangeJob = scope.launch {
+                                    colorMenuItemText = availableThemes[nextIndex]
+                                    isFadingOut = false
+                                    delay(2500)
+                                    isFadingOut = true
+                                    delay(500)
+                                    colorMenuItemText = "Color"
+                                    isFadingOut = false
+                                }
                             }, dismissOnClick = false, icon = {
                                 Icon(
                                     Icons.Default.ColorLens,
                                     contentDescription = "Color",
-                                    tint = colorScheme.onSurfaceVariant) // Use a generic color from the theme
-                            }),
+                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary)
+                            }, textColor = animatedTextColor),
                             MenuItem(
                                 text = if (isOffline) "Online note" else "Offline note",
                                 onClick = { isOffline = !isOffline },

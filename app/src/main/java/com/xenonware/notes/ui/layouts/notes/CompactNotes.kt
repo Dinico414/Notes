@@ -12,6 +12,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +61,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.ModalNavigationDrawer
@@ -120,6 +122,7 @@ import com.xenonware.notes.ui.res.NoteListCard
 import com.xenonware.notes.ui.res.NoteSketchCard
 import com.xenonware.notes.ui.res.NoteTextCard
 import com.xenonware.notes.ui.res.XenonSnackbar
+import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.ui.theme.noteBlueDark
 import com.xenonware.notes.ui.theme.noteBlueLight
@@ -313,6 +316,9 @@ fun CompactNotes(
         )
     }
 
+    val isDarkTheme = isSystemInDarkTheme()
+    val selectedTextNoteTheme = colorThemeMap[editingNoteColor] ?: "Default"
+
     val themeColorMap = remember {
         mapOf(
             "Red" to noteRedLight.value,
@@ -348,47 +354,67 @@ fun CompactNotes(
             bottomBar = {
                 val textEditorContent: @Composable (RowScope.() -> Unit)? = if (showTextNoteCard) {
                     @Composable {
-                        Row {
-                            val toggledColor = colorScheme.primary
-                            val defaultColor = Color.Transparent
-                            val toggledIconColor = colorScheme.onPrimary
-                            val defaultIconColor = colorScheme.onSurface
-                            FilledIconButton(
-                                onClick = { isBold = !isBold },
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    containerColor = if (isBold) toggledColor else defaultColor,
-                                    contentColor = if (isBold) toggledIconColor else defaultIconColor
-                                )
-                            ) {
-                                Icon(Icons.Default.FormatBold, contentDescription = stringResource(R.string.bold_text))
-                            }
-                            FilledIconButton(
-                                onClick = { isItalic = !isItalic },
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    containerColor = if (isItalic) toggledColor else defaultColor,
-                                    contentColor = if (isItalic) toggledIconColor else defaultIconColor
-                                )
-                            ) {
-                                Icon(Icons.Default.FormatItalic, contentDescription = stringResource(R.string.italic_text))
-                            }
-                            FilledIconButton(
-                                onClick = { isUnderlined = !isUnderlined },
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    containerColor = if (isUnderlined) toggledColor else defaultColor,
-                                    contentColor = if (isUnderlined) toggledIconColor else defaultIconColor
-                                )
-                            ) {
-                                Icon(
-                                    Icons.Default.FormatUnderlined, contentDescription = stringResource(R.string.underline_text)
-                                )
-                            }
-                            IconButton(onClick = {
-                                currentSizeIndex = (currentSizeIndex + 1) % textSizes.size
-                            }) {
-                                Icon(
-                                    Icons.Default.FormatSize,
-                                    contentDescription = stringResource(R.string.change_text_size)
-                                )
+                        XenonTheme(
+                            darkTheme = isDarkTheme,
+                            useDefaultTheme = selectedTextNoteTheme == "Default",
+                            useBlueTheme = selectedTextNoteTheme == "Blue",
+                            useGreenTheme = selectedTextNoteTheme == "Green",
+                            useOrangeTheme = selectedTextNoteTheme == "Orange",
+                            usePurpleTheme = selectedTextNoteTheme == "Purple",
+                            useRedTheme = selectedTextNoteTheme == "Red",
+                            useTurquoiseTheme = selectedTextNoteTheme == "Turquoise",
+                            useYellowTheme = selectedTextNoteTheme == "Yellow",
+                            dynamicColor = false
+                        ) {
+                            Row {
+                                val toggledColor = MaterialTheme.colorScheme.primary
+                                val defaultColor = Color.Transparent
+                                val toggledIconColor = MaterialTheme.colorScheme.onPrimary
+                                val defaultIconColor = MaterialTheme.colorScheme.onSurface
+                                FilledIconButton(
+                                    onClick = { isBold = !isBold },
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = if (isBold) toggledColor else defaultColor,
+                                        contentColor = if (isBold) toggledIconColor else defaultIconColor
+                                    )
+                                ) {
+                                    Icon(
+                                        Icons.Default.FormatBold,
+                                        contentDescription = stringResource(R.string.bold_text)
+                                    )
+                                }
+                                FilledIconButton(
+                                    onClick = { isItalic = !isItalic },
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = if (isItalic) toggledColor else defaultColor,
+                                        contentColor = if (isItalic) toggledIconColor else defaultIconColor
+                                    )
+                                ) {
+                                    Icon(
+                                        Icons.Default.FormatItalic,
+                                        contentDescription = stringResource(R.string.italic_text)
+                                    )
+                                }
+                                FilledIconButton(
+                                    onClick = { isUnderlined = !isUnderlined },
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = if (isUnderlined) toggledColor else defaultColor,
+                                        contentColor = if (isUnderlined) toggledIconColor else defaultIconColor
+                                    )
+                                ) {
+                                    Icon(
+                                        Icons.Default.FormatUnderlined,
+                                        contentDescription = stringResource(R.string.underline_text)
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    currentSizeIndex = (currentSizeIndex + 1) % textSizes.size
+                                }) {
+                                    Icon(
+                                        Icons.Default.FormatSize,
+                                        contentDescription = stringResource(R.string.change_text_size)
+                                    )
+                                }
                             }
                         }
                     }
@@ -590,7 +616,7 @@ fun CompactNotes(
                         notesViewModel.setSearchQuery(newQuery)
                     },
                     lazyListState = lazyListState,
-                    allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && !showListNoteCard && !showAudioNoteCard && notesLayoutType == NotesLayoutType.LIST, // Added !showAudioNoteCard
+                    allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && !showListNoteCard && !showAudioNoteCard && notesLayoutType == NotesLayoutType.LIST,
                     selectedNoteIds = selectedNoteIds.toList(),
                     onClearSelection = { selectedNoteIds = emptySet() },
                     isAddModeActive = isAddModeActive,
@@ -745,15 +771,30 @@ fun CompactNotes(
                     },
                     fabOverride = if (showTextNoteCard) {
                         {
-                            FloatingActionButton(
-                                onClick = { if (titleState.isNotBlank()) saveTrigger = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.Save,
-                                    contentDescription = stringResource(R.string.save_note),
-                                    tint = if (titleState.isNotBlank()) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
-                                        alpha = 0.38f
+                            XenonTheme(
+                                darkTheme = isDarkTheme,
+                                useDefaultTheme = selectedTextNoteTheme == "Default",
+                                useBlueTheme = selectedTextNoteTheme == "Blue",
+                                useGreenTheme = selectedTextNoteTheme == "Green",
+                                useOrangeTheme = selectedTextNoteTheme == "Orange",
+                                usePurpleTheme = selectedTextNoteTheme == "Purple",
+                                useRedTheme = selectedTextNoteTheme == "Red",
+                                useTurquoiseTheme = selectedTextNoteTheme == "Turquoise",
+                                useYellowTheme = selectedTextNoteTheme == "Yellow",
+                                dynamicColor = false
+                            ) {
+                                FloatingActionButton(
+                                    onClick = { if (titleState.isNotBlank()) saveTrigger = true },
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Save,
+                                        contentDescription = stringResource(R.string.save_note),
+                                        tint = if (titleState.isNotBlank()) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(
+                                            alpha = 0.38f
+                                        )
                                     )
-                                )
+                                }
                             }
                         }
                     } else if (showListNoteCard) {
@@ -1130,7 +1171,10 @@ fun CompactNotes(
                     isItalic = isItalic,
                     isUnderlined = isUnderlined,
                     editorFontSize = editorFontSize,
-                    toolbarHeight = 72.dp
+                    toolbarHeight = 72.dp,
+                    onThemeChange = { newThemeName ->
+                        editingNoteColor = themeColorMap[newThemeName]
+                    }
                 )
             }
 

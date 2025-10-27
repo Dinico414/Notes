@@ -962,7 +962,10 @@ fun CoverNotes(
                     isItalic = isItalic,
                     isUnderlined = isUnderlined,
                     editorFontSize = editorFontSize,
-                    toolbarHeight = 72.dp
+                    toolbarHeight = 72.dp,
+                    onThemeChange = { newThemeName ->
+                        editingNoteColor = themeColorMap[newThemeName]
+                    }
                 )
             }
 
