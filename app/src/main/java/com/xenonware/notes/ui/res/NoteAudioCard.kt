@@ -50,7 +50,8 @@ import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumCornerRadius
-import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.ui.theme.LocalIsDarkTheme
+import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.noteBlueDark
 import com.xenonware.notes.ui.theme.noteBlueLight
 import com.xenonware.notes.ui.theme.noteGreenDark
@@ -80,34 +81,27 @@ fun NoteAudioCard(
     onEditItem: (NotesItems) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val borderColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-        label = "Border Color Animation"
-    )
-
-    val extendedColors = extendedMaterialColorScheme
-    val noteColorMap = remember(extendedColors) {
-        mapOf<ULong, Color>(
-            noteRedLight.value to extendedColors.noteRed,
-            noteRedDark.value to extendedColors.noteRed,
-            noteOrangeLight.value to extendedColors.noteOrange,
-            noteOrangeDark.value to extendedColors.noteOrange,
-            noteYellowLight.value to extendedColors.noteYellow,
-            noteYellowDark.value to extendedColors.noteYellow,
-            noteGreenLight.value to extendedColors.noteGreen,
-            noteGreenDark.value to extendedColors.noteGreen,
-            noteTurquoiseLight.value to extendedColors.noteTurquoise,
-            noteTurquoiseDark.value to extendedColors.noteTurquoise,
-            noteBlueLight.value to extendedColors.noteBlue,
-            noteBlueDark.value to extendedColors.noteBlue,
-            notePurpleLight.value to extendedColors.notePurple,
-            notePurpleDark.value to extendedColors.notePurple
+    val isDarkTheme = LocalIsDarkTheme.current
+    val colorToThemeName = remember {
+        mapOf(
+            noteRedLight.value to "Red",
+            noteRedDark.value to "Red",
+            noteOrangeLight.value to "Orange",
+            noteOrangeDark.value to "Orange",
+            noteYellowLight.value to "Yellow",
+            noteYellowDark.value to "Yellow",
+            noteGreenLight.value to "Green",
+            noteGreenDark.value to "Green",
+            noteTurquoiseLight.value to "Turquoise",
+            noteTurquoiseDark.value to "Turquoise",
+            noteBlueLight.value to "Blue",
+            noteBlueDark.value to "Blue",
+            notePurpleLight.value to "Purple",
+            notePurpleDark.value to "Purple"
         )
     }
 
-    val backgroundColor = item.color?.let {
-        noteColorMap[it.toULong()]
-    } ?: MaterialTheme.colorScheme.surfaceBright
+    val selectedTheme = item.color?.let { colorToThemeName[it.toULong()] } ?: "Default"
 
     val context = LocalContext.current
     val playerManager = remember { AudioPlayerManager() }
@@ -141,192 +135,215 @@ fun NoteAudioCard(
         }
     }
 
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(MediumCornerRadius))
-            .background(backgroundColor) // Apply the correct background
-            .border(
-                width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
-            )
-            .then(
-                if (backgroundColor != MaterialTheme.colorScheme.surfaceBright) {
-                    Modifier.border(
-                        width = 0.5.dp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
-                        shape = RoundedCornerShape(MediumCornerRadius)
-                    )
-                } else {
-                    Modifier
-                }
-            )
-            .combinedClickable(
-                onClick = {
-                    if (isSelectionModeActive) {
-                        onSelectItem()
-                    } else {
-                        onEditItem(item)
-                    }
-                }, onLongClick = onSelectItem
-            )
+    XenonTheme(
+        darkTheme = isDarkTheme,
+        useDefaultTheme = selectedTheme == "Default",
+        useRedTheme = selectedTheme == "Red",
+        useOrangeTheme = selectedTheme == "Orange",
+        useYellowTheme = selectedTheme == "Yellow",
+        useGreenTheme = selectedTheme == "Green",
+        useTurquoiseTheme = selectedTheme == "Turquoise",
+        useBlueTheme = selectedTheme == "Blue",
+        usePurpleTheme = selectedTheme == "Purple",
+        dynamicColor = selectedTheme == "Default"
     ) {
-        Column(
-            modifier = Modifier.padding(top = LargestPadding)
-        ) {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.titleLarge,
-                fontFamily = QuicksandTitleVariable,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = LargestPadding)
-            )
+        val borderColor by animateColorAsState(
+            targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+            label = "Border Color Animation"
+        )
 
-            if (!item.description.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Column(
-                    modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start
-                ) {
-                    val currentProgress = if (playerManager.totalAudioDurationMillis > 0) {
-                        playerManager.currentPlaybackPositionMillis.toFloat() / playerManager.totalAudioDurationMillis
+        val backgroundColor =
+            if (selectedTheme == "Default") MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.inversePrimary
+
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(MediumCornerRadius))
+                .background(backgroundColor) // Apply the correct background
+                .border(
+                    width = 2.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(MediumCornerRadius)
+                )
+                .then(
+                    if (backgroundColor != MaterialTheme.colorScheme.surfaceBright) {
+                        Modifier.border(
+                            width = 0.5.dp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
+                            shape = RoundedCornerShape(MediumCornerRadius)
+                        )
                     } else {
-                        0f
+                        Modifier
                     }
+                )
+                .combinedClickable(
+                    onClick = {
+                        if (isSelectionModeActive) {
+                            onSelectItem()
+                        } else {
+                            onEditItem(item)
+                        }
+                    }, onLongClick = onSelectItem
+                )
+        ) {
+            Column(
+                modifier = Modifier.padding(top = LargestPadding)
+            ) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontFamily = QuicksandTitleVariable,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = LargestPadding)
+                )
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(16.dp)
-                            .padding(horizontal = LargestPadding)
-                            .background(Color.Transparent)
-                            .pointerInput(playerManager) {
-                                detectTapGestures { offset ->
-                                    val newProgress = offset.x / size.width
-                                    val newPositionMillis =
-                                        (playerManager.totalAudioDurationMillis * newProgress).toLong()
-                                    playerManager.seekTo(newPositionMillis)
-                                }
-                            }
+                if (!item.description.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(
+                        modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start
                     ) {
-                        LinearProgressIndicator(
-                            progress = { currentProgress },
+                        val currentProgress = if (playerManager.totalAudioDurationMillis > 0) {
+                            playerManager.currentPlaybackPositionMillis.toFloat() / playerManager.totalAudioDurationMillis
+                        } else {
+                            0f
+                        }
+
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(16.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            strokeCap = StrokeCap.Round
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 4.dp, bottom = 4.dp, end = 40.dp),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = {
-                                val uniqueAudioId = item.description
-                                val audioFilePath =
-                                    File(context.filesDir, "$uniqueAudioId.mp3").absolutePath
-                                if (playerManager.isPlaying) {
-                                    playerManager.pauseAudio()
-                                } else {
-                                    if (recordingState == RecordingState.PAUSED) {
-                                        playerManager.resumeAudio()
-                                    } else {
-                                        playerManager.playAudio(audioFilePath)
+                                .height(16.dp)
+                                .padding(horizontal = LargestPadding)
+                                .background(Color.Transparent)
+                                .pointerInput(playerManager) {
+                                    detectTapGestures { offset ->
+                                        val newProgress = offset.x / size.width
+                                        val newPositionMillis =
+                                            (playerManager.totalAudioDurationMillis * newProgress).toLong()
+                                        playerManager.seekTo(newPositionMillis)
                                     }
-                                }
-                            }) {
-                            Icon(
-                                imageVector = if (playerManager.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
-                                tint = MaterialTheme.colorScheme.primary
+                                }) {
+                            LinearProgressIndicator(
+                                progress = { currentProgress },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(16.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                strokeCap = StrokeCap.Round
                             )
                         }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(MediumCornerRadius))
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "${formatDuration(playerManager.currentPlaybackPositionMillis)} / ${
-                                    formatDuration(
-                                        playerManager.totalAudioDurationMillis
-                                    )
-                                }",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-        }
 
-        AnimatedVisibility(
-            visible = isSelectionModeActive,
-            modifier = Modifier.align(Alignment.TopStart),
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(6.dp)
-                    .size(24.dp)
-                    .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Crossfade(targetState = isSelected, label = "Selection Animation") { isSelected ->
-                    if (isSelected) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Selected",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else {
-                        Box(
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
                             modifier = Modifier
-                                .padding(2.dp)
-                                .size(20.dp)
-                                .border(
-                                    width = 2.dp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                    shape = CircleShape
+                                .fillMaxWidth()
+                                .padding(start = 4.dp, bottom = 4.dp, end = 40.dp),
+                            horizontalArrangement = Arrangement.Start,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    val uniqueAudioId = item.description
+                                    val audioFilePath =
+                                        File(context.filesDir, "$uniqueAudioId.mp3").absolutePath
+                                    if (playerManager.isPlaying) {
+                                        playerManager.pauseAudio()
+                                    } else {
+                                        if (recordingState == RecordingState.PAUSED) {
+                                            playerManager.resumeAudio()
+                                        } else {
+                                            playerManager.playAudio(audioFilePath)
+                                        }
+                                    }
+                                }) {
+                                Icon(
+                                    imageVector = if (playerManager.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
-                        )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(MediumCornerRadius))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "${formatDuration(playerManager.currentPlaybackPositionMillis)} / ${
+                                        formatDuration(
+                                            playerManager.totalAudioDurationMillis
+                                        )
+                                    }",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }
-        }
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = 4.dp, end = 4.dp)
-                .size(32.dp), contentAlignment = Alignment.Center
-        ) {
+
+            AnimatedVisibility(
+                visible = isSelectionModeActive,
+                modifier = Modifier.align(Alignment.TopStart),
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(6.dp)
+                        .size(24.dp)
+                        .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Crossfade(
+                        targetState = isSelected, label = "Selection Animation"
+                    ) { isSelected ->
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .padding(2.dp)
+                                    .size(20.dp)
+                                    .border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                        shape = CircleShape
+                                    )
+                            )
+                        }
+                    }
+                }
+            }
             Box(
                 modifier = Modifier
-                    .size(28.dp)
-                    .background(MaterialTheme.colorScheme.onSurface, CircleShape)
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 4.dp, end = 4.dp)
+                    .size(32.dp), contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Mic,
-                    contentDescription = "Audio",
-                    tint = MaterialTheme.colorScheme.surfaceBright,
+                Box(
                     modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(24.dp)
-                )
+                        .size(28.dp)
+                        .background(MaterialTheme.colorScheme.onSurface, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = "Audio",
+                        tint = MaterialTheme.colorScheme.surfaceBright,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(24.dp)
+                    )
+                }
             }
         }
     }

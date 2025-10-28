@@ -39,7 +39,8 @@ import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumCornerRadius
 import com.xenon.mylibrary.values.MediumSpacing
-import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.ui.theme.LocalIsDarkTheme
+import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.noteBlueDark
 import com.xenonware.notes.ui.theme.noteBlueLight
 import com.xenonware.notes.ui.theme.noteGreenDark
@@ -67,172 +68,188 @@ fun NoteListCard(
     modifier: Modifier = Modifier,
     maxLines: Int = Int.MAX_VALUE,
 ) {
-    val borderColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-        label = "Border Color Animation"
-    )
-
-    val extendedColors = extendedMaterialColorScheme
-    val noteColorMap = remember(extendedColors) {
-        mapOf<ULong, Color>(
-            noteRedLight.value to extendedColors.noteRed,
-            noteRedDark.value to extendedColors.noteRed,
-            noteOrangeLight.value to extendedColors.noteOrange,
-            noteOrangeDark.value to extendedColors.noteOrange,
-            noteYellowLight.value to extendedColors.noteYellow,
-            noteYellowDark.value to extendedColors.noteYellow,
-            noteGreenLight.value to extendedColors.noteGreen,
-            noteGreenDark.value to extendedColors.noteGreen,
-            noteTurquoiseLight.value to extendedColors.noteTurquoise,
-            noteTurquoiseDark.value to extendedColors.noteTurquoise,
-            noteBlueLight.value to extendedColors.noteBlue,
-            noteBlueDark.value to extendedColors.noteBlue,
-            notePurpleLight.value to extendedColors.notePurple,
-            notePurpleDark.value to extendedColors.notePurple
+    val isDarkTheme = LocalIsDarkTheme.current
+    val colorToThemeName = remember {
+        mapOf(
+            noteRedLight.value to "Red",
+            noteRedDark.value to "Red",
+            noteOrangeLight.value to "Orange",
+            noteOrangeDark.value to "Orange",
+            noteYellowLight.value to "Yellow",
+            noteYellowDark.value to "Yellow",
+            noteGreenLight.value to "Green",
+            noteGreenDark.value to "Green",
+            noteTurquoiseLight.value to "Turquoise",
+            noteTurquoiseDark.value to "Turquoise",
+            noteBlueLight.value to "Blue",
+            noteBlueDark.value to "Blue",
+            notePurpleLight.value to "Purple",
+            notePurpleDark.value to "Purple"
         )
     }
 
-    val backgroundColor = item.color?.let {
-        noteColorMap[it.toULong()]
-    } ?: MaterialTheme.colorScheme.surfaceBright
+    val selectedTheme = item.color?.let { colorToThemeName[it.toULong()] } ?: "Default"
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(MediumCornerRadius))
-            .background(backgroundColor) // Apply the correct background
-            .border(
-                width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
-            )
-            .then(
-                if (backgroundColor != MaterialTheme.colorScheme.surfaceBright) {
-                    Modifier.border(
-                        width = 0.5.dp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
-                        shape = RoundedCornerShape(MediumCornerRadius)
-                    )
-                } else {
-                    Modifier
-                }
-            )
-            .combinedClickable(
-                onClick = {
-                    if (isSelectionModeActive) {
-                        onSelectItem()
-                    } else {
-                        onEditItem(item)
-                    }
-                }, onLongClick = onSelectItem
-            )
+    XenonTheme(
+        darkTheme = isDarkTheme,
+        useDefaultTheme = selectedTheme == "Default",
+        useRedTheme = selectedTheme == "Red",
+        useOrangeTheme = selectedTheme == "Orange",
+        useYellowTheme = selectedTheme == "Yellow",
+        useGreenTheme = selectedTheme == "Green",
+        useTurquoiseTheme = selectedTheme == "Turquoise",
+        useBlueTheme = selectedTheme == "Blue",
+        usePurpleTheme = selectedTheme == "Purple",
+        dynamicColor = selectedTheme == "Default"
     ) {
-        Column(
-            modifier = Modifier.padding(LargestPadding)
-        ) {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.titleLarge,
-                fontFamily = QuicksandTitleVariable,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+        val borderColor by animateColorAsState(
+            targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+            label = "Border Color Animation"
+        )
 
-            if (!item.description.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(MediumSpacing))
-                val listItems = try {
-                    item.description.split("\n").filter { it.isNotBlank() }
-                } catch (_: Exception) {
-                    listOf(item.description)
-                }
+        val backgroundColor =
+            if (selectedTheme == "Default") MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.inversePrimary
 
-                listItems.take(maxLines).forEach { listItemText ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-                                    CircleShape
-                                )
-                                .clip(CircleShape)
-                                .border(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                                    CircleShape
-                                )
-                        )
-                        Spacer(modifier = Modifier.size(8.dp))
-                        Text(
-                            text = listItemText.trim(),
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                textDecoration = if (listItemText.startsWith("[x]")) TextDecoration.LineThrough else TextDecoration.None
-                            ),
-                            overflow = TextOverflow.Ellipsis,
-                            maxLines = 1,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            }
-        }
-
-        AnimatedVisibility(
-            visible = isSelectionModeActive,
-            modifier = Modifier.align(Alignment.TopStart),
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(6.dp)
-                    .size(24.dp)
-                    .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
-                    if (selected) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Selected",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(MediumCornerRadius))
+                .background(backgroundColor) // Apply the correct background
+                .border(
+                    width = 2.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(MediumCornerRadius)
+                )
+                .then(
+                    if (backgroundColor != MaterialTheme.colorScheme.surfaceBright) {
+                        Modifier.border(
+                            width = 0.5.dp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
+                            shape = RoundedCornerShape(MediumCornerRadius)
                         )
                     } else {
-                        Box(
-                            modifier = Modifier
-                                .padding(2.dp)
-                                .size(20.dp)
-                                .border(
-                                    width = 2.dp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                    shape = CircleShape
-                                )
-                        )
+                        Modifier
+                    }
+                )
+                .combinedClickable(
+                    onClick = {
+                        if (isSelectionModeActive) {
+                            onSelectItem()
+                        } else {
+                            onEditItem(item)
+                        }
+                    }, onLongClick = onSelectItem
+                )
+        ) {
+            Column(
+                modifier = Modifier.padding(LargestPadding)
+            ) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontFamily = QuicksandTitleVariable,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                if (!item.description.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(MediumSpacing))
+                    val listItems = try {
+                        item.description.split("\n").filter { it.isNotBlank() }
+                    } catch (_: Exception) {
+                        listOf(item.description)
+                    }
+
+                    listItems.take(maxLines).forEach { listItemText ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                                        CircleShape
+                                    )
+                                    .clip(CircleShape)
+                                    .border(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                        CircleShape
+                                    )
+                            )
+                            Spacer(modifier = Modifier.size(8.dp))
+                            Text(
+                                text = listItemText.trim(),
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    textDecoration = if (listItemText.startsWith("[x]")) TextDecoration.LineThrough else TextDecoration.None
+                                ),
+                                overflow = TextOverflow.Ellipsis,
+                                maxLines = 1,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
             }
-        }
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = 4.dp, end = 4.dp)
-                .size(32.dp), contentAlignment = Alignment.Center
-        ) {
+
+            AnimatedVisibility(
+                visible = isSelectionModeActive,
+                modifier = Modifier.align(Alignment.TopStart),
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(6.dp)
+                        .size(24.dp)
+                        .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
+                        if (selected) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .padding(2.dp)
+                                    .size(20.dp)
+                                    .border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                        shape = CircleShape
+                                    )
+                            )
+                        }
+                    }
+                }
+            }
             Box(
                 modifier = Modifier
-                    .size(28.dp)
-                    .background(MaterialTheme.colorScheme.onSurface, CircleShape)
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 4.dp, end = 4.dp)
+                    .size(32.dp), contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Checklist,
-                    contentDescription = "List",
-                    tint = MaterialTheme.colorScheme.surfaceBright,
+                Box(
                     modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(24.dp)
-                )
+                        .size(28.dp)
+                        .background(MaterialTheme.colorScheme.onSurface, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Checklist,
+                        contentDescription = "List",
+                        tint = MaterialTheme.colorScheme.surfaceBright,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(24.dp)
+                    )
+                }
             }
         }
     }

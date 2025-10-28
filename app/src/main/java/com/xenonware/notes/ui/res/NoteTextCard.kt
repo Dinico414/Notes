@@ -66,7 +66,6 @@ fun NoteTextCard(
     modifier: Modifier = Modifier,
     maxLines: Int = Int.MAX_VALUE, // Add maxLines parameter
 ) {
-
     val isDarkTheme = LocalIsDarkTheme.current
     val colorToThemeName = remember {
         mapOf(
