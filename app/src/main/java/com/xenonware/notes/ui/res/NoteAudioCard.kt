@@ -159,22 +159,16 @@ fun NoteAudioCard(
             modifier = modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(MediumCornerRadius))
-                .background(backgroundColor) // Apply the correct background
+                .background(backgroundColor)
                 .border(
-                    width = 2.dp,
-                    color = borderColor,
-                    shape = RoundedCornerShape(MediumCornerRadius)
+                    width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
                 )
                 .then(
-                    if (backgroundColor != MaterialTheme.colorScheme.surfaceBright) {
-                        Modifier.border(
-                            width = 0.5.dp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
-                            shape = RoundedCornerShape(MediumCornerRadius)
-                        )
-                    } else {
-                        Modifier
-                    }
+                    Modifier.border(
+                        width = 0.5.dp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
+                        shape = RoundedCornerShape(MediumCornerRadius)
+                    )
                 )
                 .combinedClickable(
                     onClick = {

@@ -108,11 +108,16 @@ fun NoteSketchCard(
             modifier = modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(MediumCornerRadius))
-                .background(MaterialTheme.colorScheme.surfaceBright)
+                .background(backgroundColor)
                 .border(
-                    width = 2.dp,
-                    color = borderColor,
-                    shape = RoundedCornerShape(MediumCornerRadius)
+                    width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
+                )
+                .then(
+                    Modifier.border(
+                        width = 0.5.dp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
+                        shape = RoundedCornerShape(MediumCornerRadius)
+                    )
                 )
                 .combinedClickable(
                     onClick = {
