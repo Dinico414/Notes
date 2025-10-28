@@ -966,12 +966,18 @@ fun CoverNotes(
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
-                BackHandler { showTextNoteCard = false }
+                BackHandler {
+                    showTextNoteCard = false
+                    resetNoteState()
+                }
                 NoteTextSheet(
                     title = titleState,
                     onTitleChange = { titleState = it },
                     initialContent = descriptionState,
-                    onDismiss = { showTextNoteCard = false },
+                    onDismiss = {
+                        showTextNoteCard = false
+                        resetNoteState()
+                    },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onSave = { title, description, theme ->
                         if (title.isNotBlank() || description.isNotBlank()) {
@@ -1017,14 +1023,19 @@ fun CoverNotes(
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
-                BackHandler { showSketchNoteCard = false }
+                BackHandler {
+                    showSketchNoteCard = false
+                    resetNoteState()
+                }
                 NoteSketchSheet(
-                    onDismiss = { showSketchNoteCard = false },
+                    onDismiss = {
+                        showSketchNoteCard = false
+                        resetNoteState()
+                    },
                     initialColor = editingNoteColor,
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
-                    }
-                )
+                    })
             }
 
             AnimatedVisibility(
@@ -1032,11 +1043,17 @@ fun CoverNotes(
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
-                BackHandler { showAudioNoteCard = false }
+                BackHandler {
+                    showAudioNoteCard = false
+                    resetNoteState()
+                }
                 NoteAudioSheet(
                     audioTitle = titleState,
                     onAudioTitleChange = { titleState = it },
-                    onDismiss = { showAudioNoteCard = false },
+                    onDismiss = {
+                        showAudioNoteCard = false
+                        resetNoteState()
+                    },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onSave = { title, uniqueAudioId, theme ->
                         if (title.isNotBlank() || uniqueAudioId.isNotBlank()) {
@@ -1080,12 +1097,18 @@ fun CoverNotes(
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
-                BackHandler { showListNoteCard = false }
+                BackHandler {
+                    showListNoteCard = false
+                    resetNoteState()
+                }
                 NoteListSheet(
                     listTitle = listTitleState,
                     onListTitleChange = { listTitleState = it },
                     initialListItems = listItemsState,
-                    onDismiss = { showListNoteCard = false },
+                    onDismiss = {
+                        showListNoteCard = false
+                        resetNoteState()
+                    },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onSave = { title, items, theme ->
                         val description = items.joinToString("") {

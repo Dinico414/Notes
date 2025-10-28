@@ -1,5 +1,6 @@
 package com.xenonware.notes.ui.res
 
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -35,7 +36,7 @@ data class MenuItem(
     val onClick: () -> Unit,
     val icon: (@Composable () -> Unit)? = null,
     val dismissOnClick: Boolean = true,
-    val textColor: Color? = null
+    val textColor: Color? = null,
 )
 
 @OptIn(ExperimentalHazeMaterialsApi::class)
@@ -44,7 +45,7 @@ fun DropdownNoteMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     items: List<MenuItem>,
-    hazeState: HazeState
+    hazeState: HazeState,
 ) {
     val transitionState = remember {
         MutableTransitionState(initialState = false)
@@ -59,26 +60,37 @@ fun DropdownNoteMenu(
         ) {
             AnimatedVisibility(
                 visibleState = transitionState,
-                enter = fadeIn(animationSpec = tween(120, easing = LinearOutSlowInEasing)) +
-                        expandVertically(
-                            animationSpec = tween(120, easing = LinearOutSlowInEasing),
-                            expandFrom = Alignment.Top
-                        ),
-                exit = fadeOut(animationSpec = tween(75, easing = FastOutLinearInEasing)) +
-                        shrinkVertically(
-                            animationSpec = tween(75, easing = FastOutLinearInEasing),
-                            shrinkTowards = Alignment.Top
-                        )
+                enter = fadeIn(
+                    animationSpec = tween(
+                        120,
+                        easing = LinearOutSlowInEasing
+                    )
+                ) + expandVertically(
+                    animationSpec = tween(120, easing = LinearOutSlowInEasing),
+                    expandFrom = Alignment.Top
+                ),
+                exit = fadeOut(
+                    animationSpec = tween(
+                        75,
+                        easing = FastOutLinearInEasing
+                    )
+                ) + shrinkVertically(
+                    animationSpec = tween(75, easing = FastOutLinearInEasing),
+                    shrinkTowards = Alignment.Top
+                )
             ) {
-                val hazeThinColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                val hazeThinColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                } else {
+                    MaterialTheme.colorScheme.surfaceDim
+                }
                 Column(
                     modifier = Modifier
                         .padding(end = 4.dp, top = 64.dp)
                         .width(150.dp)
                         .clip(RoundedCornerShape(24.dp))
                         .hazeEffect(
-                            state = hazeState,
-                            style = HazeMaterials.ultraThin(hazeThinColor)
+                            state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)
                         )
                 ) {
                     items.forEach { item ->
