@@ -150,7 +150,6 @@ fun NoteTextCard(
             label = "animatedTextColor"
         )
 
-        // Extract colorScheme.surfaceContainer into a local variable before DisposableEffect
         val statusBarColor = colorScheme.surfaceContainer
         DisposableEffect(systemUiController, statusBarColor) {
             systemUiController.setStatusBarColor(

@@ -1037,9 +1037,10 @@ fun CoverNotes(
                     audioTitle = titleState,
                     onAudioTitleChange = { titleState = it },
                     onDismiss = { showAudioNoteCard = false },
-                    initialColor = editingNoteColor,
-                    onSave = { title, uniqueAudioId, color ->
+                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
+                    onSave = { title, uniqueAudioId, theme ->
                         if (title.isNotBlank() || uniqueAudioId.isNotBlank()) {
+                            val color = themeColorMap[theme]
                             if (editingNoteId != null) {
                                 val updatedNote =
                                     notesViewModel.noteItems.filterIsInstance<NotesItems>()
@@ -1068,10 +1069,10 @@ fun CoverNotes(
                     onSaveTriggerConsumed = { saveTrigger = false },
                     selectedAudioViewType = selectedAudioViewType,
                     initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() },
-                    onThemeChange = { newThemeName -> // Pass the lambda here
+                    onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
-                    }
-                )
+                    })
+
             }
 
             AnimatedVisibility(
@@ -1085,12 +1086,13 @@ fun CoverNotes(
                     onListTitleChange = { listTitleState = it },
                     initialListItems = listItemsState,
                     onDismiss = { showListNoteCard = false },
-                    initialColor = editingNoteColor,
-                    onSave = { title, items, color ->
-                        val description = items.joinToString("\n") { // Join with new line
+                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
+                    onSave = { title, items, theme ->
+                        val description = items.joinToString("") {
                             "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
                         }
                         if (title.isNotBlank() || description.isNotBlank()) {
+                            val color = themeColorMap[theme]
                             if (editingNoteId != null) {
                                 val updatedNote =
                                     notesViewModel.noteItems.filterIsInstance<NotesItems>()
@@ -1146,8 +1148,7 @@ fun CoverNotes(
                     onAddItemTriggerConsumed = { saveTrigger = false },
                     onThemeChange = { newThemeName -> // Pass the lambda here
                         editingNoteColor = themeColorMap[newThemeName]
-                    }
-                )
+                    })
             }
         }
     }

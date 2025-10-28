@@ -513,20 +513,20 @@ fun CompactNotes(
                                 )
 
                                 val waveformContainerColor by animateColorAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.primary else colorScheme.surfaceBright,
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.tertiary else colorScheme.surfaceBright,
                                     label = "waveformContainerColor"
                                 )
                                 val waveformContentColor by animateColorAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.onPrimary else colorScheme.onSurface,
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.onTertiary else colorScheme.onSurface,
                                     label = "waveformContentColor"
                                 )
 
                                 val transcriptContainerColor by animateColorAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.primary else colorScheme.surfaceBright,
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.tertiary else colorScheme.surfaceBright,
                                     label = "transcriptContainerColor"
                                 )
                                 val transcriptContentColor by animateColorAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.onPrimary else colorScheme.onSurface,
+                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.onTertiary else colorScheme.onSurface,
                                     label = "transcriptContentColor"
                                 )
 
@@ -801,13 +801,13 @@ fun CompactNotes(
                             {
                                 FloatingActionButton(
                                     onClick = {
-                                        if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
-                                            true
-                                    }) {
+                                        if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger = true },
+                                    containerColor = colorScheme.primary
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Save,
                                         contentDescription = stringResource(R.string.save_list_note),
-                                        tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimaryContainer else colorScheme.onPrimaryContainer.copy(
+                                        tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimary else colorScheme.onPrimary.copy(
                                             alpha = 0.38f
                                         )
                                     )
@@ -816,11 +816,13 @@ fun CompactNotes(
                         } else if (showAudioNoteCard) { // FAB for Audio Note
                             {
                                 FloatingActionButton(
-                                    onClick = { if (titleState.isNotBlank()) saveTrigger = true }) {
+                                    onClick = { if (titleState.isNotBlank()) saveTrigger = true },
+                                    containerColor = colorScheme.primary
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Save,
                                         contentDescription = stringResource(R.string.save_audio_note),
-                                        tint = if (titleState.isNotBlank()) colorScheme.onPrimaryContainer else colorScheme.onPrimaryContainer.copy(
+                                        tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
                                             alpha = 0.38f
                                         )
                                     )
@@ -829,7 +831,9 @@ fun CompactNotes(
                         } else if (showSketchNoteCard) {
                             {
                                 FloatingActionButton(
-                                    onClick = { /* Implement save logic for sketch note */ }) {
+                                    onClick = { /* Implement save logic for sketch note */ },
+                                    containerColor = colorScheme.primary
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Save,
                                         contentDescription = stringResource(R.string.save_sketch_note),
@@ -1231,9 +1235,10 @@ fun CompactNotes(
                     audioTitle = titleState,
                     onAudioTitleChange = { titleState = it },
                     onDismiss = { showAudioNoteCard = false },
-                    initialColor = editingNoteColor,
-                    onSave = { title, uniqueAudioId, color ->
+                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
+                    onSave = { title, uniqueAudioId, theme ->
                         if (title.isNotBlank() || uniqueAudioId.isNotBlank()) {
+                            val color = themeColorMap[theme]
                             if (editingNoteId != null) {
                                 val updatedNote =
                                     notesViewModel.noteItems.filterIsInstance<NotesItems>()
@@ -1279,12 +1284,13 @@ fun CompactNotes(
                     onListTitleChange = { listTitleState = it },
                     initialListItems = listItemsState,
                     onDismiss = { showListNoteCard = false },
-                    initialColor = editingNoteColor,
-                    onSave = { title, items, color ->
+                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
+                    onSave = { title, items, theme ->
                         val description = items.joinToString("") {
                             "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
                         }
                         if (title.isNotBlank() || description.isNotBlank()) {
+                            val color = themeColorMap[theme]
                             if (editingNoteId != null) {
                                 val updatedNote =
                                     notesViewModel.noteItems.filterIsInstance<NotesItems>()
