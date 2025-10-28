@@ -104,7 +104,7 @@ fun NoteTextCard(
     var colorChangeJob by remember { mutableStateOf<Job?>(null) }
 
     val availableThemes = remember {
-        listOf("Default", "Blue", "Green", "Orange", "Purple", "Red", "Turquoise", "Yellow")
+        listOf("Default", "Red", "Orange", "Yellow", "Green", "Turquoise", "Blue", "Purple")
     }
 
     var content by remember { mutableStateOf(TextFieldValue(initialContent)) }
@@ -135,14 +135,14 @@ fun NoteTextCard(
     XenonTheme(
         darkTheme = isDarkTheme,
         useDefaultTheme = selectedTheme == "Default",
-        useBlueTheme = selectedTheme == "Blue",
-        useGreenTheme = selectedTheme == "Green",
-        useOrangeTheme = selectedTheme == "Orange",
-        usePurpleTheme = selectedTheme == "Purple",
         useRedTheme = selectedTheme == "Red",
-        useTurquoiseTheme = selectedTheme == "Turquoise",
+        useOrangeTheme = selectedTheme == "Orange",
         useYellowTheme = selectedTheme == "Yellow",
-        dynamicColor = false // Assuming dynamic color is not desired when explicitly setting a theme
+        useGreenTheme = selectedTheme == "Green",
+        useTurquoiseTheme = selectedTheme == "Turquoise",
+        useBlueTheme = selectedTheme == "Blue",
+        usePurpleTheme = selectedTheme == "Purple",
+        dynamicColor = selectedTheme == "Default"
     ) {
         val animatedTextColor by animateColorAsState(
             targetValue = if (isFadingOut) colorScheme.onSurface.copy(alpha = 0f) else colorScheme.onSurface,

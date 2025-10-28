@@ -92,14 +92,14 @@ fun CellTextNote(
     XenonTheme(
         darkTheme = isDarkTheme,
         useDefaultTheme = selectedTheme == "Default",
-        useBlueTheme = selectedTheme == "Blue",
-        useGreenTheme = selectedTheme == "Green",
-        useOrangeTheme = selectedTheme == "Orange",
-        usePurpleTheme = selectedTheme == "Purple",
         useRedTheme = selectedTheme == "Red",
-        useTurquoiseTheme = selectedTheme == "Turquoise",
+        useOrangeTheme = selectedTheme == "Orange",
         useYellowTheme = selectedTheme == "Yellow",
-        dynamicColor = false
+        useGreenTheme = selectedTheme == "Green",
+        useTurquoiseTheme = selectedTheme == "Turquoise",
+        useBlueTheme = selectedTheme == "Blue",
+        usePurpleTheme = selectedTheme == "Purple",
+        dynamicColor = selectedTheme == "Default"
     ) {
         val borderColor by animateColorAsState(
             targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,

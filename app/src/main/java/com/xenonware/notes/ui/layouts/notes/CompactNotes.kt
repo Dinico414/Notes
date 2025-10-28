@@ -60,7 +60,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.ModalNavigationDrawer
@@ -357,20 +356,20 @@ fun CompactNotes(
                         XenonTheme(
                             darkTheme = isDarkTheme,
                             useDefaultTheme = selectedTextNoteTheme == "Default",
-                            useBlueTheme = selectedTextNoteTheme == "Blue",
-                            useGreenTheme = selectedTextNoteTheme == "Green",
-                            useOrangeTheme = selectedTextNoteTheme == "Orange",
-                            usePurpleTheme = selectedTextNoteTheme == "Purple",
                             useRedTheme = selectedTextNoteTheme == "Red",
-                            useTurquoiseTheme = selectedTextNoteTheme == "Turquoise",
+                            useOrangeTheme = selectedTextNoteTheme == "Orange",
                             useYellowTheme = selectedTextNoteTheme == "Yellow",
-                            dynamicColor = false
+                            useGreenTheme = selectedTextNoteTheme == "Green",
+                            useTurquoiseTheme = selectedTextNoteTheme == "Turquoise",
+                            useBlueTheme = selectedTextNoteTheme == "Blue",
+                            usePurpleTheme = selectedTextNoteTheme == "Purple",
+                            dynamicColor = selectedTextNoteTheme == "Default"
                         ) {
                             Row {
-                                val toggledColor = MaterialTheme.colorScheme.primary
+                                val toggledColor = colorScheme.primary
                                 val defaultColor = Color.Transparent
-                                val toggledIconColor = MaterialTheme.colorScheme.onPrimary
-                                val defaultIconColor = MaterialTheme.colorScheme.onSurface
+                                val toggledIconColor = colorScheme.onPrimary
+                                val defaultIconColor = colorScheme.onSurface
                                 FilledIconButton(
                                     onClick = { isBold = !isBold },
                                     colors = IconButtonDefaults.iconButtonColors(
@@ -445,7 +444,10 @@ fun CompactNotes(
                                     contentColor = colorScheme.onTertiary
                                 )
                             ) {
-                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_new_item_to_list))
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = stringResource(R.string.add_new_item_to_list)
+                                )
                             }
                             IconButton(
                                 onClick = ::onListTextResizeClick,
@@ -609,224 +611,227 @@ fun CompactNotes(
 
                 val onAddModeToggle = { isAddModeActive = !isAddModeActive }
 
-                FloatingToolbarContent(
-                    hazeState = hazeState,
-                    currentSearchQuery = currentSearchQuery,
-                    onSearchQueryChanged = { newQuery ->
-                        notesViewModel.setSearchQuery(newQuery)
-                    },
-                    lazyListState = lazyListState,
-                    allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && !showListNoteCard && !showAudioNoteCard && notesLayoutType == NotesLayoutType.LIST,
-                    selectedNoteIds = selectedNoteIds.toList(),
-                    onClearSelection = { selectedNoteIds = emptySet() },
-                    isAddModeActive = isAddModeActive,
-                    isSearchActive = isSearchActive,
-                    onIsSearchActiveChange = { isSearchActive = it },
-                    defaultContent = { iconsAlphaDuration, showActionIconsExceptSearch ->
-                        Row {
-                            val iconAlphaTarget = if (isSearchActive) 0f else 1f
+                XenonTheme(
+                    darkTheme = isDarkTheme,
+                    useDefaultTheme = selectedTextNoteTheme == "Default",
+                    useRedTheme = selectedTextNoteTheme == "Red",
+                    useOrangeTheme = selectedTextNoteTheme == "Orange",
+                    useYellowTheme = selectedTextNoteTheme == "Yellow",
+                    useGreenTheme = selectedTextNoteTheme == "Green",
+                    useTurquoiseTheme = selectedTextNoteTheme == "Turquoise",
+                    useBlueTheme = selectedTextNoteTheme == "Blue",
+                    usePurpleTheme = selectedTextNoteTheme == "Purple",
+                    dynamicColor = selectedTextNoteTheme == "Default"
+                ) {
+                    FloatingToolbarContent(
+                        hazeState = hazeState,
+                        currentSearchQuery = currentSearchQuery,
+                        onSearchQueryChanged = { newQuery ->
+                            notesViewModel.setSearchQuery(newQuery)
+                        },
+                        lazyListState = lazyListState,
+                        allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && !showListNoteCard && !showAudioNoteCard && notesLayoutType == NotesLayoutType.LIST,
+                        selectedNoteIds = selectedNoteIds.toList(),
+                        onClearSelection = { selectedNoteIds = emptySet() },
+                        isAddModeActive = isAddModeActive,
+                        isSearchActive = isSearchActive,
+                        onIsSearchActiveChange = { isSearchActive = it },
+                        defaultContent = { iconsAlphaDuration, showActionIconsExceptSearch ->
+                            Row {
+                                val iconAlphaTarget = if (isSearchActive) 0f else 1f
 
-                            val listIconAlpha by animateFloatAsState(
-                                targetValue = iconAlphaTarget, animationSpec = tween(
-                                    durationMillis = iconsAlphaDuration,
-                                    delayMillis = if (isSearchActive) 0 else 0
-                                ), label = "ListIconAlpha"
-                            )
-                            IconButton(
-                                onClick = {
-                                    val newLayout =
-                                        if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
-                                    notesViewModel.setNotesLayoutType(newLayout)
-                                },
-                                modifier = Modifier.alpha(listIconAlpha),
-                                enabled = !isSearchActive && showActionIconsExceptSearch
-                            ) {
-                                Icon(
-                                    imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Default.ViewStream else Icons.Default.ViewModule,
-                                    contentDescription = stringResource(R.string.change_layout),
-                                    tint = colorScheme.onSurface
+                                val listIconAlpha by animateFloatAsState(
+                                    targetValue = iconAlphaTarget, animationSpec = tween(
+                                        durationMillis = iconsAlphaDuration,
+                                        delayMillis = if (isSearchActive) 0 else 0
+                                    ), label = "ListIconAlpha"
                                 )
-                            }
-
-                            val resizeIconAlpha by animateFloatAsState(
-                                targetValue = iconAlphaTarget, animationSpec = tween(
-                                    durationMillis = iconsAlphaDuration,
-                                    delayMillis = if (isSearchActive) 100 else 0
-                                ), label = "ResizeIconAlpha"
-                            )
-                            IconButton(
-                                onClick = ::onResizeClick, // Use the new callback
-                                modifier = Modifier.alpha(resizeIconAlpha),
-                                enabled = !isSearchActive && showActionIconsExceptSearch
-                            ) {
-                                Icon(
-                                    Icons.Default.CenterFocusStrong,
-                                    contentDescription = stringResource(R.string.resize_notes),
-                                    tint = colorScheme.onSurface
-                                )
-                            }
-
-                            val settingsIconAlpha by animateFloatAsState(
-                                targetValue = iconAlphaTarget, animationSpec = tween(
-                                    durationMillis = iconsAlphaDuration,
-                                    delayMillis = if (isSearchActive) 200 else 0
-                                ), label = "SettingsIconAlpha"
-                            )
-                            IconButton(
-                                onClick = onOpenSettings,
-                                modifier = Modifier.alpha(settingsIconAlpha),
-                                enabled = !isSearchActive && showActionIconsExceptSearch
-                            ) {
-                                Icon(
-                                    Icons.Filled.Settings,
-                                    contentDescription = stringResource(R.string.settings),
-                                    tint = colorScheme.onSurface
-                                )
-                            }
-                        }
-
-                    },
-                    onAddModeToggle = onAddModeToggle,
-                    selectionContentOverride = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            TextButton(
-                                onClick = {
-                                    notesViewModel.deleteItems(selectedNoteIds.toList())
-                                    selectedNoteIds = emptySet()
-                                },
-                                modifier = Modifier.width(192.dp),
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.delete),
-                                    textAlign = TextAlign.Center,
-                                    style = typography.bodyLarge.copy(
-                                        fontFamily = QuicksandTitleVariable,
-                                        color = extendedMaterialColorScheme.inverseErrorContainer
-
+                                IconButton(
+                                    onClick = {
+                                        val newLayout =
+                                            if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
+                                        notesViewModel.setNotesLayoutType(newLayout)
+                                    },
+                                    modifier = Modifier.alpha(listIconAlpha),
+                                    enabled = !isSearchActive && showActionIconsExceptSearch
+                                ) {
+                                    Icon(
+                                        imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Default.ViewStream else Icons.Default.ViewModule,
+                                        contentDescription = stringResource(R.string.change_layout),
+                                        tint = colorScheme.onSurface
                                     )
+                                }
+
+                                val resizeIconAlpha by animateFloatAsState(
+                                    targetValue = iconAlphaTarget, animationSpec = tween(
+                                        durationMillis = iconsAlphaDuration,
+                                        delayMillis = if (isSearchActive) 100 else 0
+                                    ), label = "ResizeIconAlpha"
                                 )
-                            }
-                        }
-                    },
-                    addModeContentOverride = {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(onClick = {
-                                resetNoteState()
-                                showTextNoteCard = true
-                                onAddModeToggle()
-                            }) {
-                                Icon(
-                                    Icons.Default.TextFields,
-                                    contentDescription = stringResource(R.string.add_text_note),
-                                    tint = colorScheme.onSecondaryContainer
+                                IconButton(
+                                    onClick = ::onResizeClick, // Use the new callback
+                                    modifier = Modifier.alpha(resizeIconAlpha),
+                                    enabled = !isSearchActive && showActionIconsExceptSearch
+                                ) {
+                                    Icon(
+                                        Icons.Default.CenterFocusStrong,
+                                        contentDescription = stringResource(R.string.resize_notes),
+                                        tint = colorScheme.onSurface
+                                    )
+                                }
+
+                                val settingsIconAlpha by animateFloatAsState(
+                                    targetValue = iconAlphaTarget, animationSpec = tween(
+                                        durationMillis = iconsAlphaDuration,
+                                        delayMillis = if (isSearchActive) 200 else 0
+                                    ), label = "SettingsIconAlpha"
                                 )
+                                IconButton(
+                                    onClick = onOpenSettings,
+                                    modifier = Modifier.alpha(settingsIconAlpha),
+                                    enabled = !isSearchActive && showActionIconsExceptSearch
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Settings,
+                                        contentDescription = stringResource(R.string.settings),
+                                        tint = colorScheme.onSurface
+                                    )
+                                }
                             }
-                            IconButton(onClick = {
-                                resetNoteState()
-                                showListNoteCard = true
-                                onAddModeToggle()
-                            }) {
-                                Icon(
-                                    Icons.Default.Checklist,
-                                    contentDescription = stringResource(R.string.add_list_note),
-                                    tint = colorScheme.onSecondaryContainer
-                                )
-                            }
-                            IconButton(onClick = {
-                                resetNoteState() // Reset state when opening audio note
-                                showAudioNoteCard = true
-                                onAddModeToggle()
-                            }) {
-                                Icon(
-                                    Icons.Filled.Mic,
-                                    contentDescription = stringResource(R.string.add_mic_note),
-                                    tint = colorScheme.onSecondaryContainer
-                                )
-                            }
-                            IconButton(onClick = {
-                                showSketchNoteCard = true
-                                onAddModeToggle()
-                            }) {
-                                Icon(
-                                    Icons.Filled.Create,
-                                    contentDescription = stringResource(R.string.add_pen_note),
-                                    tint = colorScheme.onSecondaryContainer
-                                )
-                            }
-                        }
-                    },
-                    contentOverride = when {
-                        showTextNoteCard -> textEditorContent
-                        showListNoteCard -> listEditorContent
-                        showAudioNoteCard -> audioEditorContent
-                        else -> null
-                    },
-                    fabOverride = if (showTextNoteCard) {
-                        {
-                            XenonTheme(
-                                darkTheme = isDarkTheme,
-                                useDefaultTheme = selectedTextNoteTheme == "Default",
-                                useBlueTheme = selectedTextNoteTheme == "Blue",
-                                useGreenTheme = selectedTextNoteTheme == "Green",
-                                useOrangeTheme = selectedTextNoteTheme == "Orange",
-                                usePurpleTheme = selectedTextNoteTheme == "Purple",
-                                useRedTheme = selectedTextNoteTheme == "Red",
-                                useTurquoiseTheme = selectedTextNoteTheme == "Turquoise",
-                                useYellowTheme = selectedTextNoteTheme == "Yellow",
-                                dynamicColor = false
+
+                        },
+                        onAddModeToggle = onAddModeToggle,
+                        selectionContentOverride = {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                TextButton(
+                                    onClick = {
+                                        notesViewModel.deleteItems(selectedNoteIds.toList())
+                                        selectedNoteIds = emptySet()
+                                    },
+                                    modifier = Modifier.width(192.dp),
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.delete),
+                                        textAlign = TextAlign.Center,
+                                        style = typography.bodyLarge.copy(
+                                            fontFamily = QuicksandTitleVariable,
+                                            color = extendedMaterialColorScheme.inverseErrorContainer
+
+                                        )
+                                    )
+                                }
+                            }
+                        },
+                        addModeContentOverride = {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(onClick = {
+                                    resetNoteState()
+                                    showTextNoteCard = true
+                                    onAddModeToggle()
+                                }) {
+                                    Icon(
+                                        Icons.Default.TextFields,
+                                        contentDescription = stringResource(R.string.add_text_note),
+                                        tint = colorScheme.onSecondaryContainer
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    resetNoteState()
+                                    showListNoteCard = true
+                                    onAddModeToggle()
+                                }) {
+                                    Icon(
+                                        Icons.Default.Checklist,
+                                        contentDescription = stringResource(R.string.add_list_note),
+                                        tint = colorScheme.onSecondaryContainer
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    resetNoteState() // Reset state when opening audio note
+                                    showAudioNoteCard = true
+                                    onAddModeToggle()
+                                }) {
+                                    Icon(
+                                        Icons.Filled.Mic,
+                                        contentDescription = stringResource(R.string.add_mic_note),
+                                        tint = colorScheme.onSecondaryContainer
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    showSketchNoteCard = true
+                                    onAddModeToggle()
+                                }) {
+                                    Icon(
+                                        Icons.Filled.Create,
+                                        contentDescription = stringResource(R.string.add_pen_note),
+                                        tint = colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                        },
+                        contentOverride = when {
+                            showTextNoteCard -> textEditorContent
+                            showListNoteCard -> listEditorContent
+                            showAudioNoteCard -> audioEditorContent
+                            else -> null
+                        },
+                        fabOverride = if (showTextNoteCard) {
+                            {
                                 FloatingActionButton(
                                     onClick = { if (titleState.isNotBlank()) saveTrigger = true },
-                                    containerColor = MaterialTheme.colorScheme.primary
+                                    containerColor = colorScheme.primary
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Save,
                                         contentDescription = stringResource(R.string.save_note),
-                                        tint = if (titleState.isNotBlank()) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(
+                                        tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
                                             alpha = 0.38f
                                         )
                                     )
                                 }
                             }
-                        }
-                    } else if (showListNoteCard) {
-                        {
-                            FloatingActionButton(
-                                onClick = { if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.Save,
-                                    contentDescription = stringResource(R.string.save_list_note),
-                                    tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
-                                        alpha = 0.38f
+                        } else if (showListNoteCard) {
+                            {
+                                FloatingActionButton(
+                                    onClick = {
+                                        if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
+                                            true
+                                    }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Save,
+                                        contentDescription = stringResource(R.string.save_list_note),
+                                        tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimaryContainer else colorScheme.onPrimaryContainer.copy(
+                                            alpha = 0.38f
+                                        )
                                     )
-                                )
+                                }
                             }
-                        }
-                    } else if (showAudioNoteCard) { // FAB for Audio Note
-                        {
-                            FloatingActionButton(
-                                onClick = { if (titleState.isNotBlank()) saveTrigger = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.Save,
-                                    contentDescription = stringResource(R.string.save_audio_note),
-                                    tint = if (titleState.isNotBlank()) colorScheme.onPrimaryContainer else colorScheme.onSurface.copy(
-                                        alpha = 0.38f
+                        } else if (showAudioNoteCard) { // FAB for Audio Note
+                            {
+                                FloatingActionButton(
+                                    onClick = { if (titleState.isNotBlank()) saveTrigger = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Save,
+                                        contentDescription = stringResource(R.string.save_audio_note),
+                                        tint = if (titleState.isNotBlank()) colorScheme.onPrimaryContainer else colorScheme.onPrimaryContainer.copy(
+                                            alpha = 0.38f
+                                        )
                                     )
-                                )
+                                }
                             }
-                        }
-                    } else {
-                        null
-                    },
-                )
+                        } else {
+                            null
+                        },
+                    )
+                }
             },
         ) { scaffoldPadding ->
             ActivityScreen(
@@ -964,7 +969,8 @@ fun CompactNotes(
                                                                 descriptionState =
                                                                     itemToEdit.description ?: ""
                                                                 listTitleState = itemToEdit.title
-                                                                editingNoteColor = itemToEdit.color?.toULong()
+                                                                editingNoteColor =
+                                                                    itemToEdit.color?.toULong()
                                                                 listItemsState.clear()
                                                                 nextListItemId = 0L
                                                                 currentListSizeIndex = 1
@@ -997,16 +1003,22 @@ fun CompactNotes(
                                                                     )
                                                                 }
                                                                 when (itemToEdit.noteType) {
-                                                                    NoteType.TEXT -> showTextNoteCard = true
+                                                                    NoteType.TEXT -> showTextNoteCard =
+                                                                        true
+
                                                                     NoteType.AUDIO -> {
                                                                         showAudioNoteCard = true
                                                                         selectedAudioViewType =
                                                                             AudioViewType.Waveform // Default for editing
-                                                                        editingNoteColor = itemToEdit.color?.toULong()
+                                                                        editingNoteColor =
+                                                                            itemToEdit.color?.toULong()
                                                                     }
 
-                                                                    NoteType.LIST -> showListNoteCard = true
-                                                                    NoteType.SKETCH -> showSketchNoteCard = true
+                                                                    NoteType.LIST -> showListNoteCard =
+                                                                        true
+
+                                                                    NoteType.SKETCH -> showSketchNoteCard =
+                                                                        true
                                                                 }
                                                             },
                                                             maxLines = currentListMaxLines
@@ -1058,7 +1070,8 @@ fun CompactNotes(
                                                         descriptionState =
                                                             itemToEdit.description ?: ""
                                                         listTitleState = itemToEdit.title
-                                                        editingNoteColor = itemToEdit.color?.toULong()
+                                                        editingNoteColor =
+                                                            itemToEdit.color?.toULong()
                                                         listItemsState.clear()
                                                         nextListItemId = 0L
                                                         currentListSizeIndex = 1
@@ -1088,19 +1101,24 @@ fun CompactNotes(
                                                         when (itemToEdit.noteType) {
                                                             NoteType.TEXT -> {
                                                                 showTextNoteCard = true
-                                                                editingNoteColor = itemToEdit.color?.toULong()
+                                                                editingNoteColor =
+                                                                    itemToEdit.color?.toULong()
                                                             }
+
                                                             NoteType.AUDIO -> {
                                                                 showAudioNoteCard = true
                                                                 selectedAudioViewType =
                                                                     AudioViewType.Waveform // Default for editing
-                                                                editingNoteColor = itemToEdit.color?.toULong()
+                                                                editingNoteColor =
+                                                                    itemToEdit.color?.toULong()
                                                             }
 
                                                             NoteType.LIST -> {
                                                                 showListNoteCard = true
-                                                                editingNoteColor = itemToEdit.color?.toULong()
+                                                                editingNoteColor =
+                                                                    itemToEdit.color?.toULong()
                                                             }
+
                                                             NoteType.SKETCH -> showSketchNoteCard =
                                                                 true
                                                         }
@@ -1129,9 +1147,12 @@ fun CompactNotes(
             AnimatedVisibility(
                 visible = showTextNoteCard,
                 enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = {it })
+                exit = slideOutVertically(targetOffsetY = { it })
             ) {
-                BackHandler { showTextNoteCard = false }
+                BackHandler {
+                    showTextNoteCard = false
+                    resetNoteState() // Reset state when dismissed by BackHandler
+                }
 
                 NoteTextCard(
                     title = titleState,
