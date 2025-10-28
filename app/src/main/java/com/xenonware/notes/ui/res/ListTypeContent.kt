@@ -44,7 +44,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.LargerCornerRadius
-import com.xenon.mylibrary.values.LargerPadding
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.NoPadding
 import com.xenon.mylibrary.values.SmallerCornerRadius
@@ -68,11 +67,11 @@ fun ListContent(
         val safeDrawingInsets = WindowInsets.safeDrawing.asPaddingValues()
 
         val startPadding =
-            if (safeDrawingInsets.calculateStartPadding(layoutDirection) > 0.dp) NoPadding else LargerPadding
+            if (safeDrawingInsets.calculateStartPadding(layoutDirection) > 0.dp) NoPadding else 12.dp
         val topPadding =
-            if (safeDrawingInsets.calculateTopPadding() > 0.dp) NoPadding else LargerPadding
+            if (safeDrawingInsets.calculateTopPadding() > 0.dp) NoPadding else 12.dp
         val bottomPadding =
-            if (safeDrawingInsets.calculateBottomPadding() > 0.dp) NoPadding else LargerPadding
+            if (safeDrawingInsets.calculateBottomPadding() > 0.dp) NoPadding else 12.dp
 
         val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
         val isDeveloperModeEnabled by devSettingsViewModel.devModeToggleState.collectAsState()

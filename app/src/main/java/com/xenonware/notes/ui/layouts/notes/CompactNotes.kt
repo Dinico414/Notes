@@ -330,6 +330,8 @@ fun CompactNotes(
         )
     }
 
+    val isAnyNoteSheetOpen = showTextNoteCard || showSketchNoteCard || showAudioNoteCard || showListNoteCard
+
     ModalNavigationDrawer(
         drawerContent = {
             ListContent(
@@ -339,7 +341,9 @@ fun CompactNotes(
                     scope.launch { drawerState.close() }
                 },
             )
-        }, drawerState = drawerState
+        },
+        drawerState = drawerState,
+        gesturesEnabled = !isAnyNoteSheetOpen
     ) {
         Scaffold(
             snackbarHost = {
@@ -630,7 +634,7 @@ fun CompactNotes(
                             notesViewModel.setSearchQuery(newQuery)
                         },
                         lazyListState = lazyListState,
-                        allowToolbarScrollBehavior = !isAppBarCollapsible && !showTextNoteCard && !showListNoteCard && !showAudioNoteCard && notesLayoutType == NotesLayoutType.LIST,
+                        allowToolbarScrollBehavior = !isAppBarCollapsible && !isAnyNoteSheetOpen,
                         selectedNoteIds = selectedNoteIds.toList(),
                         onClearSelection = { selectedNoteIds = emptySet() },
                         isAddModeActive = isAddModeActive,
