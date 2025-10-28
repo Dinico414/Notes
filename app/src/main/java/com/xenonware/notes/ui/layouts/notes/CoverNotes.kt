@@ -110,10 +110,10 @@ import com.xenonware.notes.R
 import com.xenonware.notes.ui.res.GoogleProfilBorder
 import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.ListItem
-import com.xenonware.notes.ui.res.NoteAudioCard
-import com.xenonware.notes.ui.res.NoteListCard
-import com.xenonware.notes.ui.res.NoteSketchCard
-import com.xenonware.notes.ui.res.NoteTextCard
+import com.xenonware.notes.ui.res.NoteAudioSheet
+import com.xenonware.notes.ui.res.NoteListSheet
+import com.xenonware.notes.ui.res.NoteSketchSheet
+import com.xenonware.notes.ui.res.NoteTextSheet
 import com.xenonware.notes.ui.res.XenonSnackbar
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.ui.theme.noteBlueDark
@@ -967,7 +967,7 @@ fun CoverNotes(
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler { showTextNoteCard = false }
-                NoteTextCard(
+                NoteTextSheet(
                     title = titleState,
                     onTitleChange = { titleState = it },
                     initialContent = descriptionState,
@@ -1018,7 +1018,7 @@ fun CoverNotes(
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler { showSketchNoteCard = false }
-                NoteSketchCard(
+                NoteSketchSheet(
                     onDismiss = { showSketchNoteCard = false },
                     initialColor = editingNoteColor,
                     onThemeChange = { newThemeName ->
@@ -1033,7 +1033,7 @@ fun CoverNotes(
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler { showAudioNoteCard = false }
-                NoteAudioCard(
+                NoteAudioSheet(
                     audioTitle = titleState,
                     onAudioTitleChange = { titleState = it },
                     onDismiss = { showAudioNoteCard = false },
@@ -1081,7 +1081,7 @@ fun CoverNotes(
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler { showListNoteCard = false }
-                NoteListCard(
+                NoteListSheet(
                     listTitle = listTitleState,
                     onListTitleChange = { listTitleState = it },
                     initialListItems = listItemsState,

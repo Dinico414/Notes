@@ -40,7 +40,7 @@ data class MenuItem(
 
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
-fun NoteDropdownMenu(
+fun DropdownNoteMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     items: List<MenuItem>,

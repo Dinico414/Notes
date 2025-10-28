@@ -1,846 +1,333 @@
 package com.xenonware.notes.ui.res
 
-// Added imports for permission handling
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import android.media.MediaPlayer
-import android.media.MediaRecorder
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
-import com.xenonware.notes.ui.layouts.notes.AudioViewType
-import com.xenonware.notes.ui.theme.LocalIsDarkTheme
-import com.xenonware.notes.ui.theme.XenonTheme
+import com.xenon.mylibrary.values.LargestPadding
+import com.xenon.mylibrary.values.MediumCornerRadius
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
-import kotlinx.coroutines.Job
+import com.xenonware.notes.ui.theme.noteBlueDark
+import com.xenonware.notes.ui.theme.noteBlueLight
+import com.xenonware.notes.ui.theme.noteGreenDark
+import com.xenonware.notes.ui.theme.noteGreenLight
+import com.xenonware.notes.ui.theme.noteOrangeDark
+import com.xenonware.notes.ui.theme.noteOrangeLight
+import com.xenonware.notes.ui.theme.notePurpleDark
+import com.xenonware.notes.ui.theme.notePurpleLight
+import com.xenonware.notes.ui.theme.noteRedDark
+import com.xenonware.notes.ui.theme.noteRedLight
+import com.xenonware.notes.ui.theme.noteTurquoiseDark
+import com.xenonware.notes.ui.theme.noteTurquoiseLight
+import com.xenonware.notes.ui.theme.noteYellowDark
+import com.xenonware.notes.ui.theme.noteYellowLight
+import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import java.io.File
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
-
-enum class RecordingState {
-    IDLE, RECORDING, PAUSED, STOPPED_UNSAVED, PLAYING, VIEWING_SAVED_AUDIO
-}
-
-class AudioRecorderManager(private val context: Context) {
-    private var mediaRecorder: MediaRecorder? = null
-    var audioFilePath: String? = null
-        private set
-    var uniqueAudioId: String? = null // New: To store the unique ID for the audio file
-        private set
-
-    var recordingDurationMillis: Long by mutableLongStateOf(0L)
-
-    var currentRecordingState: RecordingState by mutableStateOf(RecordingState.IDLE)
-        private set
-
-    var isPersistentAudio: Boolean by mutableStateOf(false) // New: Flag to indicate if the audio is persistently saved
-        private set
-
-    fun startRecording() {
-        if (currentRecordingState == RecordingState.RECORDING) return
-        if (currentRecordingState == RecordingState.PAUSED) {
-            mediaRecorder?.resume()
-            currentRecordingState = RecordingState.RECORDING
-            println("Resumed recording")
-            return
-        }
-        startNewRecording()
-    }
-
-    private fun startNewRecording() {
-        uniqueAudioId = "audio_${System.currentTimeMillis()}" // Generate a unique ID
-        val audioFile = File(context.filesDir, "$uniqueAudioId.mp3") // Use ID in filename
-        audioFilePath = audioFile.absolutePath
-        isPersistentAudio = false // New recordings are not persistent until explicitly saved
-
-        mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(context)
-        } else {
-            @Suppress("DEPRECATION") MediaRecorder()
-        }
-
-        mediaRecorder?.apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
-            setOutputFile(audioFilePath)
-            try {
-                prepare()
-                start()
-                currentRecordingState = RecordingState.RECORDING
-                recordingDurationMillis = 0L // Reset on new recording
-                println("Started recording to: $audioFilePath with ID: $uniqueAudioId")
-            } catch (e: IOException) {
-                println("Failed to start recording: ${e.message}")
-                currentRecordingState = RecordingState.IDLE
-            }
-        }
-    }
-
-    fun pauseRecording() {
-        if (currentRecordingState != RecordingState.RECORDING) return
-        mediaRecorder?.pause()
-        currentRecordingState = RecordingState.PAUSED
-        println("Paused recording")
-    }
-
-
-    fun stopRecording() {
-        if (currentRecordingState == RecordingState.RECORDING || currentRecordingState == RecordingState.PAUSED) {
-            mediaRecorder?.apply {
-                stop()
-                release()
-            }
-            mediaRecorder = null
-            currentRecordingState = RecordingState.STOPPED_UNSAVED
-            println("Stopped recording")
-        }
-    }
-
-    fun setInitialAudioFilePath(filePath: String) {
-        audioFilePath = filePath
-        // Extract uniqueAudioId from the filePath (assuming filename is uniqueId.mp3)
-        uniqueAudioId = File(filePath).nameWithoutExtension
-        isPersistentAudio = true // Audio loaded from initial path is considered persistent
-        currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
-        // We don't know the duration here, the AudioPlayerManager will set it when played.
-        recordingDurationMillis = 0L
-        println("Set initial audio file path: $filePath, extracted ID: $uniqueAudioId")
-    }
-
-    fun markAudioAsPersistent() {
-        isPersistentAudio = true
-        println("Audio with ID: $uniqueAudioId marked as persistent.")
-    }
-
-    fun deleteRecording() {
-        // Only delete the file if it's NOT marked as persistent.
-        // If isPersistentAudio is true, it means the app considers this file saved externally
-        // and won't delete it on cleanup of this manager instance.
-        if (!isPersistentAudio && audioFilePath != null) {
-            val fileToDelete = File(audioFilePath!!)
-            if (fileToDelete.exists()) {
-                fileToDelete.delete()
-                println("Temporary recording deleted: $audioFilePath")
-            }
-        } else if (isPersistentAudio) {
-            println("Persistent audio not deleted: $audioFilePath")
-        }
-        audioFilePath = null
-        uniqueAudioId = null // Reset the ID too
-        recordingDurationMillis = 0L
-        currentRecordingState = RecordingState.IDLE
-        isPersistentAudio = false // Reset the flag for future uses
-    }
-
-    fun resetState() {
-        // Stop any ongoing recording/playback before resetting
-        if (currentRecordingState == RecordingState.RECORDING || currentRecordingState == RecordingState.PAUSED) {
-            mediaRecorder?.apply {
-                stop()
-                release()
-            }
-            mediaRecorder = null
-        }
-        deleteRecording() // This will now intelligently delete only non-persistent files
-        currentRecordingState = RecordingState.IDLE
-        isPersistentAudio = false // Reset the flag
-        uniqueAudioId = null // Ensure ID is reset here too
-    }
-
-
-    fun dispose() {
-        mediaRecorder?.release()
-        mediaRecorder = null
-        deleteRecording() // Intelligent deletion based on isPersistentAudio
-    }
-}
-
-
-class AudioPlayerManager {
-    var currentRecordingState: RecordingState by mutableStateOf(RecordingState.IDLE)
-
-    var isPlaying: Boolean by mutableStateOf(false)
-    var currentPlaybackPositionMillis: Long by mutableLongStateOf(0L)
-    var totalAudioDurationMillis: Long by mutableLongStateOf(0L)
-
-    private var mediaPlayer: MediaPlayer? = null
-
-    fun playAudio(filePath: String) {
-        try {
-            mediaPlayer?.release()
-            mediaPlayer = MediaPlayer().apply {
-                setDataSource(filePath)
-                prepare()
-                start()
-                this@AudioPlayerManager.totalAudioDurationMillis = duration.toLong()
-                this@AudioPlayerManager.isPlaying = true
-                currentRecordingState = RecordingState.PLAYING
-                setOnCompletionListener {
-                    stopAudio() // This will now correctly trigger the logic in NoteAudioCard
-                    this@AudioPlayerManager.currentPlaybackPositionMillis = 0L
-                    // Don't set currentRecordingState here, let NoteAudioCard handle the transition
-                }
-            }
-            println("Playing audio from: $filePath")
-        } catch (e: IOException) {
-            println("Failed to play audio: ${e.message}")
-            this@AudioPlayerManager.isPlaying = false
-            currentRecordingState = RecordingState.IDLE // If playback fails, player is idle
-        }
-    }
-
-    fun pauseAudio() {
-        mediaPlayer?.pause()
-        isPlaying = false
-        currentRecordingState = RecordingState.PAUSED
-        println("Paused audio playback.")
-    }
-
-    fun resumeAudio() {
-        mediaPlayer?.start()
-        isPlaying = true
-        currentRecordingState = RecordingState.PLAYING
-        println("Resumed audio playback.")
-    }
-
-    fun seekTo(positionMillis: Long) {
-        mediaPlayer?.seekTo(positionMillis.toInt())
-        currentPlaybackPositionMillis = positionMillis
-        println("Seeked to $positionMillis ms.")
-    }
-
-    fun stopAudio() {
-        mediaPlayer?.apply {
-            stop()
-            release()
-        }
-        mediaPlayer = null
-        isPlaying = false
-        currentPlaybackPositionMillis = 0L
-        currentRecordingState = RecordingState.IDLE // Player itself is now idle
-        println("Stopping audio playback. Player Manager state set to IDLE.")
-    }
-
-    fun getAudioDuration(filePath: String): Long {
-        var duration = 0L
-        val tempPlayer = MediaPlayer()
-        try {
-            tempPlayer.setDataSource(filePath)
-            tempPlayer.prepare()
-            duration = tempPlayer.duration.toLong()
-        } catch (e: IOException) {
-            println("Failed to get audio duration: ${e.message}")
-        } finally {
-            tempPlayer.release()
-        }
-        return duration
-    }
-
-    fun dispose() {
-        mediaPlayer?.release()
-        mediaPlayer = null
-    }
-}
-
-@OptIn(
-    ExperimentalMaterial3Api::class,
-    ExperimentalMaterial3ExpressiveApi::class,
-    ExperimentalHazeMaterialsApi::class
-)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteAudioCard(
-    audioTitle: String,
-    onAudioTitleChange: (String) -> Unit,
-    onDismiss: () -> Unit,
-    onSave: (String, String, String) -> Unit,
-    toolbarHeight: Dp,
-    saveTrigger: Boolean,
-    onSaveTriggerConsumed: () -> Unit,
-    selectedAudioViewType: AudioViewType,
-    initialAudioFilePath: String? = null,
-    initialTheme: String = "Default",
-    onThemeChange: (String) -> Unit,
+    item: NotesItems,
+    isSelected: Boolean,
+    isSelectionModeActive: Boolean,
+    onSelectItem: () -> Unit,
+    onEditItem: (NotesItems) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val hazeState = remember { HazeState() }
-    val isDarkTheme = LocalIsDarkTheme.current
+    val borderColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+        label = "Border Color Animation"
+    )
 
-    var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) }
-    var colorMenuItemText by remember { mutableStateOf("Color") }
-    val scope = rememberCoroutineScope()
-    var isFadingOut by remember { mutableStateOf(false) }
-    var colorChangeJob by remember { mutableStateOf<Job?>(null) }
-
-    val availableThemes = remember {
-        listOf("Default", "Red", "Orange", "Yellow", "Green", "Turquoise", "Blue", "Purple")
+    val extendedColors = extendedMaterialColorScheme
+    val noteColorMap = remember(extendedColors) {
+        mapOf<ULong, Color>(
+            noteRedLight.value to extendedColors.noteRed,
+            noteRedDark.value to extendedColors.noteRed,
+            noteOrangeLight.value to extendedColors.noteOrange,
+            noteOrangeDark.value to extendedColors.noteOrange,
+            noteYellowLight.value to extendedColors.noteYellow,
+            noteYellowDark.value to extendedColors.noteYellow,
+            noteGreenLight.value to extendedColors.noteGreen,
+            noteGreenDark.value to extendedColors.noteGreen,
+            noteTurquoiseLight.value to extendedColors.noteTurquoise,
+            noteTurquoiseDark.value to extendedColors.noteTurquoise,
+            noteBlueLight.value to extendedColors.noteBlue,
+            noteBlueDark.value to extendedColors.noteBlue,
+            notePurpleLight.value to extendedColors.notePurple,
+            notePurpleDark.value to extendedColors.notePurple
+        )
     }
 
+    val backgroundColor = item.color?.let {
+        noteColorMap[it.toULong()]
+    } ?: MaterialTheme.colorScheme.surfaceBright
 
-    var showMenu by remember { mutableStateOf(false) }
-    var isOffline by remember { mutableStateOf(false) }
-    var isLabeled by remember { mutableStateOf(false) }
     val context = LocalContext.current
-
-    val recorderManager = remember { AudioRecorderManager(context) }
     val playerManager = remember { AudioPlayerManager() }
-
     var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
 
-    // Sync recordingState from managers
-    LaunchedEffect(recorderManager.currentRecordingState) {
-        recordingState = recorderManager.currentRecordingState
-        if (recordingState == RecordingState.STOPPED_UNSAVED) {
-            playerManager.currentRecordingState = RecordingState.STOPPED_UNSAVED
-        } else if (recordingState == RecordingState.IDLE) {
-            playerManager.currentRecordingState = RecordingState.IDLE
-        } else if (recordingState == RecordingState.VIEWING_SAVED_AUDIO) {
-            playerManager.currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
-        }
-    }
     LaunchedEffect(playerManager.currentRecordingState) {
-        if (playerManager.currentRecordingState == RecordingState.PLAYING) {
-            recordingState = playerManager.currentRecordingState
-        } else if (playerManager.currentRecordingState == RecordingState.IDLE) {
-            if (recorderManager.currentRecordingState == RecordingState.VIEWING_SAVED_AUDIO) {
-                recordingState = RecordingState.VIEWING_SAVED_AUDIO
-            } else if (recorderManager.currentRecordingState == RecordingState.STOPPED_UNSAVED) {
-                recordingState = RecordingState.STOPPED_UNSAVED
-            } else {
-                recordingState = RecordingState.IDLE
-            }
-        }
+        recordingState = playerManager.currentRecordingState
     }
 
-
-    // Handle initial audio file loading
-    LaunchedEffect(initialAudioFilePath) {
-        if (initialAudioFilePath != null) {
-            recorderManager.setInitialAudioFilePath(initialAudioFilePath)
-            playerManager.totalAudioDurationMillis =
-                playerManager.getAudioDuration(initialAudioFilePath)
-            playerManager.currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
-            recordingState = RecordingState.VIEWING_SAVED_AUDIO
-        } else {
-            if (recorderManager.currentRecordingState != RecordingState.IDLE) {
-                recorderManager.resetState()
-            }
-            if (playerManager.currentRecordingState != RecordingState.IDLE) {
-                playerManager.stopAudio()
-                playerManager.currentRecordingState = RecordingState.IDLE
-            }
-            recordingState = RecordingState.IDLE
-        }
-    }
-
-
-    // Simulation for recording timer
-    LaunchedEffect(recordingState) {
-        if (recordingState == RecordingState.RECORDING) {
-            while (isActive && recordingState == RecordingState.RECORDING) {
-                delay(1000L)
-                recorderManager.recordingDurationMillis += 1000L
-            }
-        }
-    }
-
-    // Simulation for playback timer
-    LaunchedEffect(recordingState) {
-        if (recordingState == RecordingState.PLAYING) {
-            while (isActive && recordingState == RecordingState.PLAYING && playerManager.isPlaying) {
+    LaunchedEffect(
+        recordingState, playerManager.isPlaying, playerManager.totalAudioDurationMillis
+    ) {
+        if (recordingState == RecordingState.PLAYING && playerManager.isPlaying) {
+            while (isActive && playerManager.isPlaying) {
                 playerManager.currentPlaybackPositionMillis =
-                    (playerManager.currentPlaybackPositionMillis + 1000L).coerceAtMost(playerManager.totalAudioDurationMillis)
-                delay(1000L)
+                    (playerManager.currentPlaybackPositionMillis + 10L).coerceAtMost(playerManager.totalAudioDurationMillis)
+                delay(10L)
             }
+        } else if (recordingState == RecordingState.PAUSED) {
+            // Do nothing, just keep the current position
         } else {
-            playerManager.currentPlaybackPositionMillis = 0L // Reset when not playing
-        }
-    }
-
-
-    // Permission launcher
-    val requestPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            recorderManager.startRecording()
-        } else {
-            println("Microphone permission denied")
-        }
-    }
-
-    LaunchedEffect(saveTrigger) {
-        if (saveTrigger) {
-            recorderManager.stopRecording()
-            playerManager.stopAudio()
-            onSave(audioTitle, recorderManager.uniqueAudioId ?: "", selectedTheme)
-            recorderManager.markAudioAsPersistent()
-            onSaveTriggerConsumed()
-            recordingState = RecordingState.VIEWING_SAVED_AUDIO
+            if (playerManager.currentPlaybackPositionMillis > 0L && playerManager.currentPlaybackPositionMillis >= playerManager.totalAudioDurationMillis) {
+                playerManager.currentPlaybackPositionMillis = 0L
+            }
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            recorderManager.dispose()
-            playerManager.stopAudio()
             playerManager.dispose()
         }
     }
 
-    val systemUiController = rememberSystemUiController()
-    val originalStatusBarColor = Color.Transparent
 
-    XenonTheme(
-        darkTheme = isDarkTheme,
-        useDefaultTheme = selectedTheme == "Default",
-        useRedTheme = selectedTheme == "Red",
-        useOrangeTheme = selectedTheme == "Orange",
-        useYellowTheme = selectedTheme == "Yellow",
-        useGreenTheme = selectedTheme == "Green",
-        useTurquoiseTheme = selectedTheme == "Turquoise",
-        useBlueTheme = selectedTheme == "Blue",
-        usePurpleTheme = selectedTheme == "Purple",
-        dynamicColor = selectedTheme == "Default"
-    ) {
-        val animatedTextColor by animateColorAsState(
-            targetValue = if (isFadingOut) colorScheme.onSurface.copy(alpha = 0f) else colorScheme.onSurface,
-            animationSpec = tween(durationMillis = 500),
-            label = "animatedTextColor"
-        )
-
-        val statusBarColor = colorScheme.surfaceContainer
-        DisposableEffect(systemUiController, statusBarColor) {
-            systemUiController.setStatusBarColor(
-                color = statusBarColor
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(MediumCornerRadius))
+            .background(backgroundColor) // Apply the correct background
+            .border(
+                width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
             )
-            onDispose {
-                systemUiController.setStatusBarColor(
-                    color = originalStatusBarColor
-                )
+            .then(
+                if (backgroundColor != MaterialTheme.colorScheme.surfaceBright) {
+                    Modifier.border(
+                        width = 0.5.dp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
+                        shape = RoundedCornerShape(MediumCornerRadius)
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .combinedClickable(
+                onClick = {
+                    if (isSelectionModeActive) {
+                        onSelectItem()
+                    } else {
+                        onEditItem(item)
+                    }
+                }, onLongClick = onSelectItem
+            )
+    ) {
+        Column(
+            modifier = Modifier.padding(top = LargestPadding)
+        ) {
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontFamily = QuicksandTitleVariable,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = LargestPadding)
+            )
+
+            if (!item.description.isNullOrEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start
+                ) {
+                    val currentProgress = if (playerManager.totalAudioDurationMillis > 0) {
+                        playerManager.currentPlaybackPositionMillis.toFloat() / playerManager.totalAudioDurationMillis
+                    } else {
+                        0f
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(16.dp)
+                            .padding(horizontal = LargestPadding)
+                            .background(Color.Transparent)
+                            .pointerInput(playerManager) {
+                                detectTapGestures { offset ->
+                                    val newProgress = offset.x / size.width
+                                    val newPositionMillis =
+                                        (playerManager.totalAudioDurationMillis * newProgress).toLong()
+                                    playerManager.seekTo(newPositionMillis)
+                                }
+                            }
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { currentProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(16.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                            strokeCap = StrokeCap.Round
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 4.dp, bottom = 4.dp, end = 40.dp),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = {
+                                val uniqueAudioId = item.description
+                                val audioFilePath =
+                                    File(context.filesDir, "$uniqueAudioId.mp3").absolutePath
+                                if (playerManager.isPlaying) {
+                                    playerManager.pauseAudio()
+                                } else {
+                                    if (recordingState == RecordingState.PAUSED) {
+                                        playerManager.resumeAudio()
+                                    } else {
+                                        playerManager.playAudio(audioFilePath)
+                                    }
+                                }
+                            }) {
+                            Icon(
+                                imageVector = if (playerManager.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(MediumCornerRadius))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "${formatDuration(playerManager.currentPlaybackPositionMillis)} / ${
+                                    formatDuration(
+                                        playerManager.totalAudioDurationMillis
+                                    )
+                                }",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
         }
 
-        val hazeThinColor = colorScheme.surfaceDim
-        val labelColor = extendedMaterialColorScheme.label
-        val bottomPadding =
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight
-
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colorScheme.surfaceContainer)
-                .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(
-                        WindowInsetsSides.Top + WindowInsetsSides.Horizontal
-                    )
-                )
-                .padding(top = 4.dp)
+        AnimatedVisibility(
+            visible = isSelectionModeActive,
+            modifier = Modifier.align(Alignment.TopStart),
+            enter = fadeIn(),
+            exit = fadeOut()
         ) {
-            val topPadding = 68.dp
-
-            Column(
+            Box(
                 modifier = Modifier
-                    .padding(horizontal = 20.dp)
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                    .hazeSource(state = hazeState),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
+                    .padding(6.dp)
+                    .size(24.dp)
+                    .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                Spacer(modifier = Modifier.height(topPadding))
-
-                AudioTimerDisplay(
-                    isRecording = recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED,
-                    isPlaying = recordingState == RecordingState.PLAYING,
-                    recordingDurationMillis = recorderManager.recordingDurationMillis,
-                    currentPlaybackPositionMillis = playerManager.currentPlaybackPositionMillis,
-                    totalAudioDurationMillis = playerManager.totalAudioDurationMillis,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp, bottom = 8.dp)
-                        .align(Alignment.CenterHorizontally)
-                )
-
-                // Waveform/Transcript Display Area
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (selectedAudioViewType == AudioViewType.Waveform) {
-                        WaveformDisplay(
-                            audioFilePath = recorderManager.audioFilePath,
-                            modifier = Modifier.fillMaxSize()
+                Crossfade(targetState = isSelected, label = "Selection Animation") { isSelected ->
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Selected",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
                         )
                     } else {
-                        Text(
-                            text = "Audio Transcript coming soon...",
-                            style = MaterialTheme.typography.headlineMedium,
-                            textAlign = TextAlign.Center
+                        Box(
+                            modifier = Modifier
+                                .padding(2.dp)
+                                .size(20.dp)
+                                .border(
+                                    width = 2.dp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                    shape = CircleShape
+                                )
                         )
                     }
                 }
-
-                // Recording Controls
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp, start = 16.dp, end = 16.dp)
-                        .padding(bottom = bottomPadding),
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    when (recordingState) {
-                        RecordingState.IDLE -> {
-                            IconButton(
-                                onClick = {
-                                    when {
-                                        ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.RECORD_AUDIO
-                                        ) == PackageManager.PERMISSION_GRANTED -> {
-                                            recorderManager.startRecording()
-                                        }
-
-                                        else -> {
-                                            requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                        }
-                                    }
-                                }) {
-                                Icon(Icons.Default.Mic, contentDescription = "Start recording")
-                            }
-                        }
-
-                        RecordingState.RECORDING -> {
-                            IconButton(onClick = { recorderManager.pauseRecording() }) {
-                                Icon(Icons.Default.Pause, contentDescription = "Pause recording")
-                            }
-                            IconButton(onClick = {
-                                recorderManager.stopRecording()
-                                playerManager.stopAudio()
-                            }) {
-                                Icon(Icons.Default.Stop, contentDescription = "Stop recording")
-                            }
-                        }
-
-                        RecordingState.PAUSED -> {
-                            IconButton(onClick = { recorderManager.startRecording() } // Resumes recording
-                            ) {
-                                Icon(Icons.Default.Mic, contentDescription = "Resume recording")
-                            }
-                            IconButton(onClick = {
-                                recorderManager.stopRecording()
-                                playerManager.stopAudio()
-                            }) {
-                                Icon(Icons.Default.Stop, contentDescription = "Stop recording")
-                            }
-                        }
-
-                        RecordingState.STOPPED_UNSAVED -> {
-                            IconButton(onClick = {
-                                recorderManager.audioFilePath?.let { path ->
-                                    playerManager.playAudio(path)
-                                }
-                            }) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = "Play recording")
-                            }
-                            IconButton(onClick = {
-                                recorderManager.deleteRecording()
-                                playerManager.stopAudio()
-                                recordingState = RecordingState.IDLE
-                            }) {
-                                Icon(Icons.Default.Refresh, contentDescription = "Redo recording")
-                            }
-                            IconButton(onClick = {
-                                recorderManager.deleteRecording()
-                                onDismiss()
-                            }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Discard recording")
-                            }
-                        }
-
-                        RecordingState.PLAYING -> {
-                            IconButton(onClick = { playerManager.stopAudio() }) {
-                                Icon(Icons.Default.Stop, contentDescription = "Stop playback")
-                            }
-                        }
-
-                        RecordingState.VIEWING_SAVED_AUDIO -> {
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                IconButton(onClick = {
-                                    recorderManager.audioFilePath?.let { path ->
-                                        playerManager.playAudio(path)
-                                    }
-                                }) {
-                                    Icon(
-                                        Icons.Default.PlayArrow,
-                                        contentDescription = "Play saved recording"
-                                    )
-                                }
-                                IconButton(onClick = { playerManager.stopAudio() }) {
-                                    Icon(Icons.Default.Stop, contentDescription = "Stop playback")
-                                }
-                                Spacer(modifier = Modifier.width(16.dp))
-                            }
-                        }
-                    }
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-                    .padding(horizontal = 16.dp)
-                    .clip(RoundedCornerShape(100f))
-                    .background(colorScheme.surfaceDim)
-                    .hazeEffect(
-                        state = hazeState,
-                        style = HazeMaterials.ultraThin(hazeThinColor),
-                    ), verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onDismiss, Modifier.padding(4.dp)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
-
-                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
-                    TextStyle(
-                        fontFamily = QuicksandTitleVariable,
-                        textAlign = TextAlign.Center,
-                        color = colorScheme.onSurface
-                    )
-                )
-                BasicTextField(
-                    value = audioTitle,
-                    onValueChange = { onAudioTitleChange(it) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    textStyle = titleTextStyle,
-                    cursorBrush = SolidColor(colorScheme.primary),
-                    decorationBox = { innerTextField ->
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (audioTitle.isEmpty()) {
-                                Text(
-                                    text = "Title",
-                                    style = titleTextStyle,
-                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
-                            innerTextField()
-                        }
-                    })
-                Box {
-                    IconButton(
-                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
-                    ) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                    }
-                    NoteDropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        items = listOf(
-                            MenuItem(
-                                text = "Label",
-                                onClick = { isLabeled = !isLabeled },
-                                dismissOnClick = false,
-                                icon = {
-                                    if (isLabeled) {
-                                        Icon(
-                                            Icons.Default.Bookmark,
-                                            contentDescription = "Label",
-                                            tint = labelColor
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Default.BookmarkBorder,
-                                            contentDescription = "Label"
-                                        )
-                                    }
-                                }), MenuItem(text = colorMenuItemText, onClick = {
-                                val currentIndex = availableThemes.indexOf(selectedTheme)
-                                val nextIndex = (currentIndex + 1) % availableThemes.size
-                                selectedTheme = availableThemes[nextIndex]
-                                onThemeChange(selectedTheme) // Call the callback here
-                                colorChangeJob?.cancel()
-                                colorChangeJob = scope.launch {
-                                    colorMenuItemText = availableThemes[nextIndex]
-                                    isFadingOut = false
-                                    delay(2500)
-                                    isFadingOut = true
-                                    delay(500)
-                                    colorMenuItemText = "Color"
-                                    isFadingOut = false
-                                }
-                            }, dismissOnClick = false, icon = {
-                                Icon(
-                                    Icons.Default.ColorLens,
-                                    contentDescription = "Color",
-                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                )
-                            }, textColor = animatedTextColor), MenuItem(
-                                text = if (isOffline) "Online note" else "Offline note",
-                                onClick = { isOffline = !isOffline },
-                                dismissOnClick = false,
-                                textColor = if (isOffline) colorScheme.error else null,
-                                icon = {
-                                    if (isOffline) {
-                                        Icon(
-                                            Icons.Default.CloudOff,
-                                            contentDescription = "Offline note",
-                                            tint = colorScheme.error
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Default.Cloud, contentDescription = "Online note"
-                                        )
-                                    }
-                                })
-                        ),
-                        hazeState = hazeState
-                    )
-                }
             }
         }
-    }
-}
-
-@Composable
-fun AudioTimerDisplay(
-    isRecording: Boolean,
-    isPlaying: Boolean,
-    recordingDurationMillis: Long,
-    currentPlaybackPositionMillis: Long,
-    totalAudioDurationMillis: Long,
-    modifier: Modifier = Modifier,
-) {
-    val displayTime = when {
-        isRecording -> recordingDurationMillis
-        isPlaying -> currentPlaybackPositionMillis
-        else -> 0L
-    }
-
-    val totalDurationDisplay = if (totalAudioDurationMillis > 0L && (isPlaying || (!isRecording))) {
-        " / ${formatDuration(totalAudioDurationMillis)}"
-    } else {
-        ""
-    }
-
-    Text(
-        text = "${formatDuration(displayTime)}$totalDurationDisplay",
-        style = MaterialTheme.typography.headlineSmall,
-        color = colorScheme.onSurface,
-        textAlign = TextAlign.Center,
-        modifier = modifier
-    )
-}
-
-fun formatDuration(millis: Long): String {
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(millis)
-    val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(minutes)
-    return String.format("%02d:%02d", minutes, seconds)
-}
-
-// Placeholder Composable for Waveform Display
-@Composable
-fun WaveformDisplay(audioFilePath: String?, modifier: Modifier = Modifier) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        if (audioFilePath != null) {
-            Text(
-                text = "Waveform visualization for $audioFilePath(requires custom drawing implementation)",
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center
-            )
-        } else {
-            Text(
-                text = "Start recording to see the waveform...",
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center
-            )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 4.dp, end = 4.dp)
+                .size(32.dp), contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(MaterialTheme.colorScheme.onSurface, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = "Audio",
+                    tint = MaterialTheme.colorScheme.surfaceBright,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(24.dp)
+                )
+            }
         }
     }
 }

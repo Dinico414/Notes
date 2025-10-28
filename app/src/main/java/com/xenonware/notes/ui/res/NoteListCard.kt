@@ -1,403 +1,238 @@
-@file:Suppress("unused")
-
 package com.xenonware.notes.ui.res
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Checkbox
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
-import com.xenonware.notes.ui.theme.LocalIsDarkTheme
-import com.xenonware.notes.ui.theme.XenonTheme
+import com.xenon.mylibrary.values.LargestPadding
+import com.xenon.mylibrary.values.MediumCornerRadius
+import com.xenon.mylibrary.values.MediumSpacing
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.xenonware.notes.ui.theme.noteBlueDark
+import com.xenonware.notes.ui.theme.noteBlueLight
+import com.xenonware.notes.ui.theme.noteGreenDark
+import com.xenonware.notes.ui.theme.noteGreenLight
+import com.xenonware.notes.ui.theme.noteOrangeDark
+import com.xenonware.notes.ui.theme.noteOrangeLight
+import com.xenonware.notes.ui.theme.notePurpleDark
+import com.xenonware.notes.ui.theme.notePurpleLight
+import com.xenonware.notes.ui.theme.noteRedDark
+import com.xenonware.notes.ui.theme.noteRedLight
+import com.xenonware.notes.ui.theme.noteTurquoiseDark
+import com.xenonware.notes.ui.theme.noteTurquoiseLight
+import com.xenonware.notes.ui.theme.noteYellowDark
+import com.xenonware.notes.ui.theme.noteYellowLight
+import com.xenonware.notes.viewmodel.classes.NotesItems
 
-data class ListItem(
-    val id: Long,
-    var text: String,
-    var isChecked: Boolean,
-)
-
-@OptIn(ExperimentalHazeMaterialsApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteListCard(
-    listTitle: String,
-    onListTitleChange: (String) -> Unit,
-    initialListItems: List<ListItem> = emptyList(),
-    onDismiss: () -> Unit,
-    onSave: (String, List<ListItem>, String) -> Unit,
-    toolbarHeight: Dp,
-    saveTrigger: Boolean,
-    onSaveTriggerConsumed: () -> Unit,
-    addItemTrigger: Boolean,
-    onAddItemTriggerConsumed: () -> Unit,
-    onAddItem: () -> Unit,
-    onDeleteItem: (ListItem) -> Unit,
-    onToggleItemChecked: (ListItem, Boolean) -> Unit,
-    onItemTextChange: (ListItem, String) -> Unit,
-    onAddItemClick: () -> Unit,
-    onTextResizeClick: () -> Unit,
-    editorFontSize: TextUnit,
-    initialTheme: String = "Default",
-    onThemeChange: (String) -> Unit,
+    item: NotesItems,
+    isSelected: Boolean,
+    isSelectionModeActive: Boolean,
+    onSelectItem: () -> Unit,
+    onEditItem: (NotesItems) -> Unit,
+    modifier: Modifier = Modifier,
+    maxLines: Int = Int.MAX_VALUE,
 ) {
-    val hazeState = remember { HazeState() }
-    val isDarkTheme = LocalIsDarkTheme.current
+    val borderColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+        label = "Border Color Animation"
+    )
 
-    var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) }
-    var colorMenuItemText by remember { mutableStateOf("Color") }
-    val scope = rememberCoroutineScope()
-    var isFadingOut by remember { mutableStateOf(false) }
-    var colorChangeJob by remember { mutableStateOf<Job?>(null) }
-
-    val availableThemes = remember {
-        listOf("Default", "Red", "Orange", "Yellow", "Green", "Turquoise", "Blue", "Purple")
-    }
-
-    var showMenu by remember { mutableStateOf(false) }
-    var currentListItems by remember { mutableStateOf(initialListItems) }
-    var isOffline by remember { mutableStateOf(false) }
-    var isLabeled by remember { mutableStateOf(false) }
-
-    val listTitleFocusRequester = remember { FocusRequester() }
-
-    var focusOnNewItemId by remember { mutableStateOf<Long?>(null) }
-
-    LaunchedEffect(Unit) {
-        if (initialListItems.isEmpty()) {
-            val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
-            currentListItems = listOf(newItem)
-            focusOnNewItemId = newItem.id
-        } else if (listTitle.isEmpty()) {
-            listTitleFocusRequester.requestFocus()
-        }
-    }
-
-    LaunchedEffect(initialListItems) {
-        currentListItems = initialListItems
-    }
-
-    LaunchedEffect(saveTrigger) {
-        if (saveTrigger) {
-            onSave(listTitle, currentListItems, selectedTheme)
-            onSaveTriggerConsumed()
-        }
-    }
-
-    LaunchedEffect(addItemTrigger) {
-        if (addItemTrigger) {
-            val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
-            currentListItems = currentListItems + newItem
-            focusOnNewItemId = newItem.id
-            onAddItem()
-            onAddItemTriggerConsumed()
-        }
-    }
-
-    val systemUiController = rememberSystemUiController()
-    val originalStatusBarColor = Color.Transparent
-
-    XenonTheme(
-        darkTheme = isDarkTheme,
-        useDefaultTheme = selectedTheme == "Default",
-        useRedTheme = selectedTheme == "Red",
-        useOrangeTheme = selectedTheme == "Orange",
-        useYellowTheme = selectedTheme == "Yellow",
-        useGreenTheme = selectedTheme == "Green",
-        useTurquoiseTheme = selectedTheme == "Turquoise",
-        useBlueTheme = selectedTheme == "Blue",
-        usePurpleTheme = selectedTheme == "Purple",
-        dynamicColor = selectedTheme == "Default"
-    ) {
-        val animatedTextColor by animateColorAsState(
-            targetValue = if (isFadingOut) colorScheme.onSurface.copy(alpha = 0f) else colorScheme.onSurface,
-            animationSpec = tween(durationMillis = 500),
-            label = "animatedTextColor"
+    val extendedColors = extendedMaterialColorScheme
+    val noteColorMap = remember(extendedColors) {
+        mapOf<ULong, Color>(
+            noteRedLight.value to extendedColors.noteRed,
+            noteRedDark.value to extendedColors.noteRed,
+            noteOrangeLight.value to extendedColors.noteOrange,
+            noteOrangeDark.value to extendedColors.noteOrange,
+            noteYellowLight.value to extendedColors.noteYellow,
+            noteYellowDark.value to extendedColors.noteYellow,
+            noteGreenLight.value to extendedColors.noteGreen,
+            noteGreenDark.value to extendedColors.noteGreen,
+            noteTurquoiseLight.value to extendedColors.noteTurquoise,
+            noteTurquoiseDark.value to extendedColors.noteTurquoise,
+            noteBlueLight.value to extendedColors.noteBlue,
+            noteBlueDark.value to extendedColors.noteBlue,
+            notePurpleLight.value to extendedColors.notePurple,
+            notePurpleDark.value to extendedColors.notePurple
         )
+    }
 
-        val statusBarColor = colorScheme.surfaceContainer
-        DisposableEffect(systemUiController, statusBarColor) {
-            systemUiController.setStatusBarColor(
-                color = statusBarColor
+    val backgroundColor = item.color?.let {
+        noteColorMap[it.toULong()]
+    } ?: MaterialTheme.colorScheme.surfaceBright
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(MediumCornerRadius))
+            .background(backgroundColor) // Apply the correct background
+            .border(
+                width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
             )
-            onDispose {
-                systemUiController.setStatusBarColor(
-                    color = originalStatusBarColor
-                )
-            }
-        }
-
-        val hazeThinColor = colorScheme.surfaceDim
-        val labelColor = extendedMaterialColorScheme.label
-        val bottomPadding =
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colorScheme.surfaceContainer)
-                .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(
-                        WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+            .then(
+                if (backgroundColor != MaterialTheme.colorScheme.surfaceBright) {
+                    Modifier.border(
+                        width = 0.5.dp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
+                        shape = RoundedCornerShape(MediumCornerRadius)
                     )
-                )
-                .padding(top = 4.dp)
+                } else {
+                    Modifier
+                }
+            )
+            .combinedClickable(
+                onClick = {
+                    if (isSelectionModeActive) {
+                        onSelectItem()
+                    } else {
+                        onEditItem(item)
+                    }
+                }, onLongClick = onSelectItem
+            )
+    ) {
+        Column(
+            modifier = Modifier.padding(LargestPadding)
         ) {
-            val topPadding = 68.dp
-            val scrollState = rememberScrollState()
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontFamily = QuicksandTitleVariable,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface
+            )
 
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 20.dp)
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                    .verticalScroll(scrollState)
-                    .hazeSource(state = hazeState)
+            if (!item.description.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(MediumSpacing))
+                val listItems = try {
+                    item.description.split("\n").filter { it.isNotBlank() }
+                } catch (_: Exception) {
+                    listOf(item.description)
+                }
 
-            ) {
-
-                Spacer(modifier = Modifier.height(topPadding))
-
-                currentListItems.forEachIndexed { index, listItem ->
-                    val itemFocusRequester = remember(listItem.id) { FocusRequester() }
-
+                listItems.take(maxLines).forEach { listItemText ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Checkbox(
-                            checked = listItem.isChecked, onCheckedChange = { isChecked ->
-                                onToggleItemChecked(
-                                    listItem, isChecked
-                                )
-                            })
-
-                        val itemTextStyle = MaterialTheme.typography.bodyLarge.merge(
-                            TextStyle(
-                                color = colorScheme.onSurface,
-                                textDecoration = if (listItem.isChecked) TextDecoration.LineThrough else TextDecoration.None,
-                                fontSize = editorFontSize
-                            )
-                        )
-
-                        BasicTextField(
-                            value = listItem.text,
-                            onValueChange = { newText -> onItemTextChange(listItem, newText) },
+                        Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .focusRequester(itemFocusRequester),
-                            textStyle = itemTextStyle,
-                            cursorBrush = SolidColor(colorScheme.primary),
-                            decorationBox = { innerTextField ->
-                                Box {
-                                    if (listItem.text.isEmpty()) {
-                                        Text(
-                                            text = "New item",
-                                            style = itemTextStyle,
-                                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                        )
-                                    }
-                                    innerTextField()
-                                }
-                            })
-
-                        IconButton(
-                            onClick = { onDeleteItem(listItem) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete item")
-                        }
-                    }
-
-                    LaunchedEffect(focusOnNewItemId, listItem.id) {
-                        if (focusOnNewItemId == listItem.id) {
-                            itemFocusRequester.requestFocus()
-                            focusOnNewItemId = null
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(bottomPadding))
-
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-                    .padding(horizontal = 16.dp)
-                    .clip(RoundedCornerShape(100f))
-                    .background(colorScheme.surfaceDim)
-                    .hazeEffect(
-                        state = hazeState,
-                        style = HazeMaterials.ultraThin(hazeThinColor),
-                    ), verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onDismiss, Modifier.padding(4.dp)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
-
-                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
-                    TextStyle(
-                        fontFamily = QuicksandTitleVariable,
-                        textAlign = TextAlign.Center,
-                        color = colorScheme.onSurface
-                    )
-                )
-                BasicTextField(
-                    value = listTitle,
-                    onValueChange = { onListTitleChange(it) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    textStyle = titleTextStyle,
-                    cursorBrush = SolidColor(colorScheme.primary),
-                    decorationBox = { innerTextField ->
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (listTitle.isEmpty()) {
-                                Text(
-                                    text = "Title",
-                                    style = titleTextStyle,
-                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    modifier = Modifier.fillMaxWidth(),
+                                .size(16.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                                    CircleShape
                                 )
-                            }
-                            innerTextField()
-                        }
-                    })
-
-                Box {
-                    IconButton(
-                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
-                    ) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                                .clip(CircleShape)
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                    CircleShape
+                                )
+                        )
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text(
+                            text = listItemText.trim(),
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                textDecoration = if (listItemText.startsWith("[x]")) TextDecoration.LineThrough else TextDecoration.None
+                            ),
+                            overflow = TextOverflow.Ellipsis,
+                            maxLines = 1,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
                     }
-                    NoteDropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        items = listOf(
-                            MenuItem(
-                            text = "Label",
-                            onClick = { isLabeled = !isLabeled },
-                            dismissOnClick = false,
-                            icon = {
-                                if (isLabeled) {
-                                    Icon(
-                                        Icons.Default.Bookmark,
-                                        contentDescription = "Label",
-                                        tint = labelColor
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.BookmarkBorder,
-                                        contentDescription = "Label"
-                                    )
-                                }
-                            }), MenuItem(text = colorMenuItemText, onClick = {
-                            val currentIndex = availableThemes.indexOf(selectedTheme)
-                            val nextIndex = (currentIndex + 1) % availableThemes.size
-                            selectedTheme = availableThemes[nextIndex]
-                            onThemeChange(selectedTheme) // Call the callback here
-                            colorChangeJob?.cancel()
-                            colorChangeJob = scope.launch {
-                                colorMenuItemText = availableThemes[nextIndex]
-                                isFadingOut = false
-                                delay(2500)
-                                isFadingOut = true
-                                delay(500)
-                                colorMenuItemText = "Color"
-                                isFadingOut = false
-                            }
-                        }, dismissOnClick = false, icon = {
-                            Icon(
-                                Icons.Default.ColorLens,
-                                contentDescription = "Color",
-                                tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                            )
-                        }, textColor = animatedTextColor), MenuItem(
-                            text = if (isOffline) "Online note" else "Offline note",
-                            onClick = { isOffline = !isOffline },
-                            dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else null,
-                            icon = {
-                                if (isOffline) {
-                                    Icon(
-                                        Icons.Default.CloudOff,
-                                        contentDescription = "Offline note",
-                                        tint = colorScheme.error
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.Cloud, contentDescription = "Online note"
-                                    )
-                                }
-                            })
-                        ),
-                        hazeState = hazeState
-                    )
                 }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = isSelectionModeActive,
+            modifier = Modifier.align(Alignment.TopStart),
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(6.dp)
+                    .size(24.dp)
+                    .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
+                    if (selected) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Selected",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .padding(2.dp)
+                                .size(20.dp)
+                                .border(
+                                    width = 2.dp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                    shape = CircleShape
+                                )
+                        )
+                    }
+                }
+            }
+        }
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 4.dp, end = 4.dp)
+                .size(32.dp), contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(MaterialTheme.colorScheme.onSurface, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Checklist,
+                    contentDescription = "List",
+                    tint = MaterialTheme.colorScheme.surfaceBright,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(24.dp)
+                )
             }
         }
     }

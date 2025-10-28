@@ -108,17 +108,17 @@ import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.MediumSpacing
 import com.xenon.mylibrary.values.SmallPadding
 import com.xenonware.notes.R
-import com.xenonware.notes.ui.res.CellAudioNote
-import com.xenonware.notes.ui.res.CellListNote
-import com.xenonware.notes.ui.res.CellSketchNote
-import com.xenonware.notes.ui.res.CellTextNote
-import com.xenonware.notes.ui.res.GoogleProfilBorder
-import com.xenonware.notes.ui.res.ListContent
-import com.xenonware.notes.ui.res.ListItem
 import com.xenonware.notes.ui.res.NoteAudioCard
 import com.xenonware.notes.ui.res.NoteListCard
 import com.xenonware.notes.ui.res.NoteSketchCard
 import com.xenonware.notes.ui.res.NoteTextCard
+import com.xenonware.notes.ui.res.GoogleProfilBorder
+import com.xenonware.notes.ui.res.ListContent
+import com.xenonware.notes.ui.res.ListItem
+import com.xenonware.notes.ui.res.NoteAudioSheet
+import com.xenonware.notes.ui.res.NoteListSheet
+import com.xenonware.notes.ui.res.NoteSketchSheet
+import com.xenonware.notes.ui.res.NoteTextSheet
 import com.xenonware.notes.ui.res.XenonSnackbar
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
@@ -1167,7 +1167,7 @@ fun CompactNotes(
                     resetNoteState() // Reset state when dismissed by BackHandler
                 }
 
-                NoteTextCard(
+                NoteTextSheet(
                     title = titleState,
                     onTitleChange = { titleState = it },
                     initialContent = descriptionState,
@@ -1217,7 +1217,7 @@ fun CompactNotes(
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler { showSketchNoteCard = false }
-                NoteSketchCard(
+                NoteSketchSheet(
                     onDismiss = { showSketchNoteCard = false },
                     initialColor = editingNoteColor,
                     onThemeChange = { newThemeName ->
@@ -1231,7 +1231,7 @@ fun CompactNotes(
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler { showAudioNoteCard = false }
-                NoteAudioCard(
+                NoteAudioSheet(
                     audioTitle = titleState,
                     onAudioTitleChange = { titleState = it },
                     onDismiss = { showAudioNoteCard = false },
@@ -1279,7 +1279,7 @@ fun CompactNotes(
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler { showListNoteCard = false }
-                NoteListCard(
+                NoteListSheet(
                     listTitle = listTitleState,
                     onListTitleChange = { listTitleState = it },
                     initialListItems = listItemsState,
@@ -1362,7 +1362,7 @@ fun NoteCard(
     maxLines: Int = Int.MAX_VALUE,
 ) {
     when (item.noteType) {
-        NoteType.TEXT -> CellTextNote(
+        NoteType.TEXT -> NoteTextCard(
             item = item,
             isSelected = isSelected,
             isSelectionModeActive = isSelectionModeActive,
@@ -1371,7 +1371,7 @@ fun NoteCard(
             maxLines = maxLines
         )
 
-        NoteType.AUDIO -> CellAudioNote(
+        NoteType.AUDIO -> NoteAudioCard(
             item = item,
             isSelected = isSelected,
             isSelectionModeActive = isSelectionModeActive,
@@ -1379,7 +1379,7 @@ fun NoteCard(
             onEditItem = onEditItem
         )
 
-        NoteType.LIST -> CellListNote(
+        NoteType.LIST -> NoteListCard(
             item = item,
             isSelected = isSelected,
             isSelectionModeActive = isSelectionModeActive,
@@ -1388,7 +1388,7 @@ fun NoteCard(
             maxLines = maxLines
         )
 
-        NoteType.SKETCH -> CellSketchNote(
+        NoteType.SKETCH -> NoteSketchCard(
             item = item,
             isSelected = isSelected,
             isSelectionModeActive = isSelectionModeActive,
