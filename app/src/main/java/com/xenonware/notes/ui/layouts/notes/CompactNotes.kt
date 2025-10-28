@@ -108,16 +108,16 @@ import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.MediumSpacing
 import com.xenon.mylibrary.values.SmallPadding
 import com.xenonware.notes.R
-import com.xenonware.notes.ui.res.NoteAudioCard
-import com.xenonware.notes.ui.res.NoteListCard
-import com.xenonware.notes.ui.res.NoteSketchCard
-import com.xenonware.notes.ui.res.NoteTextCard
 import com.xenonware.notes.ui.res.GoogleProfilBorder
 import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.ListItem
+import com.xenonware.notes.ui.res.NoteAudioCard
 import com.xenonware.notes.ui.res.NoteAudioSheet
+import com.xenonware.notes.ui.res.NoteListCard
 import com.xenonware.notes.ui.res.NoteListSheet
+import com.xenonware.notes.ui.res.NoteSketchCard
 import com.xenonware.notes.ui.res.NoteSketchSheet
+import com.xenonware.notes.ui.res.NoteTextCard
 import com.xenonware.notes.ui.res.NoteTextSheet
 import com.xenonware.notes.ui.res.XenonSnackbar
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
@@ -290,6 +290,7 @@ fun CompactNotes(
         nextListItemId = 0L
         currentListSizeIndex = 1
         selectedAudioViewType = AudioViewType.Waveform
+        
     }
 
     val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
@@ -1164,14 +1165,17 @@ fun CompactNotes(
             ) {
                 BackHandler {
                     showTextNoteCard = false
-                    resetNoteState() // Reset state when dismissed by BackHandler
+                    resetNoteState()
                 }
 
                 NoteTextSheet(
                     title = titleState,
                     onTitleChange = { titleState = it },
                     initialContent = descriptionState,
-                    onDismiss = { showTextNoteCard = false },
+                    onDismiss = {
+                        showTextNoteCard = false
+                        resetNoteState()
+                    },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onSave = { title, description, theme ->
                         if (title.isNotBlank() || description.isNotBlank()) {
@@ -1216,9 +1220,15 @@ fun CompactNotes(
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
-                BackHandler { showSketchNoteCard = false }
+                BackHandler {
+                    showSketchNoteCard = false
+                    resetNoteState()
+                }
                 NoteSketchSheet(
-                    onDismiss = { showSketchNoteCard = false },
+                    onDismiss = {
+                        showSketchNoteCard = false
+                        resetNoteState()
+                    },
                     initialColor = editingNoteColor,
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
@@ -1230,11 +1240,17 @@ fun CompactNotes(
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
-                BackHandler { showAudioNoteCard = false }
+                BackHandler {
+                    showAudioNoteCard = false
+                    resetNoteState()
+                }
                 NoteAudioSheet(
                     audioTitle = titleState,
                     onAudioTitleChange = { titleState = it },
-                    onDismiss = { showAudioNoteCard = false },
+                    onDismiss = {
+                        showAudioNoteCard = false
+                        resetNoteState()
+                    },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onSave = { title, uniqueAudioId, theme ->
                         if (title.isNotBlank() || uniqueAudioId.isNotBlank()) {
@@ -1278,12 +1294,18 @@ fun CompactNotes(
                 enter = slideInVertically(initialOffsetY = { it }),
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
-                BackHandler { showListNoteCard = false }
+                BackHandler {
+                    showListNoteCard = false
+                    resetNoteState()
+                }
                 NoteListSheet(
                     listTitle = listTitleState,
                     onListTitleChange = { listTitleState = it },
                     initialListItems = listItemsState,
-                    onDismiss = { showListNoteCard = false },
+                    onDismiss = {
+                        showListNoteCard = false
+                        resetNoteState()
+                    },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onSave = { title, items, theme ->
                         val description = items.joinToString("") {
