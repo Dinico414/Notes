@@ -296,13 +296,11 @@ fun NoteAudioCard(
                     modifier = Modifier
                         .padding(6.dp)
                         .size(24.dp)
-                        .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
+                        .background(backgroundColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Crossfade(
-                        targetState = isSelected, label = "Selection Animation"
-                    ) { isSelected ->
-                        if (isSelected) {
+                    Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
+                        if (selected) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = "Selected",

@@ -147,7 +147,7 @@ fun NoteSketchCard(
                     modifier = Modifier
                         .padding(6.dp)
                         .size(24.dp)
-                        .background(MaterialTheme.colorScheme.surfaceBright, CircleShape),
+                        .background(backgroundColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
