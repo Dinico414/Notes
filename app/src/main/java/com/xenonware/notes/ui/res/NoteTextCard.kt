@@ -3,7 +3,6 @@ package com.xenonware.notes.ui.res
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -65,6 +64,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import dev.chrisbanes.haze.HazeState
@@ -95,7 +95,7 @@ fun NoteTextCard(
     onThemeChange: (String) -> Unit // New callback for theme changes
 ) {
     val hazeState = remember { HazeState() }
-    val isDarkTheme = isSystemInDarkTheme() // Use system dark theme for the inner XenonTheme
+    val isDarkTheme = LocalIsDarkTheme.current
 
     var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) } // New state
     var colorMenuItemText by remember { mutableStateOf("Color") }
