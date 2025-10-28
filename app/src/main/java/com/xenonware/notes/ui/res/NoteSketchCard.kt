@@ -176,21 +176,21 @@ fun NoteSketchCard(
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(bottom = 4.dp, end = 4.dp)
-                    .size(32.dp), contentAlignment = Alignment.Center
+                    .padding(bottom = 6.dp, end = 6.dp)
+                    .size(26.dp), contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(22.dp)
                         .background(MaterialTheme.colorScheme.onSurface, CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Sketch",
-                        tint = MaterialTheme.colorScheme.surfaceBright,
+                        tint = backgroundColor,
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .size(24.dp)
+                            .size(18.dp)
                     )
                 }
             }
