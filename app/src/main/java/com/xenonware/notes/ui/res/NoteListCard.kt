@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
+import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.ui.theme.invertNoteBlueDark
 import com.xenonware.notes.ui.theme.invertNoteBlueLight
@@ -123,7 +124,8 @@ fun NoteListCard(
     onAddItemClick: () -> Unit,
     onTextResizeClick: () -> Unit,
     editorFontSize: TextUnit,
-    initialColor: ULong? = null
+    initialColor: ULong? = null,
+    onThemeChange: (String) -> Unit // Added onThemeChange
 ) {
     val ULongSaver = Saver<ULong?, String>(
         save = { it?.toString() ?: "null" },
@@ -185,6 +187,39 @@ fun NoteListCard(
             )
         }
     }
+
+    val colorThemeMap = remember {
+        mapOf(
+            noteRedLight.value to "Red",
+            noteRedDark.value to "Red",
+            noteOrangeLight.value to "Orange",
+            noteOrangeDark.value to "Orange",
+            noteYellowLight.value to "Yellow",
+            noteYellowDark.value to "Yellow",
+            noteGreenLight.value to "Green",
+            noteGreenDark.value to "Green",
+            noteTurquoiseLight.value to "Turquoise",
+            noteTurquoiseDark.value to "Turquoise",
+            noteBlueLight.value to "Blue",
+            noteBlueDark.value to "Blue",
+            notePurpleLight.value to "Purple",
+            notePurpleDark.value to "Purple"
+        )
+    }
+
+    val themeColorMap = remember {
+        mapOf(
+            "Red" to noteRedLight.value,
+            "Orange" to noteOrangeLight.value,
+            "Yellow" to noteYellowLight.value,
+            "Green" to noteGreenLight.value,
+            "Turquoise" to noteTurquoiseLight.value,
+            "Blue" to noteBlueLight.value,
+            "Purple" to notePurpleLight.value
+        )
+    }
+
+    val currentThemeName = colorThemeMap[selectedColor] ?: "Default"
 
 
     val cardColor = selectedColor?.let { cardColorMap[it] } ?: colorScheme.surfaceContainer
@@ -258,194 +293,208 @@ fun NoteListCard(
     val bottomPadding =
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(cardColor)
-            .windowInsetsPadding(
-                WindowInsets.safeDrawing.only(
-                    WindowInsetsSides.Top + WindowInsetsSides.Horizontal
-                )
-            )
-            .padding(top = 4.dp)
+    XenonTheme(
+        darkTheme = isDarkTheme,
+        useDefaultTheme = currentThemeName == "Default",
+        useRedTheme = currentThemeName == "Red",
+        useOrangeTheme = currentThemeName == "Orange",
+        useYellowTheme = currentThemeName == "Yellow",
+        useGreenTheme = currentThemeName == "Green",
+        useTurquoiseTheme = currentThemeName == "Turquoise",
+        useBlueTheme = currentThemeName == "Blue",
+        usePurpleTheme = currentThemeName == "Purple",
+        dynamicColor = currentThemeName == "Default"
     ) {
-        val topPadding = 68.dp
-        val scrollState = rememberScrollState()
-
-        Column(
+        Box(
             modifier = Modifier
-                .padding(horizontal = 20.dp)
                 .fillMaxSize()
-                .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                .verticalScroll(scrollState)
-                .hazeSource(state = hazeState)
-
-        ) {
-
-            Spacer(modifier = Modifier.height(topPadding))
-
-            currentListItems.forEachIndexed { index, listItem ->
-                val itemFocusRequester = remember(listItem.id) { FocusRequester() }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = listItem.isChecked,
-                        onCheckedChange = { isChecked -> onToggleItemChecked(listItem, isChecked) })
-
-                    val itemTextStyle = MaterialTheme.typography.bodyLarge.merge(
-                        TextStyle(
-                            color = colorScheme.onSurface,
-                            textDecoration = if (listItem.isChecked) TextDecoration.LineThrough else TextDecoration.None,
-                            fontSize = editorFontSize
-                        )
+                .background(cardColor)
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(
+                        WindowInsetsSides.Top + WindowInsetsSides.Horizontal
                     )
-
-                    BasicTextField(
-                        value = listItem.text,
-                        onValueChange = { newText -> onItemTextChange(listItem, newText) },
-                        modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(itemFocusRequester),
-                        textStyle = itemTextStyle,
-                        cursorBrush = SolidColor(colorScheme.primary),
-                        decorationBox = { innerTextField ->
-                            Box {
-                                if (listItem.text.isEmpty()) {
-                                    Text(
-                                        text = "New item",
-                                        style = itemTextStyle,
-                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        })
-
-                    IconButton(
-                        onClick = { onDeleteItem(listItem) }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete item")
-                    }
-                }
-
-                LaunchedEffect(focusOnNewItemId, listItem.id) {
-                    if (focusOnNewItemId == listItem.id) {
-                        itemFocusRequester.requestFocus()
-                        focusOnNewItemId = null
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(bottomPadding))
-
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(100f))
-                .background(colorScheme.surfaceDim)
-                .hazeEffect(
-                    state = hazeState,
-                    style = HazeMaterials.ultraThin(hazeThinColor),
-                ), verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onDismiss, Modifier.padding(4.dp)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-
-            val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
-                TextStyle(
-                    fontFamily = QuicksandTitleVariable,
-                    textAlign = TextAlign.Center,
-                    color = colorScheme.onSurface
                 )
-            )
-            BasicTextField(
-                value = listTitle,
-                onValueChange = { onListTitleChange(it) },
-                modifier = Modifier
-                    .weight(1f)
-                    .focusRequester(listTitleFocusRequester),
-                singleLine = true,
-                textStyle = titleTextStyle,
-                cursorBrush = SolidColor(colorScheme.primary),
-                decorationBox = { innerTextField ->
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        if (listTitle.isEmpty()) {
-                            Text(
-                                text = "Title",
-                                style = titleTextStyle,
-                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                        innerTextField()
-                    }
-                })
+                .padding(top = 4.dp)
+        ) {
+            val topPadding = 68.dp
+            val scrollState = rememberScrollState()
 
-            Box {
-                IconButton(
-                    onClick = { showMenu = !showMenu },
-                    modifier = Modifier.padding(4.dp)
-                ) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                }
-                NoteDropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    items = listOf(
-                        MenuItem(
-                            text = "Label",
-                            onClick = { isLabeled = !isLabeled },
-                            dismissOnClick = false,
-                            icon = {
-                                if (isLabeled) {
-                                    Icon(
-                                        Icons.Default.Bookmark,
-                                        contentDescription = "Label",
-                                        tint = labelColor
-                                    )
-                                } else {
-                                    Icon(Icons.Default.BookmarkBorder, contentDescription = "Label")
-                                }
-                            }),
-                        MenuItem(text = "Color", onClick = {
-                            val currentIndex = noteColors.indexOf(selectedColor)
-                            val nextIndex = (currentIndex + 1) % noteColors.size
-                            selectedColor = noteColors[nextIndex]
-                        }, dismissOnClick = false, icon = {
-                            Icon(
-                                Icons.Default.ColorLens,
-                                contentDescription = "Color",
-                                tint = selectedColor?.let { iconTintInvertMap[it] }
-                                    ?: colorScheme.onSurfaceVariant)
-                        }),
-                        MenuItem(
-                            text = if (isOffline) "Online note" else "Offline note",
-                            onClick = { isOffline = !isOffline },
-                            dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else null,
-                            icon = {
-                                if (isOffline) {
-                                    Icon(
-                                        Icons.Default.CloudOff,
-                                        contentDescription = "Offline note",
-                                        tint = colorScheme.error
-                                    )
-                                } else {
-                                    Icon(Icons.Default.Cloud, contentDescription = "Online note")
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 20.dp)
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
+                    .verticalScroll(scrollState)
+                    .hazeSource(state = hazeState)
+
+            ) {
+
+                Spacer(modifier = Modifier.height(topPadding))
+
+                currentListItems.forEachIndexed { index, listItem ->
+                    val itemFocusRequester = remember(listItem.id) { FocusRequester() }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = listItem.isChecked,
+                            onCheckedChange = { isChecked -> onToggleItemChecked(listItem, isChecked) })
+
+                        val itemTextStyle = MaterialTheme.typography.bodyLarge.merge(
+                            TextStyle(
+                                color = colorScheme.onSurface,
+                                textDecoration = if (listItem.isChecked) TextDecoration.LineThrough else TextDecoration.None,
+                                fontSize = editorFontSize
+                            )
+                        )
+
+                        BasicTextField(
+                            value = listItem.text,
+                            onValueChange = { newText -> onItemTextChange(listItem, newText) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(itemFocusRequester),
+                            textStyle = itemTextStyle,
+                            cursorBrush = SolidColor(colorScheme.primary),
+                            decorationBox = { innerTextField ->
+                                Box {
+                                    if (listItem.text.isEmpty()) {
+                                        Text(
+                                            text = "New item",
+                                            style = itemTextStyle,
+                                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                    innerTextField()
                                 }
                             })
-                    ),
-                    hazeState = hazeState
+
+                        IconButton(
+                            onClick = { onDeleteItem(listItem) }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete item")
+                        }
+                    }
+
+                    LaunchedEffect(focusOnNewItemId, listItem.id) {
+                        if (focusOnNewItemId == listItem.id) {
+                            itemFocusRequester.requestFocus()
+                            focusOnNewItemId = null
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(bottomPadding))
+
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(100f))
+                    .background(colorScheme.surfaceDim)
+                    .hazeEffect(
+                        state = hazeState,
+                        style = HazeMaterials.ultraThin(hazeThinColor),
+                    ), verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onDismiss, Modifier.padding(4.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+
+                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
+                    TextStyle(
+                        fontFamily = QuicksandTitleVariable,
+                        textAlign = TextAlign.Center,
+                        color = colorScheme.onSurface
+                    )
                 )
+                BasicTextField(
+                    value = listTitle,
+                    onValueChange = { onListTitleChange(it) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(listTitleFocusRequester),
+                    singleLine = true,
+                    textStyle = titleTextStyle,
+                    cursorBrush = SolidColor(colorScheme.primary),
+                    decorationBox = { innerTextField ->
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            if (listTitle.isEmpty()) {
+                                Text(
+                                    text = "Title",
+                                    style = titleTextStyle,
+                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                            innerTextField()
+                        }
+                    })
+
+                Box {
+                    IconButton(
+                        onClick = { showMenu = !showMenu },
+                        modifier = Modifier.padding(4.dp)
+                    ) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                    }
+                    NoteDropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        items = listOf(
+                            MenuItem(
+                                text = "Label",
+                                onClick = { isLabeled = !isLabeled },
+                                dismissOnClick = false,
+                                icon = {
+                                    if (isLabeled) {
+                                        Icon(
+                                            Icons.Default.Bookmark,
+                                            contentDescription = "Label",
+                                            tint = labelColor
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.BookmarkBorder, contentDescription = "Label")
+                                    }
+                                }),
+                            MenuItem(text = "Color", onClick = {
+                                val currentIndex = noteColors.indexOf(selectedColor)
+                                val nextIndex = (currentIndex + 1) % noteColors.size
+                                selectedColor = noteColors[nextIndex]
+                                onThemeChange(colorThemeMap[selectedColor] ?: "Default") // Notify theme change
+                            }, dismissOnClick = false, icon = {
+                                Icon(
+                                    Icons.Default.ColorLens,
+                                    contentDescription = "Color",
+                                    tint = selectedColor?.let { iconTintInvertMap[it] }
+                                        ?: colorScheme.onSurfaceVariant)
+                            }),
+                            MenuItem(
+                                text = if (isOffline) "Online note" else "Offline note",
+                                onClick = { isOffline = !isOffline },
+                                dismissOnClick = false,
+                                textColor = if (isOffline) colorScheme.error else null,
+                                icon = {
+                                    if (isOffline) {
+                                        Icon(
+                                            Icons.Default.CloudOff,
+                                            contentDescription = "Offline note",
+                                            tint = colorScheme.error
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.Cloud, contentDescription = "Online note")
+                                    }
+                                })
+                        ),
+                        hazeState = hazeState
+                    )
+                }
             }
         }
     }

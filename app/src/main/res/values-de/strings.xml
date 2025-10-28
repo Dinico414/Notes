@@ -114,5 +114,7 @@
     <string name="save_note">Notiz speichern</string>
     <string name="save_list_note">Listennotiz speichern</string>
     <string name="save_audio_note">Audionotiz speichern</string>
+    <string name="save_sketch_note">Skizzennotiz speichern</string>
+
 
 </resources>

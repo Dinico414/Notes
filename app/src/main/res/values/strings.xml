@@ -112,5 +112,7 @@
     <string name="save_note">Save Note</string>
     <string name="save_list_note">Save List Note</string>
     <string name="save_audio_note">Save Audio Note</string>
+    <string name="save_sketch_note">Save Sketch Note</string>
+
 
 </resources>

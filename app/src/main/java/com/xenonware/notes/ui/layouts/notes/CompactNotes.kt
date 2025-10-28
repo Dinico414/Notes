@@ -172,8 +172,7 @@ fun CompactNotes(
     ) {
     val ULongSaver = Saver<ULong?, String>(
         save = { it?.toString() ?: "null" },
-        restore = { if (it == "null") null else it.toULong() }
-    )
+        restore = { if (it == "null") null else it.toULong() })
 
     var editingNoteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var titleState by rememberSaveable { mutableStateOf("") }
@@ -827,6 +826,17 @@ fun CompactNotes(
                                     )
                                 }
                             }
+                        } else if (showSketchNoteCard) {
+                            {
+                                FloatingActionButton(
+                                    onClick = { /* Implement save logic for sketch note */ }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Save,
+                                        contentDescription = stringResource(R.string.save_sketch_note),
+                                        tint = colorScheme.onPrimary
+                                    )
+                                }
+                            }
                         } else {
                             null
                         },
@@ -975,29 +985,28 @@ fun CompactNotes(
                                                                 nextListItemId = 0L
                                                                 currentListSizeIndex = 1
                                                                 itemToEdit.description?.let { desc ->
-                                                                    val parsedItems =
-                                                                        desc.split("")
-                                                                            .mapNotNull { line ->
-                                                                                if (line.isBlank()) null
-                                                                                else {
-                                                                                    val isChecked =
-                                                                                        line.startsWith(
-                                                                                            "[x]"
-                                                                                        )
-                                                                                    val text =
-                                                                                        if (isChecked) line.substringAfter(
-                                                                                            "[x] "
-                                                                                        )
-                                                                                            .trim() else line.substringAfter(
-                                                                                            "[ ] "
-                                                                                        ).trim()
-                                                                                    ListItem(
-                                                                                        nextListItemId++,
-                                                                                        text,
-                                                                                        isChecked
+                                                                    val parsedItems = desc.split("")
+                                                                        .mapNotNull { line ->
+                                                                            if (line.isBlank()) null
+                                                                            else {
+                                                                                val isChecked =
+                                                                                    line.startsWith(
+                                                                                        "[x]"
                                                                                     )
-                                                                                }
+                                                                                val text =
+                                                                                    if (isChecked) line.substringAfter(
+                                                                                        "[x] "
+                                                                                    )
+                                                                                        .trim() else line.substringAfter(
+                                                                                        "[ ] "
+                                                                                    ).trim()
+                                                                                ListItem(
+                                                                                    nextListItemId++,
+                                                                                    text,
+                                                                                    isChecked
+                                                                                )
                                                                             }
+                                                                        }
                                                                     listItemsState.addAll(
                                                                         parsedItems
                                                                     )
@@ -1076,26 +1085,26 @@ fun CompactNotes(
                                                         nextListItemId = 0L
                                                         currentListSizeIndex = 1
                                                         itemToEdit.description?.let { desc ->
-                                                            val parsedItems = desc.split("")
-                                                                .mapNotNull { line ->
-                                                                    if (line.isBlank()) null
-                                                                    else {
-                                                                        val isChecked =
-                                                                            line.startsWith("[x]")
-                                                                        val text =
-                                                                            if (isChecked) line.substringAfter(
-                                                                                "[x] "
+                                                            val parsedItems =
+                                                                desc.split("").mapNotNull { line ->
+                                                                        if (line.isBlank()) null
+                                                                        else {
+                                                                            val isChecked =
+                                                                                line.startsWith("[x]")
+                                                                            val text =
+                                                                                if (isChecked) line.substringAfter(
+                                                                                    "[x] "
+                                                                                )
+                                                                                    .trim() else line.substringAfter(
+                                                                                    "[ ] "
+                                                                                ).trim()
+                                                                            ListItem(
+                                                                                nextListItemId++,
+                                                                                text,
+                                                                                isChecked
                                                                             )
-                                                                                .trim() else line.substringAfter(
-                                                                                "[ ] "
-                                                                            ).trim()
-                                                                        ListItem(
-                                                                            nextListItemId++,
-                                                                            text,
-                                                                            isChecked
-                                                                        )
+                                                                        }
                                                                     }
-                                                                }
                                                             listItemsState.addAll(parsedItems)
                                                         }
                                                         when (itemToEdit.noteType) {
@@ -1195,8 +1204,7 @@ fun CompactNotes(
                     toolbarHeight = 72.dp,
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
-                    }
-                )
+                    })
             }
 
             AnimatedVisibility(
@@ -1205,7 +1213,12 @@ fun CompactNotes(
                 exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler { showSketchNoteCard = false }
-                NoteSketchCard(onDismiss = { showSketchNoteCard = false })
+                NoteSketchCard(
+                    onDismiss = { showSketchNoteCard = false },
+                    initialColor = editingNoteColor,
+                    onThemeChange = { newThemeName ->
+                        editingNoteColor = themeColorMap[newThemeName]
+                    })
             }
 
             AnimatedVisibility(
@@ -1248,8 +1261,10 @@ fun CompactNotes(
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
                     selectedAudioViewType = selectedAudioViewType,
-                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() }
-                )
+                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() },
+                    onThemeChange = { newThemeName ->
+                        editingNoteColor = themeColorMap[newThemeName]
+                    })
 
             }
 
@@ -1322,8 +1337,10 @@ fun CompactNotes(
                     onTextResizeClick = ::onListTextResizeClick,
                     editorFontSize = listEditorFontSize,
                     addItemTrigger = saveTrigger,
-                    onAddItemTriggerConsumed = { saveTrigger = false }
-                )
+                    onAddItemTriggerConsumed = { saveTrigger = false },
+                    onThemeChange = { newThemeName -> // Pass the lambda here
+                        editingNoteColor = themeColorMap[newThemeName]
+                    })
             }
         }
     }

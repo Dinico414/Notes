@@ -75,6 +75,7 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.layouts.notes.AudioViewType
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
+import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.ui.theme.invertNoteBlueDark
 import com.xenonware.notes.ui.theme.invertNoteBlueLight
@@ -359,6 +360,7 @@ fun NoteAudioCard(
     selectedAudioViewType: AudioViewType,
     initialAudioFilePath: String? = null,
     initialColor: ULong? = null,
+    onThemeChange: (String) -> Unit, // Added onThemeChange
 ) {
     val ULongSaver = Saver<ULong?, String>(
         save = { it?.toString() ?: "null" },
@@ -419,6 +421,38 @@ fun NoteAudioCard(
         }
     }
 
+    val colorThemeMap = remember {
+        mapOf(
+            noteRedLight.value to "Red",
+            noteRedDark.value to "Red",
+            noteOrangeLight.value to "Orange",
+            noteOrangeDark.value to "Orange",
+            noteYellowLight.value to "Yellow",
+            noteYellowDark.value to "Yellow",
+            noteGreenLight.value to "Green",
+            noteGreenDark.value to "Green",
+            noteTurquoiseLight.value to "Turquoise",
+            noteTurquoiseDark.value to "Turquoise",
+            noteBlueLight.value to "Blue",
+            noteBlueDark.value to "Blue",
+            notePurpleLight.value to "Purple",
+            notePurpleDark.value to "Purple"
+        )
+    }
+
+    val themeColorMap = remember {
+        mapOf(
+            "Red" to noteRedLight.value,
+            "Orange" to noteOrangeLight.value,
+            "Yellow" to noteYellowLight.value,
+            "Green" to noteGreenLight.value,
+            "Turquoise" to noteTurquoiseLight.value,
+            "Blue" to noteBlueLight.value,
+            "Purple" to notePurpleLight.value
+        )
+    }
+
+    val currentThemeName = colorThemeMap[selectedColor] ?: "Default"
 
     val cardColor = selectedColor?.let { cardColorMap[it] } ?: colorScheme.surfaceContainer
 
@@ -471,6 +505,7 @@ fun NoteAudioCard(
             }
         }
     }
+
 
     // Handle initial audio file loading
     LaunchedEffect(initialAudioFilePath) {
@@ -562,273 +597,287 @@ fun NoteAudioCard(
     val bottomPadding =
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(cardColor)
-            .windowInsetsPadding(
-                WindowInsets.safeDrawing.only(
-                    WindowInsetsSides.Top + WindowInsetsSides.Horizontal
-                )
-            )
-            .padding(top = 4.dp)
+    XenonTheme(
+        darkTheme = isDarkTheme,
+        useDefaultTheme = currentThemeName == "Default",
+        useRedTheme = currentThemeName == "Red",
+        useOrangeTheme = currentThemeName == "Orange",
+        useYellowTheme = currentThemeName == "Yellow",
+        useGreenTheme = currentThemeName == "Green",
+        useTurquoiseTheme = currentThemeName == "Turquoise",
+        useBlueTheme = currentThemeName == "Blue",
+        usePurpleTheme = currentThemeName == "Purple",
+        dynamicColor = currentThemeName == "Default"
     ) {
-        val topPadding = 68.dp
-
-        Column(
+        Box(
             modifier = Modifier
-                .padding(horizontal = 20.dp)
                 .fillMaxSize()
-                .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                .hazeSource(state = hazeState),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+                .background(cardColor)
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(
+                        WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+                    )
+                )
+                .padding(top = 4.dp)
         ) {
-            Spacer(modifier = Modifier.height(topPadding))
+            val topPadding = 68.dp
 
-            AudioTimerDisplay(
-                isRecording = recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED,
-                isPlaying = recordingState == RecordingState.PLAYING,
-                recordingDurationMillis = recorderManager.recordingDurationMillis,
-                currentPlaybackPositionMillis = playerManager.currentPlaybackPositionMillis,
-                totalAudioDurationMillis = playerManager.totalAudioDurationMillis,
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 8.dp)
-                    .align(Alignment.CenterHorizontally)
-            )
-
-            // Waveform/Transcript Display Area
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.Center
+                    .padding(horizontal = 20.dp)
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
+                    .hazeSource(state = hazeState),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                if (selectedAudioViewType == AudioViewType.Waveform) {
-                    WaveformDisplay(
-                        audioFilePath = recorderManager.audioFilePath,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Text(
-                        text = "Audio Transcript coming soon...",
-                        style = MaterialTheme.typography.headlineMedium,
-                        textAlign = TextAlign.Center
-                    )
+                Spacer(modifier = Modifier.height(topPadding))
+
+                AudioTimerDisplay(
+                    isRecording = recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED,
+                    isPlaying = recordingState == RecordingState.PLAYING,
+                    recordingDurationMillis = recorderManager.recordingDurationMillis,
+                    currentPlaybackPositionMillis = playerManager.currentPlaybackPositionMillis,
+                    totalAudioDurationMillis = playerManager.totalAudioDurationMillis,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, bottom = 8.dp)
+                        .align(Alignment.CenterHorizontally)
+                )
+
+                // Waveform/Transcript Display Area
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (selectedAudioViewType == AudioViewType.Waveform) {
+                        WaveformDisplay(
+                            audioFilePath = recorderManager.audioFilePath,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text(
+                            text = "Audio Transcript coming soon...",
+                            style = MaterialTheme.typography.headlineMedium,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
-            }
 
-            // Recording Controls
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, start = 16.dp, end = 16.dp)
-                    .padding(bottom = bottomPadding),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                when (recordingState) {
-                    RecordingState.IDLE -> {
-                        IconButton(
-                            onClick = {
-                                when {
-                                    ContextCompat.checkSelfPermission(
-                                        context, Manifest.permission.RECORD_AUDIO
-                                    ) == PackageManager.PERMISSION_GRANTED -> {
-                                        recorderManager.startRecording()
+                // Recording Controls
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                        .padding(bottom = bottomPadding),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    when (recordingState) {
+                        RecordingState.IDLE -> {
+                            IconButton(
+                                onClick = {
+                                    when {
+                                        ContextCompat.checkSelfPermission(
+                                            context, Manifest.permission.RECORD_AUDIO
+                                        ) == PackageManager.PERMISSION_GRANTED -> {
+                                            recorderManager.startRecording()
+                                        }
+
+                                        else -> {
+                                            requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                        }
                                     }
-
-                                    else -> {
-                                        requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                    }
-                                }
-                            }) {
-                            Icon(Icons.Default.Mic, contentDescription = "Start recording")
-                        }
-                    }
-
-                    RecordingState.RECORDING -> {
-                        IconButton(onClick = { recorderManager.pauseRecording() }) {
-                            Icon(Icons.Default.Pause, contentDescription = "Pause recording")
-                        }
-                        IconButton(onClick = {
-                            recorderManager.stopRecording()
-                            playerManager.stopAudio()
-                        }) {
-                            Icon(Icons.Default.Stop, contentDescription = "Stop recording")
-                        }
-                    }
-
-                    RecordingState.PAUSED -> {
-                        IconButton(onClick = { recorderManager.startRecording() } // Resumes recording
-                        ) {
-                            Icon(Icons.Default.Mic, contentDescription = "Resume recording")
-                        }
-                        IconButton(onClick = {
-                            recorderManager.stopRecording()
-                            playerManager.stopAudio()
-                        }) {
-                            Icon(Icons.Default.Stop, contentDescription = "Stop recording")
-                        }
-                    }
-
-                    RecordingState.STOPPED_UNSAVED -> {
-                        IconButton(onClick = {
-                            recorderManager.audioFilePath?.let { path ->
-                                playerManager.playAudio(path)
+                                }) {
+                                Icon(Icons.Default.Mic, contentDescription = "Start recording")
                             }
-                        }) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Play recording")
                         }
-                        IconButton(onClick = {
-                            recorderManager.deleteRecording()
-                            playerManager.stopAudio()
-                            recordingState = RecordingState.IDLE
-                        }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Redo recording")
-                        }
-                        IconButton(onClick = {
-                            recorderManager.deleteRecording()
-                            onDismiss()
-                        }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Discard recording")
-                        }
-                    }
 
-                    RecordingState.PLAYING -> {
-                        IconButton(onClick = { playerManager.stopAudio() }) {
-                            Icon(Icons.Default.Stop, contentDescription = "Stop playback")
+                        RecordingState.RECORDING -> {
+                            IconButton(onClick = { recorderManager.pauseRecording() }) {
+                                Icon(Icons.Default.Pause, contentDescription = "Pause recording")
+                            }
+                            IconButton(onClick = {
+                                recorderManager.stopRecording()
+                                playerManager.stopAudio()
+                            }) {
+                                Icon(Icons.Default.Stop, contentDescription = "Stop recording")
+                            }
                         }
-                    }
 
-                    RecordingState.VIEWING_SAVED_AUDIO -> {
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                        RecordingState.PAUSED -> {
+                            IconButton(onClick = { recorderManager.startRecording() } // Resumes recording
+                            ) {
+                                Icon(Icons.Default.Mic, contentDescription = "Resume recording")
+                            }
+                            IconButton(onClick = {
+                                recorderManager.stopRecording()
+                                playerManager.stopAudio()
+                            }) {
+                                Icon(Icons.Default.Stop, contentDescription = "Stop recording")
+                            }
+                        }
+
+                        RecordingState.STOPPED_UNSAVED -> {
                             IconButton(onClick = {
                                 recorderManager.audioFilePath?.let { path ->
                                     playerManager.playAudio(path)
                                 }
                             }) {
-                                Icon(
-                                    Icons.Default.PlayArrow,
-                                    contentDescription = "Play saved recording"
-                                )
+                                Icon(Icons.Default.PlayArrow, contentDescription = "Play recording")
                             }
+                            IconButton(onClick = {
+                                recorderManager.deleteRecording()
+                                playerManager.stopAudio()
+                                recordingState = RecordingState.IDLE
+                            }) {
+                                Icon(Icons.Default.Refresh, contentDescription = "Redo recording")
+                            }
+                            IconButton(onClick = {
+                                recorderManager.deleteRecording()
+                                onDismiss()
+                            }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Discard recording")
+                            }
+                        }
+
+                        RecordingState.PLAYING -> {
                             IconButton(onClick = { playerManager.stopAudio() }) {
                                 Icon(Icons.Default.Stop, contentDescription = "Stop playback")
                             }
-                            Spacer(modifier = Modifier.width(16.dp))
+                        }
+
+                        RecordingState.VIEWING_SAVED_AUDIO -> {
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                IconButton(onClick = {
+                                    recorderManager.audioFilePath?.let { path ->
+                                        playerManager.playAudio(path)
+                                    }
+                                }) {
+                                    Icon(
+                                        Icons.Default.PlayArrow,
+                                        contentDescription = "Play saved recording"
+                                    )
+                                }
+                                IconButton(onClick = { playerManager.stopAudio() }) {
+                                    Icon(Icons.Default.Stop, contentDescription = "Stop playback")
+                                }
+                                Spacer(modifier = Modifier.width(16.dp))
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(100f))
-                .background(colorScheme.surfaceDim)
-                .hazeEffect(
-                    state = hazeState,
-                    style = HazeMaterials.ultraThin(hazeThinColor),
-                ), verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onDismiss, Modifier.padding(4.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(100f))
+                    .background(colorScheme.surfaceDim)
+                    .hazeEffect(
+                        state = hazeState,
+                        style = HazeMaterials.ultraThin(hazeThinColor),
+                    ), verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-
-            val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
-                TextStyle(
-                    fontFamily = QuicksandTitleVariable,
-                    textAlign = TextAlign.Center,
-                    color = colorScheme.onSurface
-                )
-            )
-            BasicTextField(
-                value = audioTitle,
-                onValueChange = { onAudioTitleChange(it) },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                textStyle = titleTextStyle,
-                cursorBrush = SolidColor(colorScheme.primary),
-                decorationBox = { innerTextField ->
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        if (audioTitle.isEmpty()) {
-                            Text(
-                                text = "Title",
-                                style = titleTextStyle,
-                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                        innerTextField()
-                    }
-                })
-            Box {
                 IconButton(
-                    onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
+                    onClick = onDismiss, Modifier.padding(4.dp)
                 ) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
-                NoteDropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    items = listOf(
-                        MenuItem(
-                            text = "Label",
-                            onClick = { isLabeled = !isLabeled },
-                            dismissOnClick = false,
-                            icon = {
-                                if (isLabeled) {
-                                    Icon(
-                                        Icons.Default.Bookmark,
-                                        contentDescription = "Label",
-                                        tint = labelColor
-                                    )
-                                } else {
-                                    Icon(Icons.Default.BookmarkBorder, contentDescription = "Label")
-                                }
-                            }),
-                        MenuItem(text = "Color", onClick = {
-                            val currentIndex = noteColors.indexOf(selectedColor)
-                            val nextIndex = (currentIndex + 1) % noteColors.size
-                            selectedColor = noteColors[nextIndex]
-                        }, dismissOnClick = false, icon = {
-                            Icon(
-                                Icons.Default.ColorLens,
-                                contentDescription = "Color",
-                                tint = selectedColor?.let { iconTintInvertMap[it] }
-                                    ?: colorScheme.onSurfaceVariant)
-                        }),
-                        MenuItem(
-                            text = if (isOffline) "Online note" else "Offline note",
-                            onClick = { isOffline = !isOffline },
-                            dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else null,
-                            icon = {
-                                if (isOffline) {
-                                    Icon(
-                                        Icons.Default.CloudOff,
-                                        contentDescription = "Offline note",
-                                        tint = colorScheme.error
-                                    )
-                                 } else {
-                                    Icon(Icons.Default.Cloud, contentDescription = "Online note")
-                                }
-                            })
-                    ),
-                    hazeState = hazeState
+
+                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
+                    TextStyle(
+                        fontFamily = QuicksandTitleVariable,
+                        textAlign = TextAlign.Center,
+                        color = colorScheme.onSurface
+                    )
                 )
+                BasicTextField(
+                    value = audioTitle,
+                    onValueChange = { onAudioTitleChange(it) },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    textStyle = titleTextStyle,
+                    cursorBrush = SolidColor(colorScheme.primary),
+                    decorationBox = { innerTextField ->
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            if (audioTitle.isEmpty()) {
+                                Text(
+                                    text = "Title",
+                                    style = titleTextStyle,
+                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                            innerTextField()
+                        }
+                    })
+                Box {
+                    IconButton(
+                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
+                    ) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                    }
+                    NoteDropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        items = listOf(
+                            MenuItem(
+                                text = "Label",
+                                onClick = { isLabeled = !isLabeled },
+                                dismissOnClick = false,
+                                icon = {
+                                    if (isLabeled) {
+                                        Icon(
+                                            Icons.Default.Bookmark,
+                                            contentDescription = "Label",
+                                            tint = labelColor
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.BookmarkBorder, contentDescription = "Label")
+                                    }
+                                }),
+                            MenuItem(text = "Color", onClick = {
+                                val currentIndex = noteColors.indexOf(selectedColor)
+                                val nextIndex = (currentIndex + 1) % noteColors.size
+                                selectedColor = noteColors[nextIndex]
+                                onThemeChange(colorThemeMap[selectedColor] ?: "Default") // Notify theme change
+                            }, dismissOnClick = false, icon = {
+                                Icon(
+                                    Icons.Default.ColorLens,
+                                    contentDescription = "Color",
+                                    tint = selectedColor?.let { iconTintInvertMap[it] }
+                                        ?: colorScheme.onSurfaceVariant)
+                            }),
+                            MenuItem(
+                                text = if (isOffline) "Online note" else "Offline note",
+                                onClick = { isOffline = !isOffline },
+                                dismissOnClick = false,
+                                textColor = if (isOffline) colorScheme.error else null,
+                                icon = {
+                                    if (isOffline) {
+                                        Icon(
+                                            Icons.Default.CloudOff,
+                                            contentDescription = "Offline note",
+                                            tint = colorScheme.error
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.Cloud, contentDescription = "Online note")
+                                    }
+                                })
+                        ),
+                        hazeState = hazeState
+                    )
+                }
             }
         }
     }
