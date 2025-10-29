@@ -4,14 +4,8 @@ package com.xenonware.notes.ui.res
 import android.app.Application
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,14 +20,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Cloud
@@ -41,10 +38,11 @@ import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Gesture
-import androidx.compose.material.icons.filled.MenuOpen
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
@@ -102,6 +100,10 @@ fun NoteSketchSheet(
     onSave: (String, String) -> Unit,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
+    isEraserMode: Boolean,
+    usePressure: Boolean,
+    strokeWidth: Float,
+    strokeColor: Color,
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
@@ -125,7 +127,8 @@ fun NoteSketchSheet(
     val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
 
-    val viewModel = viewModel<CanvasViewModel>(factory = CanvasViewModelFactory(application = application))
+    val viewModel =
+        viewModel<CanvasViewModel>(factory = CanvasViewModelFactory(application = application))
     val currentPathState = viewModel.currentPathState.collectAsState()
     val pathState = viewModel.pathState.collectAsState()
     val isHandwritingMode by viewModel.isHandwritingMode.collectAsState() // New state for handwriting mode
@@ -135,6 +138,10 @@ fun NoteSketchSheet(
             onSave(sketchTitle, selectedTheme)
             onSaveTriggerConsumed()
         }
+    }
+
+    LaunchedEffect(isEraserMode, usePressure, strokeWidth, strokeColor) {
+        viewModel.onAction(DrawingAction.UpdateTool(isEraserMode, usePressure, strokeWidth, strokeColor))
     }
 
     XenonTheme(
@@ -157,8 +164,7 @@ fun NoteSketchSheet(
 
         DisposableEffect(systemUiController, isDarkTheme) {
             systemUiController.setStatusBarColor(
-                color = Color.Transparent,
-                darkIcons = !isDarkTheme
+                color = Color.Transparent, darkIcons = !isDarkTheme
             )
             onDispose {
                 systemUiController.setStatusBarColor(
@@ -204,18 +210,16 @@ fun NoteSketchSheet(
                 modifier = Modifier
                     .fillMaxSize()
                     .hazeSource(state = hazeState)
-                    // Removed the dynamic end padding that caused UI shift
             ) {
                 Spacer(modifier = Modifier.height(68.dp)) // Padding for the top bar
                 NoteControls(
-                    currentPathState.value.color,
-                    themeDrawColors,
-                    viewModel::onAction
+                    currentPathState.value.color, themeDrawColors, viewModel::onAction
                 )
                 NoteCanvas(
                     pathState.value.paths,
                     currentPathState.value.path,
                     viewModel::onAction,
+                    isHandwritingMode = isHandwritingMode, // Pass the new parameter
                     gridEnabled = pathState.value.gridEnabled,
                     debugText = true,
                     debugPoints = false,
@@ -239,12 +243,10 @@ fun NoteSketchSheet(
                     .hazeEffect(
                         state = hazeState,
                         style = HazeMaterials.ultraThin(hazeThinColor),
-                    ),
-                verticalAlignment = Alignment.CenterVertically
+                    ), verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.padding(4.dp)
+                    onClick = onDismiss, modifier = Modifier.padding(4.dp)
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
@@ -278,8 +280,7 @@ fun NoteSketchSheet(
                     })
                 Box {
                     IconButton(
-                        onClick = { showMenu = !showMenu },
-                        modifier = Modifier.padding(4.dp)
+                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
                     ) {
                         Icon(Icons.Default.MoreVert, contentDescription = "More options")
                     }
@@ -288,79 +289,93 @@ fun NoteSketchSheet(
                         onDismissRequest = { showMenu = false },
                         items = listOf(
                             MenuItem(
-                                text = "Label",
-                                onClick = { isLabeled = !isLabeled },
-                                dismissOnClick = false,
-                                icon = {
-                                    if (isLabeled) {
-                                        Icon(
-                                            Icons.Default.Bookmark,
-                                            contentDescription = "Label",
-                                            tint = labelColor
-                                        )
-                                    } else {
-                                        Icon(Icons.Default.BookmarkBorder, contentDescription = "Label")
-                                    }
-                                }),
-                            MenuItem(
-                                text = colorMenuItemText,
-                                onClick = {
-                                    val currentIndex = availableThemes.indexOf(selectedTheme)
-                                    val nextIndex = (currentIndex + 1) % availableThemes.size
-                                    selectedTheme = availableThemes[nextIndex]
-                                    onThemeChange(selectedTheme)
-                                    colorChangeJob?.cancel()
-                                    colorChangeJob = scope.launch {
-                                        colorMenuItemText = availableThemes[nextIndex]
-                                        isFadingOut = false
-                                        delay(2500)
-                                        isFadingOut = true
-                                        delay(500)
-                                        colorMenuItemText = "Color"
-                                        isFadingOut = false
-                                    }
-                                },
-                                dismissOnClick = false,
-                                icon = {
+                            text = "Label",
+                            onClick = { isLabeled = !isLabeled },
+                            dismissOnClick = false,
+                            icon = {
+                                if (isLabeled) {
                                     Icon(
-                                        Icons.Default.ColorLens,
-                                        contentDescription = "Color",
-                                        tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                        Icons.Default.Bookmark,
+                                        contentDescription = "Label",
+                                        tint = labelColor
                                     )
-                                },
-                                textColor = animatedTextColor
-                            ),
-                            MenuItem(
-                                text = if (isOffline) "Online note" else "Offline note",
-                                onClick = { isOffline = !isOffline },
-                                dismissOnClick = false,
-                                textColor = if (isOffline) colorScheme.error else null,
-                                icon = {
-                                    if (isOffline) {
-                                        Icon(
-                                            Icons.Default.CloudOff,
-                                            contentDescription = "Offline note",
-                                            tint = colorScheme.error
-                                        )
-                                    } else {
-                                        Icon(Icons.Default.Cloud, contentDescription = "Online note")
-                                    }
-                                })
+                                } else {
+                                    Icon(
+                                        Icons.Default.BookmarkBorder,
+                                        contentDescription = "Label"
+                                    )
+                                }
+                            }), MenuItem(
+                                text = colorMenuItemText, onClick = {
+                                val currentIndex = availableThemes.indexOf(selectedTheme)
+                                val nextIndex = (currentIndex + 1) % availableThemes.size
+                                selectedTheme = availableThemes[nextIndex]
+                                onThemeChange(selectedTheme)
+                                colorChangeJob?.cancel()
+                                colorChangeJob = scope.launch {
+                                    colorMenuItemText = availableThemes[nextIndex]
+                                    isFadingOut = false
+                                    delay(2500) // Keep current theme color for 2.5 seconds
+                                    isFadingOut = true // Fade out animation for 0.5 seconds
+                                    delay(500)
+                                    colorMenuItemText = "Color"
+                                    isFadingOut = false
+                                }
+                            }, dismissOnClick = false, icon = {
+                                Icon(
+                                    Icons.Default.ColorLens,
+                                    contentDescription = "Color",
+                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                )
+                            }, textColor = animatedTextColor
+                        ), MenuItem(
+                            text = if (isOffline) "Online note" else "Offline note",
+                            onClick = { isOffline = !isOffline },
+                            dismissOnClick = false,
+                            textColor = if (isOffline) colorScheme.error else null,
+                            icon = {
+                                if (isOffline) {
+                                    Icon(
+                                        Icons.Default.CloudOff,
+                                        contentDescription = "Offline note",
+                                        tint = colorScheme.error
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.Cloud, contentDescription = "Online note"
+                                    )
+                                }
+                            })
                         ),
                         hazeState = hazeState
                     )
                 }
             }
 
-            // New NoteSideControls
-            NoteSideControls(
-                onAction = viewModel::onAction,
-                isHandwritingMode = isHandwritingMode,
-                onToggleHandwritingMode = { enabled -> viewModel.onAction(DrawingAction.ToggleHandwritingMode(enabled)) },
-                onCollapseChange = { isSideControlsCollapsed = it }, // Pass the collapse state setter
-                isCollapsed = isSideControlsCollapsed,
-                modifier = Modifier.align(Alignment.CenterEnd)
-            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical))
+                    .padding(top = 16.dp, bottom = 16.dp, end = 16.dp)
+                    .wrapContentHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                NoteSideControls(
+                    onAction = viewModel::onAction,
+                    isHandwritingMode = isHandwritingMode,
+                    onToggleHandwritingMode = { enabled ->
+                        viewModel.onAction(
+                            DrawingAction.ToggleHandwritingMode(
+                                enabled
+                            )
+                        )
+                    },
+                    onCollapseChange = { isSideControlsCollapsed = it },
+                    isCollapsed = isSideControlsCollapsed,
+                    hazeState = hazeState,
+                    hazeThinColor = hazeThinColor,
+                )
+            }
         }
     }
 }
@@ -375,34 +390,35 @@ class CanvasViewModelFactory(private val application: Application) : ViewModelPr
     }
 }
 
+@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun NoteSideControls(
     onAction: (DrawingAction) -> Unit,
     isHandwritingMode: Boolean,
     onToggleHandwritingMode: (Boolean) -> Unit,
-    onCollapseChange: (Boolean) -> Unit, // Callback for collapse state change
+    onCollapseChange: (Boolean) -> Unit,
     isCollapsed: Boolean,
-    modifier: Modifier = Modifier
+    hazeState: HazeState,
+    hazeThinColor: Color,
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
-            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical)) // Apply safe drawing for vertical edges
-            .padding(top = 16.dp, bottom = 16.dp, end = 16.dp) // Fixed padding around the toolbar from the screen edges
             .clip(RoundedCornerShape(100f))
-            .background(MaterialTheme.colorScheme.surfaceDim)
-            .padding(4.dp) // Inner padding inside the background
-            .animateContentSize(), // Animate height changes
+            .background(hazeThinColor)
+            .hazeEffect(
+                state = hazeState,
+                style = HazeMaterials.ultraThin(hazeThinColor),
+            )
+            .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically) // Use spacedBy and CenterVertically
+        verticalArrangement = if (isCollapsed) Arrangement.Center else Arrangement.spacedBy(8.dp, Alignment.Top)
     ) {
-        AnimatedVisibility(
-            visible = !isCollapsed,
-            enter = fadeIn() + expandVertically(expandFrom = Alignment.CenterVertically),
-            exit = shrinkVertically(shrinkTowards = Alignment.CenterVertically) + fadeOut()
-        ) {
+        // Top section (Undo/Redo)
+        if (!isCollapsed) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 IconButton(onClick = { onAction(DrawingAction.Undo) }) {
                     Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo")
@@ -413,37 +429,47 @@ fun NoteSideControls(
             }
         }
 
-        IconButton(onClick = { onCollapseChange(!isCollapsed) }) { // Use the callback to update parent state
+        FilledIconButton(
+            onClick = { onCollapseChange(!isCollapsed) },
+            modifier = Modifier
+                .height(56.dp)
+                .width(48.dp)
+        ) {
             Icon(
-                imageVector = if (isCollapsed) Icons.Default.MenuOpen else Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = if (isCollapsed) Icons.AutoMirrored.Rounded.KeyboardArrowLeft else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                 contentDescription = if (isCollapsed) "Expand toolbar" else "Collapse toolbar"
             )
         }
 
-        AnimatedVisibility(
-            visible = !isCollapsed,
-            enter = fadeIn() + expandVertically(expandFrom = Alignment.CenterVertically),
-            exit = shrinkVertically(shrinkTowards = Alignment.CenterVertically) + fadeOut()
-        ) {
+        if (!isCollapsed) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                IconButton(
+
+                FilledIconButton(
                     onClick = { onToggleHandwritingMode(true) },
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (isHandwritingMode) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent)
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = if (isHandwritingMode) colorScheme.tertiary else Color.Transparent,
+                        contentColor = if (isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurfaceVariant,
+                    )
                 ) {
-                    Icon(Icons.Default.Gesture, contentDescription = "Handwriting Mode", tint = if (isHandwritingMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(
+                        Icons.Default.Gesture,
+                        contentDescription = "Handwriting Mode"
+                        )
                 }
-                IconButton(
+                FilledIconButton(
                     onClick = { onToggleHandwritingMode(false) },
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (!isHandwritingMode) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent)
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = if (!isHandwritingMode) colorScheme.tertiary else Color.Transparent,
+                        contentColor = if (!isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurfaceVariant,
+                    )
                 ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Pen Mode", tint = if (!isHandwritingMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Pen Mode"
+                    )
                 }
             }
         }

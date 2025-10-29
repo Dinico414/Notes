@@ -171,6 +171,16 @@ fun CoverNotes(
     var editingNoteColor by rememberSaveable(stateSaver = uLongSaver) { mutableStateOf(null) }
     var showTextNoteCard by rememberSaveable { mutableStateOf(false) }
     var saveTrigger by remember { mutableStateOf(false) }
+    var isEraserMode by remember { mutableStateOf(false) }
+    var usePressure by remember { mutableStateOf(true) }
+    var currentSketchSize by remember { mutableStateOf(10f) }
+    val sketchColors = remember {
+        listOf(
+            Color.Black, Color.White, Color.Red, Color.Green, Color.Blue,
+            Color.Yellow, Color.Cyan, Color.Magenta, Color.Gray
+        )
+    }
+    var currentSketchColor by remember { mutableStateOf(sketchColors.first()) }
 
 
     var isBold by remember { mutableStateOf(false) }
@@ -1071,7 +1081,12 @@ fun CoverNotes(
                         resetNoteState()
                     },
                     saveTrigger = saveTrigger,
-                    onSaveTriggerConsumed = { saveTrigger = false })
+                    onSaveTriggerConsumed = { saveTrigger = false },
+                    isEraserMode = isEraserMode,
+                    usePressure = usePressure,
+                    strokeWidth = currentSketchSize,
+                    strokeColor = currentSketchColor
+                )
             }
 
             AnimatedVisibility(

@@ -21,6 +21,9 @@ data class DrawingState(
 data class CurrentPathState(
     val path: PathData? = null,
     val color: Color,
+    val isEraser: Boolean = false,
+    val usePressure: Boolean = true,
+    val strokeWidth: Float = 10f
 )
 
 data class PathData(
@@ -40,19 +43,20 @@ data class PathOffset(
 }
 
 sealed interface DrawingAction {
-    data object NewPathStart: DrawingAction
-    data class Draw(val offset: Offset, val pressure: Float): DrawingAction
-    data object PathEnd: DrawingAction
-    data object DeletePathStart: DrawingAction
-    data object Undo: DrawingAction
-    data object Redo: DrawingAction
-    data class SelectColor(val color: Color): DrawingAction
-    data object ClearCanvas: DrawingAction
-    data class EnableGrid(val enabled: Boolean): DrawingAction
-    data class ToggleHandwritingMode(val enabled: Boolean): DrawingAction
+    data object NewPathStart : DrawingAction
+    data class Draw(val offset: Offset, val pressure: Float) : DrawingAction
+    data object PathEnd : DrawingAction
+    data object DeletePathStart : DrawingAction
+    data object Undo : DrawingAction
+    data object Redo : DrawingAction
+    data class SelectColor(val color: Color) : DrawingAction
+    data object ClearCanvas : DrawingAction
+    data class EnableGrid(val enabled: Boolean) : DrawingAction
+    data class ToggleHandwritingMode(val enabled: Boolean) : DrawingAction
+    data class UpdateTool(val isEraser: Boolean, val usePressure: Boolean, val strokeWidth: Float, val strokeColor: Color) : DrawingAction
 }
 
-class CanvasViewModel(application: Application): AndroidViewModel(application) {
+class CanvasViewModel(application: Application) : AndroidViewModel(application) {
     private val prefManager = SharedPreferenceManager(application.applicationContext)
 
     private val _currentPathState = MutableStateFlow(CurrentPathState(color = Color.Black)) // Default color
@@ -61,7 +65,7 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
     private val _pathState = MutableStateFlow(DrawingState())
     val pathState = _pathState.asStateFlow()
 
-    private val _canvasSize = MutableStateFlow(Size(0,0))
+    private val _canvasSize = MutableStateFlow(Size(0, 0))
     val canvasSize = _canvasSize.asStateFlow()
 
     private val _isHandwritingMode = MutableStateFlow(true) // Default to handwriting mode
@@ -109,7 +113,7 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
     }
 
     fun onAction(action: DrawingAction) {
-        when(action) {
+        when (action) {
             DrawingAction.NewPathStart -> onNewPathStart()
             is DrawingAction.Draw -> onDraw(action.offset, action.pressure)
             DrawingAction.PathEnd -> onPathEnd()
@@ -120,17 +124,31 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
             is DrawingAction.SelectColor -> onSelectColor(action.color)
             is DrawingAction.EnableGrid -> onEnableGrid(action.enabled)
             is DrawingAction.ToggleHandwritingMode -> onToggleHandwritingMode(action.enabled)
+            is DrawingAction.UpdateTool -> onUpdateTool(action.isEraser, action.usePressure, action.strokeWidth, action.strokeColor)
+        }
+    }
+
+    private fun onUpdateTool(isEraser: Boolean, usePressure: Boolean, strokeWidth: Float, strokeColor: Color) {
+        _currentPathState.update {
+            it.copy(
+                isEraser = isEraser,
+                usePressure = usePressure,
+                strokeWidth = strokeWidth,
+                color = if(isEraser) Color.Transparent else strokeColor
+            )
         }
     }
 
     private fun onNewPathStart() {
-        _currentPathState.update { it.copy(
-            path = PathData(
-                id = System.currentTimeMillis().toString(),
-                color = it.color,
-                path = emptyList(),
+        _currentPathState.update {
+            it.copy(
+                path = PathData(
+                    id = System.currentTimeMillis().toString(),
+                    color = it.color,
+                    path = emptyList(),
+                )
             )
-        ) }
+        }
     }
 
     private var smoothness = prefManager.smoothness
@@ -145,6 +163,7 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
             _pathState.update { it }
         }
     }
+
     fun getSmoothness(): Float {
         return smoothness
     }
@@ -154,21 +173,24 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
         val i = path.lastIndex
         if (path.size > 2) {
             val controlPts = calculateBezierControlPoints(
-                path[i-2].offset, path[i-1].offset, path[i].offset, new.offset, smoothness)
+                path[i - 2].offset, path[i - 1].offset, path[i].offset, new.offset, smoothness
+            )
             path[i].controlPoint1 = controlPts.first
             path[i].controlPoint2 = controlPts.second
         }
         // Add control point for first point
         else if (path.size == 2) {
             val controlPts = calculateBezierControlPoints(
-                path[i-1].offset, path[i-1].offset, path[i].offset, new.offset, smoothness)
+                path[i - 1].offset, path[i - 1].offset, path[i].offset, new.offset, smoothness
+            )
             path[i].controlPoint1 = controlPts.second
             path[i].controlPoint2 = controlPts.second
         }
         // Add control point for last (new) point, to make the future readjustment smoother looking
         if (path.size > 1) {
             val controlPts = calculateBezierControlPoints(
-                path[i-1].offset, path[i].offset, new.offset, new.offset, smoothness)
+                path[i - 1].offset, path[i].offset, new.offset, new.offset, smoothness
+            )
             new.controlPoint1 = controlPts.first
             new.controlPoint2 = controlPts.second
         }
@@ -191,25 +213,36 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
                 return
         }
 
-        val po = PathOffset(offset, pressure * 3f + 2f)
+        val thickness = if (currentPathState.value.usePressure) {
+            pressure * currentPathState.value.strokeWidth
+        } else {
+            currentPathState.value.strokeWidth
+        }
+        val po = PathOffset(offset, thickness)
 
         updateControlPoints(path, po)
 
-        _currentPathState.update { it.copy(
-            path = currentPathData.copy(
-                path = path + po
+        _currentPathState.update {
+            it.copy(
+                path = currentPathData.copy(
+                    path = path + po
+                )
             )
-        ) }
+        }
     }
 
     private fun onPathEnd() {
         val currentPathData = currentPathState.value.path ?: return
-        _currentPathState.update { it.copy(
-            path = null
-        ) }
-        _pathState.update { it.copy(
-            paths = it.paths + currentPathData
-        ) }
+        _currentPathState.update {
+            it.copy(
+                path = null
+            )
+        }
+        _pathState.update {
+            it.copy(
+                paths = it.paths + currentPathData
+            )
+        }
         // Save state for undo/redo
         if (_undoRedoPointer < _undoRedoHistory.lastIndex) {
             _undoRedoHistory.subList(_undoRedoPointer + 1, _undoRedoHistory.size).clear()
@@ -223,25 +256,31 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
         steps: Int = 100,
     ) {
         onAction(DrawingAction.NewPathStart)
-        for (step in 0..steps-1) {
+        for (step in 0..steps - 1) {
             onAction(DrawingAction.Draw(f(step), 3f))
         }
         onAction(DrawingAction.PathEnd)
     }
 
     private fun onSelectColor(color: Color) {
-        _currentPathState.update { it.copy(
-            color = color
-        ) }
+        _currentPathState.update {
+            it.copy(
+                color = color
+            )
+        }
     }
 
     private fun onClearCanvasClick() {
-        _currentPathState.update { it.copy(
-            path = null,
-        ) }
-        _pathState.update { it.copy(
-            paths = emptyList()
-        ) }
+        _currentPathState.update {
+            it.copy(
+                path = null,
+            )
+        }
+        _pathState.update {
+            it.copy(
+                paths = emptyList()
+            )
+        }
         // Clear history and add current state
         _undoRedoHistory.clear()
         _undoRedoHistory.add(emptyList())
@@ -249,9 +288,11 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
     }
 
     private fun onEnableGrid(enabled: Boolean) {
-        _pathState.update { it.copy(
-            gridEnabled = enabled
-        ) }
+        _pathState.update {
+            it.copy(
+                gridEnabled = enabled
+            )
+        }
     }
 
     private fun onToggleHandwritingMode(enabled: Boolean) {

@@ -11,7 +11,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -28,17 +31,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
@@ -49,11 +58,14 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.StackedLineChart
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -88,6 +100,7 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -139,6 +152,7 @@ import com.xenonware.notes.ui.theme.noteTurquoiseDark
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
+import com.xenonware.notes.ui.theme.primaryContainerDark
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.NotesLayoutType
@@ -210,6 +224,19 @@ fun CompactNotes(
         }.toMutableStateList()
     })) { mutableStateListOf() }
     var nextListItemId by rememberSaveable { mutableLongStateOf(0L) }
+
+    var showSketchSizePopup by remember { mutableStateOf(false) }
+    var showSketchColorPopup by remember { mutableStateOf(false) }
+    var isEraserMode by remember { mutableStateOf(false) }
+    var usePressure by remember { mutableStateOf(true) }
+    var currentSketchSize by remember { mutableStateOf(10f) }
+    val sketchColors = remember {
+        listOf(
+            Color.Black, Color.White, Color.Red, Color.Green, Color.Blue,
+            Color.Yellow, Color.Cyan, Color.Magenta, Color.Gray
+        )
+    }
+    var currentSketchColor by remember { mutableStateOf(sketchColors.first()) }
 
 
     val noteItemsWithHeaders = notesViewModel.noteItems
@@ -569,51 +596,70 @@ fun CompactNotes(
                                         Icons.AutoMirrored.Default.Article,
                                         contentDescription = stringResource(R.string.transcript_view)
                                     )
-                                }
+                                 }
                             }
                         }
                     } else {
                         null
                     }
 
-//                val sketchEditorContent: @Composable (RowScope.() -> Unit)? = if (showSketchNoteCard) {
-//                    @Composable {
-//                        Row(
-//                            modifier = Modifier.fillMaxWidth(),
-//                            verticalAlignment = Alignment.CenterVertically,
-//                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-//                        ) {
-//                            FilledTonalButton(
-//                                onClick = {
-//                                    listItemsState.add(
-//                                        ListItem(
-//                                            nextListItemId++, "", false
-//                                        )
-//                                    )
-//                                },
-//                                modifier = Modifier
-//                                    .width(140.dp)
-//                                    .height(56.dp),
-//                                colors = ButtonDefaults.filledTonalButtonColors(
-//                                    containerColor = MaterialTheme.colorScheme.tertiary,
-//                                    contentColor = MaterialTheme.colorScheme.onTertiary
-//                                )
-//                            ) {
-//                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_new_item_to_list))
-//                                Text(text = stringResource(R.string.add))
-//                            }
-//                            IconButton(
-//                                onClick = ::onListTextResizeClick,
-//                            ) {
-//                                Icon(
-//                                    Icons.Default.FormatSize,
-//                                    contentDescription = stringResource(R.string.change_text_size))
-//                            }
-//                        }
-//                    }
-//                } else {
-//                    null
-//                }
+                val sketchEditorContent: @Composable (RowScope.() -> Unit)? = if (showSketchNoteCard) {
+                    @Composable {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            // Size selector
+                            IconButton(onClick = { showSketchSizePopup = true }) {
+                                Icon(
+                                    Icons.Default.Brush,
+                                    contentDescription = "Brush Size"
+                                )
+                            }
+                            SketchSizePopup(
+                                expanded = showSketchSizePopup,
+                                onDismissRequest = { showSketchSizePopup = false },
+                                onSizeSelected = { currentSketchSize = it }
+                            )
+
+                            // Color selector
+                            IconButton(onClick = { showSketchColorPopup = true }) {
+                                Icon(
+                                    Icons.Default.ColorLens,
+                                    contentDescription = "Brush Color"
+                                )
+                            }
+                            SketchColorPopup(
+                                expanded = showSketchColorPopup,
+                                onDismissRequest = { showSketchColorPopup = false },
+                                colors = sketchColors,
+                                onColorSelected = { currentSketchColor = it }
+                            )
+
+                            // Eraser mode
+                            IconButton(onClick = { isEraserMode = !isEraserMode }) {
+                                Icon(
+                                    painter = if (isEraserMode) painterResource(id = R.drawable.eraser) else painterResource(id = R.drawable.pencil),
+                                    contentDescription = "Eraser",
+                                    tint = colorScheme.primary
+                                )
+                            }
+
+                            // Pressure/Speed toggle
+                            IconButton(onClick = { usePressure = !usePressure }) {
+                                Icon(
+                                    Icons.Default.StackedLineChart,
+                                    contentDescription = "Toggle Pressure/Speed",
+                                    tint = if (usePressure) colorScheme.primary else colorScheme.onSurface
+                                )
+                                //TODO add correct icons and remove color toggle
+                            }
+                        }
+                    }
+                } else {
+                    null
+                }
 
                 val onAddModeToggle = { isAddModeActive = !isAddModeActive }
 
@@ -787,6 +833,7 @@ fun CompactNotes(
                             showTextNoteCard -> textEditorContent
                             showListNoteCard -> listEditorContent
                             showAudioNoteCard -> audioEditorContent
+                            showSketchNoteCard -> sketchEditorContent
                             else -> null
                         },
                         fabOverride = if (showTextNoteCard) {
@@ -1275,7 +1322,12 @@ fun CompactNotes(
                         resetNoteState()
                     },
                     saveTrigger = saveTrigger,
-                    onSaveTriggerConsumed = { saveTrigger = false })
+                    onSaveTriggerConsumed = { saveTrigger = false },
+                    isEraserMode = isEraserMode,
+                    usePressure = usePressure,
+                    strokeWidth = currentSketchSize,
+                    strokeColor = currentSketchColor
+                )
             }
 
             AnimatedVisibility(
@@ -1460,5 +1512,66 @@ fun NoteCard(
             onSelectItem = onSelectItem,
             onEditItem = onEditItem
         )
+    }
+}
+
+@Composable
+fun SketchSizePopup(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    onSizeSelected: (Float) -> Unit
+) {
+    val sizes = listOf(5f, 10f, 20f, 40f, 80f)
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest
+    ) {
+        sizes.forEach { size ->
+            DropdownMenuItem(
+                text = { Text(text = "${size.toInt()}px") },
+                onClick = {
+                    onSizeSelected(size)
+                    onDismissRequest()
+                },
+                leadingIcon = {
+                    Canvas(modifier = Modifier.size(32.dp), onDraw = {
+                        drawCircle(
+                            color = primaryContainerDark,
+                            radius = size / 2
+                        )
+                    })
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun SketchColorPopup(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    colors: List<Color>,
+    onColorSelected: (Color) -> Unit
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest
+    ) {
+        LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.width(200.dp)) {
+            items(colors) { color ->
+                IconButton(onClick = {
+                    onColorSelected(color)
+                    onDismissRequest()
+                }) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .border(1.dp, colorScheme.onSurface, CircleShape)
+                    )
+                }
+            }
+        }
     }
 }

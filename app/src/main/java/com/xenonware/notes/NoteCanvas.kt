@@ -43,6 +43,7 @@ fun NoteCanvas(
     paths: List<PathData>,
     currentPath: PathData?,
     onAction: (DrawingAction) -> Unit,
+    isHandwritingMode: Boolean, // Added isHandwritingMode parameter
     modifier: Modifier = Modifier,
     gridEnabled: Boolean = false,
     debugText: Boolean = false,
@@ -59,21 +60,22 @@ fun NoteCanvas(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-//                .pointerInput(true) {
-//                    detect
-//                }
                 .pointerInteropFilter {
                     if (!interactable) return@pointerInteropFilter true
 
-                    MotionEvent.TOOL_TYPE_STYLUS
                     if (debugText) {
                         s = "${it.action}\n${it.getToolType(0)}\n${it.buttonState}\n" +
                                 "${it.x} ${it.y}\n${it.pressure}\n${it.orientation}\n" +
                                 "${it.getAxisValue(MotionEvent.AXIS_TILT)}\n" +
                                 "${it.flags == MotionEvent.FLAG_CANCELED}"
                     }
-                    if (it.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS) {
-//                        Log.d("aaa", s.replace('\n', ' '))
+
+                    val isStylus = it.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS
+                    val isFinger = it.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER
+
+                    val canDraw = isStylus || (isHandwritingMode && isFinger)
+
+                    if (canDraw) {
                         when (it.action) {
                             MotionEvent.ACTION_DOWN,
                             MotionEvent.ACTION_UP,
@@ -123,7 +125,7 @@ fun NoteCanvas(
                                 drawLine(
                                     gridColor,
                                     start = Offset(0f, y),
-                                    end = Offset(size.width, y),
+                                    end = Offset(0f, size.height),
                                     strokeWidth = gridStrokeWidth
                                 )
                             }
