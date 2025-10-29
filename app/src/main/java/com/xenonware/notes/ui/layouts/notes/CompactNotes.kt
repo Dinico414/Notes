@@ -1,7 +1,9 @@
 package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -154,6 +156,7 @@ enum class AudioViewType {
     Waveform, Transcript
 }
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -290,7 +293,7 @@ fun CompactNotes(
         nextListItemId = 0L
         currentListSizeIndex = 1
         selectedAudioViewType = AudioViewType.Waveform
-        
+
     }
 
     val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
@@ -330,7 +333,8 @@ fun CompactNotes(
         )
     }
 
-    val isAnyNoteSheetOpen = showTextNoteCard || showSketchNoteCard || showAudioNoteCard || showListNoteCard
+    val isAnyNoteSheetOpen =
+        showTextNoteCard || showSketchNoteCard || showAudioNoteCard || showListNoteCard
 
     ModalNavigationDrawer(
         drawerContent = {
@@ -341,9 +345,7 @@ fun CompactNotes(
                     scope.launch { drawerState.close() }
                 },
             )
-        },
-        drawerState = drawerState,
-        gesturesEnabled = !isAnyNoteSheetOpen
+        }, drawerState = drawerState, gesturesEnabled = !isAnyNoteSheetOpen
     ) {
         Scaffold(
             snackbarHost = {
@@ -806,8 +808,9 @@ fun CompactNotes(
                             {
                                 FloatingActionButton(
                                     onClick = {
-                                        if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger = true },
-                                    containerColor = colorScheme.primary
+                                        if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
+                                            true
+                                    }, containerColor = colorScheme.primary
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Save,
@@ -1096,24 +1099,24 @@ fun CompactNotes(
                                                         itemToEdit.description?.let { desc ->
                                                             val parsedItems =
                                                                 desc.split("").mapNotNull { line ->
-                                                                        if (line.isBlank()) null
-                                                                        else {
-                                                                            val isChecked =
-                                                                                line.startsWith("[x]")
-                                                                            val text =
-                                                                                if (isChecked) line.substringAfter(
-                                                                                    "[x] "
-                                                                                )
-                                                                                    .trim() else line.substringAfter(
-                                                                                    "[ ] "
-                                                                                ).trim()
-                                                                            ListItem(
-                                                                                nextListItemId++,
-                                                                                text,
-                                                                                isChecked
+                                                                    if (line.isBlank()) null
+                                                                    else {
+                                                                        val isChecked =
+                                                                            line.startsWith("[x]")
+                                                                        val text =
+                                                                            if (isChecked) line.substringAfter(
+                                                                                "[x] "
                                                                             )
-                                                                        }
+                                                                                .trim() else line.substringAfter(
+                                                                                "[ ] "
+                                                                            ).trim()
+                                                                        ListItem(
+                                                                            nextListItemId++,
+                                                                            text,
+                                                                            isChecked
+                                                                        )
                                                                     }
+                                                                }
                                                             listItemsState.addAll(parsedItems)
                                                         }
                                                         when (itemToEdit.noteType) {
@@ -1137,8 +1140,11 @@ fun CompactNotes(
                                                                     itemToEdit.color?.toULong()
                                                             }
 
-                                                            NoteType.SKETCH -> showSketchNoteCard =
-                                                                true
+                                                            NoteType.SKETCH -> {
+                                                                showSketchNoteCard = true
+                                                                editingNoteColor =
+                                                                    itemToEdit.color?.toULong()
+                                                            }
                                                         }
                                                     },
                                                     maxLines = gridMaxLines
@@ -1229,14 +1235,47 @@ fun CompactNotes(
                     resetNoteState()
                 }
                 NoteSketchSheet(
+                    sketchTitle = titleState,
+                    onSketchTitleChange = { titleState = it },
                     onDismiss = {
                         showSketchNoteCard = false
                         resetNoteState()
                     },
-                    initialColor = editingNoteColor,
+                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
-                    })
+                    },
+                    onSave = { title, theme ->
+                        // The description for a sketch is managed internally for now.
+                        // We only save the title and color.
+                        if (title.isNotBlank()) {
+                            val color = themeColorMap[theme]
+                            if (editingNoteId != null) {
+                                val updatedNote =
+                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
+                                        .find { it.id == editingNoteId }?.copy(
+                                            title = title,
+                                            // description for sketch is handled via canvas data,
+                                            // so it might not be passed here
+                                            color = color?.toLong()
+                                        )
+                                if (updatedNote != null) {
+                                    notesViewModel.updateItem(updatedNote)
+                                }
+                            } else {
+                                notesViewModel.addItem(
+                                    title = title,
+                                    description = null, // No text description for a sketch
+                                    noteType = NoteType.SKETCH,
+                                    color = color?.toLong()
+                                )
+                            }
+                        }
+                        showSketchNoteCard = false
+                        resetNoteState()
+                    },
+                    saveTrigger = saveTrigger,
+                    onSaveTriggerConsumed = { saveTrigger = false })
             }
 
             AnimatedVisibility(

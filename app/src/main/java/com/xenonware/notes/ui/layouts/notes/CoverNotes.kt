@@ -1,7 +1,9 @@
 package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -141,6 +143,7 @@ import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.launch
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Suppress("unused")
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(
@@ -1028,14 +1031,47 @@ fun CoverNotes(
                     resetNoteState()
                 }
                 NoteSketchSheet(
+                    sketchTitle = titleState,
+                    onSketchTitleChange = { titleState = it },
                     onDismiss = {
                         showSketchNoteCard = false
                         resetNoteState()
                     },
-                    initialColor = editingNoteColor,
+                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
-                    })
+                    },
+                    onSave = { title, theme ->
+                        // The description for a sketch is managed internally for now.
+                        // We only save the title and color.
+                        if (title.isNotBlank()) {
+                            val color = themeColorMap[theme]
+                            if (editingNoteId != null) {
+                                val updatedNote =
+                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
+                                        .find { it.id == editingNoteId }?.copy(
+                                            title = title,
+                                            // description for sketch is handled via canvas data,
+                                            // so it might not be passed here
+                                            color = color?.toLong()
+                                        )
+                                if (updatedNote != null) {
+                                    notesViewModel.updateItem(updatedNote)
+                                }
+                            } else {
+                                notesViewModel.addItem(
+                                    title = title,
+                                    description = null, // No text description for a sketch
+                                    noteType = NoteType.SKETCH,
+                                    color = color?.toLong()
+                                )
+                            }
+                        }
+                        showSketchNoteCard = false
+                        resetNoteState()
+                    },
+                    saveTrigger = saveTrigger,
+                    onSaveTriggerConsumed = { saveTrigger = false })
             }
 
             AnimatedVisibility(

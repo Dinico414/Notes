@@ -484,10 +484,10 @@ fun NoteAudioSheet(
             label = "animatedTextColor"
         )
 
-        val statusBarColor = colorScheme.surfaceContainer
-        DisposableEffect(systemUiController, statusBarColor) {
+        DisposableEffect(systemUiController, isDarkTheme) {
             systemUiController.setStatusBarColor(
-                color = statusBarColor
+                color = Color.Transparent,
+                darkIcons = !isDarkTheme
             )
             onDispose {
                 systemUiController.setStatusBarColor(
@@ -508,16 +508,21 @@ fun NoteAudioSheet(
                 .background(colorScheme.surfaceContainer)
                 .windowInsetsPadding(
                     WindowInsets.safeDrawing.only(
-                        WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+                        WindowInsetsSides.Horizontal
                     )
                 )
-                .padding(top = 4.dp)
         ) {
             val topPadding = 68.dp
 
             Column(
                 modifier = Modifier
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Top
+                        )
+                    )
                     .padding(horizontal = 20.dp)
+                    .padding(top = 4.dp)
                     .fillMaxSize()
                     .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
                     .hazeSource(state = hazeState),
@@ -673,7 +678,13 @@ fun NoteAudioSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Top
+                        )
+                    )
                     .padding(horizontal = 16.dp)
+                    .padding(top = 4.dp)
                     .clip(RoundedCornerShape(100f))
                     .background(colorScheme.surfaceDim)
                     .hazeEffect(

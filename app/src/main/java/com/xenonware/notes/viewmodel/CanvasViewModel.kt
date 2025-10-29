@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlin.math.abs
-import kotlin.math.max
 
 data class DrawingState(
     val paths: List<PathData> = emptyList(),
@@ -28,10 +27,6 @@ data class PathData(
     val id: String,
     val color: Color,
     val path: List<PathOffset>,
-//    val minX: Float,
-//    val maxX: Float,
-//    val minY: Float,
-//    val maxY: Float,
 )
 
 data class PathOffset(
@@ -68,12 +63,35 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
     private val _canvasSize = MutableStateFlow(Size(0,0))
     val canvasSize = _canvasSize.asStateFlow()
 
+    private var drawColors: List<Color>? = null
+
     fun setCanvasSize(size: Size) {
         _canvasSize.update { size }
     }
 
-    fun setInitialDrawColor(color: Color) {
-        _currentPathState.update { it.copy(color = color) }
+    fun setDrawColors(colors: List<Color>) {
+        val oldColors = drawColors
+        drawColors = colors
+
+        if (oldColors != null && oldColors != colors) {
+            val colorMap = oldColors.zip(colors).toMap()
+            _pathState.update { drawingState ->
+                val updatedPaths = drawingState.paths.map { pathData ->
+                    colorMap[pathData.color]?.let { newColor ->
+                        pathData.copy(color = newColor)
+                    } ?: pathData
+                }
+                drawingState.copy(paths = updatedPaths)
+            }
+
+            _currentPathState.update { currentPathState ->
+                colorMap[currentPathState.color]?.let {
+                    currentPathState.copy(color = it)
+                } ?: currentPathState
+            }
+        } else if (oldColors == null && colors.isNotEmpty()) {
+            _currentPathState.update { it.copy(color = colors.first()) }
+        }
     }
 
     fun onAction(action: DrawingAction) {
@@ -149,10 +167,6 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
 
     var tmp = 0
     private fun onDraw(offset: Offset, pressure: Float) {
-//        if (tmp++ >= 1) {
-//            tmp = 0
-//            return
-//        }
 
         val currentPathData = currentPathState.value.path ?: return
         val path = currentPathData.path
@@ -160,14 +174,9 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
             val last = path.last()
             if (abs(last.offset.x - offset.x) + abs(last.offset.y - offset.y) < 0.1)
                 return
-//            if (path.size > 1) {
-//                val preLast = path[path.size - 2]
-//                val m =
-//            }
         }
 
         val po = PathOffset(offset, pressure * 3f + 2f)
-//        val po = PathOffset(offset, 3f)
 
         updateControlPoints(path, po)
 
