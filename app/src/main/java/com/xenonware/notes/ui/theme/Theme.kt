@@ -29,21 +29,32 @@ data class ExtendedMaterialColorScheme(
     val inverseErrorContainer: Color,
     val inverseOnErrorContainer: Color,
     val label: Color,
-     val noteDefault: Color,
-     val noteRed: Color,
-     val noteOrange: Color,
-     val noteYellow: Color,
-     val noteGreen: Color,
-     val noteBlue: Color,
-     val noteTurquoise: Color,
-     val notePurple: Color,
-     val invertNoteRed: Color,
-     val invertNoteOrange: Color,
-     val invertNoteYellow: Color,
-     val invertNoteGreen: Color,
-     val invertNoteBlue: Color,
-     val invertNoteTurquoise: Color,
-     val invertNotePurple: Color,
+
+    val noteDefault: Color,
+    val noteRed: Color,
+    val noteOrange: Color,
+    val noteYellow: Color,
+    val noteGreen: Color,
+    val noteTurquoise: Color,
+    val noteBlue: Color,
+    val notePurple: Color,
+
+    val invertNoteRed: Color,
+    val invertNoteOrange: Color,
+    val invertNoteYellow: Color,
+    val invertNoteGreen: Color,
+    val invertNoteTurquoise: Color,
+    val invertNoteBlue: Color,
+    val invertNotePurple: Color,
+
+    val drawDefault: Color,
+    val drawRed: Color,
+    val drawOrange: Color,
+    val drawYellow: Color,
+    val drawGreen: Color,
+    val drawTurquoise: Color,
+    val drawBlue: Color,
+    val drawPurple: Color
 )
 
 val LocalExtendedMaterialColorScheme = staticCompositionLocalOf<ExtendedMaterialColorScheme> {
@@ -666,7 +677,6 @@ private val YellowLightColorScheme = lightColorScheme(
     surfaceContainerHighest = yellowSurfaceContainerHighestLight
 )
 
-    
 
 fun Color.decreaseBrightness(factor: Float): Color {
     val hsv = FloatArray(3)
@@ -676,6 +686,7 @@ fun Color.decreaseBrightness(factor: Float): Color {
 
     return Color(ColorUtils.HSLToColor(hsv))
 }
+
 fun ColorScheme.toBlackedOut(): ColorScheme {
     return this.copy(
         background = surfaceDimDark.decreaseBrightness(0.5f),
@@ -683,6 +694,7 @@ fun ColorScheme.toBlackedOut(): ColorScheme {
         surfaceBright = surfaceDimDark
     )
 }
+
 fun ColorScheme.toCoverMode(): ColorScheme {
     return this.copy(
         background = Color.Black,
@@ -755,24 +767,33 @@ fun XenonTheme(
                 inverseErrorContainer = inverseErrorContainerDark,
                 inverseOnErrorContainer = inverseOnErrorContainerDark,
                 label = labelDark,
-                 noteDefault = surfaceContainerDark,
-                 noteRed = noteRedDark,
-                 noteOrange = noteOrangeDark,
-                 noteYellow = noteYellowDark,
-                 noteGreen = noteGreenDark,
-                 noteBlue = noteBlueDark,
-                 noteTurquoise = noteTurquoiseDark,
-                 notePurple = notePurpleDark,
 
-                 invertNoteRed = invertNoteRedDark,
-                 invertNoteOrange = invertNoteOrangeDark,
-                 invertNoteYellow = invertNoteYellowDark,
-                 invertNoteGreen = invertNoteGreenDark,
-                 invertNoteBlue = invertNoteBlueDark,
-                 invertNoteTurquoise = invertNoteTurquoiseDark,
-                 invertNotePurple = invertNotePurpleDark
+                noteDefault = surfaceContainerDark,
+                noteRed = noteRedDark,
+                noteOrange = noteOrangeDark,
+                noteYellow = noteYellowDark,
+                noteGreen = noteGreenDark,
+                noteTurquoise = noteTurquoiseDark,
+                noteBlue = noteBlueDark,
+                notePurple = notePurpleDark,
 
-            )
+                invertNoteRed = invertNoteRedDark,
+                invertNoteOrange = invertNoteOrangeDark,
+                invertNoteYellow = invertNoteYellowDark,
+                invertNoteGreen = invertNoteGreenDark,
+                invertNoteTurquoise = invertNoteTurquoiseDark,
+                invertNoteBlue = invertNoteBlueDark,
+                invertNotePurple = invertNotePurpleDark,
+
+                drawDefault = onSurfaceDark,
+                drawRed = drawRedDark,
+                drawOrange = drawOrangeDark,
+                drawYellow = drawYellowDark,
+                drawGreen = drawGreenDark,
+                drawTurquoise = drawTurquoiseDark,
+                drawBlue = drawBlueDark,
+                drawPurple = drawPurpleDark
+                )
         } else {
             ExtendedMaterialColorScheme(
                 inverseError = inverseErrorLight,
@@ -780,21 +801,32 @@ fun XenonTheme(
                 inverseErrorContainer = inverseErrorContainerLight,
                 inverseOnErrorContainer = inverseOnErrorContainerLight,
                 label = labelLight,
-                 noteDefault = surfaceContainerLight,
-                 noteRed = noteRedLight,
-                 noteOrange = noteOrangeLight,
-                 noteYellow = noteYellowLight,
-                 noteGreen = noteGreenLight,
-                 noteBlue = noteBlueLight,
-                 noteTurquoise = noteTurquoiseLight,
-                 notePurple = notePurpleLight,
-                 invertNoteRed = invertNoteRedLight,
-                 invertNoteOrange = invertNoteOrangeLight,
-                 invertNoteYellow = invertNoteYellowLight,
-                 invertNoteGreen = invertNoteGreenLight,
-                 invertNoteBlue = invertNoteBlueLight,
-                 invertNoteTurquoise = invertNoteTurquoiseLight,
-                 invertNotePurple = invertNotePurpleLight
+
+                noteDefault = surfaceContainerLight,
+                noteRed = noteRedLight,
+                noteOrange = noteOrangeLight,
+                noteYellow = noteYellowLight,
+                noteGreen = noteGreenLight,
+                noteTurquoise = noteTurquoiseLight,
+                noteBlue = noteBlueLight,
+                notePurple = notePurpleLight,
+
+                invertNoteRed = invertNoteRedLight,
+                invertNoteOrange = invertNoteOrangeLight,
+                invertNoteYellow = invertNoteYellowLight,
+                invertNoteGreen = invertNoteGreenLight,
+                invertNoteTurquoise = invertNoteTurquoiseLight,
+                invertNoteBlue = invertNoteBlueLight,
+                invertNotePurple = invertNotePurpleLight,
+
+                drawDefault = onSurfaceLight,
+                drawRed = drawRedLight,
+                drawOrange = drawOrangeLight,
+                drawYellow = drawYellowLight,
+                drawGreen = drawGreenLight,
+                drawTurquoise = drawTurquoiseLight,
+                drawBlue = drawBlueLight,
+                drawPurple = drawPurpleLight
             )
         }
     }
@@ -816,7 +848,10 @@ fun XenonTheme(
         LocalIsDarkTheme provides darkTheme
     ) {
         MaterialTheme(
-            colorScheme = baseColorScheme, typography = Typography, motionScheme = expressive(), content = content
+            colorScheme = baseColorScheme,
+            typography = Typography,
+            motionScheme = expressive(),
+            content = content
         )
     }
 }

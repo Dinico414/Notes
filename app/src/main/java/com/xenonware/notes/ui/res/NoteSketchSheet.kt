@@ -1,7 +1,11 @@
 package com.xenonware.notes.ui.res
 
+import android.app.Application
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -29,6 +33,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,13 +41,20 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenonware.notes.NoteCanvas
+import com.xenonware.notes.NoteControls
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
@@ -74,28 +86,32 @@ import com.xenonware.notes.ui.theme.noteTurquoiseDark
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
+import com.xenonware.notes.viewmodel.CanvasViewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class, ExperimentalComposeUiApi::class)
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 fun NoteSketchSheet(
     onDismiss: () -> Unit,
     initialColor: ULong? = null,
     onThemeChange: (String) -> Unit
 ) {
-    val ULongSaver = Saver<ULong?, String>(
+    val uLongSaver = Saver<ULong?, String>(
         save = { it?.toString() ?: "null" },
         restore = { if (it == "null") null else it.toULong() }
     )
 
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
+    val context = LocalContext.current
+    val application = context.applicationContext as Application
 
-    var selectedColor by rememberSaveable(stateSaver = ULongSaver) { mutableStateOf(initialColor) }
+    var selectedColor by rememberSaveable(stateSaver = uLongSaver) { mutableStateOf(initialColor) }
 
     val colorThemeMap = remember {
         mapOf(
@@ -113,18 +129,6 @@ fun NoteSketchSheet(
             noteBlueDark.value to "Blue",
             notePurpleLight.value to "Purple",
             notePurpleDark.value to "Purple"
-        )
-    }
-
-    val themeColorMap = remember {
-        mapOf(
-            "Red" to noteRedLight.value,
-            "Orange" to noteOrangeLight.value,
-            "Yellow" to noteYellowLight.value,
-            "Green" to noteGreenLight.value,
-            "Turquoise" to noteTurquoiseLight.value,
-            "Blue" to noteBlueLight.value,
-            "Purple" to notePurpleLight.value
         )
     }
 
@@ -199,7 +203,6 @@ fun NoteSketchSheet(
     var showMenu by remember { mutableStateOf(false) }
     var isOffline by remember { mutableStateOf(false) }
     var isLabeled by remember { mutableStateOf(false) }
-    val labelColor = extendedMaterialColorScheme.label
 
     val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
@@ -214,6 +217,10 @@ fun NoteSketchSheet(
         }
     }
 
+    val viewModel = viewModel<CanvasViewModel>(factory = CanvasViewModelFactory(application = application))
+    val currentPathState = viewModel.currentPathState.collectAsState()
+    val pathState = viewModel.pathState.collectAsState()
+
     XenonTheme(
         darkTheme = isDarkTheme,
         useDefaultTheme = currentThemeName == "Default",
@@ -226,6 +233,23 @@ fun NoteSketchSheet(
         usePurpleTheme = currentThemeName == "Purple",
         dynamicColor = currentThemeName == "Default"
     ) {
+        val currentExtendedColorScheme = extendedMaterialColorScheme
+        val (themeDrawColors, initialDrawColor) = remember(isDarkTheme, currentExtendedColorScheme) {
+            val colors: List<Color> = listOf(
+                currentExtendedColorScheme.drawDefault,
+                currentExtendedColorScheme.drawRed,
+                currentExtendedColorScheme.drawOrange,
+                currentExtendedColorScheme.drawYellow,
+                currentExtendedColorScheme.drawGreen,
+                currentExtendedColorScheme.drawTurquoise,
+                currentExtendedColorScheme.drawBlue,
+                currentExtendedColorScheme.drawPurple
+            )
+            Pair(colors, colors.first())
+        }
+        val labelColor = currentExtendedColorScheme.label
+        viewModel.setInitialDrawColor(initialDrawColor)
+
         Scaffold(
             topBar = {
                 Row(
@@ -309,8 +333,8 @@ fun NoteSketchSheet(
                     }
                 }
             },
-        ) { paddingValues ->
-            Box(
+        ) { innerPadding ->
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(cardColor) // Use cardColor for the background
@@ -319,16 +343,33 @@ fun NoteSketchSheet(
                             WindowInsetsSides.Horizontal
                         )
                     )
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
+                    .padding(innerPadding),
             ) {
-                Text(
-                    text = "Sketch Notes\n\ncoming soon...",
-                    style = MaterialTheme.typography.headlineMedium,
-                    textAlign = TextAlign.Center,
-                    color = colorScheme.onSurface
+                NoteControls(
+                    currentPathState.value.color,
+                    themeDrawColors,
+                    viewModel::onAction
+                )
+                NoteCanvas(
+                    pathState.value.paths,
+                    currentPathState.value.path,
+                    viewModel::onAction,
+                    gridEnabled = pathState.value.gridEnabled,
+                    debugText = true,
+                    debugPoints = false,
                 )
             }
         }
+    }
+}
+
+// Added a ViewModelFactory for CanvasViewModel to pass initialDrawColor
+@Suppress("UNCHECKED_CAST")
+class CanvasViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(CanvasViewModel::class.java)) {
+            return CanvasViewModel(application) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
