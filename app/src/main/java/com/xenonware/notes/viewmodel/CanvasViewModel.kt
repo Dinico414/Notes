@@ -49,6 +49,7 @@ sealed interface DrawingAction {
     data class SelectColor(val color: Color): DrawingAction
     data object ClearCanvas: DrawingAction
     data class EnableGrid(val enabled: Boolean): DrawingAction
+    data class ToggleHandwritingMode(val enabled: Boolean): DrawingAction
 }
 
 class CanvasViewModel(application: Application): AndroidViewModel(application) {
@@ -63,7 +64,20 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
     private val _canvasSize = MutableStateFlow(Size(0,0))
     val canvasSize = _canvasSize.asStateFlow()
 
+    private val _isHandwritingMode = MutableStateFlow(true) // Default to handwriting mode
+    val isHandwritingMode = _isHandwritingMode.asStateFlow()
+
     private var drawColors: List<Color>? = null
+
+    // For Undo/Redo
+    private val _undoRedoHistory = mutableListOf<List<PathData>>()
+    private var _undoRedoPointer = -1
+
+    init {
+        // Save initial state
+        _undoRedoHistory.add(_pathState.value.paths)
+        _undoRedoPointer = 0
+    }
 
     fun setCanvasSize(size: Size) {
         _canvasSize.update { size }
@@ -100,11 +114,12 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
             is DrawingAction.Draw -> onDraw(action.offset, action.pressure)
             DrawingAction.PathEnd -> onPathEnd()
             DrawingAction.DeletePathStart -> TODO()
-            DrawingAction.Redo -> TODO()
-            DrawingAction.Undo -> TODO()
+            DrawingAction.Redo -> onRedo()
+            DrawingAction.Undo -> onUndo()
             DrawingAction.ClearCanvas -> onClearCanvasClick()
             is DrawingAction.SelectColor -> onSelectColor(action.color)
             is DrawingAction.EnableGrid -> onEnableGrid(action.enabled)
+            is DrawingAction.ToggleHandwritingMode -> onToggleHandwritingMode(action.enabled)
         }
     }
 
@@ -195,6 +210,12 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
         _pathState.update { it.copy(
             paths = it.paths + currentPathData
         ) }
+        // Save state for undo/redo
+        if (_undoRedoPointer < _undoRedoHistory.lastIndex) {
+            _undoRedoHistory.subList(_undoRedoPointer + 1, _undoRedoHistory.size).clear()
+        }
+        _undoRedoHistory.add(_pathState.value.paths)
+        _undoRedoPointer++
     }
 
     fun drawFunction(
@@ -221,11 +242,33 @@ class CanvasViewModel(application: Application): AndroidViewModel(application) {
         _pathState.update { it.copy(
             paths = emptyList()
         ) }
+        // Clear history and add current state
+        _undoRedoHistory.clear()
+        _undoRedoHistory.add(emptyList())
+        _undoRedoPointer = 0
     }
 
     private fun onEnableGrid(enabled: Boolean) {
         _pathState.update { it.copy(
             gridEnabled = enabled
         ) }
+    }
+
+    private fun onToggleHandwritingMode(enabled: Boolean) {
+        _isHandwritingMode.update { enabled }
+    }
+
+    private fun onUndo() {
+        if (_undoRedoPointer > 0) {
+            _undoRedoPointer--
+            _pathState.update { it.copy(paths = _undoRedoHistory[_undoRedoPointer]) }
+        }
+    }
+
+    private fun onRedo() {
+        if (_undoRedoPointer < _undoRedoHistory.lastIndex) {
+            _undoRedoPointer++
+            _pathState.update { it.copy(paths = _undoRedoHistory[_undoRedoPointer]) }
+        }
     }
 }

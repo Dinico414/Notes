@@ -1,11 +1,19 @@
 package com.xenonware.notes.ui.res
 
+// New imports for side controls
 import android.app.Application
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,15 +27,21 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Gesture
+import androidx.compose.material.icons.filled.MenuOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -65,6 +79,7 @@ import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.viewmodel.CanvasViewModel
+import com.xenonware.notes.viewmodel.DrawingAction
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -113,6 +128,7 @@ fun NoteSketchSheet(
     val viewModel = viewModel<CanvasViewModel>(factory = CanvasViewModelFactory(application = application))
     val currentPathState = viewModel.currentPathState.collectAsState()
     val pathState = viewModel.pathState.collectAsState()
+    val isHandwritingMode by viewModel.isHandwritingMode.collectAsState() // New state for handwriting mode
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
@@ -182,10 +198,13 @@ fun NoteSketchSheet(
                     )
                 )
         ) {
+            var isSideControlsCollapsed by rememberSaveable { mutableStateOf(false) } // State for side controls collapse
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .hazeSource(state = hazeState)
+                    // Removed the dynamic end padding that caused UI shift
             ) {
                 Spacer(modifier = Modifier.height(68.dp)) // Padding for the top bar
                 NoteControls(
@@ -332,6 +351,16 @@ fun NoteSketchSheet(
                     )
                 }
             }
+
+            // New NoteSideControls
+            NoteSideControls(
+                onAction = viewModel::onAction,
+                isHandwritingMode = isHandwritingMode,
+                onToggleHandwritingMode = { enabled -> viewModel.onAction(DrawingAction.ToggleHandwritingMode(enabled)) },
+                onCollapseChange = { isSideControlsCollapsed = it }, // Pass the collapse state setter
+                isCollapsed = isSideControlsCollapsed,
+                modifier = Modifier.align(Alignment.CenterEnd)
+            )
         }
     }
 }
@@ -343,5 +372,80 @@ class CanvasViewModelFactory(private val application: Application) : ViewModelPr
             return CanvasViewModel(application) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+@Composable
+fun NoteSideControls(
+    onAction: (DrawingAction) -> Unit,
+    isHandwritingMode: Boolean,
+    onToggleHandwritingMode: (Boolean) -> Unit,
+    onCollapseChange: (Boolean) -> Unit, // Callback for collapse state change
+    isCollapsed: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical)) // Apply safe drawing for vertical edges
+            .padding(top = 16.dp, bottom = 16.dp, end = 16.dp) // Fixed padding around the toolbar from the screen edges
+            .clip(RoundedCornerShape(100f))
+            .background(MaterialTheme.colorScheme.surfaceDim)
+            .padding(4.dp) // Inner padding inside the background
+            .animateContentSize(), // Animate height changes
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically) // Use spacedBy and CenterVertically
+    ) {
+        AnimatedVisibility(
+            visible = !isCollapsed,
+            enter = fadeIn() + expandVertically(expandFrom = Alignment.CenterVertically),
+            exit = shrinkVertically(shrinkTowards = Alignment.CenterVertically) + fadeOut()
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IconButton(onClick = { onAction(DrawingAction.Undo) }) {
+                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo")
+                }
+                IconButton(onClick = { onAction(DrawingAction.Redo) }) {
+                    Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo")
+                }
+            }
+        }
+
+        IconButton(onClick = { onCollapseChange(!isCollapsed) }) { // Use the callback to update parent state
+            Icon(
+                imageVector = if (isCollapsed) Icons.Default.MenuOpen else Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = if (isCollapsed) "Expand toolbar" else "Collapse toolbar"
+            )
+        }
+
+        AnimatedVisibility(
+            visible = !isCollapsed,
+            enter = fadeIn() + expandVertically(expandFrom = Alignment.CenterVertically),
+            exit = shrinkVertically(shrinkTowards = Alignment.CenterVertically) + fadeOut()
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                IconButton(
+                    onClick = { onToggleHandwritingMode(true) },
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(if (isHandwritingMode) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent)
+                ) {
+                    Icon(Icons.Default.Gesture, contentDescription = "Handwriting Mode", tint = if (isHandwritingMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                IconButton(
+                    onClick = { onToggleHandwritingMode(false) },
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(if (!isHandwritingMode) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Pen Mode", tint = if (!isHandwritingMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
     }
 }
