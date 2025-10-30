@@ -10,15 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.xenonware.notes.viewmodel.DrawingAction
@@ -30,14 +25,13 @@ fun NoteControls(
     onAction: (DrawingAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val buttonSize = 34.dp
     val colorButtonSize = 28.dp
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
@@ -61,20 +55,6 @@ fun NoteControls(
                         }
                 )
             }
-        }
-        IconButton(
-            onClick = { onAction(DrawingAction.ClearCanvas) },
-            modifier = Modifier
-                .size(buttonSize)
-                .clip(CircleShape)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = null,
-//                tint = Color.White
-                modifier = Modifier
-                    .scale(-1f, 1f)
-            )
         }
     }
 }
