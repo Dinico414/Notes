@@ -39,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
@@ -203,21 +202,18 @@ fun ListContent(
                 )
 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = LargestPadding),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = LargestPadding),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     val isFilteringByDefaultColor = selectedColors.contains(null)
-                    val isAnyColorFilterActive = selectedColors.isNotEmpty()
-
-                    val defaultButtonContainerColor = colorScheme.surfaceContainerHigh
-                    val defaultButtonContentColor = colorScheme.onSurface
-
                     OutlinedIconButton(
                         onClick = { notesViewModel.toggleColorFilter(null) },
                         modifier = Modifier.weight(1f),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = defaultButtonContainerColor,
-                            contentColor = defaultButtonContentColor
+                            containerColor = colorScheme.surfaceContainerHigh,
+                            contentColor = colorScheme.onSurface
                         )
                     ) {
                         if (isFilteringByDefaultColor) {
@@ -229,19 +225,14 @@ fun ListContent(
                     }
 
                     // Red Color Filter Button
-                    val redColorValue = redInversePrimaryLight.toArgb().toLong()
-                    val isRedSelected = selectedColors.contains(redColorValue)
-                    val redButtonContainerColor =
-                        if (isDarkTheme) redInversePrimaryDark else redInversePrimaryLight
-                    val redButtonContentColor =
-                        if (isDarkTheme) redOnPrimaryLight else redOnPrimaryDark
-
+                    val isRedSelected = selectedColors.contains(NotesViewModel.COLOR_RED)
                     OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(redColorValue) },
+                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_RED) },
                         modifier = Modifier.weight(1f),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = redButtonContainerColor,
-                            contentColor = redButtonContentColor
+                            containerColor = if (isDarkTheme) redInversePrimaryDark else redInversePrimaryLight,
+                            contentColor = if (isDarkTheme) redOnPrimaryLight else redOnPrimaryDark
+
                         )
                     ) {
                         if (isRedSelected) {
@@ -253,19 +244,14 @@ fun ListContent(
                     }
 
                     // Orange Color Filter Button
-                    val orangeColorValue = orangeInversePrimaryLight.toArgb().toLong()
-                    val isOrangeSelected = selectedColors.contains(orangeColorValue)
-                    val orangeButtonContainerColor =
-                        if (isDarkTheme) orangeInversePrimaryDark else orangeInversePrimaryLight
-                    val orangeButtonContentColor =
-                        if (isDarkTheme) orangeOnPrimaryLight else orangeOnPrimaryDark
-
+                    val isOrangeSelected = selectedColors.contains(NotesViewModel.COLOR_ORANGE)
                     OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(orangeColorValue) },
+                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_ORANGE) },
                         modifier = Modifier.weight(1f),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = orangeButtonContainerColor,
-                            contentColor = orangeButtonContentColor
+                            containerColor = if (isDarkTheme) orangeInversePrimaryDark else orangeInversePrimaryLight,
+                            contentColor = if (isDarkTheme) orangeOnPrimaryLight else orangeOnPrimaryDark
+
                         )
                     ) {
                         if (isOrangeSelected) {
@@ -277,24 +263,14 @@ fun ListContent(
                     }
 
                     // Yellow Color Filter Button
-                    val yellowColorValue = yellowInversePrimaryLight.toArgb().toLong()
-                    val isYellowSelected = selectedColors.contains(yellowColorValue)
-                    val yellowButtonContainerColor = if (isYellowSelected) {
-                        if (isDarkTheme) yellowInversePrimaryDark else yellowInversePrimaryLight
-                    } else {
-                        if (isDarkTheme) yellowInversePrimaryDark else yellowInversePrimaryLight
-                    }
-                    val yellowButtonContentColor = if (isYellowSelected) {
-                        if (isDarkTheme) yellowOnPrimaryLight else yellowOnPrimaryDark
-                    } else {
-                        if (isDarkTheme) yellowOnPrimaryLight else yellowOnPrimaryDark
-                    }
+                    val isYellowSelected = selectedColors.contains(NotesViewModel.COLOR_YELLOW)
                     OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(yellowColorValue) },
+                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_YELLOW) },
                         modifier = Modifier.weight(1f),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = yellowButtonContainerColor,
-                            contentColor = yellowButtonContentColor
+                            containerColor = if (isDarkTheme) yellowInversePrimaryDark else yellowInversePrimaryLight,
+                            contentColor = if (isDarkTheme) yellowOnPrimaryLight else yellowOnPrimaryDark
+
                         )
                     ) {
                         if (isYellowSelected) {
@@ -306,20 +282,14 @@ fun ListContent(
                     }
 
                     // Green Color Filter Button
-                    val greenColorValue = greenInversePrimaryLight.toArgb().toLong()
-                    val isGreenSelected = selectedColors.contains(greenColorValue)
-                    val greenButtonContainerColor =
-                        if (isDarkTheme) greenInversePrimaryDark else greenInversePrimaryLight
-
-                    val greenButtonContentColor =
-                        if (isDarkTheme) greenOnPrimaryLight else greenOnPrimaryDark
-
+                    val isGreenSelected = selectedColors.contains(NotesViewModel.COLOR_GREEN)
                     OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(greenColorValue) },
+                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_GREEN) },
                         modifier = Modifier.weight(1f),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = greenButtonContainerColor,
-                            contentColor = greenButtonContentColor
+                            containerColor = if (isDarkTheme) greenInversePrimaryDark else greenInversePrimaryLight,
+                            contentColor = if (isDarkTheme) greenOnPrimaryLight else greenOnPrimaryDark
+
                         )
                     ) {
                         if (isGreenSelected) {
@@ -331,20 +301,15 @@ fun ListContent(
                     }
 
                     // Turquoise Color Filter Button
-                    val turquoiseColorValue = turquoiseInversePrimaryLight.toArgb().toLong()
-                    val isTurquoiseSelected = selectedColors.contains(turquoiseColorValue)
-                    val turquoiseButtonContainerColor =
-                        if (isDarkTheme) turquoiseInversePrimaryDark else turquoiseInversePrimaryLight
-
-                    val turquoiseButtonContentColor =
-                        if (isDarkTheme) turquoiseOnPrimaryLight else turquoiseOnPrimaryDark
-
+                    val isTurquoiseSelected =
+                        selectedColors.contains(NotesViewModel.COLOR_TURQUOISE)
                     OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(turquoiseColorValue) },
+                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_TURQUOISE) },
                         modifier = Modifier.weight(1f),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = turquoiseButtonContainerColor,
-                            contentColor = turquoiseButtonContentColor
+                            containerColor = if (isDarkTheme) turquoiseInversePrimaryDark else turquoiseInversePrimaryLight,
+                            contentColor = if (isDarkTheme) turquoiseOnPrimaryLight else turquoiseOnPrimaryDark
+
                         )
                     ) {
                         if (isTurquoiseSelected) {
@@ -356,20 +321,13 @@ fun ListContent(
                     }
 
                     // Blue Color Filter Button
-                    val blueColorValue = blueInversePrimaryLight.toArgb().toLong()
-                    val isBlueSelected = selectedColors.contains(blueColorValue)
-                    val blueButtonContainerColor =
-                        if (isDarkTheme) blueInversePrimaryDark else blueInversePrimaryLight
-
-                    val blueButtonContentColor =
-                        if (isDarkTheme) blueOnPrimaryLight else blueOnPrimaryDark
-
+                    val isBlueSelected = selectedColors.contains(NotesViewModel.COLOR_BLUE)
                     OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(blueColorValue) },
+                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_BLUE) },
                         modifier = Modifier.weight(1f),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = blueButtonContainerColor,
-                            contentColor = blueButtonContentColor
+                            containerColor = if (isDarkTheme) blueInversePrimaryDark else blueInversePrimaryLight,
+                            contentColor = if (isDarkTheme) blueOnPrimaryLight else blueOnPrimaryDark
                         )
                     ) {
                         if (isBlueSelected) {
@@ -381,20 +339,13 @@ fun ListContent(
                     }
 
                     // Purple Color Filter Button
-                    val purpleColorValue = purpleInversePrimaryLight.toArgb().toLong()
-                    val isPurpleSelected = selectedColors.contains(purpleColorValue)
-                    val purpleButtonContainerColor =
-                        if (isDarkTheme) purpleInversePrimaryDark else purpleInversePrimaryLight
-
-                    val purpleButtonContentColor =
-                        if (isDarkTheme) purpleOnPrimaryLight else purpleOnPrimaryDark
-
+                    val isPurpleSelected = selectedColors.contains(NotesViewModel.COLOR_PURPLE)
                     OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(purpleColorValue) },
+                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_PURPLE) },
                         modifier = Modifier.weight(1f),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = purpleButtonContainerColor,
-                            contentColor = purpleButtonContentColor
+                            containerColor = if (isDarkTheme) purpleInversePrimaryDark else purpleInversePrimaryLight,
+                            contentColor = if (isDarkTheme) purpleOnPrimaryLight else purpleOnPrimaryDark
                         )
                     ) {
                         if (isPurpleSelected) {

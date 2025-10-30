@@ -8,6 +8,13 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xenonware.notes.SharedPreferenceManager
+import com.xenonware.notes.ui.theme.blueInversePrimaryLight
+import com.xenonware.notes.ui.theme.greenInversePrimaryLight
+import com.xenonware.notes.ui.theme.orangeInversePrimaryLight
+import com.xenonware.notes.ui.theme.purpleInversePrimaryLight
+import com.xenonware.notes.ui.theme.redInversePrimaryLight
+import com.xenonware.notes.ui.theme.turquoiseInversePrimaryLight
+import com.xenonware.notes.ui.theme.yellowInversePrimaryLight
 import com.xenonware.notes.viewmodel.classes.NoteType
 import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -20,7 +27,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
+import androidx.compose.ui.graphics.toArgb
 
 enum class SortOption {
     FREE_SORTING,
@@ -453,5 +460,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         const val DEFAULT_LIST_ID = "default_list"
         const val MAX_LINES_FULL_NOTE = -1
+
+        // Define color constants here to ensure consistency
+        val COLOR_RED = redInversePrimaryLight.toArgb().toLong()
+        val COLOR_ORANGE = orangeInversePrimaryLight.toArgb().toLong()
+        val COLOR_YELLOW = yellowInversePrimaryLight.toArgb().toLong()
+        val COLOR_GREEN = greenInversePrimaryLight.toArgb().toLong()
+        val COLOR_TURQUOISE = turquoiseInversePrimaryLight.toArgb().toLong()
+        val COLOR_BLUE = blueInversePrimaryLight.toArgb().toLong()
+        val COLOR_PURPLE = purpleInversePrimaryLight.toArgb().toLong()
     }
 }
