@@ -90,6 +90,9 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _editingAudioNoteColor = MutableStateFlow<Long?>(null)
     val editingAudioNoteColor: StateFlow<Long?> = _editingAudioNoteColor.asStateFlow()
 
+    private val _selectedColors = MutableStateFlow<Set<Long?>>(emptySet())
+    val selectedColors: StateFlow<Set<Long?>> = _selectedColors.asStateFlow()
+
 
     init {
         loadAllNotes()
@@ -152,6 +155,17 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun toggleColorFilter(color: Long?) {
+        val currentColors = _selectedColors.value.toMutableSet()
+        if (currentColors.contains(color)) {
+            currentColors.remove(color)
+        } else {
+            currentColors.add(color)
+        }
+        _selectedColors.value = currentColors
+        applySortingAndFiltering()
+    }
+
     fun setSearchQuery(query: String) {
         if (_searchQuery.value != query) {
             _searchQuery.value = query
@@ -201,6 +215,20 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             NoteFilterType.LIST -> notesToDisplay.filter { it.noteType == NoteType.LIST }
             NoteFilterType.SKETCH -> notesToDisplay.filter { it.noteType == NoteType.SKETCH }
         }
+
+        val currentSelectedColors = _selectedColors.value
+        if (currentSelectedColors.isNotEmpty()) {
+            notesToDisplay = notesToDisplay.filter { note ->
+                if (currentSelectedColors.contains(null)) {
+                    // If 'null' is selected, include notes with no color AND notes with any of the other selected colors
+                    note.color == null || currentSelectedColors.contains(note.color)
+                } else {
+                    // Only filter by actual colors if 'null' is not selected
+                    currentSelectedColors.contains(note.color)
+                }
+            }
+        }
+
 
         val sortedNotes = sortNotes(notesToDisplay, currentSortOption, currentSortOrder)
 
