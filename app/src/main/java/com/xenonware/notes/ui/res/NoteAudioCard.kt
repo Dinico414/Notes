@@ -80,6 +80,7 @@ fun NoteAudioCard(
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
     modifier: Modifier = Modifier,
+    isNoteSheetOpen: Boolean, // Add isNoteSheetOpen parameter
 ) {
     val isDarkTheme = LocalIsDarkTheme.current
     val colorToThemeName = remember {
@@ -171,6 +172,7 @@ fun NoteAudioCard(
                     )
                 )
                 .combinedClickable(
+                    enabled = !isNoteSheetOpen, // Disable clicks when a note sheet is open
                     onClick = {
                         if (isSelectionModeActive) {
                             onSelectItem()

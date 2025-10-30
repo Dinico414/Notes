@@ -67,6 +67,7 @@ fun NoteListCard(
     onEditItem: (NotesItems) -> Unit,
     modifier: Modifier = Modifier,
     maxLines: Int = Int.MAX_VALUE,
+    isNoteSheetOpen: Boolean, // Add isNoteSheetOpen parameter
 ) {
     val isDarkTheme = LocalIsDarkTheme.current
     val colorToThemeName = remember {
@@ -126,6 +127,7 @@ fun NoteListCard(
                     )
                 )
                 .combinedClickable(
+                    enabled = !isNoteSheetOpen, // Disable clicks when a note sheet is open
                     onClick = {
                         if (isSelectionModeActive) {
                             onSelectItem()

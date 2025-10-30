@@ -910,7 +910,8 @@ fun CoverNotes(
                                                                 }
                                                             },
                                                             onEditItem = ::commonOnEditItem,
-                                                            maxLines = currentListMaxLines
+                                                            maxLines = currentListMaxLines,
+                                                            isNoteSheetOpen = true
                                                         )
                                                         val isLastItemInListOrNextIsHeader =
                                                             index == noteItemsWithHeaders.lastIndex || (index + 1 < noteItemsWithHeaders.size && noteItemsWithHeaders[index + 1] is String)
@@ -954,7 +955,8 @@ fun CoverNotes(
                                                         }
                                                     },
                                                     onEditItem = ::commonOnEditItem,
-                                                    maxLines = gridMaxLines
+                                                    maxLines = gridMaxLines,
+                                                    isNoteSheetOpen = true
                                                 )
                                             }
                                         }

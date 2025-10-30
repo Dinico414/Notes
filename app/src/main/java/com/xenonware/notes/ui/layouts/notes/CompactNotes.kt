@@ -903,6 +903,18 @@ fun CompactNotes(
                 }
             },
         ) { scaffoldPadding ->
+            // This Box will intercept all touch events when any note sheet is open
+            if (isAnyNoteSheetOpen) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { /* Intercept touches */ }
+                        )
+                )
+            }
             ActivityScreen(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1089,7 +1101,8 @@ fun CompactNotes(
                                                                         true
                                                                 }
                                                             },
-                                                            maxLines = currentListMaxLines
+                                                            maxLines = currentListMaxLines,
+                                                            isNoteSheetOpen = isAnyNoteSheetOpen
                                                         )
                                                         val isLastItemInListOrNextIsHeader =
                                                             index == noteItemsWithHeaders.lastIndex || (index + 1 < noteItemsWithHeaders.size && noteItemsWithHeaders[index + 1] is String)
@@ -1194,7 +1207,8 @@ fun CompactNotes(
                                                             }
                                                         }
                                                     },
-                                                    maxLines = gridMaxLines
+                                                    maxLines = gridMaxLines,
+                                                    isNoteSheetOpen = isAnyNoteSheetOpen
                                                 )
                                             }
                                         }
@@ -1477,6 +1491,7 @@ fun NoteCard(
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
     maxLines: Int = Int.MAX_VALUE,
+    isNoteSheetOpen: Boolean,
 ) {
     when (item.noteType) {
         NoteType.TEXT -> NoteTextCard(
@@ -1485,7 +1500,8 @@ fun NoteCard(
             isSelectionModeActive = isSelectionModeActive,
             onSelectItem = onSelectItem,
             onEditItem = onEditItem,
-            maxLines = maxLines
+            maxLines = maxLines,
+            isNoteSheetOpen = isNoteSheetOpen
         )
 
         NoteType.AUDIO -> NoteAudioCard(
@@ -1493,7 +1509,8 @@ fun NoteCard(
             isSelected = isSelected,
             isSelectionModeActive = isSelectionModeActive,
             onSelectItem = onSelectItem,
-            onEditItem = onEditItem
+            onEditItem = onEditItem,
+            isNoteSheetOpen = isNoteSheetOpen
         )
 
         NoteType.LIST -> NoteListCard(
@@ -1502,7 +1519,8 @@ fun NoteCard(
             isSelectionModeActive = isSelectionModeActive,
             onSelectItem = onSelectItem,
             onEditItem = onEditItem,
-            maxLines = maxLines
+            maxLines = maxLines,
+            isNoteSheetOpen = isNoteSheetOpen
         )
 
         NoteType.SKETCH -> NoteSketchCard(
