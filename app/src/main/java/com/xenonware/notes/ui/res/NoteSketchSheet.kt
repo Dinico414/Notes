@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -50,8 +51,8 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -111,9 +112,12 @@ fun NoteSketchSheet(
     usePressure: Boolean,
     strokeWidth: Float,
     strokeColor: Color,
-    showColorPicker: Boolean, // New parameter
-    onColorPickerDismiss: () -> Unit, // New parameter
-    onColorSelected: (Color) -> Unit, // New parameter
+    showColorPicker: Boolean,
+    onColorPickerDismiss: () -> Unit,
+    onColorSelected: (Color) -> Unit,
+    showPenSizePicker: Boolean,
+    onPenSizePickerDismiss: () -> Unit,
+    onPenSizeSelected: (Float) -> Unit,
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
@@ -141,7 +145,7 @@ fun NoteSketchSheet(
         viewModel<CanvasViewModel>(factory = CanvasViewModelFactory(application = application))
     val currentPathState = viewModel.currentPathState.collectAsState()
     val pathState = viewModel.pathState.collectAsState()
-    val isHandwritingMode by viewModel.isHandwritingMode.collectAsState() // New state for handwriting mode
+    val isHandwritingMode by viewModel.isHandwritingMode.collectAsState()
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
@@ -218,14 +222,14 @@ fun NoteSketchSheet(
                     )
                 )
         ) {
-            var isSideControlsCollapsed by rememberSaveable { mutableStateOf(false) } // State for side controls collapse
+            var isSideControlsCollapsed by rememberSaveable { mutableStateOf(false) }
 
 
             NoteCanvas(
                 pathState.value.paths,
                 currentPathState.value.path,
                 viewModel::onAction,
-                isHandwritingMode = isHandwritingMode, // Pass the new parameter
+                isHandwritingMode = isHandwritingMode,
                 gridEnabled = pathState.value.gridEnabled,
                 debugText = true,
                 debugPoints = false,
@@ -260,7 +264,7 @@ fun NoteSketchSheet(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
 
-                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
+                val titleTextStyle = typography.titleLarge.merge(
                     TextStyle(
                         fontFamily = QuicksandTitleVariable,
                         textAlign = TextAlign.Center,
@@ -360,7 +364,7 @@ fun NoteSketchSheet(
                     )
                 }
             }
-            
+
 
             if (showColorPicker) {
                 Box(
@@ -380,6 +384,46 @@ fun NoteSketchSheet(
                             onAction = { action ->
                                 if (action is DrawingAction.SelectColor) {
                                     onColorSelected(action.color)
+                                }
+                                viewModel.onAction(action)
+                            },
+                            modifier = Modifier
+                                .width(208.dp)
+                                .windowInsetsPadding(
+                                    WindowInsets.safeDrawing.only(
+                                        WindowInsetsSides.Bottom
+                                    )
+                                )
+                                .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(colorScheme.surfaceDim)
+                                .hazeEffect(
+                                    state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)
+                                ),
+                        )
+                        Spacer(Modifier.width(64.dp))
+                    }
+                }
+            }
+
+            if (showPenSizePicker) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onPenSizePickerDismiss
+                        ),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    Row {
+                        PenSizePicker(
+                            selectedSize = currentPathState.value.strokeWidth,
+                            sizes = listOf(2f, 5f, 10f, 20f, 40f, 60f, 80f, 100f),
+                            onAction = { action ->
+                                if (action is DrawingAction.SelectStrokeWidth) {
+                                    onPenSizeSelected(action.strokeWidth)
                                 }
                                 viewModel.onAction(action)
                             },
@@ -591,6 +635,73 @@ fun ColorPicker(
                             .clickable {
                                 onAction(DrawingAction.SelectColor(color))
                             })
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun PenSizePicker(
+    selectedSize: Float,
+    sizes: List<Float>,
+    onAction: (DrawingAction) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sizeButtonSize = 28.dp // Diameter of the button itself
+    val itemsInRow = 4
+    val spacing = 16.dp
+    val onSurfaceColor = colorScheme.onSurface // Capture color here
+    val maxPenSize = sizes.maxOrNull() ?: 1f
+
+    Column(
+        modifier = modifier
+            .wrapContentSize(Alignment.Center)
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(spacing)
+    ) {
+        val numberOfRows = (sizes.size + itemsInRow - 1) / itemsInRow
+
+        repeat(numberOfRows) { rowIndex ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val startIndex = rowIndex * itemsInRow
+                val endIndex = minOf(startIndex + itemsInRow, sizes.size)
+
+                for (i in startIndex until endIndex) {
+                    val size = sizes[i]
+                    val isSelected = selectedSize == size
+
+                    if (i > startIndex) {
+                        Spacer(modifier = Modifier.width(spacing))
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(sizeButtonSize)
+                            .clip(CircleShape)
+                            .border(
+                                if (isSelected) 2.dp else 0.8.dp, Color.Gray, shape = CircleShape
+                            )
+                            .clickable {
+                                onAction(DrawingAction.SelectStrokeWidth(size))
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // The actual circle representing the pen size
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val maxRadius = this.size.minDimension / 2
+                            drawCircle(
+                                color = onSurfaceColor,
+                                radius = (size / maxPenSize) * maxRadius
+                            )
+                        }
+                    }
                 }
             }
         }

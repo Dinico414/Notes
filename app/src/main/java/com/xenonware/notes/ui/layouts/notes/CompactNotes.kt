@@ -11,8 +11,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +35,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
@@ -41,7 +43,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
@@ -58,8 +59,6 @@ import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material.icons.filled.ViewStream
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -146,7 +145,6 @@ import com.xenonware.notes.ui.theme.noteTurquoiseDark
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
-import com.xenonware.notes.ui.theme.primaryContainerDark
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.NotesLayoutType
@@ -585,66 +583,70 @@ fun CompactNotes(
                                         Icons.AutoMirrored.Default.Article,
                                         contentDescription = stringResource(R.string.transcript_view)
                                     )
-                                 }
+                                }
                             }
                         }
                     } else {
                         null
                     }
 
-                val sketchEditorContent: @Composable (RowScope.() -> Unit)? = if (showSketchNoteCard) {
-                    @Composable {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            // Size selector
-                            IconButton(onClick = { showSketchSizePopup = true }) {
-                                Icon(
-                                    Icons.Default.Brush,
-                                    contentDescription = "Brush Size"
-                                )
-                            }
-                            SketchSizePopup(
-                                expanded = showSketchSizePopup,
-                                onDismissRequest = { showSketchSizePopup = false },
-                                onSizeSelected = { currentSketchSize = it }
-                            )
+                val sketchEditorContent: @Composable (RowScope.() -> Unit)? =
+                    if (showSketchNoteCard) {
+                        @Composable {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                // Size selector
+                                IconButton(onClick = {
+                                    showSketchSizePopup = true
+                                    showColorPicker = false
+                                }) {
+                                    Icon(
+                                        Icons.Default.Brush, contentDescription = "Brush Size"
+                                    )
+                                }
+                                // Removed PenSizePicker invocation, it's now handled in NoteSketchSheet
 
-                            // Color selector
-                            IconButton(onClick = { showColorPicker = true }) {
-                                Icon(
-                                    Icons.Default.ColorLens,
-                                    contentDescription = "Brush Color",
-                                    tint = currentSketchColor // Set tint to currentSketchColor
-                                )
-                            }
-                            // Removed SketchColorPopup here, its functionality is now within NoteSketchSheet
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = 10.dp)
+                                        .size(28.dp)
+                                        .border(2.dp, colorScheme.onSurface, CircleShape)
+                                        .border(3.dp, colorScheme.surfaceDim, CircleShape)
+                                        .background(currentSketchColor, CircleShape)
+                                ) {
+                                    IconButton(onClick = {
+                                        showColorPicker = true
+                                        showSketchSizePopup = false
+                                    })
+                                    {}
+                                }
 
-                            // Eraser mode
-                            IconButton(onClick = { isEraserMode = !isEraserMode }) {
-                                Icon(
-                                    painter = if (isEraserMode) painterResource(id = R.drawable.eraser) else painterResource(id = R.drawable.pencil),
-                                    contentDescription = "Eraser",
-                                    tint = colorScheme.primary
-                                )
-                            }
+                                // Eraser mode
+                                IconButton(onClick = { isEraserMode = !isEraserMode }) {
+                                    Icon(
+                                        painter = if (isEraserMode) painterResource(id = R.drawable.eraser) else painterResource(
+                                            id = R.drawable.pencil
+                                        ), contentDescription = "Eraser", tint = colorScheme.primary
+                                    )
+                                }
 
-                            // Pressure/Speed toggle
-                            IconButton(onClick = { usePressure = !usePressure }) {
-                                Icon(
-                                    Icons.Default.StackedLineChart,
-                                    contentDescription = "Toggle Pressure/Speed",
-                                    tint = if (usePressure) colorScheme.primary else colorScheme.onSurface
-                                )
-                                //TODO add correct icons and remove color toggle
+                                // Pressure/Speed toggle
+                                IconButton(onClick = { usePressure = !usePressure }) {
+                                    Icon(
+                                        Icons.Default.StackedLineChart,
+                                        contentDescription = "Toggle Pressure/Speed",
+                                        tint = if (usePressure) colorScheme.primary else colorScheme.onSurface
+                                    )
+                                    //TODO add correct icons and remove color toggle
+                                }
                             }
                         }
+                    } else {
+                        null
                     }
-                } else {
-                    null
-                }
 
                 val onAddModeToggle = { isAddModeActive = !isAddModeActive }
 
@@ -840,13 +842,16 @@ fun CompactNotes(
                             {
                                 FloatingActionButton(
                                     onClick = {
-                                        if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger = true
+                                        if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
+                                            true
                                     }, containerColor = colorScheme.primary
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Save,
                                         contentDescription = stringResource(R.string.save_list_note),
-                                        tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimary else colorScheme.onPrimary.copy(alpha = 0.38f)
+                                        tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimary else colorScheme.onPrimary.copy(
+                                            alpha = 0.38f
+                                        )
                                     )
                                 }
                             }
@@ -893,9 +898,7 @@ fun CompactNotes(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = { /* Intercept touches */ }
-                        )
-                )
+                            onClick = { /* Intercept touches */ }))
             }
             ActivityScreen(
                 modifier = Modifier
@@ -1038,7 +1041,7 @@ fun CompactNotes(
                                                                 nextListItemId = 0L
                                                                 currentListSizeIndex = 1
                                                                 itemToEdit.description?.let { desc ->
-                                                                    val parsedItems = desc.split("")
+                                                                    val parsedItems = desc.split("\n")
                                                                         .mapNotNull { line ->
                                                                             if (line.isBlank()) null
                                                                             else {
@@ -1140,7 +1143,7 @@ fun CompactNotes(
                                                         currentListSizeIndex = 1
                                                         itemToEdit.description?.let { desc ->
                                                             val parsedItems =
-                                                                desc.split("").mapNotNull { line ->
+                                                                desc.split("\n").mapNotNull { line ->
                                                                     if (line.isBlank()) null
                                                                     else {
                                                                         val isChecked =
@@ -1289,8 +1292,6 @@ fun CompactNotes(
                         editingNoteColor = themeColorMap[newThemeName]
                     },
                     onSave = { title, theme ->
-                        // The description for a sketch is managed internally for now.
-                        // We only save the title and color.
                         if (title.isNotBlank()) {
                             val color = themeColorMap[theme]
                             if (editingNoteId != null) {
@@ -1298,8 +1299,6 @@ fun CompactNotes(
                                     notesViewModel.noteItems.filterIsInstance<NotesItems>()
                                         .find { it.id == editingNoteId }?.copy(
                                             title = title,
-                                            // description for sketch is handled via canvas data,
-                                            // so it might not be passed here
                                             color = color?.toLong()
                                         )
                                 if (updatedNote != null) {
@@ -1328,6 +1327,12 @@ fun CompactNotes(
                     onColorSelected = { color -> // Callback for selected color
                         currentSketchColor = color
                         showColorPicker = false
+                    },
+                    showPenSizePicker = showSketchSizePopup,
+                    onPenSizePickerDismiss = { showSketchSizePopup = false },
+                    onPenSizeSelected = { size ->
+                        currentSketchSize = size
+                        showSketchSizePopup = false
                     }
                 )
             }
@@ -1405,7 +1410,7 @@ fun CompactNotes(
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onSave = { title, items, theme ->
-                        val description = items.joinToString("") {
+                        val description = items.joinToString("\n") {
                             "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
                         }
                         if (title.isNotBlank() || description.isNotBlank()) {
@@ -1518,36 +1523,5 @@ fun NoteCard(
             onSelectItem = onSelectItem,
             onEditItem = onEditItem
         )
-    }
-}
-
-@Composable
-fun SketchSizePopup(
-    expanded: Boolean,
-    onDismissRequest: () -> Unit,
-    onSizeSelected: (Float) -> Unit
-) {
-    val sizes = listOf(5f, 10f, 20f, 40f, 80f)
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismissRequest
-    ) {
-        sizes.forEach { size ->
-            DropdownMenuItem(
-                text = { Text(text = "${size.toInt()}px") },
-                onClick = {
-                    onSizeSelected(size)
-                    onDismissRequest()
-                },
-                leadingIcon = {
-                    Canvas(modifier = Modifier.size(32.dp), onDraw = {
-                        drawCircle(
-                            color = primaryContainerDark,
-                            radius = size / 2
-                        )
-                    })
-                }
-            )
-        }
     }
 }

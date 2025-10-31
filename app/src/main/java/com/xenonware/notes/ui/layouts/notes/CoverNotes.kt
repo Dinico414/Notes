@@ -1096,6 +1096,12 @@ fun CoverNotes(
                     onColorSelected = { color -> // Callback for selected color
                         currentSketchColor = color
                         showColorPicker = false
+                    },
+                    showPenSizePicker = showSketchSizePopup,
+                    onPenSizePickerDismiss = { showSketchSizePopup = false },
+                    onPenSizeSelected = { size ->
+                        currentSketchSize = size
+                        showSketchSizePopup = false
                     }
                 )
             }

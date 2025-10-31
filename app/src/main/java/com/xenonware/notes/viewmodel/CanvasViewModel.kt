@@ -50,6 +50,7 @@ sealed interface DrawingAction {
     data object Undo : DrawingAction
     data object Redo : DrawingAction
     data class SelectColor(val color: Color) : DrawingAction
+    data class SelectStrokeWidth(val strokeWidth: Float) : DrawingAction // New action
     data object ClearCanvas : DrawingAction
     data class EnableGrid(val enabled: Boolean) : DrawingAction
     data class ToggleHandwritingMode(val enabled: Boolean) : DrawingAction
@@ -122,6 +123,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
             DrawingAction.Undo -> onUndo()
             DrawingAction.ClearCanvas -> onClearCanvasClick()
             is DrawingAction.SelectColor -> onSelectColor(action.color)
+            is DrawingAction.SelectStrokeWidth -> onSelectStrokeWidth(action.strokeWidth) // New case
             is DrawingAction.EnableGrid -> onEnableGrid(action.enabled)
             is DrawingAction.ToggleHandwritingMode -> onToggleHandwritingMode(action.enabled)
             is DrawingAction.UpdateTool -> onUpdateTool(action.isEraser, action.usePressure, action.strokeWidth, action.strokeColor)
@@ -266,6 +268,14 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         _currentPathState.update {
             it.copy(
                 color = color
+            )
+        }
+    }
+
+    private fun onSelectStrokeWidth(strokeWidth: Float) { // New function
+        _currentPathState.update {
+            it.copy(
+                strokeWidth = strokeWidth
             )
         }
     }
