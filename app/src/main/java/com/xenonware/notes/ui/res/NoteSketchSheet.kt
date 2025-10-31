@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -362,38 +363,44 @@ fun NoteSketchSheet(
             
 
             if (showColorPicker) {
-                Row (modifier = Modifier.align(Alignment.BottomCenter)) {
-                ColorPicker(
-                    selectedColor = currentPathState.value.color,
-                    colors = themeDrawColors,
-                    onAction = { action ->
-                        if (action is DrawingAction.SelectColor) {
-                            onColorSelected(action.color)
-                        }
-                        viewModel.onAction(action)
-                    },
+                Box(
                     modifier = Modifier
-                        .width(208.dp)
-                        .windowInsetsPadding(
-                            WindowInsets.safeDrawing.only(
-                                WindowInsetsSides.Bottom
-                            )
-                        )
-                        .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(colorScheme.surfaceDim)
-                        .hazeEffect(
-                            state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onColorPickerDismiss // Dismiss when clicking outside the color picker
                         ),
-                )
-                    Spacer(Modifier.width(64.dp)) // This spacer looks like it's trying to push the ColorPicker to the left, but is inside the Row.
-                                                 // If the intention is to center the picker or place it at a specific offset,
-                                                 // consider using Modifier.offset or adjusting the Row's arrangement.
+                    contentAlignment = Alignment.BottomCenter // Align the ColorPicker to the bottom center
+                ) {
+                    Row {
+                        ColorPicker(
+                            selectedColor = currentPathState.value.color,
+                            colors = themeDrawColors,
+                            onAction = { action ->
+                                if (action is DrawingAction.SelectColor) {
+                                    onColorSelected(action.color)
+                                }
+                                viewModel.onAction(action)
+                            },
+                            modifier = Modifier
+                                .width(208.dp)
+                                .windowInsetsPadding(
+                                    WindowInsets.safeDrawing.only(
+                                        WindowInsetsSides.Bottom
+                                    )
+                                )
+                                .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(colorScheme.surfaceDim)
+                                .hazeEffect(
+                                    state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)
+                                ),
+                        )
+                        Spacer(Modifier.width(64.dp))
+                    }
                 }
-            } else {
-                null
             }
-
 
 
             Box(
