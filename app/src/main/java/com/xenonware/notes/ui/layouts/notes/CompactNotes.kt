@@ -616,7 +616,8 @@ fun CompactNotes(
                             IconButton(onClick = { showColorPicker = true }) {
                                 Icon(
                                     Icons.Default.ColorLens,
-                                    contentDescription = "Brush Color"
+                                    contentDescription = "Brush Color",
+                                    tint = currentSketchColor // Set tint to currentSketchColor
                                 )
                             }
                             // Removed SketchColorPopup here, its functionality is now within NoteSketchSheet
