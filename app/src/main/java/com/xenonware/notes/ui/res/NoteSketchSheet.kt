@@ -7,6 +7,8 @@ import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,9 +23,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -58,6 +63,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,7 +80,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.NoteCanvas
-import com.xenonware.notes.NoteControls
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
@@ -143,7 +148,11 @@ fun NoteSketchSheet(
     }
 
     LaunchedEffect(isEraserMode, usePressure, strokeWidth, strokeColor) {
-        viewModel.onAction(DrawingAction.UpdateTool(isEraserMode, usePressure, strokeWidth, strokeColor))
+        viewModel.onAction(
+            DrawingAction.UpdateTool(
+                isEraserMode, usePressure, strokeWidth, strokeColor
+            )
+        )
     }
 
     XenonTheme(
@@ -208,151 +217,166 @@ fun NoteSketchSheet(
         ) {
             var isSideControlsCollapsed by rememberSaveable { mutableStateOf(false) } // State for side controls collapse
 
-            Column(
+
+            NoteCanvas(
+                pathState.value.paths,
+                currentPathState.value.path,
+                viewModel::onAction,
+                isHandwritingMode = isHandwritingMode, // Pass the new parameter
+                gridEnabled = pathState.value.gridEnabled,
+                debugText = true,
+                debugPoints = false,
                 modifier = Modifier
                     .fillMaxSize()
                     .hazeSource(state = hazeState)
-            ) {
-                Spacer(modifier = Modifier.height(68.dp)) // Padding for the top bar
-                NoteControls(
-                    currentPathState.value.color, themeDrawColors, viewModel::onAction
-                )
-                NoteCanvas(
-                    pathState.value.paths,
-                    currentPathState.value.path,
-                    viewModel::onAction,
-                    isHandwritingMode = isHandwritingMode, // Pass the new parameter
-                    gridEnabled = pathState.value.gridEnabled,
-                    debugText = true,
-                    debugPoints = false,
-                )
-            }
+            )
 
-            // Top bar
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            WindowInsetsSides.Top
+            ) {
+                // Top bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(
+                                WindowInsetsSides.Top
+                            )
+                        )
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 4.dp)
+                        .clip(RoundedCornerShape(100f))
+                        .background(colorScheme.surfaceDim)
+                        .hazeEffect(
+                            state = hazeState,
+                            style = HazeMaterials.ultraThin(hazeThinColor),
+                        ), verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onDismiss, modifier = Modifier.padding(4.dp)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+
+                    val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
+                        TextStyle(
+                            fontFamily = QuicksandTitleVariable,
+                            textAlign = TextAlign.Center,
+                            color = colorScheme.onSurface
                         )
                     )
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 4.dp)
-                    .clip(RoundedCornerShape(100f))
-                    .background(colorScheme.surfaceDim)
-                    .hazeEffect(
-                        state = hazeState,
-                        style = HazeMaterials.ultraThin(hazeThinColor),
-                    ), verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onDismiss, modifier = Modifier.padding(4.dp)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    BasicTextField(
+                        value = sketchTitle,
+                        onValueChange = onSketchTitleChange,
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        textStyle = titleTextStyle,
+                        cursorBrush = SolidColor(colorScheme.primary),
+                        decorationBox = { innerTextField ->
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                if (sketchTitle.isEmpty()) {
+                                    Text(
+                                        text = "Title",
+                                        style = titleTextStyle,
+                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        })
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
+                        ) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                        }
+                        DropdownNoteMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            items = listOf(
+                                MenuItem(
+                                    text = "Label",
+                                    onClick = { isLabeled = !isLabeled },
+                                    dismissOnClick = false,
+                                    icon = {
+                                        if (isLabeled) {
+                                            Icon(
+                                                Icons.Default.Bookmark,
+                                                contentDescription = "Label",
+                                                tint = labelColor
+                                            )
+                                        } else {
+                                            Icon(
+                                                Icons.Default.BookmarkBorder,
+                                                contentDescription = "Label"
+                                            )
+                                        }
+                                    }), MenuItem(
+                                    text = colorMenuItemText, onClick = {
+                                        val currentIndex = availableThemes.indexOf(selectedTheme)
+                                        val nextIndex = (currentIndex + 1) % availableThemes.size
+                                        selectedTheme = availableThemes[nextIndex]
+                                        onThemeChange(selectedTheme)
+                                        colorChangeJob?.cancel()
+                                        colorChangeJob = scope.launch {
+                                            colorMenuItemText = availableThemes[nextIndex]
+                                            isFadingOut = false
+                                            delay(2500) // Keep current theme color for 2.5 seconds
+                                            isFadingOut = true // Fade out animation for 0.5 seconds
+                                            delay(500)
+                                            colorMenuItemText = "Color"
+                                            isFadingOut = false
+                                        }
+                                    }, dismissOnClick = false, icon = {
+                                        Icon(
+                                            Icons.Default.ColorLens,
+                                            contentDescription = "Color",
+                                            tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                        )
+                                    }, textColor = animatedTextColor
+                                ), MenuItem(
+                                    text = if (isOffline) "Online note" else "Offline note",
+                                    onClick = { isOffline = !isOffline },
+                                    dismissOnClick = false,
+                                    textColor = if (isOffline) colorScheme.error else null,
+                                    icon = {
+                                        if (isOffline) {
+                                            Icon(
+                                                Icons.Default.CloudOff,
+                                                contentDescription = "Offline note",
+                                                tint = colorScheme.error
+                                            )
+                                        } else {
+                                            Icon(
+                                                Icons.Default.Cloud,
+                                                contentDescription = "Online note"
+                                            )
+                                        }
+                                    })
+                            ),
+                            hazeState = hazeState
+                        )
+                    }
                 }
 
-                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
-                    TextStyle(
-                        fontFamily = QuicksandTitleVariable,
-                        textAlign = TextAlign.Center,
-                        color = colorScheme.onSurface
+                NoteControls(
+                    currentPathState.value.color, themeDrawColors, viewModel::onAction,
+                    modifier = Modifier
+                        .align(CenterHorizontally)
+                        .width(208.dp)
+                        .padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(colorScheme.surfaceDim)
+                        .hazeEffect(
+                            state = hazeState,
+                            style = HazeMaterials.ultraThin(hazeThinColor)
+                            ),
                     )
-                )
-                BasicTextField(
-                    value = sketchTitle,
-                    onValueChange = onSketchTitleChange,
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    textStyle = titleTextStyle,
-                    cursorBrush = SolidColor(colorScheme.primary),
-                    decorationBox = { innerTextField ->
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (sketchTitle.isEmpty()) {
-                                Text(
-                                    text = "Title",
-                                    style = titleTextStyle,
-                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
-                            innerTextField()
-                        }
-                    })
-                Box {
-                    IconButton(
-                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
-                    ) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                    }
-                    DropdownNoteMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        items = listOf(
-                            MenuItem(
-                            text = "Label",
-                            onClick = { isLabeled = !isLabeled },
-                            dismissOnClick = false,
-                            icon = {
-                                if (isLabeled) {
-                                    Icon(
-                                        Icons.Default.Bookmark,
-                                        contentDescription = "Label",
-                                        tint = labelColor
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.BookmarkBorder,
-                                        contentDescription = "Label"
-                                    )
-                                }
-                            }), MenuItem(
-                                text = colorMenuItemText, onClick = {
-                                val currentIndex = availableThemes.indexOf(selectedTheme)
-                                val nextIndex = (currentIndex + 1) % availableThemes.size
-                                selectedTheme = availableThemes[nextIndex]
-                                onThemeChange(selectedTheme)
-                                colorChangeJob?.cancel()
-                                colorChangeJob = scope.launch {
-                                    colorMenuItemText = availableThemes[nextIndex]
-                                    isFadingOut = false
-                                    delay(2500) // Keep current theme color for 2.5 seconds
-                                    isFadingOut = true // Fade out animation for 0.5 seconds
-                                    delay(500)
-                                    colorMenuItemText = "Color"
-                                    isFadingOut = false
-                                }
-                            }, dismissOnClick = false, icon = {
-                                Icon(
-                                    Icons.Default.ColorLens,
-                                    contentDescription = "Color",
-                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                )
-                            }, textColor = animatedTextColor
-                        ), MenuItem(
-                            text = if (isOffline) "Online note" else "Offline note",
-                            onClick = { isOffline = !isOffline },
-                            dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else null,
-                            icon = {
-                                if (isOffline) {
-                                    Icon(
-                                        Icons.Default.CloudOff,
-                                        contentDescription = "Offline note",
-                                        tint = colorScheme.error
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.Cloud, contentDescription = "Online note"
-                                    )
-                                }
-                            })
-                        ),
-                        hazeState = hazeState
-                    )
-                }
             }
+
 
             Box(
                 modifier = Modifier
@@ -392,7 +416,10 @@ class CanvasViewModelFactory(private val application: Application) : ViewModelPr
     }
 }
 
-@OptIn(ExperimentalHazeMaterialsApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
+@OptIn(
+    ExperimentalHazeMaterialsApi::class,
+    androidx.compose.foundation.ExperimentalFoundationApi::class
+)
 @Composable
 fun VerticalFloatingToolbar(
     onAction: (DrawingAction) -> Unit,
@@ -414,7 +441,9 @@ fun VerticalFloatingToolbar(
             )
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = if (isCollapsed) Arrangement.Center else Arrangement.spacedBy(8.dp, Alignment.Top)
+        verticalArrangement = if (isCollapsed) Arrangement.Center else Arrangement.spacedBy(
+            8.dp, Alignment.Top
+        )
     ) {
         // Top section (Undo/Redo)
         if (!isCollapsed) {
@@ -424,15 +453,13 @@ fun VerticalFloatingToolbar(
             ) {
                 IconButton(onClick = {}) {
                     Icon(
-                        Icons.AutoMirrored.Filled.Undo, 
+                        Icons.AutoMirrored.Filled.Undo,
                         contentDescription = "Undo (Long press to clear)",
                         modifier = Modifier.pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = { onAction(DrawingAction.Undo) },
-                                onLongPress = { onAction(DrawingAction.ClearCanvas) }
-                            )
-                        }
-                    )
+                                onLongPress = { onAction(DrawingAction.ClearCanvas) })
+                        })
                 }
                 IconButton(onClick = { onAction(DrawingAction.Redo) }) {
                     Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo")
@@ -466,9 +493,8 @@ fun VerticalFloatingToolbar(
                     )
                 ) {
                     Icon(
-                        Icons.Default.Gesture,
-                        contentDescription = "Handwriting Mode"
-                        )
+                        Icons.Default.Gesture, contentDescription = "Handwriting Mode"
+                    )
                 }
                 FilledIconButton(
                     onClick = { onToggleHandwritingMode(false) },
@@ -478,11 +504,71 @@ fun VerticalFloatingToolbar(
                     )
                 ) {
                     Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Pen Mode"
+                        Icons.Default.Edit, contentDescription = "Pen Mode"
                     )
                 }
             }
         }
     }
 }
+
+
+@Composable
+fun NoteControls(
+    selectedColor: Color,
+    colors: List<Color>,
+    onAction: (DrawingAction) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colorButtonSize = 28.dp
+    val itemsInRow = 4
+    val spacing = 16.dp
+
+    Column(
+        modifier = modifier
+            .wrapContentSize(Alignment.Center)
+            .padding(8.dp), 
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(spacing) // Spacing between rows
+    ) {
+        // Calculate the number of rows needed
+        val numberOfRows = (colors.size + itemsInRow - 1) / itemsInRow
+
+        // Create rows
+        repeat(numberOfRows) { rowIndex ->
+            Row(
+                modifier = Modifier.fillMaxWidth(), // Fill width of the parent Column for better arrangement
+                horizontalArrangement = Arrangement.Center, // Center items within this Row
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Calculate the start and end index for the current row
+                val startIndex = rowIndex * itemsInRow
+                val endIndex = minOf(startIndex + itemsInRow, colors.size)
+
+                // Add color items for the current row
+                for (i in startIndex until endIndex) {
+                    val color = colors[i]
+                    val isSelected = selectedColor == color
+
+                    // Add horizontal spacing between color items
+                    if (i > startIndex) { // Add spacing if not the first item in the row
+                        Spacer(modifier = Modifier.width(spacing))
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(colorButtonSize)
+                            .clip(CircleShape)
+                            .background(color)
+                            .border(
+                                if (isSelected) 2.dp else 0.8.dp, Color.Gray, shape = CircleShape
+                            )
+                            .clickable {
+                                onAction(DrawingAction.SelectColor(color))
+                            })
+                }
+            }
+        }
+    }
+}
+
