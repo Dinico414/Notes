@@ -63,7 +63,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -111,6 +110,9 @@ fun NoteSketchSheet(
     usePressure: Boolean,
     strokeWidth: Float,
     strokeColor: Color,
+    showColorPicker: Boolean, // New parameter
+    onColorPickerDismiss: () -> Unit, // New parameter
+    onColorSelected: (Color) -> Unit, // New parameter
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
@@ -231,151 +233,167 @@ fun NoteSketchSheet(
                     .hazeSource(state = hazeState)
             )
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-            ) {
-                // Top bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .windowInsetsPadding(
-                            WindowInsets.safeDrawing.only(
-                                WindowInsetsSides.Top
-                            )
-                        )
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 4.dp)
-                        .clip(RoundedCornerShape(100f))
-                        .background(colorScheme.surfaceDim)
-                        .hazeEffect(
-                            state = hazeState,
-                            style = HazeMaterials.ultraThin(hazeThinColor),
-                        ), verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = onDismiss, modifier = Modifier.padding(4.dp)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
 
-                    val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
-                        TextStyle(
-                            fontFamily = QuicksandTitleVariable,
-                            textAlign = TextAlign.Center,
-                            color = colorScheme.onSurface
+            // Top bar
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Top
                         )
                     )
-                    BasicTextField(
-                        value = sketchTitle,
-                        onValueChange = onSketchTitleChange,
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        textStyle = titleTextStyle,
-                        cursorBrush = SolidColor(colorScheme.primary),
-                        decorationBox = { innerTextField ->
-                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                if (sketchTitle.isEmpty()) {
-                                    Text(
-                                        text = "Title",
-                                        style = titleTextStyle,
-                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        })
-                    Box {
-                        IconButton(
-                            onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
-                        ) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                        }
-                        DropdownNoteMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                            items = listOf(
-                                MenuItem(
-                                    text = "Label",
-                                    onClick = { isLabeled = !isLabeled },
-                                    dismissOnClick = false,
-                                    icon = {
-                                        if (isLabeled) {
-                                            Icon(
-                                                Icons.Default.Bookmark,
-                                                contentDescription = "Label",
-                                                tint = labelColor
-                                            )
-                                        } else {
-                                            Icon(
-                                                Icons.Default.BookmarkBorder,
-                                                contentDescription = "Label"
-                                            )
-                                        }
-                                    }), MenuItem(
-                                    text = colorMenuItemText, onClick = {
-                                        val currentIndex = availableThemes.indexOf(selectedTheme)
-                                        val nextIndex = (currentIndex + 1) % availableThemes.size
-                                        selectedTheme = availableThemes[nextIndex]
-                                        onThemeChange(selectedTheme)
-                                        colorChangeJob?.cancel()
-                                        colorChangeJob = scope.launch {
-                                            colorMenuItemText = availableThemes[nextIndex]
-                                            isFadingOut = false
-                                            delay(2500) // Keep current theme color for 2.5 seconds
-                                            isFadingOut = true // Fade out animation for 0.5 seconds
-                                            delay(500)
-                                            colorMenuItemText = "Color"
-                                            isFadingOut = false
-                                        }
-                                    }, dismissOnClick = false, icon = {
-                                        Icon(
-                                            Icons.Default.ColorLens,
-                                            contentDescription = "Color",
-                                            tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                        )
-                                    }, textColor = animatedTextColor
-                                ), MenuItem(
-                                    text = if (isOffline) "Online note" else "Offline note",
-                                    onClick = { isOffline = !isOffline },
-                                    dismissOnClick = false,
-                                    textColor = if (isOffline) colorScheme.error else null,
-                                    icon = {
-                                        if (isOffline) {
-                                            Icon(
-                                                Icons.Default.CloudOff,
-                                                contentDescription = "Offline note",
-                                                tint = colorScheme.error
-                                            )
-                                        } else {
-                                            Icon(
-                                                Icons.Default.Cloud,
-                                                contentDescription = "Online note"
-                                            )
-                                        }
-                                    })
-                            ),
-                            hazeState = hazeState
-                        )
-                    }
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 4.dp)
+                    .clip(RoundedCornerShape(100f))
+                    .background(colorScheme.surfaceDim)
+                    .hazeEffect(
+                        state = hazeState,
+                        style = HazeMaterials.ultraThin(hazeThinColor),
+                    ), verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onDismiss, modifier = Modifier.padding(4.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
 
-                NoteControls(
-                    currentPathState.value.color, themeDrawColors, viewModel::onAction,
+                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
+                    TextStyle(
+                        fontFamily = QuicksandTitleVariable,
+                        textAlign = TextAlign.Center,
+                        color = colorScheme.onSurface
+                    )
+                )
+                BasicTextField(
+                    value = sketchTitle,
+                    onValueChange = onSketchTitleChange,
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    textStyle = titleTextStyle,
+                    cursorBrush = SolidColor(colorScheme.primary),
+                    decorationBox = { innerTextField ->
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            if (sketchTitle.isEmpty()) {
+                                Text(
+                                    text = "Title",
+                                    style = titleTextStyle,
+                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                            innerTextField()
+                        }
+                    })
+                Box {
+                    IconButton(
+                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
+                    ) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                    }
+                    DropdownNoteMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        items = listOf(
+                            MenuItem(
+                            text = "Label",
+                            onClick = { isLabeled = !isLabeled },
+                            dismissOnClick = false,
+                            icon = {
+                                if (isLabeled) {
+                                    Icon(
+                                        Icons.Default.Bookmark,
+                                        contentDescription = "Label",
+                                        tint = labelColor
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.BookmarkBorder,
+                                        contentDescription = "Label"
+                                    )
+                                }
+                            }), MenuItem(
+                                text = colorMenuItemText, onClick = {
+                                val currentIndex = availableThemes.indexOf(selectedTheme)
+                                val nextIndex = (currentIndex + 1) % availableThemes.size
+                                selectedTheme = availableThemes[nextIndex]
+                                onThemeChange(selectedTheme)
+                                colorChangeJob?.cancel()
+                                colorChangeJob = scope.launch {
+                                    colorMenuItemText = availableThemes[nextIndex]
+                                    isFadingOut = false
+                                    delay(2500) // Keep current theme color for 2.5 seconds
+                                    isFadingOut = true // Fade out animation for 0.5 seconds
+                                    delay(500)
+                                    colorMenuItemText = "Color"
+                                    isFadingOut = false
+                                }
+                            }, dismissOnClick = false, icon = {
+                                Icon(
+                                    Icons.Default.ColorLens,
+                                    contentDescription = "Color",
+                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                )
+                            }, textColor = animatedTextColor
+                        ), MenuItem(
+                            text = if (isOffline) "Online note" else "Offline note",
+                            onClick = { isOffline = !isOffline },
+                            dismissOnClick = false,
+                            textColor = if (isOffline) colorScheme.error else null,
+                            icon = {
+                                if (isOffline) {
+                                    Icon(
+                                        Icons.Default.CloudOff,
+                                        contentDescription = "Offline note",
+                                        tint = colorScheme.error
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.Cloud, contentDescription = "Online note"
+                                    )
+                                }
+                            })
+                        ),
+                        hazeState = hazeState
+                    )
+                }
+            }
+            
+
+            if (showColorPicker) {
+                Row (modifier = Modifier.align(Alignment.BottomCenter)) {
+                ColorPicker(
+                    selectedColor = currentPathState.value.color,
+                    colors = themeDrawColors,
+                    onAction = { action ->
+                        if (action is DrawingAction.SelectColor) {
+                            onColorSelected(action.color)
+                        }
+                        viewModel.onAction(action)
+                    },
                     modifier = Modifier
-                        .align(CenterHorizontally)
                         .width(208.dp)
-                        .padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                        .windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(
+                                WindowInsetsSides.Bottom
+                            )
+                        )
+                        .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
                         .clip(RoundedCornerShape(22.dp))
                         .background(colorScheme.surfaceDim)
                         .hazeEffect(
-                            state = hazeState,
-                            style = HazeMaterials.ultraThin(hazeThinColor)
-                            ),
-                    )
+                            state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)
+                        ),
+                )
+                    Spacer(Modifier.width(64.dp)) // This spacer looks like it's trying to push the ColorPicker to the left, but is inside the Row.
+                                                 // If the intention is to center the picker or place it at a specific offset,
+                                                 // consider using Modifier.offset or adjusting the Row's arrangement.
+                }
+            } else {
+                null
             }
+
 
 
             Box(
@@ -514,7 +532,7 @@ fun VerticalFloatingToolbar(
 
 
 @Composable
-fun NoteControls(
+fun ColorPicker(
     selectedColor: Color,
     colors: List<Color>,
     onAction: (DrawingAction) -> Unit,
@@ -527,7 +545,7 @@ fun NoteControls(
     Column(
         modifier = modifier
             .wrapContentSize(Alignment.Center)
-            .padding(8.dp), 
+            .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(spacing) // Spacing between rows
     ) {
@@ -571,4 +589,3 @@ fun NoteControls(
         }
     }
 }
-

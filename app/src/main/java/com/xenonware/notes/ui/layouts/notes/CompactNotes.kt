@@ -13,8 +13,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -31,15 +29,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
@@ -86,6 +80,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -100,7 +95,6 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -226,17 +220,12 @@ fun CompactNotes(
     var nextListItemId by rememberSaveable { mutableLongStateOf(0L) }
 
     var showSketchSizePopup by remember { mutableStateOf(false) }
-    var showSketchColorPopup by remember { mutableStateOf(false) }
+    var showColorPicker by remember { mutableStateOf(false) } // This will now trigger the picker in NoteSketchSheet
     var isEraserMode by remember { mutableStateOf(false) }
     var usePressure by remember { mutableStateOf(true) }
-    var currentSketchSize by remember { mutableStateOf(10f) }
-    val sketchColors = remember {
-        listOf(
-            Color.Black, Color.White, Color.Red, Color.Green, Color.Blue,
-            Color.Yellow, Color.Cyan, Color.Magenta, Color.Gray
-        )
-    }
-    var currentSketchColor by remember { mutableStateOf(sketchColors.first()) }
+    var currentSketchSize by remember { mutableFloatStateOf(10f) }
+    val initialSketchColor = colorScheme.onSurface
+    var currentSketchColor by remember { mutableStateOf(initialSketchColor) }
 
 
     val noteItemsWithHeaders = notesViewModel.noteItems
@@ -624,18 +613,13 @@ fun CompactNotes(
                             )
 
                             // Color selector
-                            IconButton(onClick = { showSketchColorPopup = true }) {
+                            IconButton(onClick = { showColorPicker = true }) {
                                 Icon(
                                     Icons.Default.ColorLens,
                                     contentDescription = "Brush Color"
                                 )
                             }
-                            SketchColorPopup(
-                                expanded = showSketchColorPopup,
-                                onDismissRequest = { showSketchColorPopup = false },
-                                colors = sketchColors,
-                                onColorSelected = { currentSketchColor = it }
-                            )
+                            // Removed SketchColorPopup here, its functionality is now within NoteSketchSheet
 
                             // Eraser mode
                             IconButton(onClick = { isEraserMode = !isEraserMode }) {
@@ -855,16 +839,13 @@ fun CompactNotes(
                             {
                                 FloatingActionButton(
                                     onClick = {
-                                        if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
-                                            true
+                                        if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger = true
                                     }, containerColor = colorScheme.primary
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Save,
                                         contentDescription = stringResource(R.string.save_list_note),
-                                        tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimary else colorScheme.onPrimary.copy(
-                                            alpha = 0.38f
-                                        )
+                                        tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimary else colorScheme.onPrimary.copy(alpha = 0.38f)
                                     )
                                 }
                             }
@@ -1340,7 +1321,13 @@ fun CompactNotes(
                     isEraserMode = isEraserMode,
                     usePressure = usePressure,
                     strokeWidth = currentSketchSize,
-                    strokeColor = currentSketchColor
+                    strokeColor = currentSketchColor,
+                    showColorPicker = showColorPicker,
+                    onColorPickerDismiss = { showColorPicker = false }, // Callback to dismiss
+                    onColorSelected = { color -> // Callback for selected color
+                        currentSketchColor = color
+                        showColorPicker = false
+                    }
                 )
             }
 
@@ -1560,36 +1547,6 @@ fun SketchSizePopup(
                     })
                 }
             )
-        }
-    }
-}
-
-@Composable
-fun SketchColorPopup(
-    expanded: Boolean,
-    onDismissRequest: () -> Unit,
-    colors: List<Color>,
-    onColorSelected: (Color) -> Unit
-) {
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismissRequest
-    ) {
-        LazyVerticalGrid(columns = GridCells.Fixed(4), modifier = Modifier.width(200.dp)) {
-            items(colors) { color ->
-                IconButton(onClick = {
-                    onColorSelected(color)
-                    onDismissRequest()
-                }) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(color)
-                            .border(1.dp, colorScheme.onSurface, CircleShape)
-                    )
-                }
-            }
         }
     }
 }

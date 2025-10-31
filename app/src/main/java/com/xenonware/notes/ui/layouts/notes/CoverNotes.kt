@@ -210,6 +210,9 @@ fun CoverNotes(
     })) { mutableStateListOf() }
     var nextListItemId by rememberSaveable { mutableLongStateOf(0L) }
 
+    var showSketchSizePopup by remember { mutableStateOf(false) }
+    var showColorPicker by remember { mutableStateOf(false) } // This will now trigger the picker in NoteSketchSheet
+
     val noteItemsWithHeaders = notesViewModel.noteItems
 
     val isAppBarCollapsible = when (layoutType) {
@@ -1087,7 +1090,13 @@ fun CoverNotes(
                     isEraserMode = isEraserMode,
                     usePressure = usePressure,
                     strokeWidth = currentSketchSize,
-                    strokeColor = currentSketchColor
+                    strokeColor = currentSketchColor,
+                    showColorPicker = showColorPicker,
+                    onColorPickerDismiss = { showColorPicker = false }, // Callback to dismiss
+                    onColorSelected = { color -> // Callback for selected color
+                        currentSketchColor = color
+                        showColorPicker = false
+                    }
                 )
             }
 
