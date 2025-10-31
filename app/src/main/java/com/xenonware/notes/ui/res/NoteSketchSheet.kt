@@ -362,7 +362,7 @@ fun NoteSketchSheet(
                     .wrapContentHeight(),
                 contentAlignment = Alignment.Center
             ) {
-                NoteSideControls(
+                VerticalFloatingToolbar(
                     onAction = viewModel::onAction,
                     isHandwritingMode = isHandwritingMode,
                     onToggleHandwritingMode = { enabled ->
@@ -394,7 +394,7 @@ class CanvasViewModelFactory(private val application: Application) : ViewModelPr
 
 @OptIn(ExperimentalHazeMaterialsApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun NoteSideControls(
+fun VerticalFloatingToolbar(
     onAction: (DrawingAction) -> Unit,
     isHandwritingMode: Boolean,
     onToggleHandwritingMode: (Boolean) -> Unit,

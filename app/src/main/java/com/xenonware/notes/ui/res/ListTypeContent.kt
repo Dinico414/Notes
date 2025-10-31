@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Checklist
@@ -166,9 +168,11 @@ fun ListContent(
                 HorizontalDivider(
                     thickness = 1.dp, color = colorScheme.outlineVariant
                 )
-
+                //Add Scroll container from below here
                 Column(
-                    modifier = Modifier.padding(vertical = LargestPadding)
+                    modifier = Modifier
+                        .padding(vertical = LargestPadding)
+                        .verticalScroll(rememberScrollState())
                 ) {
                     FilterItem(
                         icon = Icons.Default.ViewComfy,
@@ -212,7 +216,7 @@ fun ListContent(
                         onClick = { notesViewModel.toggleColorFilter(null) },
                         modifier = Modifier.weight(1f),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = colorScheme.surfaceContainerHigh,
+                            containerColor = colorScheme.surfaceBright,
                             contentColor = colorScheme.onSurface
                         )
                     ) {
@@ -359,6 +363,7 @@ fun ListContent(
                 HorizontalDivider(
                     thickness = 1.dp, color = colorScheme.outlineVariant
                 )
+//                the scrolling should stop here
             }
         }
     }
