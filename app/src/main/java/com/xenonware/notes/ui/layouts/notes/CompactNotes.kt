@@ -361,117 +361,72 @@ fun CompactNotes(
             )
         }, drawerState = drawerState, gesturesEnabled = !isAnyNoteSheetOpen
     ) {
-        Scaffold(
-            snackbarHost = {
-                SnackbarHost(hostState = snackbarHostState) { snackbarData ->
-                    XenonSnackbar(
-                        snackbarData = snackbarData,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                    )
-                }
-            },
-            bottomBar = {
-                val textEditorContent: @Composable (RowScope.() -> Unit)? = if (showTextNoteCard) {
-                    @Composable {
-                        XenonTheme(
-                            darkTheme = isDarkTheme,
-                            useDefaultTheme = selectedTextNoteTheme == "Default",
-                            useRedTheme = selectedTextNoteTheme == "Red",
-                            useOrangeTheme = selectedTextNoteTheme == "Orange",
-                            useYellowTheme = selectedTextNoteTheme == "Yellow",
-                            useGreenTheme = selectedTextNoteTheme == "Green",
-                            useTurquoiseTheme = selectedTextNoteTheme == "Turquoise",
-                            useBlueTheme = selectedTextNoteTheme == "Blue",
-                            usePurpleTheme = selectedTextNoteTheme == "Purple",
-                            dynamicColor = selectedTextNoteTheme == "Default"
-                        ) {
-                            Row {
-                                val toggledColor = colorScheme.primary
-                                val defaultColor = Color.Transparent
-                                val toggledIconColor = colorScheme.onPrimary
-                                val defaultIconColor = colorScheme.onSurface
-                                FilledIconButton(
-                                    onClick = { isBold = !isBold },
-                                    colors = IconButtonDefaults.iconButtonColors(
-                                        containerColor = if (isBold) toggledColor else defaultColor,
-                                        contentColor = if (isBold) toggledIconColor else defaultIconColor
-                                    )
-                                ) {
-                                    Icon(
-                                        Icons.Default.FormatBold,
-                                        contentDescription = stringResource(R.string.bold_text)
-                                    )
-                                }
-                                FilledIconButton(
-                                    onClick = { isItalic = !isItalic },
-                                    colors = IconButtonDefaults.iconButtonColors(
-                                        containerColor = if (isItalic) toggledColor else defaultColor,
-                                        contentColor = if (isItalic) toggledIconColor else defaultIconColor
-                                    )
-                                ) {
-                                    Icon(
-                                        Icons.Default.FormatItalic,
-                                        contentDescription = stringResource(R.string.italic_text)
-                                    )
-                                }
-                                FilledIconButton(
-                                    onClick = { isUnderlined = !isUnderlined },
-                                    colors = IconButtonDefaults.iconButtonColors(
-                                        containerColor = if (isUnderlined) toggledColor else defaultColor,
-                                        contentColor = if (isUnderlined) toggledIconColor else defaultIconColor
-                                    )
-                                ) {
-                                    Icon(
-                                        Icons.Default.FormatUnderlined,
-                                        contentDescription = stringResource(R.string.underline_text)
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    currentSizeIndex = (currentSizeIndex + 1) % textSizes.size
-                                }) {
-                                    Icon(
-                                        Icons.Default.FormatSize,
-                                        contentDescription = stringResource(R.string.change_text_size)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    null
-                }
-
-                val listEditorContent: @Composable (RowScope.() -> Unit)? = if (showListNoteCard) {
-                    @Composable {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            FilledTonalButton(
-                                onClick = {
-                                    listItemsState.add(
-                                        ListItem(
-                                            nextListItemId++, "", false
-                                        )
-                                    )
-                                },
-                                modifier = Modifier
-                                    .width(140.dp)
-                                    .height(56.dp),
-                                colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = colorScheme.tertiary,
-                                    contentColor = colorScheme.onTertiary
+        Scaffold(snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { snackbarData ->
+                XenonSnackbar(
+                    snackbarData = snackbarData,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+            }
+        }, bottomBar = {
+            val textEditorContent: @Composable (RowScope.() -> Unit)? = if (showTextNoteCard) {
+                @Composable {
+                    XenonTheme(
+                        darkTheme = isDarkTheme,
+                        useDefaultTheme = selectedTextNoteTheme == "Default",
+                        useRedTheme = selectedTextNoteTheme == "Red",
+                        useOrangeTheme = selectedTextNoteTheme == "Orange",
+                        useYellowTheme = selectedTextNoteTheme == "Yellow",
+                        useGreenTheme = selectedTextNoteTheme == "Green",
+                        useTurquoiseTheme = selectedTextNoteTheme == "Turquoise",
+                        useBlueTheme = selectedTextNoteTheme == "Blue",
+                        usePurpleTheme = selectedTextNoteTheme == "Purple",
+                        dynamicColor = selectedTextNoteTheme == "Default"
+                    ) {
+                        Row {
+                            val toggledColor = colorScheme.primary
+                            val defaultColor = Color.Transparent
+                            val toggledIconColor = colorScheme.onPrimary
+                            val defaultIconColor = colorScheme.onSurface
+                            FilledIconButton(
+                                onClick = { isBold = !isBold },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = if (isBold) toggledColor else defaultColor,
+                                    contentColor = if (isBold) toggledIconColor else defaultIconColor
                                 )
                             ) {
                                 Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = stringResource(R.string.add_new_item_to_list)
+                                    Icons.Default.FormatBold,
+                                    contentDescription = stringResource(R.string.bold_text)
                                 )
                             }
-                            IconButton(
-                                onClick = ::onListTextResizeClick,
+                            FilledIconButton(
+                                onClick = { isItalic = !isItalic },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = if (isItalic) toggledColor else defaultColor,
+                                    contentColor = if (isItalic) toggledIconColor else defaultIconColor
+                                )
                             ) {
+                                Icon(
+                                    Icons.Default.FormatItalic,
+                                    contentDescription = stringResource(R.string.italic_text)
+                                )
+                            }
+                            FilledIconButton(
+                                onClick = { isUnderlined = !isUnderlined },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = if (isUnderlined) toggledColor else defaultColor,
+                                    contentColor = if (isUnderlined) toggledIconColor else defaultIconColor
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.FormatUnderlined,
+                                    contentDescription = stringResource(R.string.underline_text)
+                                )
+                            }
+                            IconButton(onClick = {
+                                currentSizeIndex = (currentSizeIndex + 1) % textSizes.size
+                            }) {
                                 Icon(
                                     Icons.Default.FormatSize,
                                     contentDescription = stringResource(R.string.change_text_size)
@@ -479,1001 +434,1042 @@ fun CompactNotes(
                             }
                         }
                     }
+                }
+            } else {
+                null
+            }
+
+            val listEditorContent: @Composable (RowScope.() -> Unit)? = if (showListNoteCard) {
+                @Composable {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        FilledTonalButton(
+                            onClick = {
+                                listItemsState.add(
+                                    ListItem(
+                                        nextListItemId++, "", false
+                                    )
+                                )
+                            },
+                            modifier = Modifier
+                                .width(140.dp)
+                                .height(56.dp),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = colorScheme.tertiary,
+                                contentColor = colorScheme.onTertiary
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = stringResource(R.string.add_new_item_to_list)
+                            )
+                        }
+                        IconButton(
+                            onClick = ::onListTextResizeClick,
+                        ) {
+                            Icon(
+                                Icons.Default.FormatSize,
+                                contentDescription = stringResource(R.string.change_text_size)
+                            )
+                        }
+                    }
+                }
+            } else {
+                null
+            }
+
+            val audioEditorContent: @Composable (RowScope.() -> Unit)? = if (showAudioNoteCard) {
+                @Composable {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        val waveformCornerTopStart by animateDpAsState(
+                            targetValue = 28.dp, label = "waveformTopStart"
+                        )
+                        val waveformCornerBottomStart by animateDpAsState(
+                            targetValue = 28.dp, label = "waveformBottomStart"
+                        )
+                        val waveformCornerTopEnd by animateDpAsState(
+                            targetValue = if (selectedAudioViewType == AudioViewType.Waveform) 28.dp else 8.dp,
+                            label = "waveformTopEnd"
+                        )
+                        val waveformCornerBottomEnd by animateDpAsState(
+                            targetValue = if (selectedAudioViewType == AudioViewType.Waveform) 28.dp else 8.dp,
+                            label = "waveformBottomEnd"
+                        )
+                        val animatedWaveformShape = RoundedCornerShape(
+                            topStart = waveformCornerTopStart,
+                            bottomStart = waveformCornerBottomStart,
+                            topEnd = waveformCornerTopEnd,
+                            bottomEnd = waveformCornerBottomEnd
+                        )
+
+                        val transcriptCornerTopStart by animateDpAsState(
+                            targetValue = if (selectedAudioViewType == AudioViewType.Transcript) 28.dp else 8.dp,
+                            label = "transcriptTopStart"
+                        )
+                        val transcriptCornerBottomStart by animateDpAsState(
+                            targetValue = if (selectedAudioViewType == AudioViewType.Transcript) 28.dp else 8.dp,
+                            label = "transcriptBottomStart"
+                        )
+                        val transcriptCornerTopEnd by animateDpAsState(
+                            targetValue = 28.dp, label = "transcriptTopEnd"
+                        )
+                        val transcriptCornerBottomEnd by animateDpAsState(
+                            targetValue = 28.dp, label = "transcriptBottomEnd"
+                        )
+                        val animatedTranscriptShape = RoundedCornerShape(
+                            topStart = transcriptCornerTopStart,
+                            bottomStart = transcriptCornerBottomStart,
+                            topEnd = transcriptCornerTopEnd,
+                            bottomEnd = transcriptCornerBottomEnd
+                        )
+
+                        val waveformContainerColor by animateColorAsState(
+                            targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.tertiary else colorScheme.surfaceBright,
+                            label = "waveformContainerColor"
+                        )
+                        val waveformContentColor by animateColorAsState(
+                            targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.onTertiary else colorScheme.onSurface,
+                            label = "waveformContentColor"
+                        )
+
+                        val transcriptContainerColor by animateColorAsState(
+                            targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.tertiary else colorScheme.surfaceBright,
+                            label = "transcriptContainerColor"
+                        )
+                        val transcriptContentColor by animateColorAsState(
+                            targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.onTertiary else colorScheme.onSurface,
+                            label = "transcriptContentColor"
+                        )
+
+                        FilledIconButton(
+                            onClick = { selectedAudioViewType = AudioViewType.Waveform },
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = waveformContainerColor,
+                                contentColor = waveformContentColor
+                            ),
+                            shape = animatedWaveformShape,
+                            modifier = Modifier
+                                .width(95.dp)
+                                .height(56.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.GraphicEq,
+                                contentDescription = stringResource(R.string.waveform_view)
+                            )
+                        }
+                        Spacer(Modifier.width(2.dp))
+                        FilledIconButton(
+                            onClick = { selectedAudioViewType = AudioViewType.Transcript },
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = transcriptContainerColor,
+                                contentColor = transcriptContentColor
+                            ),
+                            shape = animatedTranscriptShape,
+                            modifier = Modifier
+                                .width(95.dp)
+                                .height(56.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Default.Article,
+                                contentDescription = stringResource(R.string.transcript_view)
+                            )
+                        }
+                    }
+                }
+            } else {
+                null
+            }
+
+            val sketchEditorContent: @Composable (RowScope.() -> Unit)? = if (showSketchNoteCard) {
+                @Composable {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        // Size selector
+                        IconButton(onClick = {
+                            showSketchSizePopup = true
+                            showColorPicker = false
+                        }) {
+                            Icon(
+                                Icons.Default.Brush, contentDescription = "Brush Size"
+                            )
+                        }
+                        // Removed PenSizePicker invocation, it's now handled in NoteSketchSheet
+
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 10.dp)
+                                .size(28.dp)
+                                .border(2.dp, colorScheme.onSurface, CircleShape)
+                                .border(3.dp, colorScheme.surfaceDim, CircleShape)
+                                .background(currentSketchColor, CircleShape)
+                        ) {
+                            IconButton(onClick = {
+                                showColorPicker = true
+                                showSketchSizePopup = false
+                            }) {}
+                        }
+
+                        // Eraser mode
+                        FilledIconButton(
+                            onClick = { isEraserMode = !isEraserMode },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = if (isEraserMode) colorScheme.tertiary else Color.Transparent,
+                                contentColor = if (isEraserMode) colorScheme.onTertiary else colorScheme.onSurface
+                            )
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.eraser),
+                                contentDescription = "Eraser"
+                            )
+                        } 
+
+                    // Pressure/Speed toggle
+                    IconButton(onClick = { usePressure = !usePressure }) {
+                        Icon(
+                            Icons.Default.StackedLineChart,
+                            contentDescription = "Toggle Pressure/Speed",
+                            tint = if (usePressure) colorScheme.primary else colorScheme.onSurface
+                        )
+                        //TODO add correct icons and remove color toggle
+                    }
+                }
+            }
+        } else {
+            null
+        }
+
+        val onAddModeToggle = { isAddModeActive = !isAddModeActive }
+
+        XenonTheme(
+            darkTheme = isDarkTheme,
+            useDefaultTheme = selectedTextNoteTheme == "Default",
+            useRedTheme = selectedTextNoteTheme == "Red",
+            useOrangeTheme = selectedTextNoteTheme == "Orange",
+            useYellowTheme = selectedTextNoteTheme == "Yellow",
+            useGreenTheme = selectedTextNoteTheme == "Green",
+            useTurquoiseTheme = selectedTextNoteTheme == "Turquoise",
+            useBlueTheme = selectedTextNoteTheme == "Blue",
+            usePurpleTheme = selectedTextNoteTheme == "Purple",
+            dynamicColor = selectedTextNoteTheme == "Default"
+        ) {
+            FloatingToolbarContent(
+                hazeState = hazeState,
+                currentSearchQuery = currentSearchQuery,
+                onSearchQueryChanged = { newQuery ->
+                    notesViewModel.setSearchQuery(newQuery)
+                },
+                lazyListState = lazyListState,
+                allowToolbarScrollBehavior = !isAppBarCollapsible && !isAnyNoteSheetOpen,
+                selectedNoteIds = selectedNoteIds.toList(),
+                onClearSelection = { selectedNoteIds = emptySet() },
+                isAddModeActive = isAddModeActive,
+                isSearchActive = isSearchActive,
+                onIsSearchActiveChange = { isSearchActive = it },
+                defaultContent = { iconsAlphaDuration, showActionIconsExceptSearch ->
+                    Row {
+                        val iconAlphaTarget = if (isSearchActive) 0f else 1f
+
+                        val listIconAlpha by animateFloatAsState(
+                            targetValue = iconAlphaTarget, animationSpec = tween(
+                                durationMillis = iconsAlphaDuration,
+                                delayMillis = if (isSearchActive) 0 else 0
+                            ), label = "ListIconAlpha"
+                        )
+                        IconButton(
+                            onClick = {
+                                val newLayout =
+                                    if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
+                                notesViewModel.setNotesLayoutType(newLayout)
+                            },
+                            modifier = Modifier.alpha(listIconAlpha),
+                            enabled = !isSearchActive && showActionIconsExceptSearch
+                        ) {
+                            Icon(
+                                imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Default.ViewStream else Icons.Default.ViewModule,
+                                contentDescription = stringResource(R.string.change_layout),
+                                tint = colorScheme.onSurface
+                            )
+                        }
+
+                        val resizeIconAlpha by animateFloatAsState(
+                            targetValue = iconAlphaTarget, animationSpec = tween(
+                                durationMillis = iconsAlphaDuration,
+                                delayMillis = if (isSearchActive) 100 else 0
+                            ), label = "ResizeIconAlpha"
+                        )
+                        IconButton(
+                            onClick = ::onResizeClick, // Use the new callback
+                            modifier = Modifier.alpha(resizeIconAlpha),
+                            enabled = !isSearchActive && showActionIconsExceptSearch
+                        ) {
+                            Icon(
+                                Icons.Default.CenterFocusStrong,
+                                contentDescription = stringResource(R.string.resize_notes),
+                                tint = colorScheme.onSurface
+                            )
+                        }
+
+                        val settingsIconAlpha by animateFloatAsState(
+                            targetValue = iconAlphaTarget, animationSpec = tween(
+                                durationMillis = iconsAlphaDuration,
+                                delayMillis = if (isSearchActive) 200 else 0
+                            ), label = "SettingsIconAlpha"
+                        )
+                        IconButton(
+                            onClick = onOpenSettings,
+                            modifier = Modifier.alpha(settingsIconAlpha),
+                            enabled = !isSearchActive && showActionIconsExceptSearch
+                        ) {
+                            Icon(
+                                Icons.Filled.Settings,
+                                contentDescription = stringResource(R.string.settings),
+                                tint = colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                },
+                onAddModeToggle = onAddModeToggle,
+                selectionContentOverride = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = {
+                                notesViewModel.deleteItems(selectedNoteIds.toList())
+                                selectedNoteIds = emptySet()
+                            },
+                            modifier = Modifier.width(192.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.delete),
+                                textAlign = TextAlign.Center,
+                                style = typography.bodyLarge.copy(
+                                    fontFamily = QuicksandTitleVariable,
+                                    color = extendedMaterialColorScheme.inverseErrorContainer
+
+                                )
+                            )
+                        }
+                    }
+                },
+                addModeContentOverride = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = {
+                            resetNoteState()
+                            showTextNoteCard = true
+                            onAddModeToggle()
+                        }) {
+                            Icon(
+                                Icons.Default.TextFields,
+                                contentDescription = stringResource(R.string.add_text_note),
+                                tint = colorScheme.onSecondaryContainer
+                            )
+                        }
+                        IconButton(onClick = {
+                            resetNoteState()
+                            showListNoteCard = true
+                            onAddModeToggle()
+                        }) {
+                            Icon(
+                                Icons.Default.Checklist,
+                                contentDescription = stringResource(R.string.add_list_note),
+                                tint = colorScheme.onSecondaryContainer
+                            )
+                        }
+                        IconButton(onClick = {
+                            resetNoteState() // Reset state when opening audio note
+                            showAudioNoteCard = true
+                            onAddModeToggle()
+                        }) {
+                            Icon(
+                                Icons.Filled.Mic,
+                                contentDescription = stringResource(R.string.add_mic_note),
+                                tint = colorScheme.onSecondaryContainer
+                            )
+                        }
+                        IconButton(onClick = {
+                            showSketchNoteCard = true
+                            onAddModeToggle()
+                        }) {
+                            Icon(
+                                Icons.Filled.Create,
+                                contentDescription = stringResource(R.string.add_pen_note),
+                                tint = colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                },
+                contentOverride = when {
+                    showTextNoteCard -> textEditorContent
+                    showListNoteCard -> listEditorContent
+                    showAudioNoteCard -> audioEditorContent
+                    showSketchNoteCard -> sketchEditorContent
+                    else -> null
+                },
+                fabOverride = if (showTextNoteCard) {
+                    {
+                        FloatingActionButton(
+                            onClick = { if (titleState.isNotBlank()) saveTrigger = true },
+                            containerColor = colorScheme.primary
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Save,
+                                contentDescription = stringResource(R.string.save_note),
+                                tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
+                                    alpha = 0.38f
+                                )
+                            )
+                        }
+                    }
+                } else if (showListNoteCard) {
+                    {
+                        FloatingActionButton(
+                            onClick = {
+                                if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
+                                    true
+                            }, containerColor = colorScheme.primary
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Save,
+                                contentDescription = stringResource(R.string.save_list_note),
+                                tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimary else colorScheme.onPrimary.copy(
+                                    alpha = 0.38f
+                                )
+                            )
+                        }
+                    }
+                } else if (showAudioNoteCard) { // FAB for Audio Note
+                    {
+                        FloatingActionButton(
+                            onClick = { if (titleState.isNotBlank()) saveTrigger = true },
+                            containerColor = colorScheme.primary
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Save,
+                                contentDescription = stringResource(R.string.save_audio_note),
+                                tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
+                                    alpha = 0.38f
+                                )
+                            )
+                        }
+                    }
+                } else if (showSketchNoteCard) {
+                    {
+                        FloatingActionButton(
+                            onClick = { /* Implement save logic for sketch note */ },
+                            containerColor = colorScheme.primary
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Save,
+                                contentDescription = stringResource(R.string.save_sketch_note),
+                                tint = colorScheme.onPrimary
+                            )
+                        }
+                    }
                 } else {
                     null
-                }
-
-                val audioEditorContent: @Composable (RowScope.() -> Unit)? =
-                    if (showAudioNoteCard) {
-                        @Composable {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                val waveformCornerTopStart by animateDpAsState(
-                                    targetValue = 28.dp, label = "waveformTopStart"
-                                )
-                                val waveformCornerBottomStart by animateDpAsState(
-                                    targetValue = 28.dp, label = "waveformBottomStart"
-                                )
-                                val waveformCornerTopEnd by animateDpAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) 28.dp else 8.dp,
-                                    label = "waveformTopEnd"
-                                )
-                                val waveformCornerBottomEnd by animateDpAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) 28.dp else 8.dp,
-                                    label = "waveformBottomEnd"
-                                )
-                                val animatedWaveformShape = RoundedCornerShape(
-                                    topStart = waveformCornerTopStart,
-                                    bottomStart = waveformCornerBottomStart,
-                                    topEnd = waveformCornerTopEnd,
-                                    bottomEnd = waveformCornerBottomEnd
-                                )
-
-                                val transcriptCornerTopStart by animateDpAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) 28.dp else 8.dp,
-                                    label = "transcriptTopStart"
-                                )
-                                val transcriptCornerBottomStart by animateDpAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) 28.dp else 8.dp,
-                                    label = "transcriptBottomStart"
-                                )
-                                val transcriptCornerTopEnd by animateDpAsState(
-                                    targetValue = 28.dp, label = "transcriptTopEnd"
-                                )
-                                val transcriptCornerBottomEnd by animateDpAsState(
-                                    targetValue = 28.dp, label = "transcriptBottomEnd"
-                                )
-                                val animatedTranscriptShape = RoundedCornerShape(
-                                    topStart = transcriptCornerTopStart,
-                                    bottomStart = transcriptCornerBottomStart,
-                                    topEnd = transcriptCornerTopEnd,
-                                    bottomEnd = transcriptCornerBottomEnd
-                                )
-
-                                val waveformContainerColor by animateColorAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.tertiary else colorScheme.surfaceBright,
-                                    label = "waveformContainerColor"
-                                )
-                                val waveformContentColor by animateColorAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Waveform) colorScheme.onTertiary else colorScheme.onSurface,
-                                    label = "waveformContentColor"
-                                )
-
-                                val transcriptContainerColor by animateColorAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.tertiary else colorScheme.surfaceBright,
-                                    label = "transcriptContainerColor"
-                                )
-                                val transcriptContentColor by animateColorAsState(
-                                    targetValue = if (selectedAudioViewType == AudioViewType.Transcript) colorScheme.onTertiary else colorScheme.onSurface,
-                                    label = "transcriptContentColor"
-                                )
-
-                                FilledIconButton(
-                                    onClick = { selectedAudioViewType = AudioViewType.Waveform },
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = waveformContainerColor,
-                                        contentColor = waveformContentColor
-                                    ),
-                                    shape = animatedWaveformShape,
-                                    modifier = Modifier
-                                        .width(95.dp)
-                                        .height(56.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.GraphicEq,
-                                        contentDescription = stringResource(R.string.waveform_view)
-                                    )
-                                }
-                                Spacer(Modifier.width(2.dp))
-                                FilledIconButton(
-                                    onClick = { selectedAudioViewType = AudioViewType.Transcript },
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = transcriptContainerColor,
-                                        contentColor = transcriptContentColor
-                                    ),
-                                    shape = animatedTranscriptShape,
-                                    modifier = Modifier
-                                        .width(95.dp)
-                                        .height(56.dp)
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Default.Article,
-                                        contentDescription = stringResource(R.string.transcript_view)
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        null
-                    }
-
-                val sketchEditorContent: @Composable (RowScope.() -> Unit)? =
-                    if (showSketchNoteCard) {
-                        @Composable {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                // Size selector
-                                IconButton(onClick = {
-                                    showSketchSizePopup = true
-                                    showColorPicker = false
-                                }) {
-                                    Icon(
-                                        Icons.Default.Brush, contentDescription = "Brush Size"
-                                    )
-                                }
-                                // Removed PenSizePicker invocation, it's now handled in NoteSketchSheet
-
-                                Box(
-                                    modifier = Modifier
-                                        .padding(horizontal = 10.dp)
-                                        .size(28.dp)
-                                        .border(2.dp, colorScheme.onSurface, CircleShape)
-                                        .border(3.dp, colorScheme.surfaceDim, CircleShape)
-                                        .background(currentSketchColor, CircleShape)
-                                ) {
-                                    IconButton(onClick = {
-                                        showColorPicker = true
-                                        showSketchSizePopup = false
-                                    })
-                                    {}
-                                }
-
-                                // Eraser mode
-                                IconButton(onClick = { isEraserMode = !isEraserMode }) {
-                                    Icon(
-                                        painter = if (isEraserMode) painterResource(id = R.drawable.eraser) else painterResource(
-                                            id = R.drawable.pencil
-                                        ), contentDescription = "Eraser", tint = colorScheme.primary
-                                    )
-                                }
-
-                                // Pressure/Speed toggle
-                                IconButton(onClick = { usePressure = !usePressure }) {
-                                    Icon(
-                                        Icons.Default.StackedLineChart,
-                                        contentDescription = "Toggle Pressure/Speed",
-                                        tint = if (usePressure) colorScheme.primary else colorScheme.onSurface
-                                    )
-                                    //TODO add correct icons and remove color toggle
-                                }
-                            }
-                        }
-                    } else {
-                        null
-                    }
-
-                val onAddModeToggle = { isAddModeActive = !isAddModeActive }
-
-                XenonTheme(
-                    darkTheme = isDarkTheme,
-                    useDefaultTheme = selectedTextNoteTheme == "Default",
-                    useRedTheme = selectedTextNoteTheme == "Red",
-                    useOrangeTheme = selectedTextNoteTheme == "Orange",
-                    useYellowTheme = selectedTextNoteTheme == "Yellow",
-                    useGreenTheme = selectedTextNoteTheme == "Green",
-                    useTurquoiseTheme = selectedTextNoteTheme == "Turquoise",
-                    useBlueTheme = selectedTextNoteTheme == "Blue",
-                    usePurpleTheme = selectedTextNoteTheme == "Purple",
-                    dynamicColor = selectedTextNoteTheme == "Default"
-                ) {
-                    FloatingToolbarContent(
-                        hazeState = hazeState,
-                        currentSearchQuery = currentSearchQuery,
-                        onSearchQueryChanged = { newQuery ->
-                            notesViewModel.setSearchQuery(newQuery)
-                        },
-                        lazyListState = lazyListState,
-                        allowToolbarScrollBehavior = !isAppBarCollapsible && !isAnyNoteSheetOpen,
-                        selectedNoteIds = selectedNoteIds.toList(),
-                        onClearSelection = { selectedNoteIds = emptySet() },
-                        isAddModeActive = isAddModeActive,
-                        isSearchActive = isSearchActive,
-                        onIsSearchActiveChange = { isSearchActive = it },
-                        defaultContent = { iconsAlphaDuration, showActionIconsExceptSearch ->
-                            Row {
-                                val iconAlphaTarget = if (isSearchActive) 0f else 1f
-
-                                val listIconAlpha by animateFloatAsState(
-                                    targetValue = iconAlphaTarget, animationSpec = tween(
-                                        durationMillis = iconsAlphaDuration,
-                                        delayMillis = if (isSearchActive) 0 else 0
-                                    ), label = "ListIconAlpha"
-                                )
-                                IconButton(
-                                    onClick = {
-                                        val newLayout =
-                                            if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
-                                        notesViewModel.setNotesLayoutType(newLayout)
-                                    },
-                                    modifier = Modifier.alpha(listIconAlpha),
-                                    enabled = !isSearchActive && showActionIconsExceptSearch
-                                ) {
-                                    Icon(
-                                        imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Default.ViewStream else Icons.Default.ViewModule,
-                                        contentDescription = stringResource(R.string.change_layout),
-                                        tint = colorScheme.onSurface
-                                    )
-                                }
-
-                                val resizeIconAlpha by animateFloatAsState(
-                                    targetValue = iconAlphaTarget, animationSpec = tween(
-                                        durationMillis = iconsAlphaDuration,
-                                        delayMillis = if (isSearchActive) 100 else 0
-                                    ), label = "ResizeIconAlpha"
-                                )
-                                IconButton(
-                                    onClick = ::onResizeClick, // Use the new callback
-                                    modifier = Modifier.alpha(resizeIconAlpha),
-                                    enabled = !isSearchActive && showActionIconsExceptSearch
-                                ) {
-                                    Icon(
-                                        Icons.Default.CenterFocusStrong,
-                                        contentDescription = stringResource(R.string.resize_notes),
-                                        tint = colorScheme.onSurface
-                                    )
-                                }
-
-                                val settingsIconAlpha by animateFloatAsState(
-                                    targetValue = iconAlphaTarget, animationSpec = tween(
-                                        durationMillis = iconsAlphaDuration,
-                                        delayMillis = if (isSearchActive) 200 else 0
-                                    ), label = "SettingsIconAlpha"
-                                )
-                                IconButton(
-                                    onClick = onOpenSettings,
-                                    modifier = Modifier.alpha(settingsIconAlpha),
-                                    enabled = !isSearchActive && showActionIconsExceptSearch
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Settings,
-                                        contentDescription = stringResource(R.string.settings),
-                                        tint = colorScheme.onSurface
-                                    )
-                                }
-                            }
-
-                        },
-                        onAddModeToggle = onAddModeToggle,
-                        selectionContentOverride = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                TextButton(
-                                    onClick = {
-                                        notesViewModel.deleteItems(selectedNoteIds.toList())
-                                        selectedNoteIds = emptySet()
-                                    },
-                                    modifier = Modifier.width(192.dp),
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.delete),
-                                        textAlign = TextAlign.Center,
-                                        style = typography.bodyLarge.copy(
-                                            fontFamily = QuicksandTitleVariable,
-                                            color = extendedMaterialColorScheme.inverseErrorContainer
-
-                                        )
-                                    )
-                                }
-                            }
-                        },
-                        addModeContentOverride = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                IconButton(onClick = {
-                                    resetNoteState()
-                                    showTextNoteCard = true
-                                    onAddModeToggle()
-                                }) {
-                                    Icon(
-                                        Icons.Default.TextFields,
-                                        contentDescription = stringResource(R.string.add_text_note),
-                                        tint = colorScheme.onSecondaryContainer
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    resetNoteState()
-                                    showListNoteCard = true
-                                    onAddModeToggle()
-                                }) {
-                                    Icon(
-                                        Icons.Default.Checklist,
-                                        contentDescription = stringResource(R.string.add_list_note),
-                                        tint = colorScheme.onSecondaryContainer
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    resetNoteState() // Reset state when opening audio note
-                                    showAudioNoteCard = true
-                                    onAddModeToggle()
-                                }) {
-                                    Icon(
-                                        Icons.Filled.Mic,
-                                        contentDescription = stringResource(R.string.add_mic_note),
-                                        tint = colorScheme.onSecondaryContainer
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    showSketchNoteCard = true
-                                    onAddModeToggle()
-                                }) {
-                                    Icon(
-                                        Icons.Filled.Create,
-                                        contentDescription = stringResource(R.string.add_pen_note),
-                                        tint = colorScheme.onSecondaryContainer
-                                    )
-                                }
-                            }
-                        },
-                        contentOverride = when {
-                            showTextNoteCard -> textEditorContent
-                            showListNoteCard -> listEditorContent
-                            showAudioNoteCard -> audioEditorContent
-                            showSketchNoteCard -> sketchEditorContent
-                            else -> null
-                        },
-                        fabOverride = if (showTextNoteCard) {
-                            {
-                                FloatingActionButton(
-                                    onClick = { if (titleState.isNotBlank()) saveTrigger = true },
-                                    containerColor = colorScheme.primary
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Save,
-                                        contentDescription = stringResource(R.string.save_note),
-                                        tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
-                                            alpha = 0.38f
-                                        )
-                                    )
-                                }
-                            }
-                        } else if (showListNoteCard) {
-                            {
-                                FloatingActionButton(
-                                    onClick = {
-                                        if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
-                                            true
-                                    }, containerColor = colorScheme.primary
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Save,
-                                        contentDescription = stringResource(R.string.save_list_note),
-                                        tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimary else colorScheme.onPrimary.copy(
-                                            alpha = 0.38f
-                                        )
-                                    )
-                                }
-                            }
-                        } else if (showAudioNoteCard) { // FAB for Audio Note
-                            {
-                                FloatingActionButton(
-                                    onClick = { if (titleState.isNotBlank()) saveTrigger = true },
-                                    containerColor = colorScheme.primary
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Save,
-                                        contentDescription = stringResource(R.string.save_audio_note),
-                                        tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
-                                            alpha = 0.38f
-                                        )
-                                    )
-                                }
-                            }
-                        } else if (showSketchNoteCard) {
-                            {
-                                FloatingActionButton(
-                                    onClick = { /* Implement save logic for sketch note */ },
-                                    containerColor = colorScheme.primary
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Save,
-                                        contentDescription = stringResource(R.string.save_sketch_note),
-                                        tint = colorScheme.onPrimary
-                                    )
-                                }
-                            }
-                        } else {
-                            null
-                        },
-                    )
-                }
-            },
-        ) { scaffoldPadding ->
-            // This Box will intercept all touch events when any note sheet is open
-            if (isAnyNoteSheetOpen) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { /* Intercept touches */ }))
-            }
-            ActivityScreen(
+                },
+            )
+        }
+    },
+    ) { scaffoldPadding ->
+        // This Box will intercept all touch events when any note sheet is open
+        if (isAnyNoteSheetOpen) {
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding()
-                    .hazeSource(hazeState)
-                    .onSizeChanged { newSize ->
-                    },
-                titleText = stringResource(id = R.string.app_name),
-
-                expandable = isAppBarCollapsible,
-
-                navigationIconStartPadding = MediumPadding,
-                navigationIconPadding = if (isDeveloperModeEnabled && showDummyProfile) SmallPadding else MediumPadding,
-                navigationIconSpacing = MediumSpacing,
-
-                navigationIcon = {
-                    Icon(
-                        Icons.Filled.Menu,
-                        contentDescription = stringResource(R.string.open_navigation_menu),
-                        modifier = Modifier.size(24.dp)
-                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { /* Intercept touches */ })
+            )
+        }
+        ActivityScreen(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding()
+                .hazeSource(hazeState)
+                .onSizeChanged { newSize ->
                 },
+            titleText = stringResource(id = R.string.app_name),
 
-                onNavigationIconClick = {
-                    scope.launch {
-                        if (drawerState.isClosed) drawerState.open() else drawerState.close()
+            expandable = isAppBarCollapsible,
+
+            navigationIconStartPadding = MediumPadding,
+            navigationIconPadding = if (isDeveloperModeEnabled && showDummyProfile) SmallPadding else MediumPadding,
+            navigationIconSpacing = MediumSpacing,
+
+            navigationIcon = {
+                Icon(
+                    Icons.Filled.Menu,
+                    contentDescription = stringResource(R.string.open_navigation_menu),
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+
+            onNavigationIconClick = {
+                scope.launch {
+                    if (drawerState.isClosed) drawerState.open() else drawerState.close()
+                }
+            },
+            hasNavigationIconExtraContent = isDeveloperModeEnabled && showDummyProfile,
+
+            navigationIconExtraContent = {
+                if (isDeveloperModeEnabled && showDummyProfile) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        GoogleProfilBorder(
+                            modifier = Modifier.size(32.dp),
+                        )
+                        Image(
+                            painter = painterResource(id = R.mipmap.default_icon),
+                            contentDescription = stringResource(R.string.open_navigation_menu),
+                            modifier = Modifier.size(26.dp)
+                        )
                     }
-                },
-                hasNavigationIconExtraContent = isDeveloperModeEnabled && showDummyProfile,
+                }
+            },
 
-                navigationIconExtraContent = {
-                    if (isDeveloperModeEnabled && showDummyProfile) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            GoogleProfilBorder(
-                                modifier = Modifier.size(32.dp),
-                            )
-                            Image(
-                                painter = painterResource(id = R.mipmap.default_icon),
-                                contentDescription = stringResource(R.string.open_navigation_menu),
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                    }
-                },
+            actions = {},
 
-                actions = {},
-
-                content = {
-                    Box(Modifier.fillMaxSize()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = ExtraLargeSpacing)
-                        ) {
-                            if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isBlank()) {
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.no_notes_message),
-                                        style = typography.bodyLarge,
-                                    )
-                                }
-                            } else if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isNotBlank()) {
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.no_search_results),
-                                        style = typography.bodyLarge,
-                                    )
-                                }
-                            } else {
-                                when (notesLayoutType) {
-                                    NotesLayoutType.LIST -> {
-                                        LazyColumn(
-                                            state = lazyListState,
-                                            modifier = Modifier.weight(1f),
-                                            contentPadding = PaddingValues(
-                                                top = ExtraLargePadding,
-                                                bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding,
-                                            )
-                                        ) {
-                                            itemsIndexed(
-                                                items = noteItemsWithHeaders,
-                                                key = { _, item -> if (item is NotesItems) item.id else item.hashCode() }) { index, item ->
-                                                when (item) {
-                                                    is String -> {
-                                                        Text(
-                                                            text = item,
-                                                            style = typography.titleMedium.copy(
-                                                                fontStyle = FontStyle.Italic
-                                                            ),
-                                                            fontWeight = FontWeight.Thin,
-                                                            textAlign = TextAlign.Start,
-                                                            fontFamily = QuicksandTitleVariable,
-                                                            modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .padding(
-                                                                    top = if (index == 0) 0.dp else LargestPadding,
-                                                                    bottom = SmallPadding,
-                                                                    start = SmallPadding,
-                                                                    end = LargestPadding
-                                                                )
-                                                        )
-                                                    }
-
-                                                    is NotesItems -> {
-                                                        NoteCard(
-                                                            item = item,
-                                                            isSelected = selectedNoteIds.contains(
-                                                                item.id
-                                                            ),
-                                                            isSelectionModeActive = isSelectionModeActive,
-                                                            onSelectItem = {
-                                                                if (selectedNoteIds.contains(item.id)) {
-                                                                    selectedNoteIds -= item.id
-                                                                } else {
-                                                                    selectedNoteIds += item.id
-                                                                }
-                                                            },
-                                                            onEditItem = { itemToEdit ->
-                                                                editingNoteId = itemToEdit.id
-                                                                titleState = itemToEdit.title
-                                                                descriptionState =
-                                                                    itemToEdit.description ?: ""
-                                                                listTitleState = itemToEdit.title
-                                                                editingNoteColor =
-                                                                    itemToEdit.color?.toULong()
-                                                                listItemsState.clear()
-                                                                nextListItemId = 0L
-                                                                currentListSizeIndex = 1
-                                                                itemToEdit.description?.let { desc ->
-                                                                    val parsedItems = desc.split("\n")
-                                                                        .mapNotNull { line ->
-                                                                            if (line.isBlank()) null
-                                                                            else {
-                                                                                val isChecked =
-                                                                                    line.startsWith(
-                                                                                        "[x]"
-                                                                                    )
-                                                                                val text =
-                                                                                    if (isChecked) line.substringAfter(
-                                                                                        "[x] "
-                                                                                    )
-                                                                                        .trim() else line.substringAfter(
-                                                                                        "[ ] "
-                                                                                    ).trim()
-                                                                                ListItem(
-                                                                                    nextListItemId++,
-                                                                                    text,
-                                                                                    isChecked
-                                                                                )
-                                                                            }
-                                                                        }
-                                                                    listItemsState.addAll(
-                                                                        parsedItems
-                                                                    )
-                                                                }
-                                                                when (itemToEdit.noteType) {
-                                                                    NoteType.TEXT -> showTextNoteCard =
-                                                                        true
-
-                                                                    NoteType.AUDIO -> {
-                                                                        showAudioNoteCard = true
-                                                                        selectedAudioViewType =
-                                                                            AudioViewType.Waveform // Default for editing
-                                                                        editingNoteColor =
-                                                                            itemToEdit.color?.toULong()
-                                                                    }
-
-                                                                    NoteType.LIST -> showListNoteCard =
-                                                                        true
-
-                                                                    NoteType.SKETCH -> showSketchNoteCard =
-                                                                        true
-                                                                }
-                                                            },
-                                                            maxLines = currentListMaxLines,
-                                                            isNoteSheetOpen = isAnyNoteSheetOpen
-                                                        )
-                                                        val isLastItemInListOrNextIsHeader =
-                                                            index == noteItemsWithHeaders.lastIndex || (index + 1 < noteItemsWithHeaders.size && noteItemsWithHeaders[index + 1] is String)
-
-                                                        if (!isLastItemInListOrNextIsHeader) {
-                                                            Spacer(
-                                                                modifier = Modifier.height(
-                                                                    MediumPadding
-                                                                )
+            content = {
+                Box(Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = ExtraLargeSpacing)
+                    ) {
+                        if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.no_notes_message),
+                                    style = typography.bodyLarge,
+                                )
+                            }
+                        } else if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isNotBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.no_search_results),
+                                    style = typography.bodyLarge,
+                                )
+                            }
+                        } else {
+                            when (notesLayoutType) {
+                                NotesLayoutType.LIST -> {
+                                    LazyColumn(
+                                        state = lazyListState,
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(
+                                            top = ExtraLargePadding,
+                                            bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding,
+                                        )
+                                    ) {
+                                        itemsIndexed(
+                                            items = noteItemsWithHeaders,
+                                            key = { _, item -> if (item is NotesItems) item.id else item.hashCode() }) { index, item ->
+                                            when (item) {
+                                                is String -> {
+                                                    Text(
+                                                        text = item,
+                                                        style = typography.titleMedium.copy(
+                                                            fontStyle = FontStyle.Italic
+                                                        ),
+                                                        fontWeight = FontWeight.Thin,
+                                                        textAlign = TextAlign.Start,
+                                                        fontFamily = QuicksandTitleVariable,
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(
+                                                                top = if (index == 0) 0.dp else LargestPadding,
+                                                                bottom = SmallPadding,
+                                                                start = SmallPadding,
+                                                                end = LargestPadding
                                                             )
-                                                        }
+                                                    )
+                                                }
+
+                                                is NotesItems -> {
+                                                    NoteCard(
+                                                        item = item,
+                                                        isSelected = selectedNoteIds.contains(
+                                                            item.id
+                                                        ),
+                                                        isSelectionModeActive = isSelectionModeActive,
+                                                        onSelectItem = {
+                                                            if (selectedNoteIds.contains(item.id)) {
+                                                                selectedNoteIds -= item.id
+                                                            } else {
+                                                                selectedNoteIds += item.id
+                                                            }
+                                                        },
+                                                        onEditItem = { itemToEdit ->
+                                                            editingNoteId = itemToEdit.id
+                                                            titleState = itemToEdit.title
+                                                            descriptionState =
+                                                                itemToEdit.description ?: ""
+                                                            listTitleState = itemToEdit.title
+                                                            editingNoteColor =
+                                                                itemToEdit.color?.toULong()
+                                                            listItemsState.clear()
+                                                            nextListItemId = 0L
+                                                            currentListSizeIndex = 1
+                                                            itemToEdit.description?.let { desc ->
+                                                                val parsedItems = desc.split("\n")
+                                                                    .mapNotNull { line ->
+                                                                        if (line.isBlank()) null
+                                                                        else {
+                                                                            val isChecked =
+                                                                                line.startsWith(
+                                                                                    "[x]"
+                                                                                )
+                                                                            val text =
+                                                                                if (isChecked) line.substringAfter(
+                                                                                    "[x] "
+                                                                                )
+                                                                                    .trim() else line.substringAfter(
+                                                                                    "[ ] "
+                                                                                ).trim()
+                                                                            ListItem(
+                                                                                nextListItemId++,
+                                                                                text,
+                                                                                isChecked
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                listItemsState.addAll(
+                                                                    parsedItems
+                                                                )
+                                                            }
+                                                            when (itemToEdit.noteType) {
+                                                                NoteType.TEXT -> showTextNoteCard =
+                                                                    true
+
+                                                                NoteType.AUDIO -> {
+                                                                    showAudioNoteCard = true
+                                                                    selectedAudioViewType =
+                                                                        AudioViewType.Waveform // Default for editing
+                                                                    editingNoteColor =
+                                                                        itemToEdit.color?.toULong()
+                                                                }
+
+                                                                NoteType.LIST -> showListNoteCard =
+                                                                    true
+
+                                                                NoteType.SKETCH -> showSketchNoteCard =
+                                                                    true
+                                                            }
+                                                        },
+                                                        maxLines = currentListMaxLines,
+                                                        isNoteSheetOpen = isAnyNoteSheetOpen
+                                                    )
+                                                    val isLastItemInListOrNextIsHeader =
+                                                        index == noteItemsWithHeaders.lastIndex || (index + 1 < noteItemsWithHeaders.size && noteItemsWithHeaders[index + 1] is String)
+
+                                                    if (!isLastItemInListOrNextIsHeader) {
+                                                        Spacer(
+                                                            modifier = Modifier.height(
+                                                                MediumPadding
+                                                            )
+                                                        )
                                                     }
                                                 }
                                             }
                                         }
                                     }
+                                }
 
-                                    NotesLayoutType.GRID -> {
-                                        LazyVerticalStaggeredGrid(
-                                            columns = StaggeredGridCells.Fixed(currentGridColumns),
-                                            modifier = Modifier.weight(1f),
-                                            contentPadding = PaddingValues(
-                                                top = ExtraLargePadding,
-                                                bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding
-                                            ),
-                                            horizontalArrangement = Arrangement.spacedBy(
-                                                MediumPadding
-                                            ),
-                                            verticalItemSpacing = MediumPadding
-                                        ) {
-                                            items(noteItemsWithHeaders.filterIsInstance<NotesItems>()) { item ->
-                                                NoteCard(
-                                                    item = item,
-                                                    isSelected = selectedNoteIds.contains(item.id),
-                                                    isSelectionModeActive = isSelectionModeActive,
-                                                    onSelectItem = {
-                                                        if (selectedNoteIds.contains(item.id)) {
-                                                            selectedNoteIds -= item.id
-                                                        } else {
-                                                            selectedNoteIds += item.id
-                                                        }
-                                                    },
-                                                    onEditItem = { itemToEdit ->
-                                                        editingNoteId = itemToEdit.id
-                                                        titleState = itemToEdit.title
-                                                        descriptionState =
-                                                            itemToEdit.description ?: ""
-                                                        listTitleState = itemToEdit.title
-                                                        editingNoteColor =
-                                                            itemToEdit.color?.toULong()
-                                                        listItemsState.clear()
-                                                        nextListItemId = 0L
-                                                        currentListSizeIndex = 1
-                                                        itemToEdit.description?.let { desc ->
-                                                            val parsedItems =
-                                                                desc.split("\n").mapNotNull { line ->
-                                                                    if (line.isBlank()) null
-                                                                    else {
-                                                                        val isChecked =
-                                                                            line.startsWith("[x]")
-                                                                        val text =
-                                                                            if (isChecked) line.substringAfter(
-                                                                                "[x] "
-                                                                            )
-                                                                                .trim() else line.substringAfter(
-                                                                                "[ ] "
-                                                                            ).trim()
-                                                                        ListItem(
-                                                                            nextListItemId++,
-                                                                            text,
-                                                                            isChecked
+                                NotesLayoutType.GRID -> {
+                                    LazyVerticalStaggeredGrid(
+                                        columns = StaggeredGridCells.Fixed(currentGridColumns),
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(
+                                            top = ExtraLargePadding,
+                                            bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding
+                                        ),
+                                        horizontalArrangement = Arrangement.spacedBy(
+                                            MediumPadding
+                                        ),
+                                        verticalItemSpacing = MediumPadding
+                                    ) {
+                                        items(noteItemsWithHeaders.filterIsInstance<NotesItems>()) { item ->
+                                            NoteCard(
+                                                item = item,
+                                                isSelected = selectedNoteIds.contains(item.id),
+                                                isSelectionModeActive = isSelectionModeActive,
+                                                onSelectItem = {
+                                                    if (selectedNoteIds.contains(item.id)) {
+                                                        selectedNoteIds -= item.id
+                                                    } else {
+                                                        selectedNoteIds += item.id
+                                                    }
+                                                },
+                                                onEditItem = { itemToEdit ->
+                                                    editingNoteId = itemToEdit.id
+                                                    titleState = itemToEdit.title
+                                                    descriptionState = itemToEdit.description ?: ""
+                                                    listTitleState = itemToEdit.title
+                                                    editingNoteColor = itemToEdit.color?.toULong()
+                                                    listItemsState.clear()
+                                                    nextListItemId = 0L
+                                                    currentListSizeIndex = 1
+                                                    itemToEdit.description?.let { desc ->
+                                                        val parsedItems =
+                                                            desc.split("\n").mapNotNull { line ->
+                                                                if (line.isBlank()) null
+                                                                else {
+                                                                    val isChecked =
+                                                                        line.startsWith("[x]")
+                                                                    val text =
+                                                                        if (isChecked) line.substringAfter(
+                                                                            "[x] "
                                                                         )
-                                                                    }
+                                                                            .trim() else line.substringAfter(
+                                                                            "[ ] "
+                                                                        ).trim()
+                                                                    ListItem(
+                                                                        nextListItemId++,
+                                                                        text,
+                                                                        isChecked
+                                                                    )
                                                                 }
-                                                            listItemsState.addAll(parsedItems)
+                                                            }
+                                                        listItemsState.addAll(parsedItems)
+                                                    }
+                                                    when (itemToEdit.noteType) {
+                                                        NoteType.TEXT -> {
+                                                            showTextNoteCard = true
+                                                            editingNoteColor =
+                                                                itemToEdit.color?.toULong()
                                                         }
-                                                        when (itemToEdit.noteType) {
-                                                            NoteType.TEXT -> {
-                                                                showTextNoteCard = true
-                                                                editingNoteColor =
-                                                                    itemToEdit.color?.toULong()
-                                                            }
 
-                                                            NoteType.AUDIO -> {
-                                                                showAudioNoteCard = true
-                                                                selectedAudioViewType =
-                                                                    AudioViewType.Waveform // Default for editing
-                                                                editingNoteColor =
-                                                                    itemToEdit.color?.toULong()
-                                                            }
-
-                                                            NoteType.LIST -> {
-                                                                showListNoteCard = true
-                                                                editingNoteColor =
-                                                                    itemToEdit.color?.toULong()
-                                                            }
-
-                                                            NoteType.SKETCH -> {
-                                                                showSketchNoteCard = true
-                                                                editingNoteColor =
-                                                                    itemToEdit.color?.toULong()
-                                                            }
+                                                        NoteType.AUDIO -> {
+                                                            showAudioNoteCard = true
+                                                            selectedAudioViewType =
+                                                                AudioViewType.Waveform // Default for editing
+                                                            editingNoteColor =
+                                                                itemToEdit.color?.toULong()
                                                         }
-                                                    },
-                                                    maxLines = gridMaxLines,
-                                                    isNoteSheetOpen = isAnyNoteSheetOpen
-                                                )
-                                            }
+
+                                                        NoteType.LIST -> {
+                                                            showListNoteCard = true
+                                                            editingNoteColor =
+                                                                itemToEdit.color?.toULong()
+                                                        }
+
+                                                        NoteType.SKETCH -> {
+                                                            showSketchNoteCard = true
+                                                            editingNoteColor =
+                                                                itemToEdit.color?.toULong()
+                                                        }
+                                                    }
+                                                },
+                                                maxLines = gridMaxLines,
+                                                isNoteSheetOpen = isAnyNoteSheetOpen
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
-                        if (isAddModeActive) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = { isAddModeActive = false })
+                    }
+                    if (isAddModeActive) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { isAddModeActive = false })
+                        )
+                    }
+                }
+            })
+
+        AnimatedVisibility(
+            visible = showTextNoteCard,
+            enter = slideInVertically(initialOffsetY = { it }),
+            exit = slideOutVertically(targetOffsetY = { it })
+        ) {
+            BackHandler {
+                showTextNoteCard = false
+                resetNoteState()
+            }
+
+            NoteTextSheet(
+                title = titleState,
+                onTitleChange = { titleState = it },
+                initialContent = descriptionState,
+                onDismiss = {
+                    showTextNoteCard = false
+                    resetNoteState()
+                },
+                initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
+                onSave = { title, description, theme ->
+                    if (title.isNotBlank() || description.isNotBlank()) {
+                        val color = themeColorMap[theme]
+                        if (editingNoteId != null) {
+                            val updatedNote =
+                                notesViewModel.noteItems.filterIsInstance<NotesItems>()
+                                    .find { it.id == editingNoteId }?.copy(
+                                        title = title,
+                                        description = description.takeIf { it.isNotBlank() },
+                                        color = color?.toLong()
+                                    )
+                            if (updatedNote != null) {
+                                notesViewModel.updateItem(updatedNote)
+                            }
+                        } else {
+                            notesViewModel.addItem(
+                                title = title,
+                                description = description.takeIf { it.isNotBlank() },
+                                noteType = NoteType.TEXT,
+                                color = color?.toLong()
                             )
                         }
                     }
-                })
-
-            AnimatedVisibility(
-                visible = showTextNoteCard,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it })
-            ) {
-                BackHandler {
                     showTextNoteCard = false
                     resetNoteState()
-                }
+                },
+                saveTrigger = saveTrigger,
+                onSaveTriggerConsumed = { saveTrigger = false },
+                isBold = isBold,
+                isItalic = isItalic,
+                isUnderlined = isUnderlined,
+                editorFontSize = editorFontSize,
+                toolbarHeight = 72.dp,
+                onThemeChange = { newThemeName ->
+                    editingNoteColor = themeColorMap[newThemeName]
+                })
+        }
 
-                NoteTextSheet(
-                    title = titleState,
-                    onTitleChange = { titleState = it },
-                    initialContent = descriptionState,
-                    onDismiss = {
-                        showTextNoteCard = false
-                        resetNoteState()
-                    },
-                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onSave = { title, description, theme ->
-                        if (title.isNotBlank() || description.isNotBlank()) {
-                            val color = themeColorMap[theme]
-                            if (editingNoteId != null) {
-                                val updatedNote =
-                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
-                                        .find { it.id == editingNoteId }?.copy(
-                                            title = title,
-                                            description = description.takeIf { it.isNotBlank() },
-                                            color = color?.toLong()
-                                        )
-                                if (updatedNote != null) {
-                                    notesViewModel.updateItem(updatedNote)
-                                }
-                            } else {
-                                notesViewModel.addItem(
-                                    title = title,
-                                    description = description.takeIf { it.isNotBlank() },
-                                    noteType = NoteType.TEXT,
-                                    color = color?.toLong()
-                                )
-                            }
-                        }
-                        showTextNoteCard = false
-                        resetNoteState()
-                    },
-                    saveTrigger = saveTrigger,
-                    onSaveTriggerConsumed = { saveTrigger = false },
-                    isBold = isBold,
-                    isItalic = isItalic,
-                    isUnderlined = isUnderlined,
-                    editorFontSize = editorFontSize,
-                    toolbarHeight = 72.dp,
-                    onThemeChange = { newThemeName ->
-                        editingNoteColor = themeColorMap[newThemeName]
-                    })
+        AnimatedVisibility(
+            visible = showSketchNoteCard,
+            enter = slideInVertically(initialOffsetY = { it }),
+            exit = slideOutVertically(targetOffsetY = { it })
+        ) {
+            BackHandler {
+                showSketchNoteCard = false
+                resetNoteState()
             }
-
-            AnimatedVisibility(
-                visible = showSketchNoteCard,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it })
-            ) {
-                BackHandler {
+            NoteSketchSheet(
+                sketchTitle = titleState,
+                onSketchTitleChange = { titleState = it },
+                onDismiss = {
                     showSketchNoteCard = false
                     resetNoteState()
-                }
-                NoteSketchSheet(
-                    sketchTitle = titleState,
-                    onSketchTitleChange = { titleState = it },
-                    onDismiss = {
-                        showSketchNoteCard = false
-                        resetNoteState()
-                    },
-                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onThemeChange = { newThemeName ->
-                        editingNoteColor = themeColorMap[newThemeName]
-                    },
-                    onSave = { title, theme ->
-                        if (title.isNotBlank()) {
-                            val color = themeColorMap[theme]
-                            if (editingNoteId != null) {
-                                val updatedNote =
-                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
-                                        .find { it.id == editingNoteId }?.copy(
-                                            title = title,
-                                            color = color?.toLong()
-                                        )
-                                if (updatedNote != null) {
-                                    notesViewModel.updateItem(updatedNote)
-                                }
-                            } else {
-                                notesViewModel.addItem(
-                                    title = title,
-                                    description = null, // No text description for a sketch
-                                    noteType = NoteType.SKETCH,
-                                    color = color?.toLong()
-                                )
+                },
+                initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
+                onThemeChange = { newThemeName ->
+                    editingNoteColor = themeColorMap[newThemeName]
+                },
+                onSave = { title, theme ->
+                    if (title.isNotBlank()) {
+                        val color = themeColorMap[theme]
+                        if (editingNoteId != null) {
+                            val updatedNote =
+                                notesViewModel.noteItems.filterIsInstance<NotesItems>()
+                                    .find { it.id == editingNoteId }?.copy(
+                                        title = title, color = color?.toLong()
+                                    )
+                            if (updatedNote != null) {
+                                notesViewModel.updateItem(updatedNote)
                             }
+                        } else {
+                            notesViewModel.addItem(
+                                title = title,
+                                description = null, // No text description for a sketch
+                                noteType = NoteType.SKETCH,
+                                color = color?.toLong()
+                            )
                         }
-                        showSketchNoteCard = false
-                        resetNoteState()
-                    },
-                    saveTrigger = saveTrigger,
-                    onSaveTriggerConsumed = { saveTrigger = false },
-                    isEraserMode = isEraserMode,
-                    usePressure = usePressure,
-                    strokeWidth = currentSketchSize,
-                    strokeColor = currentSketchColor,
-                    showColorPicker = showColorPicker,
-                    onColorPickerDismiss = { showColorPicker = false }, // Callback to dismiss
-                    onColorSelected = { color -> // Callback for selected color
-                        currentSketchColor = color
-                        showColorPicker = false
-                    },
-                    showPenSizePicker = showSketchSizePopup,
-                    onPenSizePickerDismiss = { showSketchSizePopup = false },
-                    onPenSizeSelected = { size ->
-                        currentSketchSize = size
-                        showSketchSizePopup = false
                     }
-                )
-            }
+                    showSketchNoteCard = false
+                    resetNoteState()
+                },
+                saveTrigger = saveTrigger,
+                onSaveTriggerConsumed = { saveTrigger = false },
+                isEraserMode = isEraserMode,
+                usePressure = usePressure,
+                strokeWidth = currentSketchSize,
+                strokeColor = currentSketchColor,
+                showColorPicker = showColorPicker,
+                onColorPickerDismiss = { showColorPicker = false }, // Callback to dismiss
+                onColorSelected = { color -> // Callback for selected color
+                    currentSketchColor = color
+                    showColorPicker = false
+                },
+                showPenSizePicker = showSketchSizePopup,
+                onPenSizePickerDismiss = { showSketchSizePopup = false },
+                onPenSizeSelected = { size ->
+                    currentSketchSize = size
+                    showSketchSizePopup = false
+                })
+        }
 
-            AnimatedVisibility(
-                visible = showAudioNoteCard,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it })
-            ) {
-                BackHandler {
+        AnimatedVisibility(
+            visible = showAudioNoteCard,
+            enter = slideInVertically(initialOffsetY = { it }),
+            exit = slideOutVertically(targetOffsetY = { it })
+        ) {
+            BackHandler {
+                showAudioNoteCard = false
+                resetNoteState()
+            }
+            NoteAudioSheet(
+                audioTitle = titleState,
+                onAudioTitleChange = { titleState = it },
+                onDismiss = {
                     showAudioNoteCard = false
                     resetNoteState()
-                }
-                NoteAudioSheet(
-                    audioTitle = titleState,
-                    onAudioTitleChange = { titleState = it },
-                    onDismiss = {
-                        showAudioNoteCard = false
-                        resetNoteState()
-                    },
-                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onSave = { title, uniqueAudioId, theme ->
-                        if (title.isNotBlank() || uniqueAudioId.isNotBlank()) {
-                            val color = themeColorMap[theme]
-                            if (editingNoteId != null) {
-                                val updatedNote =
-                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
-                                        .find { it.id == editingNoteId }?.copy(
-                                            title = title,
-                                            description = uniqueAudioId,
-                                            color = color?.toLong()
-                                        )
-                                if (updatedNote != null) {
-                                    notesViewModel.updateItem(updatedNote)
-                                }
-                            } else {
-                                notesViewModel.addItem(
-                                    title = title,
-                                    description = uniqueAudioId.takeIf { it.isNotBlank() },
-                                    noteType = NoteType.AUDIO,
-                                    color = color?.toLong()
-                                )
+                },
+                initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
+                onSave = { title, uniqueAudioId, theme ->
+                    if (title.isNotBlank() || uniqueAudioId.isNotBlank()) {
+                        val color = themeColorMap[theme]
+                        if (editingNoteId != null) {
+                            val updatedNote =
+                                notesViewModel.noteItems.filterIsInstance<NotesItems>()
+                                    .find { it.id == editingNoteId }?.copy(
+                                        title = title,
+                                        description = uniqueAudioId,
+                                        color = color?.toLong()
+                                    )
+                            if (updatedNote != null) {
+                                notesViewModel.updateItem(updatedNote)
                             }
+                        } else {
+                            notesViewModel.addItem(
+                                title = title,
+                                description = uniqueAudioId.takeIf { it.isNotBlank() },
+                                noteType = NoteType.AUDIO,
+                                color = color?.toLong()
+                            )
                         }
-                        showAudioNoteCard = false
-                        resetNoteState()
-                    },
-                    toolbarHeight = 72.dp,
-                    saveTrigger = saveTrigger,
-                    onSaveTriggerConsumed = { saveTrigger = false },
-                    selectedAudioViewType = selectedAudioViewType,
-                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() },
-                    onThemeChange = { newThemeName ->
-                        editingNoteColor = themeColorMap[newThemeName]
-                    })
+                    }
+                    showAudioNoteCard = false
+                    resetNoteState()
+                },
+                toolbarHeight = 72.dp,
+                saveTrigger = saveTrigger,
+                onSaveTriggerConsumed = { saveTrigger = false },
+                selectedAudioViewType = selectedAudioViewType,
+                initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() },
+                onThemeChange = { newThemeName ->
+                    editingNoteColor = themeColorMap[newThemeName]
+                })
 
+        }
+
+        AnimatedVisibility(
+            visible = showListNoteCard,
+            enter = slideInVertically(initialOffsetY = { it }),
+            exit = slideOutVertically(targetOffsetY = { it })
+        ) {
+            BackHandler {
+                showListNoteCard = false
+                resetNoteState()
             }
-
-            AnimatedVisibility(
-                visible = showListNoteCard,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it })
-            ) {
-                BackHandler {
+            NoteListSheet(
+                listTitle = listTitleState,
+                onListTitleChange = { listTitleState = it },
+                initialListItems = listItemsState,
+                onDismiss = {
                     showListNoteCard = false
                     resetNoteState()
-                }
-                NoteListSheet(
-                    listTitle = listTitleState,
-                    onListTitleChange = { listTitleState = it },
-                    initialListItems = listItemsState,
-                    onDismiss = {
-                        showListNoteCard = false
-                        resetNoteState()
-                    },
-                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onSave = { title, items, theme ->
-                        val description = items.joinToString("\n") {
-                            "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
-                        }
-                        if (title.isNotBlank() || description.isNotBlank()) {
-                            val color = themeColorMap[theme]
-                            if (editingNoteId != null) {
-                                val updatedNote =
-                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
-                                        .find { it.id == editingNoteId }?.copy(
-                                            title = title,
-                                            description = description.takeIf { it.isNotBlank() },
-                                            color = color?.toLong()
-                                        )
-                                if (updatedNote != null) {
-                                    notesViewModel.updateItem(updatedNote)
-                                }
-                            } else {
-                                notesViewModel.addItem(
-                                    title = title,
-                                    description = description.takeIf { it.isNotBlank() },
-                                    noteType = NoteType.LIST,
-                                    color = color?.toLong()
-                                )
+                },
+                initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
+                onSave = { title, items, theme ->
+                    val description = items.joinToString("\n") {
+                        "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
+                    }
+                    if (title.isNotBlank() || description.isNotBlank()) {
+                        val color = themeColorMap[theme]
+                        if (editingNoteId != null) {
+                            val updatedNote =
+                                notesViewModel.noteItems.filterIsInstance<NotesItems>()
+                                    .find { it.id == editingNoteId }?.copy(
+                                        title = title,
+                                        description = description.takeIf { it.isNotBlank() },
+                                        color = color?.toLong()
+                                    )
+                            if (updatedNote != null) {
+                                notesViewModel.updateItem(updatedNote)
                             }
+                        } else {
+                            notesViewModel.addItem(
+                                title = title,
+                                description = description.takeIf { it.isNotBlank() },
+                                noteType = NoteType.LIST,
+                                color = color?.toLong()
+                            )
                         }
-                        showListNoteCard = false
-                        resetNoteState()
-                    },
-                    toolbarHeight = 72.dp,
-                    saveTrigger = saveTrigger,
-                    onSaveTriggerConsumed = { saveTrigger = false },
-                    onAddItem = {
-                        listItemsState.add(ListItem(nextListItemId++, "", false))
-                    },
-                    onDeleteItem = { itemToDelete ->
-                        listItemsState.remove(itemToDelete)
-                    },
-                    onToggleItemChecked = { item, isChecked ->
-                        val index = listItemsState.indexOfFirst { it.id == item.id }
-                        if (index != -1) {
-                            listItemsState[index] =
-                                listItemsState[index].copy(isChecked = isChecked)
-                        }
-                    },
-                    onItemTextChange = { item, newText ->
-                        val index = listItemsState.indexOfFirst { it.id == item.id }
-                        if (index != -1) {
-                            listItemsState[index] = listItemsState[index].copy(text = newText)
-                        }
-                    },
+                    }
+                    showListNoteCard = false
+                    resetNoteState()
+                },
+                toolbarHeight = 72.dp,
+                saveTrigger = saveTrigger,
+                onSaveTriggerConsumed = { saveTrigger = false },
+                onAddItem = {
+                    listItemsState.add(ListItem(nextListItemId++, "", false))
+                },
+                onDeleteItem = { itemToDelete ->
+                    listItemsState.remove(itemToDelete)
+                },
+                onToggleItemChecked = { item, isChecked ->
+                    val index = listItemsState.indexOfFirst { it.id == item.id }
+                    if (index != -1) {
+                        listItemsState[index] = listItemsState[index].copy(isChecked = isChecked)
+                    }
+                },
+                onItemTextChange = { item, newText ->
+                    val index = listItemsState.indexOfFirst { it.id == item.id }
+                    if (index != -1) {
+                        listItemsState[index] = listItemsState[index].copy(text = newText)
+                    }
+                },
 
-                    onAddItemClick = {
-                        listItemsState.add(ListItem(nextListItemId++, "", false))
-                    },
-                    onTextResizeClick = ::onListTextResizeClick,
-                    editorFontSize = listEditorFontSize,
-                    addItemTrigger = saveTrigger,
-                    onAddItemTriggerConsumed = { saveTrigger = false },
-                    onThemeChange = { newThemeName -> // Pass the lambda here
-                        editingNoteColor = themeColorMap[newThemeName]
-                    })
-            }
+                onAddItemClick = {
+                    listItemsState.add(ListItem(nextListItemId++, "", false))
+                },
+                onTextResizeClick = ::onListTextResizeClick,
+                editorFontSize = listEditorFontSize,
+                addItemTrigger = saveTrigger,
+                onAddItemTriggerConsumed = { saveTrigger = false },
+                onThemeChange = { newThemeName -> // Pass the lambda here
+                    editingNoteColor = themeColorMap[newThemeName]
+                })
         }
     }
+}
 }
 
 @Composable
