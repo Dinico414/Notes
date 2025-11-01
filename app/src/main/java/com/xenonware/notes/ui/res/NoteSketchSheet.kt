@@ -379,7 +379,15 @@ fun NoteSketchSheet(
                             }
                         ),
                     contentAlignment = Alignment.BottomCenter) {
-                    Row {
+                    Row(
+                        modifier = Modifier
+                            .windowInsetsPadding(
+                                WindowInsets.safeDrawing.only(
+                                    WindowInsetsSides.Bottom
+                                )
+                            )
+                            .padding(bottom = 80.dp)
+                    ) {
                         if (showColorPicker) {
                             ColorPicker(
                                 selectedColor = currentPathState.value.color,
@@ -392,12 +400,7 @@ fun NoteSketchSheet(
                                 },
                                 modifier = Modifier
                                     .width(208.dp)
-                                    .windowInsetsPadding(
-                                        WindowInsets.safeDrawing.only(
-                                            WindowInsetsSides.Bottom
-                                        )
-                                    )
-                                    .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
+                                    .padding(horizontal = 16.dp)
                                     .clip(RoundedCornerShape(22.dp))
                                     .background(colorScheme.surfaceDim)
                                     .hazeEffect(
@@ -418,12 +421,7 @@ fun NoteSketchSheet(
                                 },
                                 modifier = Modifier
                                     .width(208.dp)
-                                    .windowInsetsPadding(
-                                        WindowInsets.safeDrawing.only(
-                                            WindowInsetsSides.Bottom
-                                        )
-                                    )
-                                    .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
+                                    .padding(horizontal = 16.dp)
                                     .clip(RoundedCornerShape(22.dp))
                                     .background(colorScheme.surfaceDim)
                                     .hazeEffect(
