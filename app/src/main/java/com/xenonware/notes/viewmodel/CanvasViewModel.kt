@@ -218,7 +218,32 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    var tmp = 0
+    // Helper function to calculate the shortest distance from a point to a line segment
+    private fun distancePointToLineSegment(
+        point: Offset,
+        segmentStart: Offset,
+        segmentEnd: Offset
+    ): Float {
+        val l2 = (segmentEnd.x - segmentStart.x).square() + (segmentEnd.y - segmentStart.y).square()
+        if (l2 == 0f) return (point - segmentStart).getDistance() // Segment is a point
+
+        val t = ((point.x - segmentStart.x) * (segmentEnd.x - segmentStart.x) +
+                 (point.y - segmentStart.y) * (segmentEnd.y - segmentStart.y)) / l2
+        
+        return if (t < 0) {
+            (point - segmentStart).getDistance()
+        } else if (t > 1) {
+            (point - segmentEnd).getDistance()
+        } else {
+            val projectionX = segmentStart.x + t * (segmentEnd.x - segmentStart.x)
+            val projectionY = segmentStart.y + t * (segmentEnd.y - segmentStart.y)
+            (point - Offset(projectionX, projectionY)).getDistance()
+        }
+    }
+
+    // Extension function for Float to square itself
+    private fun Float.square() = this * this
+
     private fun onDraw(offset: Offset, pressure: Float) {
         val thickness = if (currentPathState.value.usePressure) {
             pressure * currentPathState.value.strokeWidth
@@ -229,9 +254,19 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         if (currentPathState.value.isEraser) {
             val eraserRadius = thickness / 2
             val updatedPaths = _pathState.value.paths.filterNot { existingPath ->
-                existingPath.path.any { pathOffset ->
-                    val distance = (pathOffset.offset - offset).getDistance()
+                // Check collision with line segments of the existing path
+                existingPath.path.windowed(2, 1).any { (p1, p2) ->
+                    val distance = distancePointToLineSegment(
+                        point = offset,
+                        segmentStart = p1.offset,
+                        segmentEnd = p2.offset
+                    )
                     // Consider the stroke width of the existing path when checking for collision
+                    // Use the average thickness of the segment for a more accurate check
+                    val segmentThickness = (p1.thickness + p2.thickness) / 2
+                    distance <= eraserRadius + (segmentThickness / 2)
+                } || existingPath.path.any { pathOffset -> // Also check single points for very short paths
+                    val distance = (pathOffset.offset - offset).getDistance()
                     distance <= eraserRadius + (pathOffset.thickness / 2)
                 }
             }
