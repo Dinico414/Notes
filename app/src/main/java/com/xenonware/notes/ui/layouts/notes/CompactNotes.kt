@@ -607,10 +607,10 @@ fun CompactNotes(
 
                         Box(
                             modifier = Modifier
-                                .padding(horizontal = 10.dp)
-                                .size(28.dp)
+                                .padding(horizontal = 5.dp)
+                                .size(38.dp)
                                 .border(2.dp, colorScheme.onSurface, CircleShape)
-                                .border(3.dp, colorScheme.surfaceDim, CircleShape)
+                                .border(4.dp, colorScheme.surfaceDim, CircleShape)
                                 .background(currentSketchColor, CircleShape)
                         ) {
                             IconButton(onClick = {
@@ -631,7 +631,7 @@ fun CompactNotes(
                                 painter = painterResource(id = R.drawable.eraser),
                                 contentDescription = "Eraser"
                             )
-                        } 
+                        }
 
                     // Pressure/Speed toggle
                     IconButton(onClick = { usePressure = !usePressure }) {
