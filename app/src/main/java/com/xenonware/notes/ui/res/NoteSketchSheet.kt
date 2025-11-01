@@ -366,86 +366,77 @@ fun NoteSketchSheet(
             }
 
 
-            if (showColorPicker) {
+            if (showColorPicker || showPenSizePicker) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = onColorPickerDismiss // Dismiss when clicking outside the color picker
+                            onClick = {
+                                onColorPickerDismiss()
+                                onPenSizePickerDismiss()
+                            }
                         ),
-                    contentAlignment = Alignment.BottomCenter // Align the ColorPicker to the bottom center
-                ) {
+                    contentAlignment = Alignment.BottomCenter) {
                     Row {
-                        ColorPicker(
-                            selectedColor = currentPathState.value.color,
-                            colors = themeDrawColors,
-                            onAction = { action ->
-                                if (action is DrawingAction.SelectColor) {
-                                    onColorSelected(action.color)
-                                }
-                                viewModel.onAction(action)
-                            },
-                            modifier = Modifier
-                                .width(208.dp)
-                                .windowInsetsPadding(
-                                    WindowInsets.safeDrawing.only(
-                                        WindowInsetsSides.Bottom
+                        if (showColorPicker) {
+                            ColorPicker(
+                                selectedColor = currentPathState.value.color,
+                                colors = themeDrawColors,
+                                onAction = { action ->
+                                    if (action is DrawingAction.SelectColor) {
+                                        onColorSelected(action.color)
+                                    }
+                                    viewModel.onAction(action)
+                                },
+                                modifier = Modifier
+                                    .width(208.dp)
+                                    .windowInsetsPadding(
+                                        WindowInsets.safeDrawing.only(
+                                            WindowInsetsSides.Bottom
+                                        )
                                     )
-                                )
-                                .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
-                                .clip(RoundedCornerShape(22.dp))
-                                .background(colorScheme.surfaceDim)
-                                .hazeEffect(
-                                    state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)
-                                ),
-                        )
+                                    .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
+                                    .clip(RoundedCornerShape(22.dp))
+                                    .background(colorScheme.surfaceDim)
+                                    .hazeEffect(
+                                        state = hazeState,
+                                        style = HazeMaterials.ultraThin(hazeThinColor)
+                                    ),
+                            )
+                        }
+                        if (showPenSizePicker) {
+                            PenSizePicker(
+                                selectedSize = currentPathState.value.strokeWidth,
+                                sizes = listOf(2f, 5f, 10f, 20f, 40f, 60f, 80f, 100f),
+                                onAction = { action ->
+                                    if (action is DrawingAction.SelectStrokeWidth) {
+                                        onPenSizeSelected(action.strokeWidth)
+                                    }
+                                    viewModel.onAction(action)
+                                },
+                                modifier = Modifier
+                                    .width(208.dp)
+                                    .windowInsetsPadding(
+                                        WindowInsets.safeDrawing.only(
+                                            WindowInsetsSides.Bottom
+                                        )
+                                    )
+                                    .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
+                                    .clip(RoundedCornerShape(22.dp))
+                                    .background(colorScheme.surfaceDim)
+                                    .hazeEffect(
+                                        state = hazeState,
+                                        style = HazeMaterials.ultraThin(hazeThinColor)
+                                    ),
+                            )
+                        }
+
                         Spacer(Modifier.width(64.dp))
                     }
                 }
             }
-
-            if (showPenSizePicker) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onPenSizePickerDismiss
-                        ),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    Row {
-                        PenSizePicker(
-                            selectedSize = currentPathState.value.strokeWidth,
-                            sizes = listOf(2f, 5f, 10f, 20f, 40f, 60f, 80f, 100f),
-                            onAction = { action ->
-                                if (action is DrawingAction.SelectStrokeWidth) {
-                                    onPenSizeSelected(action.strokeWidth)
-                                }
-                                viewModel.onAction(action)
-                            },
-                            modifier = Modifier
-                                .width(208.dp)
-                                .windowInsetsPadding(
-                                    WindowInsets.safeDrawing.only(
-                                        WindowInsetsSides.Bottom
-                                    )
-                                )
-                                .padding(bottom = 80.dp, start = 16.dp, end = 16.dp)
-                                .clip(RoundedCornerShape(22.dp))
-                                .background(colorScheme.surfaceDim)
-                                .hazeEffect(
-                                    state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)
-                                ),
-                        )
-                        Spacer(Modifier.width(64.dp))
-                    }
-                }
-            }
-
 
             Box(
                 modifier = Modifier
@@ -690,15 +681,13 @@ fun PenSizePicker(
                             )
                             .clickable {
                                 onAction(DrawingAction.SelectStrokeWidth(size))
-                            },
-                        contentAlignment = Alignment.Center
+                            }, contentAlignment = Alignment.Center
                     ) {
                         // The actual circle representing the pen size
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val maxRadius = this.size.minDimension / 2
                             drawCircle(
-                                color = onSurfaceColor,
-                                radius = (size / maxPenSize) * maxRadius
+                                color = onSurfaceColor, radius = (size / maxPenSize) * maxRadius
                             )
                         }
                     }
