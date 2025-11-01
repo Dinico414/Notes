@@ -1,7 +1,6 @@
 package com.xenonware.notes.viewmodel
 
 import android.app.Application
-import android.util.Log
 import android.util.Size
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -113,6 +112,14 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private fun saveStateForUndoRedo() {
+        if (_undoRedoPointer < _undoRedoHistory.lastIndex) {
+            _undoRedoHistory.subList(_undoRedoPointer + 1, _undoRedoHistory.size).clear()
+        }
+        _undoRedoHistory.add(_pathState.value.paths)
+        _undoRedoPointer++
+    }
+
     fun onAction(action: DrawingAction) {
         when (action) {
             DrawingAction.NewPathStart -> onNewPathStart()
@@ -142,6 +149,13 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun onNewPathStart() {
+        // If it's an eraser, we don't need to create a new PathData for the eraser itself.
+        // Ensure the path in currentPathState is null for eraser mode.
+        if (currentPathState.value.isEraser) {
+            _currentPathState.update { it.copy(path = null) }
+            return
+        }
+
         _currentPathState.update {
             it.copy(
                 path = PathData(
@@ -206,22 +220,36 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
 
     var tmp = 0
     private fun onDraw(offset: Offset, pressure: Float) {
+        val thickness = if (currentPathState.value.usePressure) {
+            pressure * currentPathState.value.strokeWidth
+        } else {
+            currentPathState.value.strokeWidth
+        }
 
+        if (currentPathState.value.isEraser) {
+            val eraserRadius = thickness / 2
+            val updatedPaths = _pathState.value.paths.filterNot { existingPath ->
+                existingPath.path.any { pathOffset ->
+                    val distance = (pathOffset.offset - offset).getDistance()
+                    // Consider the stroke width of the existing path when checking for collision
+                    distance <= eraserRadius + (pathOffset.thickness / 2)
+                }
+            }
+            _pathState.update { it.copy(paths = updatedPaths) }
+            return
+        }
+
+        // --- Existing drawing logic for pen below ---
         val currentPathData = currentPathState.value.path ?: return
         val path = currentPathData.path
+
         if (path.isNotEmpty()) {
             val last = path.last()
             if (abs(last.offset.x - offset.x) + abs(last.offset.y - offset.y) < 0.1)
                 return
         }
 
-        val thickness = if (currentPathState.value.usePressure) {
-            pressure * currentPathState.value.strokeWidth
-        } else {
-            currentPathState.value.strokeWidth
-        }
         val po = PathOffset(offset, thickness)
-
         updateControlPoints(path, po)
 
         _currentPathState.update {
@@ -234,6 +262,15 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun onPathEnd() {
+        if (currentPathState.value.isEraser) {
+            // Eraser operation has completed, save the current state for undo/redo
+            saveStateForUndoRedo()
+            // Reset current path state to null for consistency, as no path was actively built for the eraser
+            _currentPathState.update { it.copy(path = null) }
+            return
+        }
+
+        // Regular drawing path end logic
         val currentPathData = currentPathState.value.path ?: return
         _currentPathState.update {
             it.copy(
@@ -245,12 +282,8 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
                 paths = it.paths + currentPathData
             )
         }
-        // Save state for undo/redo
-        if (_undoRedoPointer < _undoRedoHistory.lastIndex) {
-            _undoRedoHistory.subList(_undoRedoPointer + 1, _undoRedoHistory.size).clear()
-        }
-        _undoRedoHistory.add(_pathState.value.paths)
-        _undoRedoPointer++
+        // Save state for undo/redo for regular drawing
+        saveStateForUndoRedo()
     }
 
     fun drawFunction(
