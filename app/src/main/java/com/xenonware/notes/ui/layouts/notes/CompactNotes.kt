@@ -1044,7 +1044,7 @@ fun CompactNotes(
                                                             nextListItemId = 0L
                                                             currentListSizeIndex = 1
                                                             itemToEdit.description?.let { desc ->
-                                                                val parsedItems = desc.split("\n")
+                                                                val parsedItems = desc.split("")
                                                                     .mapNotNull { line ->
                                                                         if (line.isBlank()) null
                                                                         else {
@@ -1144,7 +1144,7 @@ fun CompactNotes(
                                                     currentListSizeIndex = 1
                                                     itemToEdit.description?.let { desc ->
                                                         val parsedItems =
-                                                            desc.split("\n").mapNotNull { line ->
+                                                            desc.split("").mapNotNull { line ->
                                                                 if (line.isBlank()) null
                                                                 else {
                                                                     val isChecked =
@@ -1333,7 +1333,9 @@ fun CompactNotes(
                 onPenSizeSelected = { size ->
                     currentSketchSize = size
                     showSketchSizePopup = false
-                })
+                },
+                snackbarHostState = snackbarHostState // Pass the snackbarHostState here
+            )
         }
 
         AnimatedVisibility(
@@ -1409,7 +1411,7 @@ fun CompactNotes(
                 },
                 initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                 onSave = { title, items, theme ->
-                    val description = items.joinToString("\n") {
+                    val description = items.joinToString("") {
                         "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
                     }
                     if (title.isNotBlank() || description.isNotBlank()) {

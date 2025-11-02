@@ -1060,18 +1060,13 @@ fun CoverNotes(
                         editingNoteColor = themeColorMap[newThemeName]
                     },
                     onSave = { title, theme ->
-                        // The description for a sketch is managed internally for now.
-                        // We only save the title and color.
                         if (title.isNotBlank()) {
                             val color = themeColorMap[theme]
                             if (editingNoteId != null) {
                                 val updatedNote =
                                     notesViewModel.noteItems.filterIsInstance<NotesItems>()
                                         .find { it.id == editingNoteId }?.copy(
-                                            title = title,
-                                            // description for sketch is handled via canvas data,
-                                            // so it might not be passed here
-                                            color = color?.toLong()
+                                            title = title, color = color?.toLong()
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1095,8 +1090,8 @@ fun CoverNotes(
                     strokeWidth = currentSketchSize,
                     strokeColor = currentSketchColor,
                     showColorPicker = showColorPicker,
-                    onColorPickerDismiss = { showColorPicker = false }, // Callback to dismiss
-                    onColorSelected = { color -> // Callback for selected color
+                    onColorPickerDismiss = { showColorPicker = false },
+                    onColorSelected = { color ->
                         currentSketchColor = color
                         showColorPicker = false
                     },
@@ -1105,7 +1100,8 @@ fun CoverNotes(
                     onPenSizeSelected = { size ->
                         currentSketchSize = size
                         showSketchSizePopup = false
-                    }
+                    },
+                    snackbarHostState = snackbarHostState
                 )
             }
 

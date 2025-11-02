@@ -2,6 +2,7 @@ package com.xenonware.notes.ui.res
 
 import android.app.Application
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -56,12 +57,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -75,6 +78,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -84,6 +88,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.NoteCanvas
+import com.xenonware.notes.R
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
@@ -121,6 +126,7 @@ fun NoteSketchSheet(
     showPenSizePicker: Boolean,
     onPenSizePickerDismiss: () -> Unit,
     onPenSizeSelected: (Float) -> Unit,
+    snackbarHostState: SnackbarHostState,
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
@@ -140,6 +146,7 @@ fun NoteSketchSheet(
     var showMenu by remember { mutableStateOf(false) }
     var isOffline by remember { mutableStateOf(false) }
     var isLabeled by remember { mutableStateOf(false) }
+    var lastBackPressTime by rememberSaveable { mutableLongStateOf(0L) }
 
     val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
@@ -149,6 +156,21 @@ fun NoteSketchSheet(
     val currentPathState = viewModel.currentPathState.collectAsState()
     val pathState = viewModel.pathState.collectAsState()
     val isHandwritingMode by viewModel.isHandwritingMode.collectAsState()
+
+    BackHandler {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastBackPressTime < 2000L) { // 2 seconds
+            onDismiss()
+        } else {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = context.getString(R.string.navigate_back_description),
+                    duration = androidx.compose.material3.SnackbarDuration.Short
+                )
+            }
+            lastBackPressTime = currentTime
+        }
+    }
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
@@ -235,7 +257,7 @@ fun NoteSketchSheet(
                 onAction = viewModel::onAction,
                 isHandwritingMode = isHandwritingMode,
                 gridEnabled = pathState.value.gridEnabled,
-                debugText = false,
+                debugText = true,
                 debugPoints = false,
                 modifier = Modifier
                     .fillMaxSize()
@@ -277,7 +299,20 @@ fun NoteSketchSheet(
                     ), verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = onDismiss, modifier = Modifier.padding(4.dp)
+                    onClick = {
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastBackPressTime < 2000L) { // 2 seconds
+                            onDismiss()
+                        } else {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = context.getString(R.string.open_navigation_menu),
+                                    duration = androidx.compose.material3.SnackbarDuration.Short
+                                )
+                            }
+                            lastBackPressTime = currentTime
+                        }
+                    }, modifier = Modifier.padding(4.dp)
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
