@@ -1,8 +1,6 @@
 package com.xenonware.notes
 
-import android.database.Cursor
 import android.os.Build
-import android.util.Log
 import android.view.MotionEvent
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
@@ -26,12 +24,15 @@ import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.DrawStyle
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.xenonware.notes.viewmodel.DrawingAction
+import com.xenonware.notes.viewmodel.DrawingAction.Draw
+import com.xenonware.notes.viewmodel.DrawingAction.Erase
+import com.xenonware.notes.viewmodel.DrawingAction.NewPathStart
+import com.xenonware.notes.viewmodel.DrawingAction.PathEnd
 import com.xenonware.notes.viewmodel.PathData
 import com.xenonware.notes.viewmodel.PathOffset
 import kotlin.math.abs
@@ -72,6 +73,19 @@ fun NoteCanvas(
 
                     val isStylus = it.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS
                     val isFinger = it.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER
+                    val isEraser = it.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
+
+
+                    if (isEraser) {
+                        when (it.action) {
+                            MotionEvent.ACTION_DOWN,
+                            MotionEvent.ACTION_MOVE -> {
+                                onAction(Erase(Offset(it.x, it.y)))
+                            }
+                        }
+                        return@pointerInteropFilter true
+                    }
+
 
                     val canDraw = isStylus || (isHandwritingMode && isFinger)
 
@@ -82,10 +96,10 @@ fun NoteCanvas(
                             MotionEvent.ACTION_MOVE -> {
                                 cursorPos = null
                                 if (it.action == MotionEvent.ACTION_DOWN)
-                                    onAction(DrawingAction.NewPathStart)
-                                onAction(DrawingAction.Draw(Offset(it.x, it.y), it.pressure))
+                                    onAction(NewPathStart)
+                                onAction(Draw(Offset(it.x, it.y), it.pressure))
                                 if (it.action == MotionEvent.ACTION_UP)
-                                    onAction(DrawingAction.PathEnd)
+                                    onAction(PathEnd)
                             }
                             MotionEvent.ACTION_HOVER_ENTER,
                             MotionEvent.ACTION_HOVER_EXIT,
@@ -152,7 +166,7 @@ private fun DrawScope.drawPath(
 ) {
 //    val customBrush = object : ShaderBrush() {
 //        override fun createShader(size: Size): Shader {
-//            return LinearGradientShader()
+//            return LinearGradient()
 //        }
 //    }
 

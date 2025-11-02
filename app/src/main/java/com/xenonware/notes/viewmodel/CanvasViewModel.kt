@@ -45,6 +45,7 @@ sealed interface DrawingAction {
     data object NewPathStart : DrawingAction
     data class Draw(val offset: Offset, val pressure: Float) : DrawingAction
     data object PathEnd : DrawingAction
+    data class Erase(val offset: Offset) : DrawingAction
     data object DeletePathStart : DrawingAction
     data object Undo : DrawingAction
     data object Redo : DrawingAction
@@ -125,6 +126,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
             DrawingAction.NewPathStart -> onNewPathStart()
             is DrawingAction.Draw -> onDraw(action.offset, action.pressure)
             DrawingAction.PathEnd -> onPathEnd()
+            is DrawingAction.Erase -> onErase(action.offset)
             DrawingAction.DeletePathStart -> TODO()
             DrawingAction.Redo -> onRedo()
             DrawingAction.Undo -> onUndo()
@@ -319,6 +321,11 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         }
         // Save state for undo/redo for regular drawing
         saveStateForUndoRedo()
+    }
+
+    private fun onErase(offset: Offset) {
+        _currentPathState.update { it.copy(isEraser = true) }
+        onDraw(offset, 1.0f) // Use a default pressure for eraser
     }
 
     fun drawFunction(
