@@ -229,9 +229,10 @@ fun NoteSketchSheet(
 
 
             NoteCanvas(
-                pathState.value.paths,
-                currentPathState.value.path,
-                viewModel::onAction,
+                paths = pathState.value.paths,
+                currentPath = currentPathState.value.path,
+                currentToolState = currentPathState.value,
+                onAction = viewModel::onAction,
                 isHandwritingMode = isHandwritingMode,
                 gridEnabled = pathState.value.gridEnabled,
                 debugText = true,

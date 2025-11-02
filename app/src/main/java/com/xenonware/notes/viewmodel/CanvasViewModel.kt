@@ -253,30 +253,6 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
             currentPathState.value.strokeWidth
         }
 
-        if (currentPathState.value.isEraser) {
-            val eraserRadius = thickness / 2
-            val updatedPaths = _pathState.value.paths.filterNot { existingPath ->
-                // Check collision with line segments of the existing path
-                existingPath.path.windowed(2, 1).any { (p1, p2) ->
-                    val distance = distancePointToLineSegment(
-                        point = offset,
-                        segmentStart = p1.offset,
-                        segmentEnd = p2.offset
-                    )
-                    // Consider the stroke width of the existing path when checking for collision
-                    // Use the average thickness of the segment for a more accurate check
-                    val segmentThickness = (p1.thickness + p2.thickness) / 2
-                    distance <= eraserRadius + (segmentThickness / 2)
-                } || existingPath.path.any { pathOffset -> // Also check single points for very short paths
-                    val distance = (pathOffset.offset - offset).getDistance()
-                    distance <= eraserRadius + (pathOffset.thickness / 2)
-                }
-            }
-            _pathState.update { it.copy(paths = updatedPaths) }
-            return
-        }
-
-        // --- Existing drawing logic for pen below ---
         val currentPathData = currentPathState.value.path ?: return
         val path = currentPathData.path
 
@@ -324,8 +300,26 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun onErase(offset: Offset) {
-        _currentPathState.update { it.copy(isEraser = true) }
-        onDraw(offset, 1.0f) // Use a default pressure for eraser
+        val thickness = currentPathState.value.strokeWidth
+        val eraserRadius = thickness / 2
+        val updatedPaths = _pathState.value.paths.filterNot { existingPath ->
+            // Check collision with line segments of the existing path
+            existingPath.path.windowed(2, 1).any { (p1, p2) ->
+                val distance = distancePointToLineSegment(
+                    point = offset,
+                    segmentStart = p1.offset,
+                    segmentEnd = p2.offset
+                )
+                // Consider the stroke width of the existing path when checking for collision
+                // Use the average thickness of the segment for a more accurate check
+                val segmentThickness = (p1.thickness + p2.thickness) / 2
+                distance <= eraserRadius + (segmentThickness / 2)
+            } || existingPath.path.any { pathOffset -> // Also check single points for very short paths
+                val distance = (pathOffset.offset - offset).getDistance()
+                distance <= eraserRadius + (pathOffset.thickness / 2)
+            }
+        }
+        _pathState.update { it.copy(paths = updatedPaths) }
     }
 
     fun drawFunction(

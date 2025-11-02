@@ -28,11 +28,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import com.xenonware.notes.viewmodel.CurrentPathState
 import com.xenonware.notes.viewmodel.DrawingAction
 import com.xenonware.notes.viewmodel.DrawingAction.Draw
 import com.xenonware.notes.viewmodel.DrawingAction.Erase
 import com.xenonware.notes.viewmodel.DrawingAction.NewPathStart
 import com.xenonware.notes.viewmodel.DrawingAction.PathEnd
+import com.xenonware.notes.viewmodel.DrawingAction.UpdateTool
 import com.xenonware.notes.viewmodel.PathData
 import com.xenonware.notes.viewmodel.PathOffset
 import kotlin.math.abs
@@ -43,6 +45,7 @@ import kotlin.math.abs
 fun NoteCanvas(
     paths: List<PathData>,
     currentPath: PathData?,
+    currentToolState: CurrentPathState,
     onAction: (DrawingAction) -> Unit,
     isHandwritingMode: Boolean, // Added isHandwritingMode parameter
     modifier: Modifier = Modifier,
@@ -52,6 +55,8 @@ fun NoteCanvas(
     interactable: Boolean = true
 ) {
     var s by remember { mutableStateOf("") }
+    var wasEraserMode by remember { mutableStateOf(false) }
+
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
@@ -71,16 +76,32 @@ fun NoteCanvas(
                                 "${it.flags == MotionEvent.FLAG_CANCELED}"
                     }
 
+                    val isDetectedToolEraser = it.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
+
+                    if (isDetectedToolEraser != wasEraserMode) {
+                        wasEraserMode = isDetectedToolEraser
+                        onAction(
+                            UpdateTool(
+                                isEraser = isDetectedToolEraser,
+                                usePressure = currentToolState.usePressure,
+                                strokeWidth = currentToolState.strokeWidth,
+                                strokeColor = currentToolState.color
+                            )
+                        )
+                    }
+
                     val isStylus = it.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS
                     val isFinger = it.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER
-                    val isEraser = it.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
-
+                    val isEraser = currentToolState.isEraser
 
                     if (isEraser) {
                         when (it.action) {
                             MotionEvent.ACTION_DOWN,
                             MotionEvent.ACTION_MOVE -> {
                                 onAction(Erase(Offset(it.x, it.y)))
+                            }
+                            MotionEvent.ACTION_UP -> {
+                                onAction(PathEnd)
                             }
                         }
                         return@pointerInteropFilter true
