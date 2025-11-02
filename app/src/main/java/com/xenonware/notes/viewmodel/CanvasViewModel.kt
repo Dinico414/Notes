@@ -151,19 +151,13 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun onNewPathStart() {
-        // If it's an eraser, we don't need to create a new PathData for the eraser itself.
-        // Ensure the path in currentPathState is null for eraser mode.
-        if (currentPathState.value.isEraser) {
-            _currentPathState.update { it.copy(path = null) }
-            return
-        }
-
         _currentPathState.update {
             it.copy(
+                isEraser = false,
                 path = PathData(
                     id = System.currentTimeMillis().toString(),
                     color = it.color,
-                    path = emptyList(),
+                    path = emptyList()
                 )
             )
         }
@@ -300,6 +294,9 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun onErase(offset: Offset) {
+        if (!currentPathState.value.isEraser) {
+            _currentPathState.update { it.copy(isEraser = true) }
+        }
         val thickness = currentPathState.value.strokeWidth
         val eraserRadius = thickness / 2
         val updatedPaths = _pathState.value.paths.filterNot { existingPath ->
