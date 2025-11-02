@@ -239,19 +239,21 @@ fun NoteSketchSheet(
                 modifier = Modifier
                     .fillMaxSize()
                     .hazeSource(state = hazeState)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {
-                            if (showColorPicker) {
-                                onColorPickerDismiss()
-                            }
-                            if (showPenSizePicker) {
-                                onPenSizePickerDismiss()
-                            }
-                        }
-                    )
             )
+
+            if (showColorPicker || showPenSizePicker) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            onColorPickerDismiss()
+                            onPenSizePickerDismiss()
+                        }
+                )
+            }
 
 
             // Top bar
