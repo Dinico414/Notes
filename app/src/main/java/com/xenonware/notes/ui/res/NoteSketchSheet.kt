@@ -1,6 +1,5 @@
 package com.xenonware.notes.ui.res
 
-// New imports for side controls
 import android.app.Application
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -240,6 +239,18 @@ fun NoteSketchSheet(
                 modifier = Modifier
                     .fillMaxSize()
                     .hazeSource(state = hazeState)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            if (showColorPicker) {
+                                onColorPickerDismiss()
+                            }
+                            if (showPenSizePicker) {
+                                onPenSizePickerDismiss()
+                            }
+                        }
+                    )
             )
 
 
@@ -360,6 +371,8 @@ fun NoteSketchSheet(
                                     } else {
                                         Icon(
                                             Icons.Default.Cloud, contentDescription = "Online note"
+
+
                                         )
                                     }
                                 })
@@ -370,17 +383,11 @@ fun NoteSketchSheet(
             }
 
 
+
+
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {
-                            onColorPickerDismiss()
-                            onPenSizePickerDismiss()
-                        }
-                    ),
+                    .fillMaxSize(),
                 contentAlignment = Alignment.BottomCenter
             ) {
                 Row(
@@ -424,8 +431,7 @@ fun NoteSketchSheet(
                                             onColorSelected(action.color)
                                         }
                                         viewModel.onAction(action)
-                                    }
-                                )
+                                    })
                             }
                             this@Row.AnimatedVisibility(
                                 visible = showPenSizePicker,
@@ -440,8 +446,7 @@ fun NoteSketchSheet(
                                             onPenSizeSelected(action.strokeWidth)
                                         }
                                         viewModel.onAction(action)
-                                    }
-                                )
+                                    })
                             }
                         }
                     }
@@ -589,7 +594,7 @@ fun ColorPicker(
     selectedColor: Color,
     colors: List<Color>,
     onAction: (DrawingAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val colorButtonSize = 28.dp
     val itemsInRow = 4
@@ -644,7 +649,7 @@ fun PenSizePicker(
     selectedSize: Float,
     sizes: List<Float>,
     onAction: (DrawingAction) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val sizeButtonSize = 28.dp
     val itemsInRow = 4
