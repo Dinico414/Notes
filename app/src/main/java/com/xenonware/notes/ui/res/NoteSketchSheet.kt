@@ -381,7 +381,8 @@ fun NoteSketchSheet(
                             onPenSizePickerDismiss()
                         }
                     ),
-                contentAlignment = Alignment.BottomCenter) {
+                contentAlignment = Alignment.BottomCenter
+            ) {
                 Row(
                     modifier = Modifier
                         .windowInsetsPadding(
@@ -392,22 +393,14 @@ fun NoteSketchSheet(
                         .padding(bottom = 80.dp)
                 ) {
                     AnimatedVisibility(
-                        visible = showColorPicker,
+                        visible = showColorPicker || showPenSizePicker,
                         enter = expandVertically(
                             expandFrom = Alignment.Bottom,
                             animationSpec = tween(durationMillis = 300)
                         ) + fadeIn(animationSpec = tween(durationMillis = 300)),
                         exit = fadeOut(animationSpec = tween(durationMillis = 500))
                     ) {
-                        ColorPicker(
-                            selectedColor = currentPathState.value.color,
-                            colors = themeDrawColors,
-                            onAction = { action ->
-                                if (action is DrawingAction.SelectColor) {
-                                    onColorSelected(action.color)
-                                }
-                                viewModel.onAction(action)
-                            },
+                        Box(
                             modifier = Modifier
                                 .width(208.dp)
                                 .padding(horizontal = 16.dp)
@@ -417,35 +410,40 @@ fun NoteSketchSheet(
                                     state = hazeState,
                                     style = HazeMaterials.ultraThin(hazeThinColor)
                                 )
-                        )
-                    }
-                    AnimatedVisibility(
-                        visible = showPenSizePicker,
-                        enter = expandVertically(
-                            expandFrom = Alignment.Bottom,
-                            animationSpec = tween(durationMillis = 300)
-                        ) + fadeIn(animationSpec = tween(durationMillis = 300)),
-                        exit = fadeOut(animationSpec = tween(durationMillis = 500))
-                    ) {
-                        PenSizePicker(
-                            selectedSize = currentPathState.value.strokeWidth,
-                            sizes = listOf(2f, 5f, 10f, 20f, 40f, 60f, 80f, 100f),
-                            onAction = { action ->
-                                if (action is DrawingAction.SelectStrokeWidth) {
-                                    onPenSizeSelected(action.strokeWidth)
-                                }
-                                viewModel.onAction(action)
-                            },
-                            modifier = Modifier
-                                .width(208.dp)
-                                .padding(horizontal = 16.dp)
-                                .clip(RoundedCornerShape(22.dp))
-                                .background(colorScheme.surfaceDim)
-                                .hazeEffect(
-                                    state = hazeState,
-                                    style = HazeMaterials.ultraThin(hazeThinColor)
-                                ),
-                        )
+                        ) {
+                            this@Row.AnimatedVisibility(
+                                visible = showColorPicker,
+                                enter = fadeIn(animationSpec = tween(durationMillis = 300)),
+                                exit = fadeOut(animationSpec = tween(durationMillis = 300))
+                            ) {
+                                ColorPicker(
+                                    selectedColor = currentPathState.value.color,
+                                    colors = themeDrawColors,
+                                    onAction = { action ->
+                                        if (action is DrawingAction.SelectColor) {
+                                            onColorSelected(action.color)
+                                        }
+                                        viewModel.onAction(action)
+                                    }
+                                )
+                            }
+                            this@Row.AnimatedVisibility(
+                                visible = showPenSizePicker,
+                                enter = fadeIn(animationSpec = tween(durationMillis = 300)),
+                                exit = fadeOut(animationSpec = tween(durationMillis = 300))
+                            ) {
+                                PenSizePicker(
+                                    selectedSize = currentPathState.value.strokeWidth,
+                                    sizes = listOf(2f, 5f, 10f, 20f, 40f, 60f, 80f, 100f),
+                                    onAction = { action ->
+                                        if (action is DrawingAction.SelectStrokeWidth) {
+                                            onPenSizeSelected(action.strokeWidth)
+                                        }
+                                        viewModel.onAction(action)
+                                    }
+                                )
+                            }
+                        }
                     }
                     Spacer(Modifier.width(64.dp))
                 }
