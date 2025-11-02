@@ -235,7 +235,7 @@ fun NoteSketchSheet(
                 onAction = viewModel::onAction,
                 isHandwritingMode = isHandwritingMode,
                 gridEnabled = pathState.value.gridEnabled,
-                debugText = true,
+                debugText = false,
                 debugPoints = false,
                 modifier = Modifier
                     .fillMaxSize()

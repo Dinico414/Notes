@@ -1,3 +1,5 @@
+@file:Suppress("AssignedValueIsNeverRead")
+
 package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
@@ -74,6 +76,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -173,7 +176,7 @@ fun CoverNotes(
     var saveTrigger by remember { mutableStateOf(false) }
     var isEraserMode by remember { mutableStateOf(false) }
     var usePressure by remember { mutableStateOf(true) }
-    var currentSketchSize by remember { mutableStateOf(10f) }
+    var currentSketchSize by remember { mutableFloatStateOf(10f) }
     val sketchColors = remember {
         listOf(
             Color.Black, Color.White, Color.Red, Color.Green, Color.Blue,
@@ -921,7 +924,7 @@ fun CoverNotes(
 
                                                         if (!isLastItemInListOrNextIsHeader) {
                                                             Spacer(
-                                                                modifier = Modifier.Companion.height(
+                                                                modifier = Modifier.height(
                                                                     MediumPadding
                                                                 )
                                                             )

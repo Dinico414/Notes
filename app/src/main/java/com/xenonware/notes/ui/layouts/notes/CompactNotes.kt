@@ -1,3 +1,5 @@
+@file:Suppress("AssignedValueIsNeverRead")
+
 package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
@@ -179,14 +181,14 @@ fun CompactNotes(
     appSize: IntSize,
 
     ) {
-    val ULongSaver = Saver<ULong?, String>(
+    val uLongSaver = Saver<ULong?, String>(
         save = { it?.toString() ?: "null" },
         restore = { if (it == "null") null else it.toULong() })
 
     var editingNoteId by rememberSaveable { mutableStateOf<Int?>(null) }
     var titleState by rememberSaveable { mutableStateOf("") }
     var descriptionState by rememberSaveable { mutableStateOf("") }
-    var editingNoteColor by rememberSaveable(stateSaver = ULongSaver) { mutableStateOf<ULong?>(null) }
+    var editingNoteColor by rememberSaveable(stateSaver = uLongSaver) { mutableStateOf(null) }
     var showTextNoteCard by rememberSaveable { mutableStateOf(false) }
     var saveTrigger by remember { mutableStateOf(false) }
 
@@ -906,7 +908,7 @@ fun CompactNotes(
                 .fillMaxSize()
                 .padding()
                 .hazeSource(hazeState)
-                .onSizeChanged { newSize ->
+                .onSizeChanged { _ ->
                 },
             titleText = stringResource(id = R.string.app_name),
 
