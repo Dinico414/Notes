@@ -4,8 +4,12 @@ package com.xenonware.notes.ui.res
 import android.app.Application
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -127,7 +131,7 @@ fun NoteSketchSheet(
     var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) }
     var colorMenuItemText by remember { mutableStateOf("Color") }
     val scope = rememberCoroutineScope()
-    var isFadingOut by remember { mutableStateOf(false) }
+    var isFadingOut by remember { mutableStateOf<Boolean>(false) }
     var colorChangeJob by remember { mutableStateOf<Job?>(null) }
 
     val availableThemes = remember {
@@ -302,63 +306,63 @@ fun NoteSketchSheet(
                         onDismissRequest = { showMenu = false },
                         items = listOf(
                             MenuItem(
-                            text = "Label",
-                            onClick = { isLabeled = !isLabeled },
-                            dismissOnClick = false,
-                            icon = {
-                                if (isLabeled) {
-                                    Icon(
-                                        Icons.Default.Bookmark,
-                                        contentDescription = "Label",
-                                        tint = labelColor
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.BookmarkBorder,
-                                        contentDescription = "Label"
-                                    )
-                                }
-                            }), MenuItem(
+                                text = "Label",
+                                onClick = { isLabeled = !isLabeled },
+                                dismissOnClick = false,
+                                icon = {
+                                    if (isLabeled) {
+                                        Icon(
+                                            Icons.Default.Bookmark,
+                                            contentDescription = "Label",
+                                            tint = labelColor
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.BookmarkBorder,
+                                            contentDescription = "Label"
+                                        )
+                                    }
+                                }), MenuItem(
                                 text = colorMenuItemText, onClick = {
-                                val currentIndex = availableThemes.indexOf(selectedTheme)
-                                val nextIndex = (currentIndex + 1) % availableThemes.size
-                                selectedTheme = availableThemes[nextIndex]
-                                onThemeChange(selectedTheme)
-                                colorChangeJob?.cancel()
-                                colorChangeJob = scope.launch {
-                                    colorMenuItemText = availableThemes[nextIndex]
-                                    isFadingOut = false
-                                    delay(2500) // Keep current theme color for 2.5 seconds
-                                    isFadingOut = true // Fade out animation for 0.5 seconds
-                                    delay(500)
-                                    colorMenuItemText = "Color"
-                                    isFadingOut = false
-                                }
-                            }, dismissOnClick = false, icon = {
-                                Icon(
-                                    Icons.Default.ColorLens,
-                                    contentDescription = "Color",
-                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                )
-                            }, textColor = animatedTextColor
-                        ), MenuItem(
-                            text = if (isOffline) "Online note" else "Offline note",
-                            onClick = { isOffline = !isOffline },
-                            dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else null,
-                            icon = {
-                                if (isOffline) {
+                                    val currentIndex = availableThemes.indexOf(selectedTheme)
+                                    val nextIndex = (currentIndex + 1) % availableThemes.size
+                                    selectedTheme = availableThemes[nextIndex]
+                                    onThemeChange(selectedTheme)
+                                    colorChangeJob?.cancel()
+                                    colorChangeJob = scope.launch {
+                                        colorMenuItemText = availableThemes[nextIndex]
+                                        isFadingOut = false
+                                        delay(2500) // Keep current theme color for 2.5 seconds
+                                        isFadingOut = true // Fade out animation for 0.5 seconds
+                                        delay(500)
+                                        colorMenuItemText = "Color"
+                                        isFadingOut = false
+                                    }
+                                }, dismissOnClick = false, icon = {
                                     Icon(
-                                        Icons.Default.CloudOff,
-                                        contentDescription = "Offline note",
-                                        tint = colorScheme.error
+                                        Icons.Default.ColorLens,
+                                        contentDescription = "Color",
+                                        tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
                                     )
-                                } else {
-                                    Icon(
-                                        Icons.Default.Cloud, contentDescription = "Online note"
-                                    )
-                                }
-                            })
+                                }, textColor = animatedTextColor
+                            ), MenuItem(
+                                text = if (isOffline) "Online note" else "Offline note",
+                                onClick = { isOffline = !isOffline },
+                                dismissOnClick = false,
+                                textColor = if (isOffline) colorScheme.error else null,
+                                icon = {
+                                    if (isOffline) {
+                                        Icon(
+                                            Icons.Default.CloudOff,
+                                            contentDescription = "Offline note",
+                                            tint = colorScheme.error
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.Cloud, contentDescription = "Online note"
+                                        )
+                                    }
+                                })
                         ),
                         hazeState = hazeState
                     )
@@ -366,75 +370,87 @@ fun NoteSketchSheet(
             }
 
 
-            if (showColorPicker || showPenSizePicker) {
-                Box(
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            onColorPickerDismiss()
+                            onPenSizePickerDismiss()
+                        }
+                    ),
+                contentAlignment = Alignment.BottomCenter) {
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {
-                                onColorPickerDismiss()
-                                onPenSizePickerDismiss()
-                            }
-                        ),
-                    contentAlignment = Alignment.BottomCenter) {
-                    Row(
-                        modifier = Modifier
-                            .windowInsetsPadding(
-                                WindowInsets.safeDrawing.only(
-                                    WindowInsetsSides.Bottom
-                                )
+                        .windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(
+                                WindowInsetsSides.Bottom
                             )
-                            .padding(bottom = 80.dp)
+                        )
+                        .padding(bottom = 80.dp)
+                ) {
+                    AnimatedVisibility(
+                        visible = showColorPicker,
+                        enter = expandVertically(
+                            expandFrom = Alignment.Bottom,
+                            animationSpec = tween(durationMillis = 300)
+                        ) + fadeIn(animationSpec = tween(durationMillis = 300)),
+                        exit = fadeOut(animationSpec = tween(durationMillis = 500))
                     ) {
-                        if (showColorPicker) {
-                            ColorPicker(
-                                selectedColor = currentPathState.value.color,
-                                colors = themeDrawColors,
-                                onAction = { action ->
-                                    if (action is DrawingAction.SelectColor) {
-                                        onColorSelected(action.color)
-                                    }
-                                    viewModel.onAction(action)
-                                },
-                                modifier = Modifier
-                                    .width(208.dp)
-                                    .padding(horizontal = 16.dp)
-                                    .clip(RoundedCornerShape(22.dp))
-                                    .background(colorScheme.surfaceDim)
-                                    .hazeEffect(
-                                        state = hazeState,
-                                        style = HazeMaterials.ultraThin(hazeThinColor)
-                                    ),
-                            )
-                        }
-                        if (showPenSizePicker) {
-                            PenSizePicker(
-                                selectedSize = currentPathState.value.strokeWidth,
-                                sizes = listOf(2f, 5f, 10f, 20f, 40f, 60f, 80f, 100f),
-                                onAction = { action ->
-                                    if (action is DrawingAction.SelectStrokeWidth) {
-                                        onPenSizeSelected(action.strokeWidth)
-                                    }
-                                    viewModel.onAction(action)
-                                },
-                                modifier = Modifier
-                                    .width(208.dp)
-                                    .padding(horizontal = 16.dp)
-                                    .clip(RoundedCornerShape(22.dp))
-                                    .background(colorScheme.surfaceDim)
-                                    .hazeEffect(
-                                        state = hazeState,
-                                        style = HazeMaterials.ultraThin(hazeThinColor)
-                                    ),
-                            )
-                        }
-
-                        Spacer(Modifier.width(64.dp))
+                        ColorPicker(
+                            selectedColor = currentPathState.value.color,
+                            colors = themeDrawColors,
+                            onAction = { action ->
+                                if (action is DrawingAction.SelectColor) {
+                                    onColorSelected(action.color)
+                                }
+                                viewModel.onAction(action)
+                            },
+                            modifier = Modifier
+                                .width(208.dp)
+                                .padding(horizontal = 16.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(colorScheme.surfaceDim)
+                                .hazeEffect(
+                                    state = hazeState,
+                                    style = HazeMaterials.ultraThin(hazeThinColor)
+                                )
+                        )
                     }
+                    AnimatedVisibility(
+                        visible = showPenSizePicker,
+                        enter = expandVertically(
+                            expandFrom = Alignment.Bottom,
+                            animationSpec = tween(durationMillis = 300)
+                        ) + fadeIn(animationSpec = tween(durationMillis = 300)),
+                        exit = fadeOut(animationSpec = tween(durationMillis = 500))
+                    ) {
+                        PenSizePicker(
+                            selectedSize = currentPathState.value.strokeWidth,
+                            sizes = listOf(2f, 5f, 10f, 20f, 40f, 60f, 80f, 100f),
+                            onAction = { action ->
+                                if (action is DrawingAction.SelectStrokeWidth) {
+                                    onPenSizeSelected(action.strokeWidth)
+                                }
+                                viewModel.onAction(action)
+                            },
+                            modifier = Modifier
+                                .width(208.dp)
+                                .padding(horizontal = 16.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(colorScheme.surfaceDim)
+                                .hazeEffect(
+                                    state = hazeState,
+                                    style = HazeMaterials.ultraThin(hazeThinColor)
+                                ),
+                        )
+                    }
+                    Spacer(Modifier.width(64.dp))
                 }
             }
+
 
             Box(
                 modifier = Modifier
@@ -503,7 +519,6 @@ fun VerticalFloatingToolbar(
             8.dp, Alignment.Top
         )
     ) {
-        // Top section (Undo/Redo)
         if (!isCollapsed) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -587,29 +602,24 @@ fun ColorPicker(
             .wrapContentSize(Alignment.Center)
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(spacing) // Spacing between rows
+        verticalArrangement = Arrangement.spacedBy(spacing)
     ) {
-        // Calculate the number of rows needed
         val numberOfRows = (colors.size + itemsInRow - 1) / itemsInRow
 
-        // Create rows
         repeat(numberOfRows) { rowIndex ->
             Row(
-                modifier = Modifier.fillMaxWidth(), // Fill width of the parent Column for better arrangement
-                horizontalArrangement = Arrangement.Center, // Center items within this Row
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Calculate the start and end index for the current row
                 val startIndex = rowIndex * itemsInRow
                 val endIndex = minOf(startIndex + itemsInRow, colors.size)
 
-                // Add color items for the current row
                 for (i in startIndex until endIndex) {
                     val color = colors[i]
                     val isSelected = selectedColor == color
 
-                    // Add horizontal spacing between color items
-                    if (i > startIndex) { // Add spacing if not the first item in the row
+                    if (i > startIndex) {
                         Spacer(modifier = Modifier.width(spacing))
                     }
 
@@ -638,10 +648,10 @@ fun PenSizePicker(
     onAction: (DrawingAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val sizeButtonSize = 28.dp // Diameter of the button itself
+    val sizeButtonSize = 28.dp
     val itemsInRow = 4
     val spacing = 16.dp
-    val onSurfaceColor = colorScheme.onSurface // Capture color here
+    val onSurfaceColor = colorScheme.onSurface
     val maxPenSize = sizes.maxOrNull() ?: 1f
 
     Column(
@@ -681,7 +691,6 @@ fun PenSizePicker(
                                 onAction(DrawingAction.SelectStrokeWidth(size))
                             }, contentAlignment = Alignment.Center
                     ) {
-                        // The actual circle representing the pen size
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val maxRadius = this.size.minDimension / 2
                             drawCircle(
