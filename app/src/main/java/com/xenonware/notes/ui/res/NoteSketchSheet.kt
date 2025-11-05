@@ -2,6 +2,7 @@ package com.xenonware.notes.ui.res
 
 import android.app.Application
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
@@ -51,6 +52,8 @@ import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -78,7 +81,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -136,7 +138,7 @@ fun NoteSketchSheet(
     var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) }
     var colorMenuItemText by remember { mutableStateOf("Color") }
     val scope = rememberCoroutineScope()
-    var isFadingOut by remember { mutableStateOf<Boolean>(false) }
+    var isFadingOut by remember { mutableStateOf(false) }
     var colorChangeJob by remember { mutableStateOf<Job?>(null) }
 
     val availableThemes = remember {
@@ -146,9 +148,11 @@ fun NoteSketchSheet(
     var showMenu by remember { mutableStateOf(false) }
     var isOffline by remember { mutableStateOf(false) }
     var isLabeled by remember { mutableStateOf(false) }
+    var debugTextEnabled by rememberSaveable { mutableStateOf(false) } // Added debugTextEnabled state
+    var isDeveloperOptionsEnabled by remember { mutableStateOf(false) } // Added isDeveloperOptionsEnabled state
     var lastBackPressTime by rememberSaveable { mutableLongStateOf(0L) }
 
-    val systemUiController = rememberSystemUiController()
+    @Suppress("DEPRECATION") val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
 
     val viewModel =
@@ -156,6 +160,14 @@ fun NoteSketchSheet(
     val currentPathState = viewModel.currentPathState.collectAsState()
     val pathState = viewModel.pathState.collectAsState()
     val isHandwritingMode by viewModel.isHandwritingMode.collectAsState()
+
+    LaunchedEffect(Unit) { // Check for developer options
+        isDeveloperOptionsEnabled = Settings.Global.getInt(
+            context.contentResolver,
+            Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
+            0
+        ) == 1
+    }
 
     BackHandler {
         val currentTime = System.currentTimeMillis()
@@ -257,7 +269,7 @@ fun NoteSketchSheet(
                 onAction = viewModel::onAction,
                 isHandwritingMode = isHandwritingMode,
                 gridEnabled = pathState.value.gridEnabled,
-                debugText = true,
+                debugText = debugTextEnabled, // Changed to use debugTextEnabled
                 debugPoints = false,
                 modifier = Modifier
                     .fillMaxSize()
@@ -353,7 +365,7 @@ fun NoteSketchSheet(
                     DropdownNoteMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
-                        items = listOf(
+                        items = listOfNotNull(
                             MenuItem(
                                 text = "Label",
                                 onClick = { isLabeled = !isLabeled },
@@ -371,7 +383,8 @@ fun NoteSketchSheet(
                                             contentDescription = "Label"
                                         )
                                     }
-                                }), MenuItem(
+                                }),
+                            MenuItem(
                                 text = colorMenuItemText, onClick = {
                                     val currentIndex = availableThemes.indexOf(selectedTheme)
                                     val nextIndex = (currentIndex + 1) % availableThemes.size
@@ -380,12 +393,10 @@ fun NoteSketchSheet(
                                     colorChangeJob?.cancel()
                                     colorChangeJob = scope.launch {
                                         colorMenuItemText = availableThemes[nextIndex]
-                                        isFadingOut = false
                                         delay(2500) // Keep current theme color for 2.5 seconds
-                                        isFadingOut = true // Fade out animation for 0.5 seconds
+                                        // Fade out animation for 0.5 seconds
                                         delay(500)
                                         colorMenuItemText = "Color"
-                                        isFadingOut = false
                                     }
                                 }, dismissOnClick = false, icon = {
                                     Icon(
@@ -394,7 +405,8 @@ fun NoteSketchSheet(
                                         tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
                                     )
                                 }, textColor = animatedTextColor
-                            ), MenuItem(
+                            ),
+                            MenuItem(
                                 text = if (isOffline) "Online note" else "Offline note",
                                 onClick = { isOffline = !isOffline },
                                 dismissOnClick = false,
@@ -409,12 +421,30 @@ fun NoteSketchSheet(
                                     } else {
                                         Icon(
                                             Icons.Default.Cloud, contentDescription = "Online note"
-
-
                                         )
                                     }
-                                })
-                        ),
+                                }),
+                            if (isDeveloperOptionsEnabled) { // Conditionally add debug text option
+                                MenuItem(
+                                    text = "Debug text",
+                                    onClick = { debugTextEnabled = !debugTextEnabled },
+                                    dismissOnClick = false,
+                                    icon = {
+                                        if (debugTextEnabled) {
+                                            Icon(
+                                                Icons.Default.Visibility,
+                                                contentDescription = "Debug text enabled"
+                                            )
+                                        } else {
+                                            Icon(
+                                                Icons.Default.VisibilityOff,
+                                                contentDescription = "Debug text disabled"
+                                            )
+                                        }
+                                    }
+                                )
+                            } else null // Ensure null is handled if developer options are not enabled
+                        ), // Filter out null items
                         hazeState = hazeState
                     )
                 }
