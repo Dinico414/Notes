@@ -55,7 +55,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.StackedLineChart
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material.icons.filled.ViewStream
@@ -639,15 +638,15 @@ fun CompactNotes(
                                     )
                                 }
 
-                                // Pressure/Speed toggle
                                 IconButton(onClick = { usePressure = !usePressure }) {
                                     Icon(
-                                        Icons.Default.StackedLineChart,
-                                        contentDescription = "Toggle Pressure/Speed",
-                                        tint = if (usePressure) colorScheme.primary else colorScheme.onSurface
+                                        painter = painterResource(
+                                            id = if (usePressure) R.drawable.dynamic else R.drawable.constant
+                                        ),
+                                        contentDescription = "Toggle Pressure/Speed"
                                     )
-                                    //TODO add correct icons and remove color toggle
                                 }
+
                             }
                         }
                     } else {

@@ -49,8 +49,6 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -81,6 +79,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -637,7 +636,8 @@ fun VerticalFloatingToolbar(
                     )
                 ) {
                     Icon(
-                        Icons.Default.Gesture, contentDescription = "Handwriting Mode"
+                        painter = painterResource(id = R.drawable.hand_drawn),
+                        contentDescription = "Hand Mode"
                     )
                 }
                 FilledIconButton(
@@ -648,7 +648,8 @@ fun VerticalFloatingToolbar(
                     )
                 ) {
                     Icon(
-                        Icons.Default.Edit, contentDescription = "Pen Mode"
+                        painter = painterResource(id = R.drawable.pen_drawn),
+                        contentDescription = "Pen Mode"
                     )
                 }
             }
