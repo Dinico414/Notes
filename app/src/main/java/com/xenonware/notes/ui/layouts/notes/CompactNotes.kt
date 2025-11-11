@@ -775,6 +775,7 @@ fun CompactNotes(
                     ) {
                         IconButton(onClick = {
                             resetNoteState()
+                            isSearchActive = false // Disable search when opening a new text note
                             showTextNoteCard = true
                             onAddModeToggle()
                         }) {
@@ -786,6 +787,7 @@ fun CompactNotes(
                         }
                         IconButton(onClick = {
                             resetNoteState()
+                            isSearchActive = false // Disable search when opening a new list note
                             showListNoteCard = true
                             onAddModeToggle()
                         }) {
@@ -797,6 +799,7 @@ fun CompactNotes(
                         }
                         IconButton(onClick = {
                             resetNoteState() // Reset state when opening audio note
+                            isSearchActive = false // Disable search when opening a new audio note
                             showAudioNoteCard = true
                             onAddModeToggle()
                         }) {
@@ -807,6 +810,7 @@ fun CompactNotes(
                             )
                         }
                         IconButton(onClick = {
+                            isSearchActive = false // Disable search when opening a new sketch note
                             showSketchNoteCard = true
                             onAddModeToggle()
                         }) {
@@ -1071,10 +1075,13 @@ fun CompactNotes(
                                                                 )
                                                             }
                                                             when (itemToEdit.noteType) {
-                                                                NoteType.TEXT -> showTextNoteCard =
-                                                                    true
+                                                                NoteType.TEXT -> {
+                                                                    isSearchActive = false // Disable search
+                                                                    showTextNoteCard = true
+                                                                }
 
                                                                 NoteType.AUDIO -> {
+                                                                    isSearchActive = false // Disable search
                                                                     showAudioNoteCard = true
                                                                     selectedAudioViewType =
                                                                         AudioViewType.Waveform // Default for editing
@@ -1082,11 +1089,15 @@ fun CompactNotes(
                                                                         itemToEdit.color?.toULong()
                                                                 }
 
-                                                                NoteType.LIST -> showListNoteCard =
-                                                                    true
+                                                                NoteType.LIST -> {
+                                                                    isSearchActive = false // Disable search
+                                                                    showListNoteCard = true
+                                                                }
 
-                                                                NoteType.SKETCH -> showSketchNoteCard =
-                                                                    true
+                                                                NoteType.SKETCH -> {
+                                                                    isSearchActive = false // Disable search
+                                                                    showSketchNoteCard = true
+                                                                }
                                                             }
                                                         },
                                                         maxLines = currentListMaxLines,
@@ -1167,12 +1178,14 @@ fun CompactNotes(
                                                     }
                                                     when (itemToEdit.noteType) {
                                                         NoteType.TEXT -> {
+                                                            isSearchActive = false // Disable search
                                                             showTextNoteCard = true
                                                             editingNoteColor =
                                                                 itemToEdit.color?.toULong()
                                                         }
 
                                                         NoteType.AUDIO -> {
+                                                            isSearchActive = false // Disable search
                                                             showAudioNoteCard = true
                                                             selectedAudioViewType =
                                                                 AudioViewType.Waveform // Default for editing
@@ -1181,12 +1194,14 @@ fun CompactNotes(
                                                         }
 
                                                         NoteType.LIST -> {
+                                                            isSearchActive = false // Disable search
                                                             showListNoteCard = true
                                                             editingNoteColor =
                                                                 itemToEdit.color?.toULong()
                                                         }
 
                                                         NoteType.SKETCH -> {
+                                                            isSearchActive = false // Disable search
                                                             showSketchNoteCard = true
                                                             editingNoteColor =
                                                                 itemToEdit.color?.toULong()
@@ -1222,6 +1237,7 @@ fun CompactNotes(
         ) {
             BackHandler {
                 showTextNoteCard = false
+                isSearchActive = false // Disable search on dismiss
                 resetNoteState()
             }
 
@@ -1231,6 +1247,7 @@ fun CompactNotes(
                 initialContent = descriptionState,
                 onDismiss = {
                     showTextNoteCard = false
+                    isSearchActive = false // Disable search on dismiss
                     resetNoteState()
                 },
                 initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1258,6 +1275,7 @@ fun CompactNotes(
                         }
                     }
                     showTextNoteCard = false
+                    isSearchActive = false // Disable search on save
                     resetNoteState()
                 },
                 saveTrigger = saveTrigger,
@@ -1279,6 +1297,7 @@ fun CompactNotes(
         ) {
             BackHandler {
                 showSketchNoteCard = false
+                isSearchActive = false // Disable search on dismiss
                 resetNoteState()
             }
             NoteSketchSheet(
@@ -1286,6 +1305,7 @@ fun CompactNotes(
                 onSketchTitleChange = { titleState = it },
                 onDismiss = {
                     showSketchNoteCard = false
+                    isSearchActive = false // Disable search on dismiss
                     resetNoteState()
                 },
                 initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1314,6 +1334,7 @@ fun CompactNotes(
                         }
                     }
                     showSketchNoteCard = false
+                    isSearchActive = false // Disable search on save
                     resetNoteState()
                 },
                 saveTrigger = saveTrigger,
@@ -1345,6 +1366,7 @@ fun CompactNotes(
         ) {
             BackHandler {
                 showAudioNoteCard = false
+                isSearchActive = false // Disable search on dismiss
                 resetNoteState()
             }
             NoteAudioSheet(
@@ -1352,6 +1374,7 @@ fun CompactNotes(
                 onAudioTitleChange = { titleState = it },
                 onDismiss = {
                     showAudioNoteCard = false
+                    isSearchActive = false // Disable search on dismiss
                     resetNoteState()
                 },
                 initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1369,7 +1392,8 @@ fun CompactNotes(
                             if (updatedNote != null) {
                                 notesViewModel.updateItem(updatedNote)
                             }
-                        } else {
+                        }
+                        else {
                             notesViewModel.addItem(
                                 title = title,
                                 description = uniqueAudioId.takeIf { it.isNotBlank() },
@@ -1379,6 +1403,7 @@ fun CompactNotes(
                         }
                     }
                     showAudioNoteCard = false
+                    isSearchActive = false // Disable search on save
                     resetNoteState()
                 },
                 toolbarHeight = 72.dp,
@@ -1399,6 +1424,7 @@ fun CompactNotes(
         ) {
             BackHandler {
                 showListNoteCard = false
+                isSearchActive = false // Disable search on dismiss
                 resetNoteState()
             }
             NoteListSheet(
@@ -1407,6 +1433,7 @@ fun CompactNotes(
                 initialListItems = listItemsState,
                 onDismiss = {
                     showListNoteCard = false
+                    isSearchActive = false // Disable search on dismiss
                     resetNoteState()
                 },
                 initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1437,6 +1464,7 @@ fun CompactNotes(
                         }
                     }
                     showListNoteCard = false
+                    isSearchActive = false // Disable search on save
                     resetNoteState()
                 },
                 toolbarHeight = 72.dp,
