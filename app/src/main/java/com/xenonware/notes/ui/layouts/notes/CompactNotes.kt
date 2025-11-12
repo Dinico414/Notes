@@ -13,6 +13,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,7 +43,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Create
@@ -95,6 +95,7 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -594,25 +595,50 @@ fun CompactNotes(
                 val sketchEditorContent: @Composable (RowScope.() -> Unit)? =
                     if (showSketchNoteCard) {
                         @Composable {
+                            val sketchSizes = remember { listOf(2f, 5f, 10f, 20f, 40f, 60f, 80f, 100f) }
+                            val maxPenSize = sketchSizes.maxOrNull() ?: 1f
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                IconButton(onClick = {
-                                    showSketchSizePopup = true
-                                    showColorPicker = false
-                                }) {
-                                    Icon(
-                                        Icons.Default.Brush, contentDescription = "Brush Size"
-                                    )
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = 5.dp)
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .border(
+                                            2.dp,
+                                            if (showSketchSizePopup) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.6f),
+                                            CircleShape
+                                        )
+                                        .background(colorScheme.surfaceDim, CircleShape)
+                                        .clickable {
+                                            showSketchSizePopup = true
+                                            showColorPicker = false
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val onSurface = colorScheme.onSurface
+
+                                    Canvas(modifier = Modifier.fillMaxSize()) {
+                                        drawCircle(
+                                            color = onSurface,
+                                            radius = (currentSketchSize / maxPenSize) * (this.size.minDimension / 2)
+                                        )
+                                    }
                                 }
 
                                 Box(
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
                                         .size(38.dp)
-                                        .border(2.dp, colorScheme.onSurface.copy(alpha = 0.6f), CircleShape)
+                                        .border(
+                                            2.dp,
+                                            if (showColorPicker) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.6f),
+                                            CircleShape
+                                        )
                                         .border(4.dp, colorScheme.surfaceDim, CircleShape)
                                         .background(currentSketchColor, CircleShape)
                                 ) {
