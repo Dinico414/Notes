@@ -162,9 +162,7 @@ fun NoteSketchSheet(
 
     LaunchedEffect(Unit) { // Check for developer options
         isDeveloperOptionsEnabled = Settings.Global.getInt(
-            context.contentResolver,
-            Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
-            0
+            context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0
         ) == 1
     }
 
@@ -285,8 +283,7 @@ fun NoteSketchSheet(
                         ) {
                             onColorPickerDismiss()
                             onPenSizePickerDismiss()
-                        }
-                )
+                        })
             }
 
 
@@ -385,25 +382,25 @@ fun NoteSketchSheet(
                                 }),
                             MenuItem(
                                 text = colorMenuItemText, onClick = {
-                                    val currentIndex = availableThemes.indexOf(selectedTheme)
-                                    val nextIndex = (currentIndex + 1) % availableThemes.size
-                                    selectedTheme = availableThemes[nextIndex]
-                                    onThemeChange(selectedTheme)
-                                    colorChangeJob?.cancel()
-                                    colorChangeJob = scope.launch {
-                                        colorMenuItemText = availableThemes[nextIndex]
-                                        delay(2500) // Keep current theme color for 2.5 seconds
-                                        // Fade out animation for 0.5 seconds
-                                        delay(500)
-                                        colorMenuItemText = "Color"
-                                    }
-                                }, dismissOnClick = false, icon = {
-                                    Icon(
-                                        Icons.Default.ColorLens,
-                                        contentDescription = "Color",
-                                        tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                    )
-                                }, textColor = animatedTextColor
+                                val currentIndex = availableThemes.indexOf(selectedTheme)
+                                val nextIndex = (currentIndex + 1) % availableThemes.size
+                                selectedTheme = availableThemes[nextIndex]
+                                onThemeChange(selectedTheme)
+                                colorChangeJob?.cancel()
+                                colorChangeJob = scope.launch {
+                                    colorMenuItemText = availableThemes[nextIndex]
+                                    delay(2500) // Keep current theme color for 2.5 seconds
+                                    // Fade out animation for 0.5 seconds
+                                    delay(500)
+                                    colorMenuItemText = "Color"
+                                }
+                            }, dismissOnClick = false, icon = {
+                                Icon(
+                                    Icons.Default.ColorLens,
+                                    contentDescription = "Color",
+                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                )
+                            }, textColor = animatedTextColor
                             ),
                             MenuItem(
                                 text = if (isOffline) "Online note" else "Offline note",
@@ -440,8 +437,7 @@ fun NoteSketchSheet(
                                                 contentDescription = "Debug text disabled"
                                             )
                                         }
-                                    }
-                                )
+                                    })
                             } else null // Ensure null is handled if developer options are not enabled
                         ), // Filter out null items
                         hazeState = hazeState
@@ -453,9 +449,7 @@ fun NoteSketchSheet(
 
 
             Box(
-                modifier = Modifier
-                    .fillMaxSize(),
-                contentAlignment = Alignment.BottomCenter
+                modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter
             ) {
                 Row(
                     modifier = Modifier
@@ -701,7 +695,15 @@ fun ColorPicker(
                             .clip(CircleShape)
                             .background(color)
                             .border(
-                                if (isSelected) 2.dp else 0.8.dp, Color.Gray, shape = CircleShape
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) colorScheme.onSurface else colorScheme.onSurface.copy(alpha = 0.4f),
+                                shape = CircleShape
+                            )
+
+                            .border(
+                                width = if (isSelected) 3.5.dp else 2.dp,
+                                color = colorScheme.surfaceDim,
+                                shape = CircleShape
                             )
                             .clickable {
                                 onAction(DrawingAction.SelectColor(color))
@@ -724,6 +726,7 @@ fun PenSizePicker(
     val itemsInRow = 4
     val spacing = 16.dp
     val onSurfaceColor = colorScheme.onSurface
+    val onSelectColor = colorScheme.inversePrimary
     val maxPenSize = sizes.maxOrNull() ?: 1f
 
     Column(
@@ -757,7 +760,9 @@ fun PenSizePicker(
                             .size(sizeButtonSize)
                             .clip(CircleShape)
                             .border(
-                                if (isSelected) 2.dp else 0.8.dp, Color.Gray, shape = CircleShape
+                                width = 1.dp,
+                                color = if (isSelected) onSurfaceColor else onSurfaceColor.copy(alpha = 0.4f),
+                                shape = CircleShape
                             )
                             .clickable {
                                 onAction(DrawingAction.SelectStrokeWidth(size))
@@ -766,7 +771,8 @@ fun PenSizePicker(
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val maxRadius = this.size.minDimension / 2
                             drawCircle(
-                                color = onSurfaceColor, radius = (size / maxPenSize) * maxRadius
+                                color = if (isSelected) onSelectColor else onSurfaceColor,
+                                radius = (size / maxPenSize) * maxRadius
                             )
                         }
                     }

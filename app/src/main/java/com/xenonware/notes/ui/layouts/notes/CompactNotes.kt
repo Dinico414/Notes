@@ -599,7 +599,6 @@ fun CompactNotes(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                // Size selector
                                 IconButton(onClick = {
                                     showSketchSizePopup = true
                                     showColorPicker = false
@@ -608,13 +607,12 @@ fun CompactNotes(
                                         Icons.Default.Brush, contentDescription = "Brush Size"
                                     )
                                 }
-                                // Removed PenSizePicker invocation, it's now handled in NoteSketchSheet
 
                                 Box(
                                     modifier = Modifier
                                         .padding(horizontal = 5.dp)
                                         .size(38.dp)
-                                        .border(2.dp, colorScheme.onSurface, CircleShape)
+                                        .border(2.dp, colorScheme.onSurface.copy(alpha = 0.6f), CircleShape)
                                         .border(4.dp, colorScheme.surfaceDim, CircleShape)
                                         .background(currentSketchColor, CircleShape)
                                 ) {
@@ -624,7 +622,7 @@ fun CompactNotes(
                                     }) {}
                                 }
 
-                                // Eraser mode
+
                                 FilledIconButton(
                                     onClick = { isEraserMode = !isEraserMode },
                                     colors = IconButtonDefaults.iconButtonColors(
