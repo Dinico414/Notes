@@ -95,6 +95,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -620,18 +623,25 @@ fun CompactNotes(
                                             ),
                                             CircleShape
                                         )
-                                        .background(colorScheme.surfaceDim, CircleShape)
+                                        .background(colorScheme.primary.copy(alpha = 0.4f), CircleShape)
                                         .clickable {
                                             showSketchSizePopup = true
                                             showColorPicker = false
                                         }, contentAlignment = Alignment.Center
                                 ) {
                                     val onSurface = colorScheme.onSurface
-
                                     Canvas(modifier = Modifier.fillMaxSize()) {
-                                        drawCircle(
+                                        val maxRadius = this.size.minDimension * 8f / 10f
+                                        val rectWidth = (currentSketchSize / maxPenSize) * maxRadius
+                                        val rectHeight = maxRadius
+                                        drawRoundRect(
                                             color = onSurface,
-                                            radius = (currentSketchSize / maxPenSize) * (this.size.minDimension / 2)
+                                            topLeft = Offset(
+                                                x = (this.size.width - rectWidth) / 2f,
+                                                y = (this.size.height - rectHeight) / 2f
+                                            ),
+                                            size = Size(width = rectWidth, height = rectHeight),
+                                            cornerRadius = CornerRadius(100f)
                                         )
                                     }
                                 }

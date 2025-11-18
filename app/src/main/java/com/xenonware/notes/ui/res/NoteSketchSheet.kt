@@ -75,6 +75,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
@@ -666,7 +669,8 @@ fun ColorPicker(
     Column(
         modifier = modifier
             .wrapContentSize(Alignment.Center)
-            .padding(8.dp),
+            .padding(8.dp)
+            .clickable {},
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(spacing)
     ) {
@@ -696,7 +700,9 @@ fun ColorPicker(
                             .background(color)
                             .border(
                                 width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) colorScheme.onSurface else colorScheme.onSurface.copy(alpha = 0.4f),
+                                color = if (isSelected) colorScheme.onSurface else colorScheme.onSurface.copy(
+                                    alpha = 0.4f
+                                ),
                                 shape = CircleShape
                             )
 
@@ -726,13 +732,14 @@ fun PenSizePicker(
     val itemsInRow = 4
     val spacing = 16.dp
     val onSurfaceColor = colorScheme.onSurface
-    val onSelectColor = colorScheme.inversePrimary
+    val onSelectColor = colorScheme.primary
     val maxPenSize = sizes.maxOrNull() ?: 1f
 
     Column(
         modifier = modifier
             .wrapContentSize(Alignment.Center)
-            .padding(8.dp),
+            .padding(8.dp)
+            .clickable {},
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(spacing)
     ) {
@@ -761,7 +768,9 @@ fun PenSizePicker(
                             .clip(CircleShape)
                             .border(
                                 width = 1.dp,
-                                color = if (isSelected) onSurfaceColor else onSurfaceColor.copy(alpha = 0.4f),
+                                color = if (isSelected) onSurfaceColor else onSurfaceColor.copy(
+                                    alpha = 0.4f
+                                ),
                                 shape = CircleShape
                             )
                             .clickable {
@@ -769,10 +778,17 @@ fun PenSizePicker(
                             }, contentAlignment = Alignment.Center
                     ) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
-                            val maxRadius = this.size.minDimension / 2
-                            drawCircle(
+                            val maxRadius = this.size.minDimension * 8 / 10
+                            val rectWidth = (size / maxPenSize) * maxRadius
+                            val rectHeight = maxRadius
+                            drawRoundRect(
                                 color = if (isSelected) onSelectColor else onSurfaceColor,
-                                radius = (size / maxPenSize) * maxRadius
+                                topLeft = Offset(
+                                    x = (this.size.width - rectWidth) / 2,
+                                    y = (this.size.height - rectHeight) / 2
+                                ),
+                                size = Size(width = rectWidth, height = rectHeight),
+                                cornerRadius = CornerRadius(100f)
                             )
                         }
                     }
