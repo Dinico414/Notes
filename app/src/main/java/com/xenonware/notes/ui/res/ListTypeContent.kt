@@ -1,6 +1,5 @@
 package com.xenonware.notes.ui.res
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,16 +36,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.LargerCornerRadius
@@ -54,6 +56,8 @@ import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.NoPadding
 import com.xenon.mylibrary.values.SmallerCornerRadius
 import com.xenonware.notes.R
+import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
+import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.blueInversePrimaryDark
 import com.xenonware.notes.ui.theme.blueInversePrimaryLight
@@ -83,14 +87,12 @@ import com.xenonware.notes.ui.theme.yellowInversePrimaryDark
 import com.xenonware.notes.ui.theme.yellowInversePrimaryLight
 import com.xenonware.notes.ui.theme.yellowOnPrimaryDark
 import com.xenonware.notes.ui.theme.yellowOnPrimaryLight
-import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.NoteFilterType
 import com.xenonware.notes.viewmodel.NotesViewModel
 
 @Composable
 fun ListContent(
     notesViewModel: NotesViewModel = viewModel(),
-    devSettingsViewModel: DevSettingsViewModel = viewModel(),
     onFilterSelected: (NoteFilterType) -> Unit,
 ) {
     val currentFilter by notesViewModel.noteFilterType.collectAsState()
@@ -109,8 +111,17 @@ fun ListContent(
         val bottomPadding =
             if (safeDrawingInsets.calculateBottomPadding() > 0.dp) NoPadding else 12.dp
 
-        val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
-        val isDeveloperModeEnabled by devSettingsViewModel.devModeToggleState.collectAsState()
+
+        val context = LocalContext.current
+        val googleAuthUiClient = remember {
+            GoogleAuthUiClient(
+                context = context.applicationContext,
+                oneTapClient = Identity.getSignInClient(context.applicationContext)
+            )
+        }
+        val signInViewModel: SignInViewModel = viewModel()
+        val state by signInViewModel.state.collectAsStateWithLifecycle()
+        val userData = googleAuthUiClient.getSignedInUser()
 
         Box(
             modifier = Modifier
@@ -147,7 +158,7 @@ fun ListContent(
                     )
 
 
-                    if (isDeveloperModeEnabled && showDummyProfile) {
+                    if (state.isSignInSuccessful) {
                         Box(
                             contentAlignment = Alignment.Center,
                         ) {
@@ -156,10 +167,11 @@ fun ListContent(
                             // Assuming GoogleProfilBorder is defined elsewhere.
                             GoogleProfilBorder(
                                 modifier = Modifier.size(32.dp),
+                                state = state
                             )
-                            Image(
-                                painter = painterResource(id = R.mipmap.default_icon),
-                                contentDescription = stringResource(R.string.open_navigation_menu),
+                            GoogleProfilePicture(
+                                state = state,
+                                userData = userData,
                                 modifier = Modifier.size(26.dp)
                             )
                         }

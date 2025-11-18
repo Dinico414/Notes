@@ -31,11 +31,13 @@ import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoCornerRadius
 import com.xenon.mylibrary.values.NoSpacing
 import com.xenonware.notes.R
+import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInState
 import com.xenonware.notes.ui.res.DialogClearDataConfirmation
 import com.xenonware.notes.ui.res.DialogCoverDisplaySelection
 import com.xenonware.notes.ui.res.DialogLanguageSelection
 import com.xenonware.notes.ui.res.DialogResetSettingsConfirmation
+import com.xenonware.notes.ui.res.DialogSignOut
 import com.xenonware.notes.ui.res.DialogThemeSelection
 import com.xenonware.notes.viewmodel.SettingsViewModel
 import com.xenonware.notes.viewmodel.classes.SettingsItems
@@ -50,7 +52,10 @@ fun CoverSettings(
     viewModel: SettingsViewModel,
     onNavigateToDeveloperOptions: () -> Unit,
     state: SignInState,
-    onSignInClick: () -> Unit
+    googleAuthUiClient: GoogleAuthUiClient,
+    onSignInClick: () -> Unit,
+    onSignOutClick: () -> Unit,
+    onConfirmSignOut: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -67,6 +72,7 @@ fun CoverSettings(
     val showLanguageDialog by viewModel.showLanguageDialog.collectAsState()
     val availableLanguages by viewModel.availableLanguages.collectAsState()
     val selectedLanguageTagInDialog by viewModel.selectedLanguageTagInDialog.collectAsState()
+    val showSignOutDialog by viewModel.showSignOutDialog.collectAsState()
 
     val packageManager = context.packageManager
     val packageName = context.packageName
@@ -141,7 +147,9 @@ fun CoverSettings(
                     useGroupStyling = false,
                     onNavigateToDeveloperOptions = onNavigateToDeveloperOptions,
                     state = state,
-                    onSignInClick = onSignInClick
+                    googleAuthUiClient = googleAuthUiClient,
+                    onSignInClick = onSignInClick,
+                    onSignOutClick = onSignOutClick
                 )
             }
         })
@@ -208,6 +216,18 @@ fun CoverSettings(
                 onLanguageSelected = { tag -> viewModel.onLanguageSelectedInDialog(tag) },
                 onDismiss = { viewModel.dismissLanguageDialog() },
                 onConfirm = { viewModel.applySelectedLanguage() })
+        }
+    }
+    if (showSignOutDialog) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeEffect(hazeState)
+        ) {
+            DialogSignOut(
+                onConfirm = onConfirmSignOut,
+                onDismiss = { viewModel.dismissSignOutDialog() }
+            )
         }
     }
 }

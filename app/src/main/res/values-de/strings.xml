@@ -116,6 +116,8 @@
     <string name="save_audio_note">Audionotiz speichern</string>
     <string name="save_sketch_note">Skizzennotiz speichern</string>
     <string name="default_web_client_id">8027822132-4gdatq7k92rvsjvmneecvc3ahb1r6jrm.apps.googleusercontent.com</string>
+    <string name="sign_out">Sign out</string>
+    <string name="sign_out_dialog_description">Are you sure you want to sign out?</string>
 
 
 </resources>

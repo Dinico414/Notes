@@ -12,25 +12,29 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.xenonware.notes.R
+import com.xenonware.notes.presentation.sign_in.SignInState
+import com.xenonware.notes.presentation.sign_in.UserData
 
 @Composable
 fun GoogleProfilePicture(
-    modifier: Modifier
+    state: SignInState,
+    userData: UserData?,
+    modifier: Modifier = Modifier
 ) {
-    if (state.isSignedIn) {
-        Image(
-            painter = painterResource(id = R.mipmap.default_icon),
-            contentDescription = stringResource(R.string.open_navigation_menu),
-            modifier = Modifier.size(40.dp)
-        )
-    } else {
+    if (state.isSignInSuccessful && userData?.profilePictureUrl != null) {
         AsyncImage(
-            model = userData.profilePicture,
+            model = userData.profilePictureUrl,
             contentDescription = "Profile Picture",
-            modifier = Modifier
+            modifier = modifier
                 .size(40.dp)
                 .clip(CircleShape),
             contentScale = ContentScale.Crop
+        )
+    } else {
+        Image(
+            painter = painterResource(id = R.mipmap.default_icon),
+            contentDescription = stringResource(R.string.open_navigation_menu),
+            modifier = modifier.size(40.dp)
         )
     }
 }

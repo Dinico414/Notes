@@ -31,12 +31,16 @@ import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.LargeCornerRadius
 import com.xenon.mylibrary.values.LargestPadding
+import com.xenonware.notes.presentation.sign_in.SignInState
+import com.xenonware.notes.presentation.sign_in.UserData
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsGoogleTile(
-    title: String,
-    subtitle: String,
+    title: String?,
+    subtitle: String?,
+    state: SignInState,
+    userData: UserData?,
     onClick: (() -> Unit)?,
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -68,24 +72,33 @@ fun SettingsGoogleTile(
             contentAlignment = Alignment.Center,
         ) {
             GoogleProfilBorder(
+                state = state,
                 modifier = Modifier.size(48.dp),
             )
-           GoogleProfilePicture(
-               modifier = Modifier.size(40.dp)
-           )
+            GoogleProfilePicture(
+                state = state,
+                userData = userData,
+                modifier = Modifier.size(40.dp)
+            )
 
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title, style = MaterialTheme.typography.titleMedium.copy(
-                    fontFamily = QuicksandTitleVariable
-                ), color = contentColor
-            )
-            if (subtitle.isNotEmpty()) {
+            if (title != null) {
                 Text(
-                    text = subtitle, style = MaterialTheme.typography.bodyMedium.copy(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge.copy(
                         fontFamily = QuicksandTitleVariable
-                    ), color = subtitleColor
+                    ),
+                    color = contentColor
+                )
+            }
+            if (!subtitle.isNullOrEmpty()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontFamily = QuicksandTitleVariable
+                    ),
+                    color = subtitleColor
                 )
             }
         }

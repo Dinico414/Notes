@@ -53,7 +53,6 @@ fun DevSettingsItems(
 
     ) {
     val isDeveloperModeEnabled by viewModel.devModeToggleState.collectAsState()
-    val isShowDummyProfileEnabled by viewModel.showDummyProfileState.collectAsState()
 
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -113,7 +112,7 @@ fun DevSettingsItems(
                 val newCheckedState = !isDeveloperModeEnabled
                 viewModel.setDeveloperModeEnabled(newCheckedState)
             },
-            shape = tileShapeOverride ?: topShape,
+            shape = tileShapeOverride ?: if(isDeveloperModeEnabled) topShape else standaloneShape,
             backgroundColor = tileBackgroundColor,
             contentColor = tileContentColor,
             subtitleColor = tileSubtitleColor,
@@ -123,25 +122,6 @@ fun DevSettingsItems(
 
         if (isDeveloperModeEnabled) {
             Spacer(modifier = Modifier.Companion.height(SmallSpacing))
-
-            SettingsSwitchTile(
-                title = stringResource(id = R.string.show_dummy_profile_title),
-                subtitle = "",
-                checked = isShowDummyProfileEnabled,
-                onCheckedChange = { newCheckedState ->
-                    viewModel.setShowDummyProfileEnabled(newCheckedState)
-                },
-                onClick = {
-                    val newCheckedState = !isShowDummyProfileEnabled
-                    viewModel.setShowDummyProfileEnabled(newCheckedState)
-                },
-                shape = tileShapeOverride ?: bottomShape,
-                backgroundColor = tileBackgroundColor,
-                contentColor = tileContentColor,
-                subtitleColor = tileSubtitleColor,
-                horizontalPadding = tileHorizontalPadding,
-                verticalPadding = tileVerticalPadding
-            )
         }
     }
 }

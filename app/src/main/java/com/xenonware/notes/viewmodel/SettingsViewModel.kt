@@ -56,6 +56,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _showVersionDialog = MutableStateFlow(false)
     val showVersionDialog: StateFlow<Boolean> = _showVersionDialog.asStateFlow()
 
+    private val _showSignOutDialog = MutableStateFlow(false)
+    val showSignOutDialog: StateFlow<Boolean> = _showSignOutDialog
+
     private val _currentThemeTitleFlow =
         MutableStateFlow(themeOptions.getOrElse(sharedPreferenceManager.theme) { themeOptions.first() }.title)
     val currentThemeTitle: StateFlow<String> = _currentThemeTitleFlow.asStateFlow()
@@ -438,6 +441,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun dismissVersionDialog() {
         _showVersionDialog.value = false
     }
+
+    fun dismissSignOutDialog() {
+        _showSignOutDialog.value = false
+    }
+
+    fun onSignOutClicked() {
+        _showSignOutDialog.value = true
+    }
+
 
     class SettingsViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

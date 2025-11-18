@@ -2,7 +2,6 @@ package com.xenonware.notes
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -110,17 +109,6 @@ class SettingsActivity : ComponentActivity() {
                     }
                 )
 
-
-                LaunchedEffect(key1 = state.isSignInSuccessful) {
-                    if (state.isSignInSuccessful) {
-                        Toast.makeText(
-                            applicationContext,
-                            "Sign in successful",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
-
                 NavHost(
                     navController = navController,
                     startDestination = SettingsDestinations.MAIN_SETTINGS_ROUTE
@@ -136,6 +124,7 @@ class SettingsActivity : ComponentActivity() {
                                 context.startActivity(intent)
                             },
                             state = state,
+                            googleAuthUiClient = googleAuthUiClient,
                             onSignInClick = {
                                 lifecycleScope.launch {
                                     try {
@@ -148,6 +137,16 @@ class SettingsActivity : ComponentActivity() {
                                     } catch (e: ApiException) {
                                         traditionalSignInLauncher.launch(googleAuthUiClient.getTraditionalSignInIntent())
                                     }
+                                }
+                            },
+                            onSignOutClick = {
+                                settingsViewModel.onSignOutClicked()
+                            },
+                            onConfirmSignOut = {
+                                lifecycleScope.launch {
+                                    googleAuthUiClient.signOut()
+                                    viewModel.resetState()
+                                    settingsViewModel.dismissSignOutDialog()
                                 }
                             }
                         )

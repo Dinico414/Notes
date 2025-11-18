@@ -30,11 +30,13 @@ import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoSpacing
 import com.xenonware.notes.BuildConfig
 import com.xenonware.notes.R
+import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInState
 import com.xenonware.notes.ui.res.DialogClearDataConfirmation
 import com.xenonware.notes.ui.res.DialogCoverDisplaySelection
 import com.xenonware.notes.ui.res.DialogLanguageSelection
 import com.xenonware.notes.ui.res.DialogResetSettingsConfirmation
+import com.xenonware.notes.ui.res.DialogSignOut
 import com.xenonware.notes.ui.res.DialogThemeSelection
 import com.xenonware.notes.ui.res.DialogVersionNumber
 import com.xenonware.notes.ui.res.VersionInfo
@@ -54,12 +56,14 @@ fun DefaultSettings(
     isLandscape: Boolean,
     onNavigateToDeveloperOptions: () -> Unit,
     state: SignInState,
-    onSignInClick: () -> Unit
+    onSignInClick: () -> Unit,
+    onSignOutClick: () -> Unit,
+    onConfirmSignOut: () -> Unit,
+    googleAuthUiClient: GoogleAuthUiClient,
 ) {
     val context = LocalContext.current
 
     val currentThemeTitle by viewModel.currentThemeTitle.collectAsState()
-    val blackedOutEnabled by viewModel.blackedOutModeEnabled.collectAsState()
     val showThemeDialog by viewModel.showThemeDialog.collectAsState()
     val themeOptions = viewModel.themeOptions
     val dialogSelectedThemeIndex by viewModel.dialogPreviewThemeIndex.collectAsState()
@@ -73,10 +77,8 @@ fun DefaultSettings(
     val availableLanguages by viewModel.availableLanguages.collectAsState()
     val selectedLanguageTagInDialog by viewModel.selectedLanguageTagInDialog.collectAsState()
     val showVersionDialog by viewModel.showVersionDialog.collectAsState()
+    val showSignOutDialog by viewModel.showSignOutDialog.collectAsState()
 
-
-    val twentyFourHourTimePattern = "HH:mm"
-    val twelveHourTimePattern = "h:mm a"
 
     val packageManager = context.packageManager
     val packageName = context.packageName
@@ -147,7 +149,9 @@ fun DefaultSettings(
                     appVersion = appVersion,
                     onNavigateToDeveloperOptions = onNavigateToDeveloperOptions,
                     state = state,
-                    onSignInClick = onSignInClick
+                    onSignInClick = onSignInClick,
+                    onSignOutClick = onSignOutClick,
+                    googleAuthUiClient = googleAuthUiClient
                 )
             }
         })
@@ -222,8 +226,7 @@ fun DefaultSettings(
                 .hazeEffect(hazeState)
         ) {
             DialogVersionNumber(
-                onDismiss = { viewModel.dismissVersionDialog() },
-                versionInfo = VersionInfo(
+                onDismiss = { viewModel.dismissVersionDialog() }, versionInfo = VersionInfo(
                     appVersion = appVersion,
                     xenonUIVersion = "3.0",
                     xenonCommonsVersion = BuildConfig.XENON_COMMONS_VERSION
@@ -231,5 +234,16 @@ fun DefaultSettings(
             )
         }
     }
+    if (showSignOutDialog) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeEffect(hazeState)
+        ) {
+            DialogSignOut(
+                onConfirm = onConfirmSignOut,
+                onDismiss = { viewModel.dismissSignOutDialog() }
+            )
+        }
+    }
 }
-

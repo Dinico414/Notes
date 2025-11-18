@@ -1,5 +1,6 @@
 package com.xenonware.notes.ui.res
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.LinearEasing
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.xenonware.notes.presentation.sign_in.SignInState
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -32,6 +34,7 @@ import kotlin.random.Random
 @Composable
 fun GoogleProfilBorder(
     modifier: Modifier = Modifier,
+    state: SignInState,
     strokeWidth: Dp = 2.dp,
     gapAngle: Float = 15f,
     angleChangeIntervalMillis: Long = 2000,
@@ -48,46 +51,64 @@ fun GoogleProfilBorder(
             Color(0xFF0F9D58)
         )
     }
+    val greyColor = Color.Gray
     val numColors = googleColors.size
+
+    val animatedColors = List(numColors) {
+        animateColorAsState(
+            targetValue = if (state.isSignInSuccessful) googleColors[it] else greyColor,
+            animationSpec = tween(1000)
+        ).value
+    }
 
     val rotationAngleAnim = remember { Animatable(0f) }
 
     val sweepAngleAnimatables = remember {
-        val initialAngles = generateRandomSweepAngles(numColors, gapAngle)
-        initialAngles.map { Animatable(it) }
+        List(numColors) { Animatable(0f) }
     }
+
+    val equalSweepAngle = (360f - numColors * gapAngle) / numColors
 
     var targetSweepAnglesHolder by remember {
-        mutableStateOf(sweepAngleAnimatables.map { it.value })
+        mutableStateOf(List(numColors) { equalSweepAngle })
     }
 
-    LaunchedEffect(Unit) {
-        rotationAngleAnim.animateTo(
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 4000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart
-            )
-        )
+    LaunchedEffect(state.isSignInSuccessful) {
+        if (state.isSignInSuccessful) {
+            launch {
+                rotationAngleAnim.animateTo(
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 4000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart
+                    )
+                )
+            }
+        } else {
+            rotationAngleAnim.stop()
+            rotationAngleAnim.snapTo(0f)
+        }
     }
 
-    LaunchedEffect(angleChangeIntervalMillis, numColors, gapAngle) {
-        while (true) {
-            delay(angleChangeIntervalMillis)
-            targetSweepAnglesHolder = generateRandomSweepAngles(numColors, gapAngle)
+    LaunchedEffect(state.isSignInSuccessful, angleChangeIntervalMillis, numColors, gapAngle) {
+        if (state.isSignInSuccessful) {
+            while (true) {
+                targetSweepAnglesHolder = generateRandomSweepAngles(numColors, gapAngle)
+                delay(angleChangeIntervalMillis)
+            }
+        } else {
+            targetSweepAnglesHolder = List(numColors) { equalSweepAngle }
         }
     }
 
     LaunchedEffect(targetSweepAnglesHolder) {
         coroutineScope {
             targetSweepAnglesHolder.forEachIndexed { index, targetAngle ->
-                if (index < sweepAngleAnimatables.size) {
-                    launch {
-                        sweepAngleAnimatables[index].animateTo(
-                            targetValue = targetAngle,
-                            animationSpec = sweepAnimationSpec
-                        )
-                    }
+                launch {
+                    sweepAngleAnimatables[index].animateTo(
+                        targetValue = targetAngle,
+                        animationSpec = sweepAnimationSpec
+                    )
                 }
             }
         }
@@ -103,12 +124,12 @@ fun GoogleProfilBorder(
 
         var currentStartAngle = rotationAngleAnim.value - 90f
 
-        for (i in googleColors.indices) {
+        for (i in animatedColors.indices) {
             val sweep = sweepAngleAnimatables[i].value
             if (sweep <= 0.1f) continue
 
             drawArc(
-                color = googleColors[i],
+                color = animatedColors[i],
                 startAngle = currentStartAngle,
                 sweepAngle = sweep,
                 useCenter = false,

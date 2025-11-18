@@ -13,7 +13,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -93,7 +92,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -101,7 +100,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.ActivityScreen
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.res.FloatingToolbarContent
@@ -112,7 +113,10 @@ import com.xenon.mylibrary.values.NoCornerRadius
 import com.xenon.mylibrary.values.NoSpacing
 import com.xenon.mylibrary.values.SmallPadding
 import com.xenonware.notes.R
+import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
+import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.res.GoogleProfilBorder
+import com.xenonware.notes.ui.res.GoogleProfilePicture
 import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.ListItem
 import com.xenonware.notes.ui.res.NoteAudioSheet
@@ -315,7 +319,6 @@ fun CoverNotes(
     }
 
 
-    val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
     val isDeveloperModeEnabled by devSettingsViewModel.devModeToggleState.collectAsState()
 
     val colorThemeMap = remember {
@@ -781,6 +784,18 @@ fun CoverNotes(
         ) { scaffoldPadding ->
             val coverScreenBackgroundColor = Color.Black
             val coverScreenContentColor = Color.White
+
+            val context = LocalContext.current
+            val googleAuthUiClient = remember {
+                GoogleAuthUiClient(
+                    context = context.applicationContext,
+                    oneTapClient = Identity.getSignInClient(context.applicationContext)
+                )
+            }
+            val signInViewModel: SignInViewModel = viewModel()
+            val state by signInViewModel.state.collectAsStateWithLifecycle()
+            val userData = googleAuthUiClient.getSignedInUser()
+
             ActivityScreen(
                 modifier = Modifier
                     .fillMaxSize()
@@ -795,7 +810,7 @@ fun CoverNotes(
                 appBarNavigationIconContentColor = coverScreenContentColor,
                 contentCornerRadius = NoCornerRadius,
                 navigationIconStartPadding = MediumPadding,
-                navigationIconPadding = if (isDeveloperModeEnabled && showDummyProfile) SmallPadding else MediumPadding,
+                navigationIconPadding = if (state.isSignInSuccessful) SmallPadding else MediumPadding,
                 navigationIconSpacing = MediumSpacing,
 
                 navigationIcon = {
@@ -811,19 +826,20 @@ fun CoverNotes(
                         if (drawerState.isClosed) drawerState.open() else drawerState.close()
                     }
                 },
-                hasNavigationIconExtraContent = isDeveloperModeEnabled && showDummyProfile,
+                hasNavigationIconExtraContent = state.isSignInSuccessful,
 
                 navigationIconExtraContent = {
-                    if (isDeveloperModeEnabled && showDummyProfile) {
+                    if (state.isSignInSuccessful) {
                         Box(
                             contentAlignment = Alignment.Center,
                         ) {
                             GoogleProfilBorder(
                                 modifier = Modifier.size(32.dp),
+                                state = state
                             )
-                            Image(
-                                painter = painterResource(id = R.mipmap.default_icon),
-                                contentDescription = stringResource(R.string.open_navigation_menu),
+                            GoogleProfilePicture(
+                                state = state,
+                                userData = userData,
                                 modifier = Modifier.size(26.dp)
                             )
                         }

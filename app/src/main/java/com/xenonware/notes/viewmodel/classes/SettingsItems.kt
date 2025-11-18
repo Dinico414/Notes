@@ -30,6 +30,7 @@ import com.xenon.mylibrary.values.NoCornerRadius
 import com.xenon.mylibrary.values.SmallSpacing
 import com.xenon.mylibrary.values.SmallestCornerRadius
 import com.xenonware.notes.R
+import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInState
 import com.xenonware.notes.ui.res.SettingsGoogleTile
 import com.xenonware.notes.ui.res.SettingsSwitchMenuTile
@@ -62,12 +63,15 @@ fun SettingsItems(
     switchColorsOverride: SwitchColors? = null,
     useGroupStyling: Boolean = true,
     state: SignInState,
-    onSignInClick: () -> Unit
+    googleAuthUiClient: GoogleAuthUiClient,
+    onSignInClick: () -> Unit,
+    onSignOutClick: () -> Unit
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val blackedOutEnabled by viewModel.blackedOutModeEnabled.collectAsState()
     val developerModeEnabled by viewModel.developerModeEnabled.collectAsState()
+    val userData by lazy { googleAuthUiClient.getSignedInUser() }
 
     val actualInnerGroupRadius = if (useGroupStyling) innerGroupRadius else 0.dp
     val actualOuterGroupRadius = if (useGroupStyling) outerGroupRadius else 0.dp
@@ -100,9 +104,6 @@ fun SettingsItems(
     val standaloneShape = if (useGroupStyling) RoundedCornerShape(actualOuterGroupRadius)
     else RoundedCornerShape(NoCornerRadius)
 
-    val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
-    val isDeveloperModeEnabled by devSettingsViewModel.devModeToggleState.collectAsState()
-
     LaunchedEffect(key1 = state.signInError) {
         state.signInError?.let { error ->
             Toast.makeText(
@@ -113,20 +114,20 @@ fun SettingsItems(
         }
     }
 
-    if (isDeveloperModeEnabled && showDummyProfile) {
-        SettingsGoogleTile(
-            title = if (state.isSignedIn) "Sign in" else userDate.username,
-            subtitle = "your.email@gmail.com",
-            onClick = onSignInClick,
-            shape = tileShapeOverride ?: standaloneShape,
-            backgroundColor = Color.Transparent,
-            contentColor = tileContentColor,
-            subtitleColor = tileSubtitleColor,
-            horizontalPadding = tileHorizontalPadding,
-            verticalPadding = tileVerticalPadding
-        )
-        Spacer(Modifier.height(actualOuterGroupSpacing))
-    }
+    SettingsGoogleTile(
+        title = if (state.isSignInSuccessful) userData?.username else "Sign in",
+        subtitle = if (state.isSignInSuccessful) userData?.email else null,
+        onClick = if (state.isSignInSuccessful) onSignOutClick else onSignInClick,
+        shape = tileShapeOverride ?: standaloneShape,
+        backgroundColor = Color.Transparent,
+        contentColor = tileContentColor,
+        subtitleColor = tileSubtitleColor,
+        horizontalPadding = tileHorizontalPadding,
+        verticalPadding = tileVerticalPadding,
+        state = state,
+        userData = userData
+    )
+    Spacer(Modifier.height(actualOuterGroupSpacing))
 
     SettingsTile(
         title = stringResource(id = R.string.theme),

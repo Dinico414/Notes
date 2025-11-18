@@ -16,26 +16,13 @@ class DevSettingsViewModel(application: Application) : AndroidViewModel(applicat
     private val _devModeToggleState = MutableStateFlow(sharedPreferenceManager.developerModeEnabled)
     val devModeToggleState: StateFlow<Boolean> = _devModeToggleState.asStateFlow()
 
-    private val _showDummyProfileState = MutableStateFlow(sharedPreferenceManager.showDummyProfileEnabled)
-    val showDummyProfileState: StateFlow<Boolean> = _showDummyProfileState.asStateFlow()
-
     fun setDeveloperModeEnabled(enabled: Boolean) {
         viewModelScope.launch {
             sharedPreferenceManager.developerModeEnabled = enabled
             _devModeToggleState.value = enabled
 
             if (!enabled) {
-                setShowDummyProfileEnabled(false)
-            }
-        }
-    }
-    fun setShowDummyProfileEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            if (sharedPreferenceManager.showDummyProfileEnabled != enabled) {
-                sharedPreferenceManager.showDummyProfileEnabled = enabled
-                _showDummyProfileState.value = enabled
-
-                triggerExampleDevActionThatRequiresRestart()
+                //put in any dev settings
             }
         }
     }

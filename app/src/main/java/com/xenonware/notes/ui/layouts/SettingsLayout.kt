@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInState
 import com.xenonware.notes.ui.layouts.settings.CoverSettings
 import com.xenonware.notes.ui.layouts.settings.DefaultSettings
@@ -19,7 +20,10 @@ fun SettingsLayout(
     onNavigateToDeveloperOptions: () -> Unit,
     modifier: Modifier = Modifier,
     state: SignInState,
-    onSignInClick: () -> Unit
+    googleAuthUiClient: GoogleAuthUiClient,
+    onSignInClick: () -> Unit,
+    onSignOutClick: () -> Unit,
+    onConfirmSignOut: () -> Unit,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         when (layoutType) {
@@ -29,7 +33,10 @@ fun SettingsLayout(
                     viewModel = viewModel,
                     onNavigateToDeveloperOptions = onNavigateToDeveloperOptions,
                     state = state,
-                    onSignInClick = onSignInClick
+                    googleAuthUiClient = googleAuthUiClient,
+                    onSignInClick = onSignInClick,
+                    onSignOutClick = onSignOutClick,
+                    onConfirmSignOut = onConfirmSignOut
                 )
             }
 
@@ -41,7 +48,10 @@ fun SettingsLayout(
                     isLandscape = isLandscape,
                     onNavigateToDeveloperOptions = onNavigateToDeveloperOptions,
                     state = state,
-                    onSignInClick = onSignInClick
+                    googleAuthUiClient = googleAuthUiClient,
+                    onSignInClick = onSignInClick,
+                    onSignOutClick = onSignOutClick,
+                    onConfirmSignOut = onConfirmSignOut
                 )
             }
         }
