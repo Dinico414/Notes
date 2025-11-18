@@ -112,7 +112,7 @@ fun DevSettingsItems(
                 val newCheckedState = !isDeveloperModeEnabled
                 viewModel.setDeveloperModeEnabled(newCheckedState)
             },
-            shape = tileShapeOverride ?: if(isDeveloperModeEnabled) topShape else standaloneShape,
+            shape = tileShapeOverride ?: /*if(isDeveloperModeEnabled) topShape else*/ standaloneShape,
             backgroundColor = tileBackgroundColor,
             contentColor = tileContentColor,
             subtitleColor = tileSubtitleColor,
