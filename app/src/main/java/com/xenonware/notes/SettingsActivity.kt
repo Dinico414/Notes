@@ -37,6 +37,8 @@ object SettingsDestinations {
 
 class SettingsActivity : ComponentActivity() {
 
+    private val sharedPreferenceManager by lazy { SharedPreferenceManager(application) }  // Add if missing
+
     private lateinit var settingsViewModel: SettingsViewModel
     private lateinit var signInViewModel: SignInViewModel
 
@@ -149,6 +151,7 @@ class SettingsActivity : ComponentActivity() {
                             onConfirmSignOut = {
                                 lifecycleScope.launch {
                                     googleAuthUiClient.signOut()
+                                    sharedPreferenceManager.isUserLoggedIn = false
                                     settingsViewModel.dismissSignOutDialog()
                                     signInViewModel.resetState()
                                 }
@@ -164,5 +167,11 @@ class SettingsActivity : ComponentActivity() {
         super.onResume()
         settingsViewModel.updateCurrentLanguage()
         settingsViewModel.refreshDeveloperModeState()
+        lifecycleScope.launch {
+            val user = googleAuthUiClient.getSignedInUser()
+            val isSignedIn = user != null
+            sharedPreferenceManager.isUserLoggedIn = isSignedIn  // Sync pref if out of sync
+            signInViewModel.updateSignInState(isSignedIn)  // Assuming you add this function to SignInViewModel
+        }
     }
 }

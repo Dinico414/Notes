@@ -1,6 +1,8 @@
 package com.xenonware.notes.presentation.sign_in
 
 import android.app.Application
+import android.content.SharedPreferences
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.xenonware.notes.SharedPreferenceManager
@@ -8,29 +10,52 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-class SignInViewModel(application: Application): ViewModel() {
-
-    private val sharedPreferenceManager = SharedPreferenceManager(application)
+class SignInViewModel(
+    application: Application,
+    private val sharedPreferenceManager: SharedPreferenceManager = SharedPreferenceManager(application)
+) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow(SignInState())
     val state = _state.asStateFlow()
 
-    init {
-        _state.update {
-            it.copy(
-                isSignInSuccessful = sharedPreferenceManager.isUserLoggedIn
-            )
+    private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+        if (key == "is_user_logged_in") {
+            val isLoggedIn = prefs.getBoolean(key, false)
+            _state.update { it.copy(isSignInSuccessful = isLoggedIn) }
         }
+    }
+
+    init {
+        sharedPreferenceManager.sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceListener)
+        // Optional: Initial sync if needed
+        val isLoggedIn = sharedPreferenceManager.isUserLoggedIn
+        _state.update { it.copy(isSignInSuccessful = isLoggedIn) }
+    }
+
+    override fun onCleared() {
+        sharedPreferenceManager.sharedPreferences.unregisterOnSharedPreferenceChangeListener(preferenceListener)
+        super.onCleared()
+    }
+
+    fun updateSignInState(isSignedIn: Boolean) {
+        _state.update { it.copy(isSignInSuccessful = isSignedIn) }
     }
 
     fun onSignInResult(result: SignInResult) {
         _state.update {
-            it.copy(
-                isSignInSuccessful = result.data != null,
-                signInError = result.errorMessage
-            )
+            if (result.data != null) {
+                sharedPreferenceManager.isUserLoggedIn = true
+                it.copy(
+                    isSignInSuccessful = true,
+                    signInError = null
+                )
+            } else {
+                it.copy(
+                    isSignInSuccessful = false,
+                    signInError = result.errorMessage
+                )
+            }
         }
-        sharedPreferenceManager.isUserLoggedIn = result.data != null
     }
 
     fun resetState() {

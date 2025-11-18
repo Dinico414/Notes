@@ -15,17 +15,32 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.IntSize
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.auth.api.identity.Identity
+import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.layouts.NotesListLayout
 import com.xenonware.notes.ui.theme.ScreenEnvironment
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.NotesViewModel
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     private val notesViewModel: NotesViewModel by viewModels()
-    private val signInViewModel: SignInViewModel by viewModels { SignInViewModel.SignInViewModelFactory(application) }
+    private val signInViewModel: SignInViewModel by viewModels {
+        SignInViewModel.SignInViewModelFactory(
+            application
+        )
+    }
     private lateinit var sharedPreferenceManager: SharedPreferenceManager
+
+    private val googleAuthUiClient by lazy {
+        GoogleAuthUiClient(
+            context = applicationContext,
+            oneTapClient = Identity.getSignInClient(applicationContext)
+        )
+    }
 
     private var lastAppliedTheme: Int = -1
     private var lastAppliedCoverThemeEnabled: Boolean = false
@@ -75,6 +90,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        lifecycleScope.launch {
+            val user = googleAuthUiClient.getSignedInUser()
+            val isSignedIn = user != null
+            sharedPreferenceManager.isUserLoggedIn = isSignedIn  // Sync pref if out of sync
+            signInViewModel.updateSignInState(isSignedIn)  // Assuming you add this function to SignInViewModel
+        }
 
 
         val currentThemePref = sharedPreferenceManager.theme
