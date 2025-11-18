@@ -26,8 +26,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var sharedPreferenceManager: SharedPreferenceManager
 
     private var lastAppliedTheme: Int = -1
-    private var lastAppliedCoverThemeEnabled: Boolean =
-        false
+    private var lastAppliedCoverThemeEnabled: Boolean = false
     private var lastAppliedBlackedOutMode: Boolean = false
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
@@ -50,8 +49,7 @@ class MainActivity : ComponentActivity() {
 
             val currentContext = LocalContext.current
             val currentContainerSize = LocalWindowInfo.current.containerSize
-            val applyCoverTheme =
-                sharedPreferenceManager.isCoverThemeApplied(currentContainerSize)
+            val applyCoverTheme = sharedPreferenceManager.isCoverThemeApplied(currentContainerSize)
 
             ScreenEnvironment(
                 themePreference = lastAppliedTheme,
@@ -75,14 +73,12 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
 
+
         val currentThemePref = sharedPreferenceManager.theme
-        val currentCoverThemeEnabledSetting =
-            sharedPreferenceManager.coverThemeEnabled
+        val currentCoverThemeEnabledSetting = sharedPreferenceManager.coverThemeEnabled
         val currentBlackedOutMode = sharedPreferenceManager.blackedOutModeEnabled
 
-        if (currentThemePref != lastAppliedTheme || currentCoverThemeEnabledSetting != lastAppliedCoverThemeEnabled ||
-            currentBlackedOutMode != lastAppliedBlackedOutMode
-        ) {
+        if (currentThemePref != lastAppliedTheme || currentCoverThemeEnabledSetting != lastAppliedCoverThemeEnabled || currentBlackedOutMode != lastAppliedBlackedOutMode) {
             if (currentThemePref != lastAppliedTheme) {
                 updateAppCompatDelegateTheme(currentThemePref)
             }

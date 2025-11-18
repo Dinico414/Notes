@@ -30,6 +30,7 @@ import com.xenon.mylibrary.values.NoCornerRadius
 import com.xenon.mylibrary.values.SmallSpacing
 import com.xenon.mylibrary.values.SmallestCornerRadius
 import com.xenonware.notes.R
+import com.xenonware.notes.presentation.sign_in.SignInState
 import com.xenonware.notes.ui.res.SettingsGoogleTile
 import com.xenonware.notes.ui.res.SettingsSwitchMenuTile
 import com.xenonware.notes.ui.res.SettingsSwitchTile
@@ -60,6 +61,8 @@ fun SettingsItems(
     tileVerticalPadding: Dp = LargerPadding,
     switchColorsOverride: SwitchColors? = null,
     useGroupStyling: Boolean = true,
+    state: SignInState,
+    onSignInClick: () -> Unit
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -100,17 +103,21 @@ fun SettingsItems(
     val showDummyProfile by devSettingsViewModel.showDummyProfileState.collectAsState()
     val isDeveloperModeEnabled by devSettingsViewModel.devModeToggleState.collectAsState()
 
+    LaunchedEffect(key1 = state.signInError) {
+        state.signInError?.let { error ->
+            Toast.makeText(
+                context,
+                error,
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     if (isDeveloperModeEnabled && showDummyProfile) {
         SettingsGoogleTile(
-            title = "Your Name",
+            title = if (state.isSignedIn) "Sign in" else userDate.username,
             subtitle = "your.email@gmail.com",
-            onClick = {
-                Toast.makeText(
-                    context,
-                    "Dummy Unit, open Google Account coming soon",
-                    Toast.LENGTH_SHORT
-                ).show()
-            },
+            onClick = onSignInClick,
             shape = tileShapeOverride ?: standaloneShape,
             backgroundColor = Color.Transparent,
             contentColor = tileContentColor,

@@ -1,7 +1,6 @@
 package com.xenonware.notes.ui.res
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,8 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -34,7 +31,6 @@ import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.LargeCornerRadius
 import com.xenon.mylibrary.values.LargestPadding
-import com.xenonware.notes.R
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -50,7 +46,7 @@ fun SettingsGoogleTile(
     arrowColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     shape: Shape = RoundedCornerShape(LargeCornerRadius),
     horizontalPadding: Dp = LargestPadding,
-    verticalPadding: Dp = ExtraLargePadding
+    verticalPadding: Dp = ExtraLargePadding,
 ) {
     Row(
         modifier = modifier
@@ -68,33 +64,28 @@ fun SettingsGoogleTile(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(ExtraLargePadding)
     ) {
-        Box (
+        Box(
             contentAlignment = Alignment.Center,
         ) {
             GoogleProfilBorder(
                 modifier = Modifier.size(48.dp),
             )
-            Image(
-                painter = painterResource(id = R.mipmap.default_icon),
-                contentDescription = stringResource(R.string.open_navigation_menu),
-                modifier = Modifier.size(40.dp)
-            )
+           GoogleProfilePicture(
+               modifier = Modifier.size(40.dp)
+           )
+
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium.copy(
+                text = title, style = MaterialTheme.typography.titleMedium.copy(
                     fontFamily = QuicksandTitleVariable
-                ),
-                color = contentColor
+                ), color = contentColor
             )
             if (subtitle.isNotEmpty()) {
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium.copy(
+                    text = subtitle, style = MaterialTheme.typography.bodyMedium.copy(
                         fontFamily = QuicksandTitleVariable
-                    ),
-                    color = subtitleColor
+                    ), color = subtitleColor
                 )
             }
         }

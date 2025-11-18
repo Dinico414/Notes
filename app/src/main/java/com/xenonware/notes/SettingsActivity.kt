@@ -2,9 +2,13 @@ package com.xenonware.notes
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -13,22 +17,36 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.common.api.ApiException
+import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
+import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.layouts.SettingsLayout
 import com.xenonware.notes.ui.theme.ScreenEnvironment
 import com.xenonware.notes.viewmodel.SettingsViewModel
+import kotlinx.coroutines.launch
 
 
 object SettingsDestinations {
     const val MAIN_SETTINGS_ROUTE = "main_settings"
-    // DEVELOPER_OPTIONS_ROUTE is not used for NavHost here as it's a separate Activity
 }
 
 class SettingsActivity : ComponentActivity() {
 
     private lateinit var settingsViewModel: SettingsViewModel
+
+    private val googleAuthUiClient by lazy {
+        GoogleAuthUiClient(
+            context = applicationContext,
+            oneTapClient = Identity.getSignInClient(applicationContext)
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,7 +59,7 @@ class SettingsActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            val navController = rememberNavController() // This NavController is for within SettingsActivity if needed
+            val navController = rememberNavController()
 
             val activeNightMode by settingsViewModel.activeNightModeFlag.collectAsState()
             LaunchedEffect(activeNightMode) {
@@ -60,11 +78,51 @@ class SettingsActivity : ComponentActivity() {
                 persistedAppThemeIndex, applyCoverTheme, blackedOutEnabled
             ) { layoutType, isLandscape ->
 
-                val context = LocalContext.current // Context for launching DevSettingsActivity
-                // Using a simple NavHost for the main settings content.
-                // If DevSettings were a composable destination, it would be defined here.
+                val context = LocalContext.current
+                val viewModel = viewModel<SignInViewModel>()
+                val state by viewModel.state.collectAsStateWithLifecycle()
+
+                val oneTapLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.StartIntentSenderForResult(),
+                    onResult = { result ->
+                        if (result.resultCode == RESULT_OK) {
+                            lifecycleScope.launch {
+                                val signInResult = googleAuthUiClient.signInWithIntent(
+                                    intent = result.data ?: return@launch
+                                )
+                                viewModel.onSignInResult(signInResult)
+                            }
+                        }
+                    }
+                )
+
+                val traditionalSignInLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.StartActivityForResult(),
+                    onResult = { result ->
+                        if (result.resultCode == RESULT_OK) {
+                            lifecycleScope.launch {
+                                val signInResult = googleAuthUiClient.signInWithTraditionalIntent(
+                                    intent = result.data ?: return@launch
+                                )
+                                viewModel.onSignInResult(signInResult)
+                            }
+                        }
+                    }
+                )
+
+
+                LaunchedEffect(key1 = state.isSignInSuccessful) {
+                    if (state.isSignInSuccessful) {
+                        Toast.makeText(
+                            applicationContext,
+                            "Sign in successful",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+
                 NavHost(
-                    navController = navController, // Use the navController defined above
+                    navController = navController,
                     startDestination = SettingsDestinations.MAIN_SETTINGS_ROUTE
                 ) {
                     composable(SettingsDestinations.MAIN_SETTINGS_ROUTE) {
@@ -76,11 +134,24 @@ class SettingsActivity : ComponentActivity() {
                             onNavigateToDeveloperOptions = {
                                 val intent = Intent(context, DevSettingsActivity::class.java)
                                 context.startActivity(intent)
+                            },
+                            state = state,
+                            onSignInClick = {
+                                lifecycleScope.launch {
+                                    try {
+                                        val signInResult = googleAuthUiClient.signIn()
+                                        oneTapLauncher.launch(
+                                            IntentSenderRequest.Builder(
+                                                signInResult.pendingIntent.intentSender
+                                            ).build()
+                                        )
+                                    } catch (e: ApiException) {
+                                        traditionalSignInLauncher.launch(googleAuthUiClient.getTraditionalSignInIntent())
+                                    }
+                                }
                             }
                         )
                     }
-                    // If DevSettingsActivity was a Composable destination, it would be:
-                    // composable(SettingsDestinations.DEVELOPER_OPTIONS_ROUTE) { /* DevSettings Composable */ }
                 }
             }
         }
@@ -88,10 +159,7 @@ class SettingsActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // These calls ensure that when the Activity resumes (e.g., after returning
-        // from DevSettingsActivity), the ViewModel's state is updated from SharedPreferences
-        // or other sources, which will then trigger UI recomposition if needed.
-        settingsViewModel.updateCurrentLanguage() // This now also calls refreshDeveloperModeState()
-        settingsViewModel.refreshDeveloperModeState() // Explicit call for clarity, though updateCurrentLanguage also calls it
+        settingsViewModel.updateCurrentLanguage()
+        settingsViewModel.refreshDeveloperModeState()
     }
 }

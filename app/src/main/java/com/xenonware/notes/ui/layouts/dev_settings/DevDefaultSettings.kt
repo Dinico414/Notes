@@ -39,6 +39,7 @@ fun DevDefaultSettings(
     val hazeState = rememberHazeState()
     val context = LocalContext.current
 
+
     val isAppBarCollapsible = when (layoutType) {
         LayoutType.COVER -> false
         LayoutType.SMALL -> false
@@ -92,5 +93,6 @@ fun DevDefaultSettings(
                 )
             }
         }
+
     )
 }

@@ -31,6 +31,7 @@ import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoCornerRadius
 import com.xenon.mylibrary.values.NoSpacing
 import com.xenonware.notes.R
+import com.xenonware.notes.presentation.sign_in.SignInState
 import com.xenonware.notes.ui.res.DialogClearDataConfirmation
 import com.xenonware.notes.ui.res.DialogCoverDisplaySelection
 import com.xenonware.notes.ui.res.DialogLanguageSelection
@@ -48,6 +49,8 @@ fun CoverSettings(
     onNavigateBack: () -> Unit,
     viewModel: SettingsViewModel,
     onNavigateToDeveloperOptions: () -> Unit,
+    state: SignInState,
+    onSignInClick: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -136,7 +139,9 @@ fun CoverSettings(
                     tileHorizontalPadding = MediumPadding,
                     tileVerticalPadding = MediumPadding,
                     useGroupStyling = false,
-                    onNavigateToDeveloperOptions = onNavigateToDeveloperOptions
+                    onNavigateToDeveloperOptions = onNavigateToDeveloperOptions,
+                    state = state,
+                    onSignInClick = onSignInClick
                 )
             }
         })

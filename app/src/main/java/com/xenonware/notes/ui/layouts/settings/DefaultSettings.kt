@@ -28,12 +28,16 @@ import com.xenon.mylibrary.ActivityScreen
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoSpacing
+import com.xenonware.notes.BuildConfig
 import com.xenonware.notes.R
+import com.xenonware.notes.presentation.sign_in.SignInState
 import com.xenonware.notes.ui.res.DialogClearDataConfirmation
 import com.xenonware.notes.ui.res.DialogCoverDisplaySelection
 import com.xenonware.notes.ui.res.DialogLanguageSelection
 import com.xenonware.notes.ui.res.DialogResetSettingsConfirmation
 import com.xenonware.notes.ui.res.DialogThemeSelection
+import com.xenonware.notes.ui.res.DialogVersionNumber
+import com.xenonware.notes.ui.res.VersionInfo
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.SettingsViewModel
 import com.xenonware.notes.viewmodel.classes.SettingsItems
@@ -49,6 +53,8 @@ fun DefaultSettings(
     layoutType: LayoutType,
     isLandscape: Boolean,
     onNavigateToDeveloperOptions: () -> Unit,
+    state: SignInState,
+    onSignInClick: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -66,6 +72,8 @@ fun DefaultSettings(
     val showLanguageDialog by viewModel.showLanguageDialog.collectAsState()
     val availableLanguages by viewModel.availableLanguages.collectAsState()
     val selectedLanguageTagInDialog by viewModel.selectedLanguageTagInDialog.collectAsState()
+    val showVersionDialog by viewModel.showVersionDialog.collectAsState()
+
 
     val twentyFourHourTimePattern = "HH:mm"
     val twelveHourTimePattern = "h:mm a"
@@ -137,7 +145,9 @@ fun DefaultSettings(
                     coverThemeEnabled = coverThemeEnabled,
                     currentLanguage = currentLanguage,
                     appVersion = appVersion,
-                    onNavigateToDeveloperOptions = onNavigateToDeveloperOptions
+                    onNavigateToDeveloperOptions = onNavigateToDeveloperOptions,
+                    state = state,
+                    onSignInClick = onSignInClick
                 )
             }
         })
@@ -203,6 +213,22 @@ fun DefaultSettings(
                 onLanguageSelected = { tag -> viewModel.onLanguageSelectedInDialog(tag) },
                 onDismiss = { viewModel.dismissLanguageDialog() },
                 onConfirm = { viewModel.applySelectedLanguage() })
+        }
+    }
+    if (showVersionDialog) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeEffect(hazeState)
+        ) {
+            DialogVersionNumber(
+                onDismiss = { viewModel.dismissVersionDialog() },
+                versionInfo = VersionInfo(
+                    appVersion = appVersion,
+                    xenonUIVersion = "3.0",
+                    xenonCommonsVersion = BuildConfig.XENON_COMMONS_VERSION
+                )
+            )
         }
     }
 }
