@@ -31,6 +31,7 @@ class SharedPreferenceManager(context: Context) {
     private val notesLayoutTypeKey = "notes_layout_type"
     private val gridColumnCountKey = "grid_column_count"
     private val listItemLineCountKey = "list_item_line_count"
+    private val isUserLoggedInKey = "is_user_logged_in"
 
     internal val sharedPreferences: SharedPreferences =
         context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
@@ -143,6 +144,10 @@ class SharedPreferenceManager(context: Context) {
     var listItemLineCount: Int
         get() = sharedPreferences.getInt(listItemLineCountKey, 3) // Default to 3 lines
         set(value) = sharedPreferences.edit { putInt(listItemLineCountKey, value) }
+
+    var isUserLoggedIn: Boolean
+        get() = sharedPreferences.getBoolean(isUserLoggedInKey, false)
+        set(value) = sharedPreferences.edit { putBoolean(isUserLoggedInKey, value) }
 
     fun isCoverThemeApplied(currentDisplaySize: IntSize): Boolean {
         if (!coverThemeEnabled) return false

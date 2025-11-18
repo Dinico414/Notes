@@ -47,7 +47,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.ExtraLargePadding
@@ -92,7 +91,8 @@ import com.xenonware.notes.viewmodel.NotesViewModel
 
 @Composable
 fun ListContent(
-    notesViewModel: NotesViewModel = viewModel(),
+    notesViewModel: NotesViewModel,
+    signInViewModel: SignInViewModel,
     onFilterSelected: (NoteFilterType) -> Unit,
 ) {
     val currentFilter by notesViewModel.noteFilterType.collectAsState()
@@ -119,7 +119,6 @@ fun ListContent(
                 oneTapClient = Identity.getSignInClient(context.applicationContext)
             )
         }
-        val signInViewModel: SignInViewModel = viewModel()
         val state by signInViewModel.state.collectAsStateWithLifecycle()
         val userData = googleAuthUiClient.getSignedInUser()
 
@@ -162,9 +161,6 @@ fun ListContent(
                         Box(
                             contentAlignment = Alignment.Center,
                         ) {
-                            // This part of the code was not provided in the original context snippet
-                            // I am adding a placeholder to prevent compilation errors.
-                            // Assuming GoogleProfilBorder is defined elsewhere.
                             GoogleProfilBorder(
                                 modifier = Modifier.size(32.dp),
                                 state = state

@@ -161,6 +161,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun CoverNotes(
     notesViewModel: NotesViewModel = viewModel(),
+    signInViewModel: SignInViewModel = viewModel(),
     devSettingsViewModel: DevSettingsViewModel = viewModel(),
     layoutType: LayoutType,
     isLandscape: Boolean,
@@ -354,16 +355,19 @@ fun CoverNotes(
 
     val lazyListState = rememberLazyListState()
 
+    val isAnyNoteSheetOpen = remember { mutableStateOf(false) }
+
     ModalNavigationDrawer(
         drawerContent = {
             ListContent(
                 notesViewModel = notesViewModel,
+                signInViewModel = signInViewModel,
                 onFilterSelected = { filterType ->
                     notesViewModel.setNoteFilterType(filterType)
                     scope.launch { drawerState.close() }
                 },
             )
-        }, drawerState = drawerState
+        }, drawerState = drawerState, gesturesEnabled = !isAnyNoteSheetOpen.value
     ) {
         Scaffold(
             snackbarHost = {

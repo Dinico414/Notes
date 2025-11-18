@@ -18,7 +18,6 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -39,6 +38,7 @@ object SettingsDestinations {
 class SettingsActivity : ComponentActivity() {
 
     private lateinit var settingsViewModel: SettingsViewModel
+    private lateinit var signInViewModel: SignInViewModel
 
     private val googleAuthUiClient by lazy {
         GoogleAuthUiClient(
@@ -54,6 +54,11 @@ class SettingsActivity : ComponentActivity() {
             this,
             SettingsViewModel.SettingsViewModelFactory(application)
         )[SettingsViewModel::class.java]
+
+        signInViewModel = ViewModelProvider(
+            this,
+            SignInViewModel.SignInViewModelFactory(application)
+        )[SignInViewModel::class.java]
 
         enableEdgeToEdge()
 
@@ -78,8 +83,7 @@ class SettingsActivity : ComponentActivity() {
             ) { layoutType, isLandscape ->
 
                 val context = LocalContext.current
-                val viewModel = viewModel<SignInViewModel>()
-                val state by viewModel.state.collectAsStateWithLifecycle()
+                val state by signInViewModel.state.collectAsStateWithLifecycle()
 
                 val oneTapLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartIntentSenderForResult(),
@@ -89,7 +93,7 @@ class SettingsActivity : ComponentActivity() {
                                 val signInResult = googleAuthUiClient.signInWithIntent(
                                     intent = result.data ?: return@launch
                                 )
-                                viewModel.onSignInResult(signInResult)
+                                signInViewModel.onSignInResult(signInResult)
                             }
                         }
                     }
@@ -103,7 +107,7 @@ class SettingsActivity : ComponentActivity() {
                                 val signInResult = googleAuthUiClient.signInWithTraditionalIntent(
                                     intent = result.data ?: return@launch
                                 )
-                                viewModel.onSignInResult(signInResult)
+                                signInViewModel.onSignInResult(signInResult)
                             }
                         }
                     }
@@ -145,8 +149,8 @@ class SettingsActivity : ComponentActivity() {
                             onConfirmSignOut = {
                                 lifecycleScope.launch {
                                     googleAuthUiClient.signOut()
-                                    viewModel.resetState()
                                     settingsViewModel.dismissSignOutDialog()
+                                    signInViewModel.resetState()
                                 }
                             }
                         )

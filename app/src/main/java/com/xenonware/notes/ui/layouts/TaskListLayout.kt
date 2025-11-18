@@ -4,6 +4,7 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntSize
+import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.layouts.notes.CompactNotes
 import com.xenonware.notes.ui.layouts.notes.CoverNotes
 import com.xenonware.notes.viewmodel.LayoutType
@@ -12,7 +13,8 @@ import com.xenonware.notes.viewmodel.NotesViewModel
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun NotesListLayout(
-    viewModel: NotesViewModel,
+    notesViewModel: NotesViewModel,
+    signInViewModel: SignInViewModel,
     isLandscape: Boolean,
     modifier: Modifier = Modifier,
     layoutType: LayoutType,
@@ -25,7 +27,8 @@ fun NotesListLayout(
             if (isLandscape) {
                 CoverNotes(
                     onOpenSettings = onOpenSettings,
-                    notesViewModel = viewModel,
+                    notesViewModel = notesViewModel,
+                    signInViewModel = signInViewModel,
                     layoutType = layoutType,
                     isLandscape = true,
                     appSize = appSize,
@@ -33,7 +36,8 @@ fun NotesListLayout(
             } else {
                 CoverNotes(
                     onOpenSettings = onOpenSettings,
-                    notesViewModel = viewModel,
+                    notesViewModel = notesViewModel,
+                    signInViewModel = signInViewModel,
                     layoutType = layoutType,
                     isLandscape = false,
                     appSize = appSize,
@@ -45,7 +49,8 @@ fun NotesListLayout(
             if (isLandscape) {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    notesViewModel = viewModel,
+                    notesViewModel = notesViewModel,
+                    signInViewModel = signInViewModel,
                     layoutType = layoutType,
                     isLandscape = true,
                     appSize = appSize,
@@ -53,7 +58,8 @@ fun NotesListLayout(
             } else {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    notesViewModel = viewModel,
+                    notesViewModel = notesViewModel,
+                    signInViewModel = signInViewModel,
                     layoutType = layoutType,
                     isLandscape = false,
                     appSize = appSize,
@@ -65,7 +71,8 @@ fun NotesListLayout(
             if (isLandscape) {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    notesViewModel = viewModel,
+                    notesViewModel = notesViewModel,
+                    signInViewModel = signInViewModel,
                     layoutType = layoutType,
                     isLandscape = true,
                     appSize = appSize,
@@ -73,7 +80,8 @@ fun NotesListLayout(
             } else {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    notesViewModel = viewModel,
+                    notesViewModel = notesViewModel,
+                    signInViewModel = signInViewModel,
                     layoutType = layoutType,
                     isLandscape = false,
                     appSize = appSize,
@@ -85,7 +93,8 @@ fun NotesListLayout(
             if (isLandscape) {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    notesViewModel = viewModel,
+                    notesViewModel = notesViewModel,
+                    signInViewModel = signInViewModel,
                     layoutType = layoutType,
                     isLandscape = true,
                     appSize = appSize,
@@ -93,7 +102,8 @@ fun NotesListLayout(
             } else {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    notesViewModel = viewModel,
+                    notesViewModel = notesViewModel,
+                    signInViewModel = signInViewModel,
                     layoutType = layoutType,
                     isLandscape = false,
                     appSize = appSize,
@@ -105,7 +115,8 @@ fun NotesListLayout(
             if (isLandscape) {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    notesViewModel = viewModel,
+                    notesViewModel = notesViewModel,
+                    signInViewModel = signInViewModel,
                     layoutType = layoutType,
                     isLandscape = true,
                     appSize = appSize,
@@ -113,7 +124,8 @@ fun NotesListLayout(
             } else {
                 CompactNotes(
                     onOpenSettings = onOpenSettings,
-                    notesViewModel = viewModel,
+                    notesViewModel = notesViewModel,
+                    signInViewModel = signInViewModel,
                     layoutType = layoutType,
                     isLandscape = false,
                     appSize = appSize,

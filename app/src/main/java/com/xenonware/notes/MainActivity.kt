@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.IntSize
 import androidx.core.view.WindowCompat
+import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.layouts.NotesListLayout
 import com.xenonware.notes.ui.theme.ScreenEnvironment
 import com.xenonware.notes.viewmodel.LayoutType
@@ -23,6 +24,7 @@ import com.xenonware.notes.viewmodel.NotesViewModel
 class MainActivity : ComponentActivity() {
 
     private val notesViewModel: NotesViewModel by viewModels()
+    private val signInViewModel: SignInViewModel by viewModels { SignInViewModel.SignInViewModelFactory(application) }
     private lateinit var sharedPreferenceManager: SharedPreferenceManager
 
     private var lastAppliedTheme: Int = -1
@@ -57,7 +59,8 @@ class MainActivity : ComponentActivity() {
                 blackedOutModeEnabled = lastAppliedBlackedOutMode
             ) { layoutType, isLandscape ->
                 XenonApp(
-                    viewModel = notesViewModel,
+                    notesViewModel = notesViewModel,
+                    signInViewModel = signInViewModel,
                     layoutType = layoutType,
                     isLandscape = isLandscape,
                     appSize = currentContainerSize,
@@ -102,7 +105,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun XenonApp(
-    viewModel: NotesViewModel,
+    notesViewModel: NotesViewModel,
+    signInViewModel: SignInViewModel,
     layoutType: LayoutType,
     isLandscape: Boolean,
     onOpenSettings: () -> Unit,
@@ -110,7 +114,8 @@ fun XenonApp(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         NotesListLayout(
-            viewModel = viewModel,
+            notesViewModel = notesViewModel,
+            signInViewModel = signInViewModel,
             isLandscape = isLandscape,
             layoutType = layoutType,
             onOpenSettings = onOpenSettings,

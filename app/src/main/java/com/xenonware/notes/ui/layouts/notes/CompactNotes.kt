@@ -152,6 +152,7 @@ import com.xenonware.notes.ui.theme.noteTurquoiseDark
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
+import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.NotesLayoutType
 import com.xenonware.notes.viewmodel.NotesViewModel
@@ -178,6 +179,8 @@ enum class AudioViewType {
 @Composable
 fun CompactNotes(
     notesViewModel: NotesViewModel = viewModel(),
+    signInViewModel: SignInViewModel = viewModel(),
+    devSettingsViewModel: DevSettingsViewModel = viewModel(),
     layoutType: LayoutType,
     isLandscape: Boolean,
     onOpenSettings: () -> Unit,
@@ -356,6 +359,7 @@ fun CompactNotes(
         drawerContent = {
             ListContent(
                 notesViewModel = notesViewModel,
+                signInViewModel = signInViewModel,
                 onFilterSelected = { filterType ->
                     notesViewModel.setNoteFilterType(filterType)
                     scope.launch { drawerState.close() }
@@ -595,7 +599,8 @@ fun CompactNotes(
                 val sketchEditorContent: @Composable (RowScope.() -> Unit)? =
                     if (showSketchNoteCard) {
                         @Composable {
-                            val sketchSizes = remember { listOf(2f, 5f, 10f, 20f, 40f, 60f, 80f, 100f) }
+                            val sketchSizes =
+                                remember { listOf(2f, 5f, 10f, 20f, 40f, 60f, 80f, 100f) }
                             val maxPenSize = sketchSizes.maxOrNull() ?: 1f
 
                             Row(
@@ -610,15 +615,16 @@ fun CompactNotes(
                                         .clip(CircleShape)
                                         .border(
                                             2.dp,
-                                            if (showSketchSizePopup) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.6f),
+                                            if (showSketchSizePopup) colorScheme.primary else colorScheme.onSurface.copy(
+                                                alpha = 0.6f
+                                            ),
                                             CircleShape
                                         )
                                         .background(colorScheme.surfaceDim, CircleShape)
                                         .clickable {
                                             showSketchSizePopup = true
                                             showColorPicker = false
-                                        },
-                                    contentAlignment = Alignment.Center
+                                        }, contentAlignment = Alignment.Center
                                 ) {
                                     val onSurface = colorScheme.onSurface
 
@@ -636,7 +642,9 @@ fun CompactNotes(
                                         .size(38.dp)
                                         .border(
                                             2.dp,
-                                            if (showColorPicker) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.6f),
+                                            if (showColorPicker) colorScheme.primary else colorScheme.onSurface.copy(
+                                                alpha = 0.6f
+                                            ),
                                             CircleShape
                                         )
                                         .border(4.dp, colorScheme.surfaceDim, CircleShape)
@@ -666,8 +674,7 @@ fun CompactNotes(
                                     Icon(
                                         painter = painterResource(
                                             id = if (usePressure) R.drawable.dynamic else R.drawable.constant
-                                        ),
-                                        contentDescription = "Toggle Pressure/Speed"
+                                        ), contentDescription = "Toggle Pressure/Speed"
                                     )
                                 }
 
@@ -965,7 +972,7 @@ fun CompactNotes(
                 expandable = isAppBarCollapsible,
 
                 navigationIconStartPadding = MediumPadding,
-                navigationIconPadding = if(state.isSignInSuccessful) SmallPadding else MediumPadding,
+                navigationIconPadding = if (state.isSignInSuccessful) SmallPadding else MediumPadding,
                 navigationIconSpacing = MediumSpacing,
 
                 navigationIcon = {
@@ -990,13 +997,10 @@ fun CompactNotes(
                             contentAlignment = Alignment.Center,
                         ) {
                             GoogleProfilBorder(
-                                modifier = Modifier.size(32.dp),
-                                state = state
+                                modifier = Modifier.size(32.dp), state = state
                             )
                             GoogleProfilePicture(
-                                state = state,
-                                userData = userData,
-                                modifier = Modifier.size(26.dp)
+                                state = state, userData = userData, modifier = Modifier.size(26.dp)
                             )
                         }
                     }
