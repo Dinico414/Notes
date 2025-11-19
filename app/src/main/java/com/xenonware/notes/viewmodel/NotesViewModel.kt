@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xenonware.notes.SharedPreferenceManager
@@ -27,7 +28,6 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.compose.ui.graphics.toArgb
 
 enum class SortOption {
     FREE_SORTING,
@@ -318,6 +318,13 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private fun determineNextDisplayOrder(): Int {
         return _allNotesItems.maxOfOrNull { it.displayOrder }?.plus(1) ?: 0
     }
+
+//    private val database = Firebase.database
+//
+//    fun saveNote(note: ContactsContract.CommonDataKinds.Note) {
+//        val myRef = database.getReference("notes")
+//        myRef.child(note.id).setValue(note)
+//    }
 
     fun addItem(
         title: String,

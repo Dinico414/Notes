@@ -75,6 +75,7 @@ dependencies {
     implementation(libs.androidx.material3.window.size.class1.android)
     implementation(libs.androidx.material3.adaptive)
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.database.ktx)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
