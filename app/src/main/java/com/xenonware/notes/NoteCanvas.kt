@@ -47,7 +47,7 @@ fun NoteCanvas(
     currentPath: PathData?,
     currentToolState: CurrentPathState,
     onAction: (DrawingAction) -> Unit,
-    isHandwritingMode: Boolean, // Added isHandwritingMode parameter
+    isHandwritingMode: Boolean,
     modifier: Modifier = Modifier,
     gridEnabled: Boolean = false,
     debugText: Boolean = false,
@@ -185,12 +185,6 @@ private fun DrawScope.drawPath(
     color: Color,
     drawDebugPoints: Boolean = false
 ) {
-//    val customBrush = object : ShaderBrush() {
-//        override fun createShader(size: Size): Shader {
-//            return LinearGradient()
-//        }
-//    }
-
     if(path.isNotEmpty()) {
         val smoothedPath = Path()
         smoothedPath.moveTo(path.first().x, path.first().y)

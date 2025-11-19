@@ -129,13 +129,10 @@ import com.xenonware.notes.ui.res.GoogleProfilBorder
 import com.xenonware.notes.ui.res.GoogleProfilePicture
 import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.ListItem
-import com.xenonware.notes.ui.res.NoteAudioCard
 import com.xenonware.notes.ui.res.NoteAudioSheet
-import com.xenonware.notes.ui.res.NoteListCard
+import com.xenonware.notes.ui.res.NoteCard
 import com.xenonware.notes.ui.res.NoteListSheet
-import com.xenonware.notes.ui.res.NoteSketchCard
 import com.xenonware.notes.ui.res.NoteSketchSheet
-import com.xenonware.notes.ui.res.NoteTextCard
 import com.xenonware.notes.ui.res.NoteTextSheet
 import com.xenonware.notes.ui.res.XenonSnackbar
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
@@ -1636,56 +1633,5 @@ fun CompactNotes(
                 )
             }
         }
-    }
-}
-
-
-@Composable
-fun NoteCard(
-    item: NotesItems,
-    isSelected: Boolean,
-    isSelectionModeActive: Boolean,
-    onSelectItem: () -> Unit,
-    onEditItem: (NotesItems) -> Unit,
-    maxLines: Int = Int.MAX_VALUE,
-    isNoteSheetOpen: Boolean,
-) {
-    when (item.noteType) {
-        NoteType.TEXT -> NoteTextCard(
-            item = item,
-            isSelected = isSelected,
-            isSelectionModeActive = isSelectionModeActive,
-            onSelectItem = onSelectItem,
-            onEditItem = onEditItem,
-            maxLines = maxLines,
-            isNoteSheetOpen = isNoteSheetOpen
-        )
-
-        NoteType.AUDIO -> NoteAudioCard(
-            item = item,
-            isSelected = isSelected,
-            isSelectionModeActive = isSelectionModeActive,
-            onSelectItem = onSelectItem,
-            onEditItem = onEditItem,
-            isNoteSheetOpen = isNoteSheetOpen
-        )
-
-        NoteType.LIST -> NoteListCard(
-            item = item,
-            isSelected = isSelected,
-            isSelectionModeActive = isSelectionModeActive,
-            onSelectItem = onSelectItem,
-            onEditItem = onEditItem,
-            maxLines = maxLines,
-            isNoteSheetOpen = isNoteSheetOpen
-        )
-
-        NoteType.SKETCH -> NoteSketchCard(
-            item = item,
-            isSelected = isSelected,
-            isSelectionModeActive = isSelectionModeActive,
-            onSelectItem = onSelectItem,
-            onEditItem = onEditItem
-        )
     }
 }

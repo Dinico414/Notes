@@ -120,6 +120,7 @@ import com.xenonware.notes.ui.res.GoogleProfilePicture
 import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.ListItem
 import com.xenonware.notes.ui.res.NoteAudioSheet
+import com.xenonware.notes.ui.res.NoteCard
 import com.xenonware.notes.ui.res.NoteListSheet
 import com.xenonware.notes.ui.res.NoteSketchSheet
 import com.xenonware.notes.ui.res.NoteTextSheet
