@@ -2,6 +2,7 @@ package com.xenonware.notes.ui.res
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,12 +24,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.ViewComfy
@@ -62,7 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.QuicksandTitleVariable
-import com.xenon.mylibrary.res.XenonTextFieldV2
+import com.xenon.mylibrary.res.XenonTextField
 import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.LargerCornerRadius
 import com.xenon.mylibrary.values.LargestPadding
@@ -164,6 +165,8 @@ fun ListContent(
                     .fillMaxWidth()
                     .padding(ExtraLargePadding)
             ) {
+                // Add a focusable element at the top of the drawer to intercept the initial focus
+                Box(modifier = Modifier.focusable())
                 Row(verticalAlignment = Alignment.Top) {
                     Text(
                         text = stringResource(id = R.string.app_name),
@@ -391,16 +394,15 @@ fun ListContent(
 
                     if (localLabel.isNotEmpty()) {
                         Column(
-                            modifier = Modifier.padding(vertical = LargestPadding)
+                            modifier = Modifier.padding(top = LargestPadding)
                         ) {
                             localLabel.forEach { label ->
                                 FilterItem(
-                                    icon = Icons.Default.Label,
+                                    icon = Icons.AutoMirrored.Default.Label,
                                     label = label.text,
                                     isSelected = selectedLabel == label.id,
                                     onClick = { notesViewModel.setLabelFilter(label.id) },
-                                    onDeleteClick = { notesViewModel.removeLabel(label.id) }
-                                )
+                                    onDeleteClick = { notesViewModel.removeLabel(label.id) })
                             }
                         }
                     }
@@ -411,13 +413,14 @@ fun ListContent(
                             .padding(vertical = LargestPadding),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        XenonTextFieldV2(
+                        XenonTextField(
                             value = newLabelName,
                             onValueChange = { newLabelName = it },
                             placeholder = { Text(stringResource(R.string.add_new_label)) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            forceRequest = false
                         )
                         Spacer(modifier = Modifier.width(MediumPadding))
 
@@ -429,14 +432,14 @@ fun ListContent(
                                 }
                             },
                             modifier = Modifier
-                                .height(50.dp)
+                                .height(48.dp)
                                 .width(40.dp),
                             enabled = newLabelName.isNotBlank(),
                             colors = IconButtonDefaults.filledIconButtonColors(containerColor = colorScheme.primary)
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Add,
-                                contentDescription = stringResource(R.string.add_new_step)
+                                contentDescription = stringResource(R.string.add_new_label)
                             )
                         }
                     }
@@ -467,8 +470,7 @@ private fun FilterItem(
             .background(backgroundColor)
             .clickable { onClick() }
             .padding(LargestPadding),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+        verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = icon,
             contentDescription = label,
@@ -488,11 +490,11 @@ private fun FilterItem(
         )
         onDeleteClick?.let {
             IconButton(
-                onClick = it,
-                modifier = Modifier.size(24.dp)
+                onClick = it, modifier = Modifier.size(24.dp)
             ) {
                 Icon(
                     imageVector = Icons.Filled.Delete,
+                    tint = colorScheme.onSurface,
                     contentDescription = stringResource(R.string.remove_step)
                 )
             }

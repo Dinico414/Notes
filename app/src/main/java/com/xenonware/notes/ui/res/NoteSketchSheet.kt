@@ -667,7 +667,8 @@ fun VerticalFloatingToolbar(
                     onClick = { onToggleHandwritingMode(false) },
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = if (!isHandwritingMode) colorScheme.tertiary else Color.Transparent,
-                    )
+                        contentColor = if (!isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurface,
+                        )
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.pen_drawn),

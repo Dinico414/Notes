@@ -31,7 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.xenon.mylibrary.res.XenonTextFieldV2
+import com.xenon.mylibrary.res.XenonTextField
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenonware.notes.R
 import com.xenonware.notes.viewmodel.classes.Label
@@ -94,7 +94,7 @@ fun LabelSelectionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    XenonTextFieldV2(
+                    XenonTextField(
                         value = newLabelName,
                         onValueChange = { newLabelName = it },
                         placeholder = { Text(stringResource(R.string.add_new_label)) },

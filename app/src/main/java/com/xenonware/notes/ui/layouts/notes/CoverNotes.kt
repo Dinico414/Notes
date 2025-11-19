@@ -370,7 +370,6 @@ fun CoverNotes(
                 signInViewModel = signInViewModel,
                 onFilterSelected = { filterType ->
                     notesViewModel.setNoteFilterType(filterType)
-                    scope.launch { drawerState.close() }
                 },
             )
         }, drawerState = drawerState, gesturesEnabled = !isAnyNoteSheetOpen
