@@ -9,6 +9,7 @@ import com.xenonware.notes.viewmodel.NotesLayoutType
 import com.xenonware.notes.viewmodel.SortOption
 import com.xenonware.notes.viewmodel.SortOrder
 import com.xenonware.notes.viewmodel.ThemeSetting
+import com.xenonware.notes.viewmodel.classes.Label
 import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.serialization.json.Json
 import kotlin.math.max
@@ -24,6 +25,7 @@ class SharedPreferenceManager(context: Context) {
     private val taskSortOptionKey = "task_sort_option"
     private val taskSortOrderKey = "task_sort_order"
     private val taskListKey = "task_list_json"
+    private val labelsListKey = "labels_list_json"
     private val drawerTodoItemsKey = "drawer_todo_items_json"
     private val blackedOutModeKey = "blacked_out_mode_enabled"
     private val developerModeKey = "developer_mode_enabled"
@@ -86,6 +88,30 @@ class SharedPreferenceManager(context: Context) {
                 sharedPreferences.edit { putString(taskListKey, jsonString) }
             } catch (e: Exception) {
                 System.err.println("Error encoding task items: ${e.localizedMessage}")
+            }
+        }
+
+    var labels: List<Label>
+        get() {
+            val jsonString = sharedPreferences.getString(labelsListKey, null)
+            return if (jsonString != null) {
+                try {
+                    json.decodeFromString<List<Label>>(jsonString)
+                } catch (e: Exception) {
+                    System.err.println("Error decoding labels, deleting old data: ${e.localizedMessage}")
+                    sharedPreferences.edit { remove(labelsListKey) }
+                    emptyList()
+                }
+            } else {
+                emptyList()
+            }
+        }
+        set(value) {
+            try {
+                val jsonString = json.encodeToString(value)
+                sharedPreferences.edit { putString(labelsListKey, jsonString) }
+            } catch (e: Exception) {
+                System.err.println("Error encoding labels: ${e.localizedMessage}")
             }
         }
 
@@ -175,6 +201,7 @@ class SharedPreferenceManager(context: Context) {
             remove(notesLayoutTypeKey)
             remove(gridColumnCountKey)
             remove(listItemLineCountKey)
+            remove(labelsListKey)
         }
     }
 }

@@ -16,6 +16,7 @@ import com.xenonware.notes.ui.theme.purpleInversePrimaryLight
 import com.xenonware.notes.ui.theme.redInversePrimaryLight
 import com.xenonware.notes.ui.theme.turquoiseInversePrimaryLight
 import com.xenonware.notes.ui.theme.yellowInversePrimaryLight
+import com.xenonware.notes.viewmodel.classes.Label
 import com.xenonware.notes.viewmodel.classes.NoteType
 import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -28,6 +29,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 enum class SortOption {
     FREE_SORTING,
@@ -100,9 +102,13 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedColors = MutableStateFlow<Set<Long?>>(emptySet())
     val selectedColors: StateFlow<Set<Long?>> = _selectedColors.asStateFlow()
 
+    private val _labels = MutableStateFlow<List<Label>>(emptyList())
+    val labels: StateFlow<List<Label>> = _labels.asStateFlow()
+
 
     init {
         loadAllNotes()
+        loadLabels()
         applySortingAndFiltering()
     }
 
@@ -178,6 +184,27 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             _searchQuery.value = query
             applySortingAndFiltering()
         }
+    }
+
+    private fun loadLabels() {
+        _labels.value = prefsManager.labels
+    }
+
+    private fun saveLabels() {
+        prefsManager.labels = _labels.value
+    }
+
+    fun addLabel(labelText: String) {
+        if (labelText.isNotBlank()) {
+            val newLabel = Label(id = UUID.randomUUID().toString(), text = labelText.trim())
+            _labels.value = _labels.value + newLabel
+            saveLabels()
+        }
+    }
+
+    fun removeLabel(labelId: String) {
+        _labels.value = _labels.value.filter { it.id != labelId }
+        saveLabels()
     }
 
     private fun loadAllNotes() {

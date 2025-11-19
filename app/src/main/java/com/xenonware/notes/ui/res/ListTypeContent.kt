@@ -6,27 +6,38 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.ViewComfy
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
@@ -36,7 +47,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,13 +58,18 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenon.mylibrary.res.XenonTextFieldV2
 import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.LargerCornerRadius
 import com.xenon.mylibrary.values.LargestPadding
+import com.xenon.mylibrary.values.MediumPadding
+import com.xenon.mylibrary.values.MediumSpacing
 import com.xenon.mylibrary.values.NoPadding
 import com.xenon.mylibrary.values.SmallerCornerRadius
 import com.xenonware.notes.R
@@ -98,6 +116,9 @@ fun ListContent(
     val currentFilter by notesViewModel.noteFilterType.collectAsState()
     val selectedColors by notesViewModel.selectedColors.collectAsState()
     val isDarkTheme = LocalIsDarkTheme.current
+
+    val localLabel by notesViewModel.labels.collectAsState()
+    var newLabelName by remember { mutableStateOf("") }
 
     ModalDrawerSheet(
         drawerContainerColor = Color.Transparent,
@@ -162,13 +183,10 @@ fun ListContent(
                             contentAlignment = Alignment.Center,
                         ) {
                             GoogleProfilBorder(
-                                modifier = Modifier.size(32.dp),
-                                state = state
+                                modifier = Modifier.size(32.dp), state = state
                             )
                             GoogleProfilePicture(
-                                state = state,
-                                userData = userData,
-                                modifier = Modifier.size(26.dp)
+                                state = state, userData = userData, modifier = Modifier.size(26.dp)
                             )
                         }
                     }
@@ -181,8 +199,7 @@ fun ListContent(
                     modifier = Modifier.verticalScroll(rememberScrollState())
                 ) {
                     Column(
-                        modifier = Modifier
-                            .padding(vertical = LargestPadding)
+                        modifier = Modifier.padding(vertical = LargestPadding)
                     ) {
                         FilterItem(
                             icon = Icons.Default.ViewComfy,
@@ -373,7 +390,82 @@ fun ListContent(
                     HorizontalDivider(
                         thickness = 1.dp, color = colorScheme.outlineVariant
                     )
-                  //                the scrolling should stop here
+
+                    if (localLabel.isNotEmpty()) {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(LargestPadding),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = LargestPadding)
+                                .heightIn(max = 200.dp)
+                        ) {
+                            items(items = localLabel, key = { it.id }) { step ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = MediumPadding / 2),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = step.text,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(start = MediumPadding),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    IconButton(
+                                        onClick = { notesViewModel.removeLabel(step.id) },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Delete,
+                                            contentDescription = stringResource(R.string.remove_step)
+                                        )
+                                    }
+
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(MediumSpacing))
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = LargestPadding),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        XenonTextFieldV2(
+                            value = newLabelName,
+                            onValueChange = { newLabelName = it },
+                            placeholder = { Text(stringResource(R.string.add_new_label)) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                        )
+                        Spacer(modifier = Modifier.width(MediumPadding))
+
+                        FilledIconButton(
+                            onClick = {
+                                if (newLabelName.isNotBlank()) {
+                                    notesViewModel.addLabel(newLabelName)
+                                    newLabelName = ""
+                                }
+                            },
+                            modifier = Modifier
+                                .height(50.dp)
+                                .width(40.dp),
+                            enabled = newLabelName.isNotBlank(),
+                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = colorScheme.primary)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Add,
+                                contentDescription = stringResource(R.string.add_new_step)
+                            )
+                        }
+                    }
                 }
             }
         }
