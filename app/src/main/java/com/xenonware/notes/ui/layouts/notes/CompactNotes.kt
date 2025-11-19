@@ -623,7 +623,9 @@ fun CompactNotes(
                                             ),
                                             CircleShape
                                         )
-                                        .background(colorScheme.primary.copy(alpha = 0.4f), CircleShape)
+                                        .background(
+                                            colorScheme.primary.copy(alpha = 0.4f), CircleShape
+                                        )
                                         .clickable {
                                             showSketchSizePopup = true
                                             showColorPicker = false

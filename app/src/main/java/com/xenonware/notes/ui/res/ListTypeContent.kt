@@ -178,200 +178,203 @@ fun ListContent(
                 )
                 //Add Scroll container from below here
                 Column(
-                    modifier = Modifier
-                        .padding(vertical = LargestPadding)
-                        .verticalScroll(rememberScrollState())
+                    modifier = Modifier.verticalScroll(rememberScrollState())
                 ) {
-                    FilterItem(
-                        icon = Icons.Default.ViewComfy,
-                        label = stringResource(R.string.all_notes),
-                        isSelected = currentFilter == NoteFilterType.ALL,
-                        onClick = { onFilterSelected(NoteFilterType.ALL) })
-                    FilterItem(
-                        icon = Icons.Default.TextFields,
-                        label = stringResource(R.string.text_notes),
-                        isSelected = currentFilter == NoteFilterType.TEXT,
-                        onClick = { onFilterSelected(NoteFilterType.TEXT) })
+                    Column(
+                        modifier = Modifier
+                            .padding(vertical = LargestPadding)
+                    ) {
+                        FilterItem(
+                            icon = Icons.Default.ViewComfy,
+                            label = stringResource(R.string.all_notes),
+                            isSelected = currentFilter == NoteFilterType.ALL,
+                            onClick = { onFilterSelected(NoteFilterType.ALL) })
+                        FilterItem(
+                            icon = Icons.Default.TextFields,
+                            label = stringResource(R.string.text_notes),
+                            isSelected = currentFilter == NoteFilterType.TEXT,
+                            onClick = { onFilterSelected(NoteFilterType.TEXT) })
 
-                    FilterItem(
-                        icon = Icons.Default.Checklist,
-                        label = stringResource(R.string.list_notes),
-                        isSelected = currentFilter == NoteFilterType.LIST,
-                        onClick = { onFilterSelected(NoteFilterType.LIST) })
-                    FilterItem(
-                        icon = Icons.Default.Mic,
-                        label = stringResource(R.string.audio_notes),
-                        isSelected = currentFilter == NoteFilterType.AUDIO,
-                        onClick = { onFilterSelected(NoteFilterType.AUDIO) })
-                    FilterItem(
-                        icon = Icons.Default.Edit,
-                        label = stringResource(R.string.sketch_notes),
-                        isSelected = currentFilter == NoteFilterType.SKETCH,
-                        onClick = { onFilterSelected(NoteFilterType.SKETCH) })
+                        FilterItem(
+                            icon = Icons.Default.Checklist,
+                            label = stringResource(R.string.list_notes),
+                            isSelected = currentFilter == NoteFilterType.LIST,
+                            onClick = { onFilterSelected(NoteFilterType.LIST) })
+                        FilterItem(
+                            icon = Icons.Default.Mic,
+                            label = stringResource(R.string.audio_notes),
+                            isSelected = currentFilter == NoteFilterType.AUDIO,
+                            onClick = { onFilterSelected(NoteFilterType.AUDIO) })
+                        FilterItem(
+                            icon = Icons.Default.Edit,
+                            label = stringResource(R.string.sketch_notes),
+                            isSelected = currentFilter == NoteFilterType.SKETCH,
+                            onClick = { onFilterSelected(NoteFilterType.SKETCH) })
+                    }
+                    HorizontalDivider(
+                        thickness = 1.dp, color = colorScheme.outlineVariant
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = LargestPadding),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        val isFilteringByDefaultColor = selectedColors.contains(null)
+                        OutlinedIconButton(
+                            onClick = { notesViewModel.toggleColorFilter(null) },
+                            modifier = Modifier.weight(1f),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = colorScheme.surfaceBright,
+                                contentColor = colorScheme.onSurface
+                            )
+                        ) {
+                            if (isFilteringByDefaultColor) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Default Color Selected"
+                                )
+                            }
+                        }
+
+                        // Red Color Filter Button
+                        val isRedSelected = selectedColors.contains(NotesViewModel.COLOR_RED)
+                        OutlinedIconButton(
+                            onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_RED) },
+                            modifier = Modifier.weight(1f),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = if (isDarkTheme) redInversePrimaryDark else redInversePrimaryLight,
+                                contentColor = if (isDarkTheme) redOnPrimaryLight else redOnPrimaryDark
+
+                            )
+                        ) {
+                            if (isRedSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Red Selected"
+                                )
+                            }
+                        }
+
+                        // Orange Color Filter Button
+                        val isOrangeSelected = selectedColors.contains(NotesViewModel.COLOR_ORANGE)
+                        OutlinedIconButton(
+                            onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_ORANGE) },
+                            modifier = Modifier.weight(1f),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = if (isDarkTheme) orangeInversePrimaryDark else orangeInversePrimaryLight,
+                                contentColor = if (isDarkTheme) orangeOnPrimaryLight else orangeOnPrimaryDark
+
+                            )
+                        ) {
+                            if (isOrangeSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Orange Selected"
+                                )
+                            }
+                        }
+
+                        // Yellow Color Filter Button
+                        val isYellowSelected = selectedColors.contains(NotesViewModel.COLOR_YELLOW)
+                        OutlinedIconButton(
+                            onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_YELLOW) },
+                            modifier = Modifier.weight(1f),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = if (isDarkTheme) yellowInversePrimaryDark else yellowInversePrimaryLight,
+                                contentColor = if (isDarkTheme) yellowOnPrimaryLight else yellowOnPrimaryDark
+
+                            )
+                        ) {
+                            if (isYellowSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Yellow Selected"
+                                )
+                            }
+                        }
+
+                        // Green Color Filter Button
+                        val isGreenSelected = selectedColors.contains(NotesViewModel.COLOR_GREEN)
+                        OutlinedIconButton(
+                            onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_GREEN) },
+                            modifier = Modifier.weight(1f),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = if (isDarkTheme) greenInversePrimaryDark else greenInversePrimaryLight,
+                                contentColor = if (isDarkTheme) greenOnPrimaryLight else greenOnPrimaryDark
+
+                            )
+                        ) {
+                            if (isGreenSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Green Selected"
+                                )
+                            }
+                        }
+
+                        // Turquoise Color Filter Button
+                        val isTurquoiseSelected =
+                            selectedColors.contains(NotesViewModel.COLOR_TURQUOISE)
+                        OutlinedIconButton(
+                            onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_TURQUOISE) },
+                            modifier = Modifier.weight(1f),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = if (isDarkTheme) turquoiseInversePrimaryDark else turquoiseInversePrimaryLight,
+                                contentColor = if (isDarkTheme) turquoiseOnPrimaryLight else turquoiseOnPrimaryDark
+
+                            )
+                        ) {
+                            if (isTurquoiseSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Turquoise Selected"
+                                )
+                            }
+                        }
+
+                        // Blue Color Filter Button
+                        val isBlueSelected = selectedColors.contains(NotesViewModel.COLOR_BLUE)
+                        OutlinedIconButton(
+                            onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_BLUE) },
+                            modifier = Modifier.weight(1f),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = if (isDarkTheme) blueInversePrimaryDark else blueInversePrimaryLight,
+                                contentColor = if (isDarkTheme) blueOnPrimaryLight else blueOnPrimaryDark
+                            )
+                        ) {
+                            if (isBlueSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Blue Selected"
+                                )
+                            }
+                        }
+
+                        // Purple Color Filter Button
+                        val isPurpleSelected = selectedColors.contains(NotesViewModel.COLOR_PURPLE)
+                        OutlinedIconButton(
+                            onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_PURPLE) },
+                            modifier = Modifier.weight(1f),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = if (isDarkTheme) purpleInversePrimaryDark else purpleInversePrimaryLight,
+                                contentColor = if (isDarkTheme) purpleOnPrimaryLight else purpleOnPrimaryDark
+                            )
+                        ) {
+                            if (isPurpleSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Purple Selected"
+                                )
+                            }
+                        }
+                    }
+                    HorizontalDivider(
+                        thickness = 1.dp, color = colorScheme.outlineVariant
+                    )
+                  //                the scrolling should stop here
                 }
-                HorizontalDivider(
-                    thickness = 1.dp, color = colorScheme.outlineVariant
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = LargestPadding),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    val isFilteringByDefaultColor = selectedColors.contains(null)
-                    OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(null) },
-                        modifier = Modifier.weight(1f),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = colorScheme.surfaceBright,
-                            contentColor = colorScheme.onSurface
-                        )
-                    ) {
-                        if (isFilteringByDefaultColor) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Default Color Selected"
-                            )
-                        }
-                    }
-
-                    // Red Color Filter Button
-                    val isRedSelected = selectedColors.contains(NotesViewModel.COLOR_RED)
-                    OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_RED) },
-                        modifier = Modifier.weight(1f),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = if (isDarkTheme) redInversePrimaryDark else redInversePrimaryLight,
-                            contentColor = if (isDarkTheme) redOnPrimaryLight else redOnPrimaryDark
-
-                        )
-                    ) {
-                        if (isRedSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Red Selected"
-                            )
-                        }
-                    }
-
-                    // Orange Color Filter Button
-                    val isOrangeSelected = selectedColors.contains(NotesViewModel.COLOR_ORANGE)
-                    OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_ORANGE) },
-                        modifier = Modifier.weight(1f),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = if (isDarkTheme) orangeInversePrimaryDark else orangeInversePrimaryLight,
-                            contentColor = if (isDarkTheme) orangeOnPrimaryLight else orangeOnPrimaryDark
-
-                        )
-                    ) {
-                        if (isOrangeSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Orange Selected"
-                            )
-                        }
-                    }
-
-                    // Yellow Color Filter Button
-                    val isYellowSelected = selectedColors.contains(NotesViewModel.COLOR_YELLOW)
-                    OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_YELLOW) },
-                        modifier = Modifier.weight(1f),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = if (isDarkTheme) yellowInversePrimaryDark else yellowInversePrimaryLight,
-                            contentColor = if (isDarkTheme) yellowOnPrimaryLight else yellowOnPrimaryDark
-
-                        )
-                    ) {
-                        if (isYellowSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Yellow Selected"
-                            )
-                        }
-                    }
-
-                    // Green Color Filter Button
-                    val isGreenSelected = selectedColors.contains(NotesViewModel.COLOR_GREEN)
-                    OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_GREEN) },
-                        modifier = Modifier.weight(1f),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = if (isDarkTheme) greenInversePrimaryDark else greenInversePrimaryLight,
-                            contentColor = if (isDarkTheme) greenOnPrimaryLight else greenOnPrimaryDark
-
-                        )
-                    ) {
-                        if (isGreenSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Green Selected"
-                            )
-                        }
-                    }
-
-                    // Turquoise Color Filter Button
-                    val isTurquoiseSelected =
-                        selectedColors.contains(NotesViewModel.COLOR_TURQUOISE)
-                    OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_TURQUOISE) },
-                        modifier = Modifier.weight(1f),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = if (isDarkTheme) turquoiseInversePrimaryDark else turquoiseInversePrimaryLight,
-                            contentColor = if (isDarkTheme) turquoiseOnPrimaryLight else turquoiseOnPrimaryDark
-
-                        )
-                    ) {
-                        if (isTurquoiseSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Turquoise Selected"
-                            )
-                        }
-                    }
-
-                    // Blue Color Filter Button
-                    val isBlueSelected = selectedColors.contains(NotesViewModel.COLOR_BLUE)
-                    OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_BLUE) },
-                        modifier = Modifier.weight(1f),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = if (isDarkTheme) blueInversePrimaryDark else blueInversePrimaryLight,
-                            contentColor = if (isDarkTheme) blueOnPrimaryLight else blueOnPrimaryDark
-                        )
-                    ) {
-                        if (isBlueSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Blue Selected"
-                            )
-                        }
-                    }
-
-                    // Purple Color Filter Button
-                    val isPurpleSelected = selectedColors.contains(NotesViewModel.COLOR_PURPLE)
-                    OutlinedIconButton(
-                        onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_PURPLE) },
-                        modifier = Modifier.weight(1f),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = if (isDarkTheme) purpleInversePrimaryDark else purpleInversePrimaryLight,
-                            contentColor = if (isDarkTheme) purpleOnPrimaryLight else purpleOnPrimaryDark
-                        )
-                    ) {
-                        if (isPurpleSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Purple Selected"
-                            )
-                        }
-                    }
-                }
-                HorizontalDivider(
-                    thickness = 1.dp, color = colorScheme.outlineVariant
-                )
-//                the scrolling should stop here
             }
         }
     }
