@@ -206,9 +206,33 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun removeLabel(labelId: String) {
+        // Create a new list of notes with the label removed
+        val updatedNotes = _allNotesItems.map { note ->
+            if (note.labels.contains(labelId)) {
+                note.copy(labels = note.labels.filter { it != labelId })
+            } else {
+                note
+            }
+        }
+
+        // Replace the entire list in _allNotesItems to ensure Compose detects the change
+        _allNotesItems.clear()
+        _allNotesItems.addAll(updatedNotes)
+        saveAllNotes()
+
+        // Update the labels list
         _labels.value = _labels.value.filter { it.id != labelId }
         saveLabels()
+
+        // If the deleted label was the active filter, clear it
+        if (_selectedLabel.value == labelId) {
+            _selectedLabel.value = null
+        }
+
+        // Finally, trigger a UI refresh by re-applying sorting and filtering
+        applySortingAndFiltering()
     }
+
 
     fun setLabelFilter(labelId: String?) {
         _selectedLabel.value = if (_selectedLabel.value == labelId) null else labelId
