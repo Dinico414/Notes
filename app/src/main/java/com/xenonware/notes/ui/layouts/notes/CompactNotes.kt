@@ -358,6 +358,9 @@ fun CompactNotes(
     val isAnyNoteSheetOpen =
         showTextNoteCard || showSketchNoteCard || showAudioNoteCard || showListNoteCard
 
+    val allLabels by notesViewModel.labels.collectAsState()
+    var selectedLabelId by rememberSaveable { mutableStateOf<String?>(null) }
+
     ModalNavigationDrawer(
         drawerContent = {
             ListContent(
@@ -1343,7 +1346,7 @@ fun CompactNotes(
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onSave = { title, description, theme ->
+                    onSave = { title, description, theme, labelId ->
                         if (title.isNotBlank() || description.isNotBlank()) {
                             val color = themeColorMap[theme]
                             if (editingNoteId != null) {
@@ -1352,7 +1355,8 @@ fun CompactNotes(
                                         .find { it.id == editingNoteId }?.copy(
                                             title = title,
                                             description = description.takeIf { it.isNotBlank() },
-                                            color = color?.toLong()
+                                            color = color?.toLong(),
+                                            labels = labelId?.let { listOf(it) } ?: emptyList()
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1362,13 +1366,14 @@ fun CompactNotes(
                                     title = title,
                                     description = description.takeIf { it.isNotBlank() },
                                     noteType = NoteType.TEXT,
-                                    color = color?.toLong()
+                                    color = color?.toLong(),
+                                    labels = labelId?.let { listOf(it) } ?: emptyList()
                                 )
                             }
                         }
                         showTextNoteCard = false
-                        isSearchActive = false // Disable search on save
-                        notesViewModel.setSearchQuery("") // Clear search query
+                        isSearchActive = false
+                        notesViewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     saveTrigger = saveTrigger,
@@ -1380,7 +1385,12 @@ fun CompactNotes(
                     toolbarHeight = 72.dp,
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
-                    })
+                    },
+                    allLabels = allLabels,
+                    initialSelectedLabelId = selectedLabelId,
+                    onLabelSelected = { selectedLabelId = it },
+                    onAddNewLabel = { notesViewModel.addLabel(it) }
+                )
             }
 
             AnimatedVisibility(
@@ -1407,14 +1417,15 @@ fun CompactNotes(
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
                     },
-                    onSave = { title, theme ->
+                    onSave = { title, theme, labelId ->
                         if (title.isNotBlank()) {
                             val color = themeColorMap[theme]
                             if (editingNoteId != null) {
                                 val updatedNote =
                                     notesViewModel.noteItems.filterIsInstance<NotesItems>()
                                         .find { it.id == editingNoteId }?.copy(
-                                            title = title, color = color?.toLong()
+                                            title = title,   color = color?.toLong(),
+                                            labels = labelId?.let { listOf(it) } ?: emptyList()
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1424,7 +1435,8 @@ fun CompactNotes(
                                     title = title,
                                     description = null, // No text description for a sketch
                                     noteType = NoteType.SKETCH,
-                                    color = color?.toLong()
+                                    color = color?.toLong(),
+                                    labels = labelId?.let { listOf(it) } ?: emptyList()
                                 )
                             }
                         }
@@ -1451,9 +1463,14 @@ fun CompactNotes(
                         currentSketchSize = size
                         showSketchSizePopup = false
                     },
-                    snackbarHostState = snackbarHostState // Pass the snackbarHostState here
+                    snackbarHostState = snackbarHostState, // Pass the snackbarHostState here
+                    allLabels = allLabels,
+                    initialSelectedLabelId = selectedLabelId,
+                    onLabelSelected = { selectedLabelId = it },
+                    onAddNewLabel = { notesViewModel.addLabel(it) }
                 )
             }
+
 
             AnimatedVisibility(
                 visible = showAudioNoteCard,
@@ -1476,7 +1493,7 @@ fun CompactNotes(
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onSave = { title, uniqueAudioId, theme ->
+                    onSave = { title, uniqueAudioId, theme, labelId ->
                         if (title.isNotBlank() || uniqueAudioId.isNotBlank()) {
                             val color = themeColorMap[theme]
                             if (editingNoteId != null) {
@@ -1485,7 +1502,8 @@ fun CompactNotes(
                                         .find { it.id == editingNoteId }?.copy(
                                             title = title,
                                             description = uniqueAudioId,
-                                            color = color?.toLong()
+                                            color = color?.toLong(),
+                                            labels = labelId?.let { listOf(it) } ?: emptyList()
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1495,7 +1513,8 @@ fun CompactNotes(
                                     title = title,
                                     description = uniqueAudioId.takeIf { it.isNotBlank() },
                                     noteType = NoteType.AUDIO,
-                                    color = color?.toLong()
+                                    color = color?.toLong(),
+                                    labels = labelId?.let { listOf(it) } ?: emptyList()
                                 )
                             }
                         }
@@ -1511,7 +1530,12 @@ fun CompactNotes(
                     initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() },
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
-                    })
+                    },
+                    allLabels = allLabels,
+                    initialSelectedLabelId = selectedLabelId,
+                    onLabelSelected = { selectedLabelId = it },
+                    onAddNewLabel = { notesViewModel.addLabel(it) }
+                )
 
             }
 
@@ -1537,7 +1561,7 @@ fun CompactNotes(
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onSave = { title, items, theme ->
+                    onSave = { title, items, theme, labelId ->
                         val description = items.joinToString("") {
                             "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
                         }
@@ -1549,7 +1573,8 @@ fun CompactNotes(
                                         .find { it.id == editingNoteId }?.copy(
                                             title = title,
                                             description = description.takeIf { it.isNotBlank() },
-                                            color = color?.toLong()
+                                            color = color?.toLong(),
+                                            labels = labelId?.let { listOf(it) } ?: emptyList()
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1559,7 +1584,8 @@ fun CompactNotes(
                                     title = title,
                                     description = description.takeIf { it.isNotBlank() },
                                     noteType = NoteType.LIST,
-                                    color = color?.toLong()
+                                    color = color?.toLong(),
+                                    labels = labelId?.let { listOf(it) } ?: emptyList()
                                 )
                             }
                         }
@@ -1600,7 +1626,12 @@ fun CompactNotes(
                     onAddItemTriggerConsumed = { saveTrigger = false },
                     onThemeChange = { newThemeName -> // Pass the lambda here
                         editingNoteColor = themeColorMap[newThemeName]
-                    })
+                    },
+                    allLabels = allLabels,
+                    initialSelectedLabelId = selectedLabelId,
+                    onLabelSelected = { selectedLabelId = it },
+                    onAddNewLabel = { notesViewModel.addLabel(it) }
+                )
             }
         }
     }

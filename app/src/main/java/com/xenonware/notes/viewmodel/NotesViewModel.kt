@@ -372,7 +372,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         title: String,
         description: String? = null,
         noteType: NoteType = NoteType.TEXT,
-        color: Long? = null
+        color: Long? = null,
+        labels: List<String> = emptyList()
     ) {
         if (title.isNotBlank()) {
             val newItem = NotesItems(
@@ -383,7 +384,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 creationTimestamp = System.currentTimeMillis(),
                 displayOrder = determineNextDisplayOrder(),
                 noteType = noteType,
-                color = color
+                color = color,
+                labels = labels
             )
             _allNotesItems.add(newItem)
             saveAllNotes()

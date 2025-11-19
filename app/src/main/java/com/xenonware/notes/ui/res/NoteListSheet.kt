@@ -1,5 +1,3 @@
-@file:Suppress("unused")
-
 package com.xenonware.notes.ui.res
 
 import androidx.compose.animation.animateColorAsState
@@ -66,6 +64,7 @@ import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.viewmodel.classes.Label
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -88,7 +87,7 @@ fun NoteListSheet(
     onListTitleChange: (String) -> Unit,
     initialListItems: List<ListItem> = emptyList(),
     onDismiss: () -> Unit,
-    onSave: (String, List<ListItem>, String) -> Unit,
+    onSave: (String, List<ListItem>, String, String?) -> Unit,
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
@@ -103,6 +102,10 @@ fun NoteListSheet(
     editorFontSize: TextUnit,
     initialTheme: String = "Default",
     onThemeChange: (String) -> Unit,
+    allLabels: List<Label>,
+    initialSelectedLabelId: String?,
+    onLabelSelected: (String?) -> Unit,
+    onAddNewLabel: (String) -> Unit,
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
@@ -120,7 +123,10 @@ fun NoteListSheet(
     var showMenu by remember { mutableStateOf(false) }
     var currentListItems by remember { mutableStateOf(initialListItems) }
     var isOffline by remember { mutableStateOf(false) }
-    var isLabeled by remember { mutableStateOf(false) }
+
+    var showLabelDialog by remember { mutableStateOf(false) }
+    var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
+    val isLabeled = selectedLabelId != null
 
     val listTitleFocusRequester = remember { FocusRequester() }
 
@@ -142,7 +148,7 @@ fun NoteListSheet(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(listTitle, currentListItems, selectedTheme)
+            onSave(listTitle, currentListItems, selectedTheme, selectedLabelId)
             onSaveTriggerConsumed()
         }
     }
@@ -188,6 +194,19 @@ fun NoteListSheet(
                     color = originalStatusBarColor
                 )
             }
+        }
+
+        if (showLabelDialog) {
+            LabelSelectionDialog(
+                allLabels = allLabels,
+                selectedLabelId = selectedLabelId,
+                onLabelSelected = {
+                    selectedLabelId = it
+                    onLabelSelected(it)
+                },
+                onAddNewLabel = onAddNewLabel,
+                onDismiss = { showLabelDialog = false }
+            )
         }
 
         val hazeThinColor = colorScheme.surfaceDim
@@ -351,8 +370,11 @@ fun NoteListSheet(
                         items = listOf(
                             MenuItem(
                                 text = "Label",
-                                onClick = { isLabeled = !isLabeled },
-                                dismissOnClick = false,
+                                onClick = {
+                                    showLabelDialog = true
+                                    showMenu = false
+                                },
+                                dismissOnClick = true,
                                 icon = {
                                     if (isLabeled) {
                                         Icon(

@@ -67,6 +67,7 @@ import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.viewmodel.classes.Label
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -83,7 +84,7 @@ fun NoteTextSheet(
     onTitleChange: (String) -> Unit,
     initialContent: String = "",
     onDismiss: () -> Unit,
-    onSave: (String, String, String) -> Unit, // Changed type for onSave
+    onSave: (String, String, String, String?) -> Unit,
     isBold: Boolean,
     isItalic: Boolean,
     isUnderlined: Boolean,
@@ -91,13 +92,17 @@ fun NoteTextSheet(
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
-    initialTheme: String = "Default", // New parameter
-    onThemeChange: (String) -> Unit // New callback for theme changes
+    initialTheme: String = "Default",
+    onThemeChange: (String) -> Unit,
+    allLabels: List<Label>,
+    initialSelectedLabelId: String?,
+    onLabelSelected: (String?) -> Unit,
+    onAddNewLabel: (String) -> Unit,
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
 
-    var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) } // New state
+    var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) }
     var colorMenuItemText by remember { mutableStateOf("Color") }
     val scope = rememberCoroutineScope()
     var isFadingOut by remember { mutableStateOf(false) }
@@ -110,7 +115,10 @@ fun NoteTextSheet(
     var content by remember { mutableStateOf(TextFieldValue(initialContent)) }
     var showMenu by remember { mutableStateOf(false) }
     var isOffline by remember { mutableStateOf(false) }
-    var isLabeled by remember { mutableStateOf(false) }
+
+    var showLabelDialog by remember { mutableStateOf(false) }
+    var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
+    val isLabeled = selectedLabelId != null
 
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -124,7 +132,7 @@ fun NoteTextSheet(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(title, content.text, selectedTheme)
+            onSave(title, content.text, selectedTheme, selectedLabelId)
             onSaveTriggerConsumed()
         }
     }
@@ -160,6 +168,19 @@ fun NoteTextSheet(
                     color = originalStatusBarColor
                 )
             }
+        }
+
+        if (showLabelDialog) {
+            LabelSelectionDialog(
+                allLabels = allLabels,
+                selectedLabelId = selectedLabelId,
+                onLabelSelected = {
+                    selectedLabelId = it
+                    onLabelSelected(it)
+                },
+                onAddNewLabel = onAddNewLabel,
+                onDismiss = { showLabelDialog = false }
+            )
         }
 
         val hazeThinColor = colorScheme.surfaceDim
@@ -295,8 +316,11 @@ fun NoteTextSheet(
                         items = listOf(
                             MenuItem(
                                 text = "Label",
-                                onClick = { isLabeled = !isLabeled },
-                                dismissOnClick = false,
+                                onClick = {
+                                    showLabelDialog = true
+                                    showMenu = false
+                                },
+                                dismissOnClick = true,
                                 icon = {
                                     if (isLabeled) {
                                         Icon(

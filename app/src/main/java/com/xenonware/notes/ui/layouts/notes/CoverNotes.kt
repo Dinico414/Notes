@@ -355,7 +355,11 @@ fun CoverNotes(
 
     val lazyListState = rememberLazyListState()
 
-    val isAnyNoteSheetOpen = remember { mutableStateOf(false) }
+    val isAnyNoteSheetOpen =
+        showTextNoteCard || showSketchNoteCard || showAudioNoteCard || showListNoteCard
+
+    val allLabels by notesViewModel.labels.collectAsState()
+    var selectedLabelId by rememberSaveable { mutableStateOf<String?>(null) }
 
     ModalNavigationDrawer(
         drawerContent = {
@@ -367,7 +371,7 @@ fun CoverNotes(
                     scope.launch { drawerState.close() }
                 },
             )
-        }, drawerState = drawerState, gesturesEnabled = !isAnyNoteSheetOpen.value
+        }, drawerState = drawerState, gesturesEnabled = !isAnyNoteSheetOpen
     ) {
         Scaffold(
             snackbarHost = {
@@ -1017,10 +1021,12 @@ fun CoverNotes(
                     initialContent = descriptionState,
                     onDismiss = {
                         showTextNoteCard = false
+                        isSearchActive = false // Disable search on dismiss
+                        notesViewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onSave = { title, description, theme ->
+                    onSave = { title, description, theme, labelId ->
                         if (title.isNotBlank() || description.isNotBlank()) {
                             val color = themeColorMap[theme]
                             if (editingNoteId != null) {
@@ -1029,7 +1035,8 @@ fun CoverNotes(
                                         .find { it.id == editingNoteId }?.copy(
                                             title = title,
                                             description = description.takeIf { it.isNotBlank() },
-                                            color = color?.toLong()
+                                            color = color?.toLong(),
+                                            labels = labelId?.let { listOf(it) } ?: emptyList()
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1039,11 +1046,14 @@ fun CoverNotes(
                                     title = title,
                                     description = description.takeIf { it.isNotBlank() },
                                     noteType = NoteType.TEXT,
-                                    color = color?.toLong()
+                                    color = color?.toLong(),
+                                    labels = labelId?.let { listOf(it) } ?: emptyList()
                                 )
                             }
                         }
                         showTextNoteCard = false
+                        isSearchActive = false
+                        notesViewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     saveTrigger = saveTrigger,
@@ -1055,7 +1065,12 @@ fun CoverNotes(
                     toolbarHeight = 72.dp,
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
-                    })
+                    },
+                    allLabels = allLabels,
+                    initialSelectedLabelId = selectedLabelId,
+                    onLabelSelected = { selectedLabelId = it },
+                    onAddNewLabel = { notesViewModel.addLabel(it) }
+                )
             }
 
 
@@ -1073,20 +1088,23 @@ fun CoverNotes(
                     onSketchTitleChange = { titleState = it },
                     onDismiss = {
                         showSketchNoteCard = false
+                        isSearchActive = false // Disable search on dismiss
+                        notesViewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
                     },
-                    onSave = { title, theme ->
+                    onSave = { title, theme, labelId ->
                         if (title.isNotBlank()) {
                             val color = themeColorMap[theme]
                             if (editingNoteId != null) {
                                 val updatedNote =
                                     notesViewModel.noteItems.filterIsInstance<NotesItems>()
                                         .find { it.id == editingNoteId }?.copy(
-                                            title = title, color = color?.toLong()
+                                            title = title,   color = color?.toLong(),
+                                            labels = labelId?.let { listOf(it) } ?: emptyList()
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1096,11 +1114,14 @@ fun CoverNotes(
                                     title = title,
                                     description = null, // No text description for a sketch
                                     noteType = NoteType.SKETCH,
-                                    color = color?.toLong()
+                                    color = color?.toLong(),
+                                    labels = labelId?.let { listOf(it) } ?: emptyList()
                                 )
                             }
                         }
                         showSketchNoteCard = false
+                        isSearchActive = false // Disable search on save
+                        notesViewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
                     },
                     saveTrigger = saveTrigger,
@@ -1110,8 +1131,8 @@ fun CoverNotes(
                     strokeWidth = currentSketchSize,
                     strokeColor = currentSketchColor,
                     showColorPicker = showColorPicker,
-                    onColorPickerDismiss = { showColorPicker = false },
-                    onColorSelected = { color ->
+                    onColorPickerDismiss = { showColorPicker = false }, // Callback to dismiss
+                    onColorSelected = { color -> // Callback for selected color
                         currentSketchColor = color
                         showColorPicker = false
                     },
@@ -1121,7 +1142,11 @@ fun CoverNotes(
                         currentSketchSize = size
                         showSketchSizePopup = false
                     },
-                    snackbarHostState = snackbarHostState
+                    snackbarHostState = snackbarHostState, // Pass the snackbarHostState here
+                    allLabels = allLabels,
+                    initialSelectedLabelId = selectedLabelId,
+                    onLabelSelected = { selectedLabelId = it },
+                    onAddNewLabel = { notesViewModel.addLabel(it) }
                 )
             }
 
@@ -1139,10 +1164,12 @@ fun CoverNotes(
                     onAudioTitleChange = { titleState = it },
                     onDismiss = {
                         showAudioNoteCard = false
+                        isSearchActive = false // Disable search on dismiss
+                        notesViewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onSave = { title, uniqueAudioId, theme ->
+                    onSave = { title, uniqueAudioId, theme, labelId ->
                         if (title.isNotBlank() || uniqueAudioId.isNotBlank()) {
                             val color = themeColorMap[theme]
                             if (editingNoteId != null) {
@@ -1151,7 +1178,8 @@ fun CoverNotes(
                                         .find { it.id == editingNoteId }?.copy(
                                             title = title,
                                             description = uniqueAudioId,
-                                            color = color?.toLong()
+                                            color = color?.toLong(),
+                                            labels = labelId?.let { listOf(it) } ?: emptyList()
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1161,11 +1189,14 @@ fun CoverNotes(
                                     title = title,
                                     description = uniqueAudioId.takeIf { it.isNotBlank() },
                                     noteType = NoteType.AUDIO,
-                                    color = color?.toLong()
+                                    color = color?.toLong(),
+                                    labels = labelId?.let { listOf(it) } ?: emptyList()
                                 )
                             }
                         }
                         showAudioNoteCard = false
+                        isSearchActive = false // Disable search on save
+                        notesViewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
                     },
                     toolbarHeight = 72.dp,
@@ -1175,8 +1206,12 @@ fun CoverNotes(
                     initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() },
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
-                    })
-
+                    },
+                    allLabels = allLabels,
+                    initialSelectedLabelId = selectedLabelId,
+                    onLabelSelected = { selectedLabelId = it },
+                    onAddNewLabel = { notesViewModel.addLabel(it) }
+                )
             }
 
             AnimatedVisibility(
@@ -1194,10 +1229,12 @@ fun CoverNotes(
                     initialListItems = listItemsState,
                     onDismiss = {
                         showListNoteCard = false
+                        isSearchActive = false // Disable search on dismiss
+                        notesViewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onSave = { title, items, theme ->
+                    onSave = { title, items, theme, labelId ->
                         val description = items.joinToString("") {
                             "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
                         }
@@ -1209,7 +1246,8 @@ fun CoverNotes(
                                         .find { it.id == editingNoteId }?.copy(
                                             title = title,
                                             description = description.takeIf { it.isNotBlank() },
-                                            color = color?.toLong()
+                                            color = color?.toLong(),
+                                            labels = labelId?.let { listOf(it) } ?: emptyList()
                                         )
                                 if (updatedNote != null) {
                                     notesViewModel.updateItem(updatedNote)
@@ -1219,11 +1257,14 @@ fun CoverNotes(
                                     title = title,
                                     description = description.takeIf { it.isNotBlank() },
                                     noteType = NoteType.LIST,
-                                    color = color?.toLong()
+                                    color = color?.toLong(),
+                                    labels = labelId?.let { listOf(it) } ?: emptyList()
                                 )
                             }
                         }
                         showListNoteCard = false
+                        isSearchActive = false // Disable search on save
+                        notesViewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
                     },
                     toolbarHeight = 72.dp,
@@ -1258,7 +1299,12 @@ fun CoverNotes(
                     onAddItemTriggerConsumed = { saveTrigger = false },
                     onThemeChange = { newThemeName -> // Pass the lambda here
                         editingNoteColor = themeColorMap[newThemeName]
-                    })
+                    },
+                    allLabels = allLabels,
+                    initialSelectedLabelId = selectedLabelId,
+                    onLabelSelected = { selectedLabelId = it },
+                    onAddNewLabel = { notesViewModel.addLabel(it) }
+                )
             }
         }
     }

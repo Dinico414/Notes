@@ -98,6 +98,7 @@ import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.viewmodel.CanvasViewModel
 import com.xenonware.notes.viewmodel.DrawingAction
+import com.xenonware.notes.viewmodel.classes.Label
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -117,7 +118,7 @@ fun NoteSketchSheet(
     onDismiss: () -> Unit,
     initialTheme: String = "Default",
     onThemeChange: (String) -> Unit,
-    onSave: (String, String) -> Unit,
+    onSave: (String, String, String?) -> Unit,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
     isEraserMode: Boolean,
@@ -131,6 +132,10 @@ fun NoteSketchSheet(
     onPenSizePickerDismiss: () -> Unit,
     onPenSizeSelected: (Float) -> Unit,
     snackbarHostState: SnackbarHostState,
+    allLabels: List<Label>,
+    initialSelectedLabelId: String?,
+    onLabelSelected: (String?) -> Unit,
+    onAddNewLabel: (String) -> Unit,
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
@@ -149,7 +154,11 @@ fun NoteSketchSheet(
 
     var showMenu by remember { mutableStateOf(false) }
     var isOffline by remember { mutableStateOf(false) }
-    var isLabeled by remember { mutableStateOf(false) }
+
+    var showLabelDialog by remember { mutableStateOf(false) }
+    var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
+    val isLabeled = selectedLabelId != null
+
     var debugTextEnabled by rememberSaveable { mutableStateOf(false) } // Added debugTextEnabled state
     var isDeveloperOptionsEnabled by remember { mutableStateOf(false) } // Added isDeveloperOptionsEnabled state
     var lastBackPressTime by rememberSaveable { mutableLongStateOf(0L) }
@@ -186,7 +195,7 @@ fun NoteSketchSheet(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(sketchTitle, selectedTheme)
+            onSave(sketchTitle, selectedTheme, selectedLabelId)
             onSaveTriggerConsumed()
         }
     }
@@ -226,6 +235,19 @@ fun NoteSketchSheet(
                     color = originalStatusBarColor
                 )
             }
+        }
+
+        if (showLabelDialog) {
+            LabelSelectionDialog(
+                allLabels = allLabels,
+                selectedLabelId = selectedLabelId,
+                onLabelSelected = {
+                    selectedLabelId = it
+                    onLabelSelected(it)
+                },
+                onAddNewLabel = onAddNewLabel,
+                onDismiss = { showLabelDialog = false }
+            )
         }
 
         val hazeThinColor = colorScheme.surfaceDim
@@ -367,8 +389,11 @@ fun NoteSketchSheet(
                         items = listOfNotNull(
                             MenuItem(
                                 text = "Label",
-                                onClick = { isLabeled = !isLabeled },
-                                dismissOnClick = false,
+                                onClick = {
+                                    showLabelDialog = true
+                                    showMenu = false
+                                },
+                                dismissOnClick = true,
                                 icon = {
                                     if (isLabeled) {
                                         Icon(
