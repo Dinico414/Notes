@@ -752,7 +752,8 @@ fun NoteAudioSheet(
                                             contentDescription = "Label"
                                         )
                                     }
-                                }), MenuItem(text = colorMenuItemText, onClick = {
+                                }),
+                            MenuItem(text = colorMenuItemText, onClick = {
                                 val currentIndex = availableThemes.indexOf(selectedTheme)
                                 val nextIndex = (currentIndex + 1) % availableThemes.size
                                 selectedTheme = availableThemes[nextIndex]
@@ -773,8 +774,10 @@ fun NoteAudioSheet(
                                     contentDescription = "Color",
                                     tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
                                 )
-                            }, textColor = animatedTextColor), MenuItem(
-                                text = if (isOffline) "Online note" else "Offline note",
+                            }, textColor = animatedTextColor
+                            ),
+                            MenuItem(
+                                text = if (isOffline) "Offline note" else "Online note",
                                 onClick = { isOffline = !isOffline },
                                 dismissOnClick = false,
                                 textColor = if (isOffline) colorScheme.error else null,

@@ -305,7 +305,10 @@ fun NoteTextSheet(
                                             tint = labelColor
                                         )
                                     } else {
-                                        Icon(Icons.Default.BookmarkBorder, contentDescription = "Label")
+                                        Icon(
+                                            Icons.Default.BookmarkBorder,
+                                            contentDescription = "Label"
+                                        )
                                     }
                                 }),
                             MenuItem(text = colorMenuItemText, onClick = {
@@ -327,10 +330,12 @@ fun NoteTextSheet(
                                 Icon(
                                     Icons.Default.ColorLens,
                                     contentDescription = "Color",
-                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary)
-                            }, textColor = animatedTextColor),
+                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                )
+                            }, textColor = animatedTextColor
+                            ),
                             MenuItem(
-                                text = if (isOffline) "Online note" else "Offline note",
+                                text = if (isOffline) "Offline note" else "Online note",
                                 onClick = { isOffline = !isOffline },
                                 dismissOnClick = false,
                                 textColor = if (isOffline) colorScheme.error else null,
@@ -342,7 +347,9 @@ fun NoteTextSheet(
                                             tint = colorScheme.error
                                         )
                                     } else {
-                                        Icon(Icons.Default.Cloud, contentDescription = "Online note")
+                                        Icon(
+                                            Icons.Default.Cloud, contentDescription = "Online note"
+                                        )
                                     }
                                 })
                         ),

@@ -350,61 +350,64 @@ fun NoteListSheet(
                         onDismissRequest = { showMenu = false },
                         items = listOf(
                             MenuItem(
-                            text = "Label",
-                            onClick = { isLabeled = !isLabeled },
-                            dismissOnClick = false,
-                            icon = {
-                                if (isLabeled) {
-                                    Icon(
-                                        Icons.Default.Bookmark,
-                                        contentDescription = "Label",
-                                        tint = labelColor
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.BookmarkBorder,
-                                        contentDescription = "Label"
-                                    )
+                                text = "Label",
+                                onClick = { isLabeled = !isLabeled },
+                                dismissOnClick = false,
+                                icon = {
+                                    if (isLabeled) {
+                                        Icon(
+                                            Icons.Default.Bookmark,
+                                            contentDescription = "Label",
+                                            tint = labelColor
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.BookmarkBorder,
+                                            contentDescription = "Label"
+                                        )
+                                    }
+                                }),
+                            MenuItem(text = colorMenuItemText, onClick = {
+                                val currentIndex = availableThemes.indexOf(selectedTheme)
+                                val nextIndex = (currentIndex + 1) % availableThemes.size
+                                selectedTheme = availableThemes[nextIndex]
+                                onThemeChange(selectedTheme) // Call the callback here
+                                colorChangeJob?.cancel()
+                                colorChangeJob = scope.launch {
+                                    colorMenuItemText = availableThemes[nextIndex]
+                                    isFadingOut = false
+                                    delay(2500)
+                                    isFadingOut = true
+                                    delay(500)
+                                    colorMenuItemText = "Color"
+                                    isFadingOut = false
                                 }
-                            }), MenuItem(text = colorMenuItemText, onClick = {
-                            val currentIndex = availableThemes.indexOf(selectedTheme)
-                            val nextIndex = (currentIndex + 1) % availableThemes.size
-                            selectedTheme = availableThemes[nextIndex]
-                            onThemeChange(selectedTheme) // Call the callback here
-                            colorChangeJob?.cancel()
-                            colorChangeJob = scope.launch {
-                                colorMenuItemText = availableThemes[nextIndex]
-                                isFadingOut = false
-                                delay(2500)
-                                isFadingOut = true
-                                delay(500)
-                                colorMenuItemText = "Color"
-                                isFadingOut = false
-                            }
-                        }, dismissOnClick = false, icon = {
-                            Icon(
-                                Icons.Default.ColorLens,
-                                contentDescription = "Color",
-                                tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                            )
-                        }, textColor = animatedTextColor), MenuItem(
-                            text = if (isOffline) "Online note" else "Offline note",
-                            onClick = { isOffline = !isOffline },
-                            dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else null,
-                            icon = {
-                                if (isOffline) {
-                                    Icon(
-                                        Icons.Default.CloudOff,
-                                        contentDescription = "Offline note",
-                                        tint = colorScheme.error
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.Cloud, contentDescription = "Online note"
-                                    )
-                                }
-                            })
+                            }, dismissOnClick = false, icon = {
+                                Icon(
+                                    Icons.Default.ColorLens,
+                                    contentDescription = "Color",
+                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                )
+                            }, textColor = animatedTextColor
+                            ),
+                            MenuItem(
+                                text = if (isOffline) "Offline note" else "Online note",
+                                onClick = { isOffline = !isOffline },
+                                dismissOnClick = false,
+                                textColor = if (isOffline) colorScheme.error else null,
+                                icon = {
+                                    if (isOffline) {
+                                        Icon(
+                                            Icons.Default.CloudOff,
+                                            contentDescription = "Offline note",
+                                            tint = colorScheme.error
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.Cloud, contentDescription = "Online note"
+                                        )
+                                    }
+                                })
                         ),
                         hazeState = hazeState
                     )

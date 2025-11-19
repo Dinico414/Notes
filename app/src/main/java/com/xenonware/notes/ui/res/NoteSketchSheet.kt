@@ -348,7 +348,7 @@ fun NoteSketchSheet(
                                 Text(
                                     text = "Title",
                                     style = titleTextStyle,
-                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    color = colorScheme.onSurface.copy(alpha = 0.6f),
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                             }
@@ -383,19 +383,20 @@ fun NoteSketchSheet(
                                         )
                                     }
                                 }),
-                            MenuItem(
-                                text = colorMenuItemText, onClick = {
+                            MenuItem(text = colorMenuItemText, onClick = {
                                 val currentIndex = availableThemes.indexOf(selectedTheme)
                                 val nextIndex = (currentIndex + 1) % availableThemes.size
                                 selectedTheme = availableThemes[nextIndex]
-                                onThemeChange(selectedTheme)
+                                onThemeChange(selectedTheme) // Call the callback here
                                 colorChangeJob?.cancel()
                                 colorChangeJob = scope.launch {
                                     colorMenuItemText = availableThemes[nextIndex]
-                                    delay(2500) // Keep current theme color for 2.5 seconds
-                                    // Fade out animation for 0.5 seconds
+                                    isFadingOut = false
+                                    delay(2500)
+                                    isFadingOut = true
                                     delay(500)
                                     colorMenuItemText = "Color"
+                                    isFadingOut = false
                                 }
                             }, dismissOnClick = false, icon = {
                                 Icon(
@@ -406,7 +407,7 @@ fun NoteSketchSheet(
                             }, textColor = animatedTextColor
                             ),
                             MenuItem(
-                                text = if (isOffline) "Online note" else "Offline note",
+                                text = if (isOffline) "Offline note" else "Online note",
                                 onClick = { isOffline = !isOffline },
                                 dismissOnClick = false,
                                 textColor = if (isOffline) colorScheme.error else null,
@@ -629,7 +630,7 @@ fun VerticalFloatingToolbar(
                     onClick = { onToggleHandwritingMode(true) },
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = if (isHandwritingMode) colorScheme.tertiary else Color.Transparent,
-                        contentColor = if (isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurfaceVariant,
+                        contentColor = if (isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurface,
                     )
                 ) {
                     Icon(
@@ -641,7 +642,6 @@ fun VerticalFloatingToolbar(
                     onClick = { onToggleHandwritingMode(false) },
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = if (!isHandwritingMode) colorScheme.tertiary else Color.Transparent,
-                        contentColor = if (!isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurfaceVariant,
                     )
                 ) {
                     Icon(
