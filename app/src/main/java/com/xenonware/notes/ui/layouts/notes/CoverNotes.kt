@@ -1010,8 +1010,8 @@ fun CoverNotes(
 
             AnimatedVisibility(
                 visible = showTextNoteCard,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it })
+                enter = slideInVertically(animationSpec = tween(1000), initialOffsetY = { it }),
+                exit = slideOutVertically(animationSpec = tween(500), targetOffsetY = { it })
             ) {
                 BackHandler {
                     showTextNoteCard = false
@@ -1071,15 +1071,17 @@ fun CoverNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) }
-                )
+                    onAddNewLabel = { notesViewModel.addLabel(it) },
+//                    isVisible = showTextNoteCard,
+
+                    )
             }
 
 
             AnimatedVisibility(
                 visible = showSketchNoteCard,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it })
+                enter = slideInVertically(animationSpec = tween(1000), initialOffsetY = { it }),
+                exit = slideOutVertically(animationSpec = tween(500), targetOffsetY = { it })
             ) {
                 BackHandler {
                     showSketchNoteCard = false
@@ -1154,8 +1156,8 @@ fun CoverNotes(
 
             AnimatedVisibility(
                 visible = showAudioNoteCard,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it })
+                enter = slideInVertically(animationSpec = tween(1000), initialOffsetY = { it }),
+                exit = slideOutVertically(animationSpec = tween(500), targetOffsetY = { it })
             ) {
                 BackHandler {
                     showAudioNoteCard = false
@@ -1218,8 +1220,8 @@ fun CoverNotes(
 
             AnimatedVisibility(
                 visible = showListNoteCard,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it })
+                enter = slideInVertically(animationSpec = tween(1000), initialOffsetY = { it }),
+                exit = slideOutVertically(animationSpec = tween(500), targetOffsetY = { it })
             ) {
                 BackHandler {
                     showListNoteCard = false
