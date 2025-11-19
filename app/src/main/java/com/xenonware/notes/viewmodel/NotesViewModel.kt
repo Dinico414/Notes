@@ -105,6 +105,9 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _labels = MutableStateFlow<List<Label>>(emptyList())
     val labels: StateFlow<List<Label>> = _labels.asStateFlow()
 
+    private val _selectedLabel = MutableStateFlow<String?>(null)
+    val selectedLabel: StateFlow<String?> = _selectedLabel.asStateFlow()
+
 
     init {
         loadAllNotes()
@@ -207,6 +210,11 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         saveLabels()
     }
 
+    fun setLabelFilter(labelId: String?) {
+        _selectedLabel.value = if (_selectedLabel.value == labelId) null else labelId
+        applySortingAndFiltering()
+    }
+
     private fun loadAllNotes() {
         currentSortOption = prefsManager.sortOption
         currentSortOrder = prefsManager.sortOrder
@@ -260,6 +268,13 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     // Only filter by actual colors if 'null' is not selected
                     currentSelectedColors.contains(note.color)
                 }
+            }
+        }
+
+        val currentSelectedLabel = _selectedLabel.value
+        if (currentSelectedLabel != null) {
+            notesToDisplay = notesToDisplay.filter { note ->
+                note.labels.contains(currentSelectedLabel)
             }
         }
 

@@ -18,7 +18,8 @@ data class NotesItems(
     var displayOrder: Int = 0,
     val noteType: NoteType = NoteType.TEXT,
     val color: Long? = null,
-    val themeName: String? = null
+    val themeName: String? = null,
+    val labels: List<String> = emptyList()
 ) {
     var currentHeader = ""
 }

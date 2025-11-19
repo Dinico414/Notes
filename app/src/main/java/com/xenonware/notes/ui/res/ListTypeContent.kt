@@ -13,14 +13,11 @@ import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -31,6 +28,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.ViewComfy
@@ -69,7 +67,6 @@ import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.LargerCornerRadius
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumPadding
-import com.xenon.mylibrary.values.MediumSpacing
 import com.xenon.mylibrary.values.NoPadding
 import com.xenon.mylibrary.values.SmallerCornerRadius
 import com.xenonware.notes.R
@@ -118,6 +115,7 @@ fun ListContent(
     val isDarkTheme = LocalIsDarkTheme.current
 
     val localLabel by notesViewModel.labels.collectAsState()
+    val selectedLabel by notesViewModel.selectedLabel.collectAsState()
     var newLabelName by remember { mutableStateOf("") }
 
     ModalDrawerSheet(
@@ -392,43 +390,19 @@ fun ListContent(
                     )
 
                     if (localLabel.isNotEmpty()) {
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(LargestPadding),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = LargestPadding)
-                                .heightIn(max = 200.dp)
+                        Column(
+                            modifier = Modifier.padding(vertical = LargestPadding)
                         ) {
-                            items(items = localLabel, key = { it.id }) { step ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = MediumPadding / 2),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = step.text,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .padding(start = MediumPadding),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    IconButton(
-                                        onClick = { notesViewModel.removeLabel(step.id) },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Delete,
-                                            contentDescription = stringResource(R.string.remove_step)
-                                        )
-                                    }
-
-                                }
+                            localLabel.forEach { label ->
+                                FilterItem(
+                                    icon = Icons.Default.Label,
+                                    label = label.text,
+                                    isSelected = selectedLabel == label.id,
+                                    onClick = { notesViewModel.setLabelFilter(label.id) },
+                                    onDeleteClick = { notesViewModel.removeLabel(label.id) }
+                                )
                             }
                         }
-                        Spacer(modifier = Modifier.height(MediumSpacing))
                     }
 
                     Row(
@@ -478,6 +452,7 @@ private fun FilterItem(
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit,
+    onDeleteClick: (() -> Unit)? = null,
 ) {
     val backgroundColor = if (isSelected) {
         colorScheme.inversePrimary
@@ -492,7 +467,8 @@ private fun FilterItem(
             .background(backgroundColor)
             .clickable { onClick() }
             .padding(LargestPadding),
-        verticalAlignment = Alignment.CenterVertically) {
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
@@ -503,8 +479,23 @@ private fun FilterItem(
             text = label,
             fontFamily = QuicksandTitleVariable,
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(start = LargestPadding),
-            color = colorScheme.onSurface
+            modifier = Modifier
+                .padding(start = LargestPadding)
+                .weight(1f),
+            color = colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
+        onDeleteClick?.let {
+            IconButton(
+                onClick = it,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = stringResource(R.string.remove_step)
+                )
+            }
+        }
     }
 }
