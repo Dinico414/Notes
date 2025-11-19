@@ -275,6 +275,9 @@ fun CoverNotes(
         currentListSizeIndex = (currentListSizeIndex + 1) % listTextSizes.size
     }
 
+    val allLabels by notesViewModel.labels.collectAsState()
+    var selectedLabelId by rememberSaveable { mutableStateOf<String?>(null) }
+
     fun resetNoteState() {
         editingNoteId = null
         titleState = ""
@@ -284,6 +287,7 @@ fun CoverNotes(
         listItemsState.clear()
         nextListItemId = 0L
         currentListSizeIndex = 1
+        selectedLabelId = null
     }
 
     fun commonOnEditItem(itemToEdit: NotesItems) {
@@ -292,6 +296,7 @@ fun CoverNotes(
         descriptionState = itemToEdit.description ?: ""
         listTitleState = itemToEdit.title
         editingNoteColor = itemToEdit.color?.toULong()
+        selectedLabelId = itemToEdit.labels.firstOrNull()
         listItemsState.clear()
         nextListItemId = 0L
         currentListSizeIndex = 1
@@ -357,9 +362,6 @@ fun CoverNotes(
 
     val isAnyNoteSheetOpen =
         showTextNoteCard || showSketchNoteCard || showAudioNoteCard || showListNoteCard
-
-    val allLabels by notesViewModel.labels.collectAsState()
-    var selectedLabelId by rememberSaveable { mutableStateOf<String?>(null) }
 
     ModalNavigationDrawer(
         drawerContent = {

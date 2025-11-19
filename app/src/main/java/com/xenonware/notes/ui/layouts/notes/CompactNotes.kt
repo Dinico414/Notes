@@ -295,6 +295,8 @@ fun CompactNotes(
     val currentListMaxLines = listLineLimits[listNoteLineLimitIndex]
     val currentGridColumns = gridColumnCountOptions[gridNoteColumnCountIndex]
     val gridMaxLines = 20
+    val allLabels by notesViewModel.labels.collectAsState()
+    var selectedLabelId by rememberSaveable { mutableStateOf<String?>(null) }
 
     fun onResizeClick() {
         if (notesLayoutType == NotesLayoutType.LIST) {
@@ -318,7 +320,7 @@ fun CompactNotes(
         nextListItemId = 0L
         currentListSizeIndex = 1
         selectedAudioViewType = AudioViewType.Waveform
-
+        selectedLabelId = null
     }
 
     val colorThemeMap = remember {
@@ -357,9 +359,6 @@ fun CompactNotes(
 
     val isAnyNoteSheetOpen =
         showTextNoteCard || showSketchNoteCard || showAudioNoteCard || showListNoteCard
-
-    val allLabels by notesViewModel.labels.collectAsState()
-    var selectedLabelId by rememberSaveable { mutableStateOf<String?>(null) }
 
     ModalNavigationDrawer(
         drawerContent = {
@@ -1111,6 +1110,8 @@ fun CompactNotes(
                                                                 listTitleState = itemToEdit.title
                                                                 editingNoteColor =
                                                                     itemToEdit.color?.toULong()
+                                                                selectedLabelId =
+                                                                    itemToEdit.labels.firstOrNull()
                                                                 listItemsState.clear()
                                                                 nextListItemId = 0L
                                                                 currentListSizeIndex = 1
@@ -1235,6 +1236,8 @@ fun CompactNotes(
                                                         listTitleState = itemToEdit.title
                                                         editingNoteColor =
                                                             itemToEdit.color?.toULong()
+                                                        selectedLabelId =
+                                                            itemToEdit.labels.firstOrNull()
                                                         listItemsState.clear()
                                                         nextListItemId = 0L
                                                         currentListSizeIndex = 1
