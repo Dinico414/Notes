@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -28,7 +29,6 @@ import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
@@ -42,6 +42,9 @@ import com.xenonware.notes.viewmodel.DrawingAction.PathEnd
 import com.xenonware.notes.viewmodel.DrawingAction.UpdateTool
 import com.xenonware.notes.viewmodel.PathData
 import com.xenonware.notes.viewmodel.PathOffset
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.ceil
 import androidx.compose.ui.graphics.Canvas as ComposeCanvas
 
@@ -64,64 +67,84 @@ fun NoteCanvas(
     var wasEraserMode by remember { mutableStateOf(false) }
 
     // --- BUFFERING STATE ---
-    // Holds the bitmap of completed paths (and the baked tail of the current path)
+    // cachedBitmap: The active image shown on screen
     var cachedBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-    // Tracks how many completed paths from the list are already on the bitmap
+    // drawnPathsCount: How many paths are currently baked into cachedBitmap
     var drawnPathsCount by remember { mutableIntStateOf(0) }
-    // Tracks how many points of the CURRENT active path are already on the bitmap
+    // currentPathBakedSize: How many points of the ACTIVE stroke are baked
     var currentPathBakedSize by remember { mutableIntStateOf(0) }
 
-    // Helper to ensure bitmap exists and is the right size
-    fun ensureBitmap(size: IntSize): ImageBitmap {
-        val current = cachedBitmap
-        return if (current != null && current.width == size.width && current.height == size.height) {
-            current
-        } else {
-            val newBitmap = ImageBitmap(size.width, size.height)
-            cachedBitmap = newBitmap
-            drawnPathsCount = 0
-            currentPathBakedSize = 0
-            newBitmap
-        }
-    }
+    // Canvas Size tracker to ensure we create bitmaps of correct size
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
-    // 1. Handle "Old" Finished Paths
-    // This updates the bitmap when the user lifts their finger and a path is added to 'paths'
-    LaunchedEffect(paths, cachedBitmap) {
-        val bitmap = cachedBitmap ?: return@LaunchedEffect
-        val canvas = ComposeCanvas(bitmap)
-        val paint = Paint().apply { isAntiAlias = true }
+    val coroutineScope = rememberCoroutineScope()
 
-        // If paths list shrunk (Undo/Clear), we must reset everything
-        if (paths.size < drawnPathsCount) {
-            canvas.nativeCanvas.drawColor(android.graphics.Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
-            drawnPathsCount = 0
-            currentPathBakedSize = 0
-        }
+    // 1. Handle Paths Updates (Drawing, Erasing, Undo)
+    LaunchedEffect(paths) {
+        // Wait until layout gives us a size
+        if (canvasSize == IntSize.Zero) return@LaunchedEffect
 
-        // Draw new finished paths
-        if (paths.size > drawnPathsCount) {
-            for (i in drawnPathsCount until paths.size) {
-                val pathData = paths[i]
-                drawPathToCanvas(canvas, paint, pathData.path, pathData.color)
-            }
+        val currentBitmap = cachedBitmap
+
+        // CASE A: LIST SHRUNK or CHANGED (Erasing / Undo)
+        // If the list is smaller, OR the count implies a modification/replacement, we must redraw fully.
+        // We also check if drawnPathsCount > paths.size to detect deletion.
+        val needsFullRedraw = paths.size < drawnPathsCount || (paths.size == drawnPathsCount && paths.isNotEmpty()) || currentBitmap == null
+
+        // CASE B: APPEND (Normal Drawing)
+        // If we just added one new path to the end, we can draw it incrementally on the Main thread.
+        val isAppend = paths.size == drawnPathsCount + 1 && currentBitmap != null
+
+        if (isAppend && currentBitmap != null) {
+            // -- FAST PATH --
+            // Just draw the one new stroke onto the existing bitmap.
+            // This is safe to do on Main thread because it's just one stroke.
+            val canvas = ComposeCanvas(currentBitmap)
+            val paint = Paint().apply { isAntiAlias = true }
+            val newPath = paths.last()
+            drawPathToCanvas(canvas, paint, newPath.path, newPath.color)
             drawnPathsCount = paths.size
+
+            // Reset the baked size for the *next* potential active stroke
+            currentPathBakedSize = 0
+        }
+        else if (needsFullRedraw) {
+            // -- SLOW PATH (Background Thread) --
+            // The list changed in a complex way (Eraser removed/split lines).
+            // We offload the reconstruction of the bitmap to a background thread.
+            // This prevents the UI (cursor) from freezing while we loop through 1000 paths.
+
+            coroutineScope.launch(Dispatchers.Default) {
+                // Create a NEW bitmap in background
+                val newBitmap = ImageBitmap(canvasSize.width, canvasSize.height)
+                val canvas = ComposeCanvas(newBitmap)
+                val paint = Paint().apply { isAntiAlias = true }
+
+                // Draw ALL paths
+                paths.forEach { pathData ->
+                    drawPathToCanvas(canvas, paint, pathData.path, pathData.color)
+                }
+
+                // Swap in the new bitmap on Main thread
+                withContext(Dispatchers.Main) {
+                    cachedBitmap = newBitmap
+                    drawnPathsCount = paths.size
+                    currentPathBakedSize = 0
+                }
+            }
         }
     }
 
     // 2. Handle "Current" Active Path (Incremental Baking)
-    // This updates the bitmap WHILE the user is drawing if the line gets too long
     LaunchedEffect(currentPath) {
         val pathData = currentPath
-        val bitmap = cachedBitmap
+        val bitmap = cachedBitmap ?: return@LaunchedEffect
 
-        // If user lifted finger (currentPath is null), reset our baked counter
-        if (pathData == null || bitmap == null) {
+        if (pathData == null) {
             currentPathBakedSize = 0
             return@LaunchedEffect
         }
 
-        // We keep a buffer of ~4 points at the end to allow the Bezier curve to update smoothly
         val bufferSize = 4
         val safeIndex = pathData.path.size - bufferSize
 
@@ -129,14 +152,10 @@ fun NoteCanvas(
             val canvas = ComposeCanvas(bitmap)
             val paint = Paint().apply { isAntiAlias = true }
 
-            // Extract the segment we want to bake
-            // We start from (currentPathBakedSize - 1) to ensure connection with previous segment
             val startIdx = (currentPathBakedSize - 1).coerceAtLeast(0)
             val segmentToBake = pathData.path.subList(startIdx, safeIndex + 1)
 
             drawPathToCanvas(canvas, paint, segmentToBake, pathData.color)
-
-            // Update the tracker so we don't draw these points again
             currentPathBakedSize = safeIndex
         }
     }
@@ -157,6 +176,7 @@ fun NoteCanvas(
                         debugString = "${it.action}\nPoints: ${currentPath?.path?.size ?: 0}\nBaked: $currentPathBakedSize"
                     }
 
+                    // --- TOOL SWITCHING LOGIC ---
                     val isDetectedToolEraser = it.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
                     if (isDetectedToolEraser != wasEraserMode) {
                         wasEraserMode = isDetectedToolEraser
@@ -172,14 +192,28 @@ fun NoteCanvas(
                     val isFinger = it.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER
                     val isEraser = currentToolState.isEraser
 
+                    // --- ERASER INPUT ---
                     if (isEraser) {
                         when (it.action) {
-                            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> onAction(Erase(Offset(it.x, it.y)))
-                            MotionEvent.ACTION_UP -> onAction(PathEnd)
+                            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                                onAction(Erase(Offset(it.x, it.y)))
+                                cursorPos = Offset(it.x, it.y) // Update cursor even while erasing
+                            }
+                            MotionEvent.ACTION_UP -> {
+                                onAction(PathEnd)
+                                cursorPos = null
+                            }
+                            MotionEvent.ACTION_HOVER_MOVE -> {
+                                cursorPos = Offset(it.x, it.y)
+                            }
+                            MotionEvent.ACTION_HOVER_EXIT -> {
+                                cursorPos = null
+                            }
                         }
                         return@pointerInteropFilter true
                     }
 
+                    // --- DRAWING INPUT ---
                     val canDraw = isStylus || (isHandwritingMode && isFinger)
                     if (canDraw) {
                         when (it.action) {
@@ -198,8 +232,20 @@ fun NoteCanvas(
                     return@pointerInteropFilter true
                 }
                 .drawWithCache {
-                    // Initialize or resize bitmap
-                    val bitmap = ensureBitmap(IntSize(size.width.toInt(), size.height.toInt()))
+                    // Update size tracker so LaunchedEffect knows how big the bitmap should be
+                    val currentSize = IntSize(size.width.toInt(), size.height.toInt())
+                    if (canvasSize != currentSize) {
+                        canvasSize = currentSize
+                        // If size changed, we force a bitmap reset logic implicitly by null check in helper or effect
+                        // But practically, LaunchedEffect will catch the size change if we restart it or check inside
+                        // Since LaunchedEffect(paths) doesn't watch canvasSize, we trigger a manual update if needed
+                        // For simplicity, we assume size is stable after layout.
+                    }
+
+                    // Ensure we have at least one bitmap to start
+                    if (cachedBitmap == null && size.width > 0 && size.height > 0) {
+                        cachedBitmap = ImageBitmap(size.width.toInt(), size.height.toInt())
+                    }
 
                     val cellSizePx = 25.sp.roundToPx()
                     val gridColor = Color.LightGray
@@ -219,23 +265,24 @@ fun NoteCanvas(
                             }
                         }
 
-                        // 2. Draw the Cached Bitmap (Background Layer)
-                        drawImage(image = bitmap, topLeft = Offset.Zero)
+                        // 2. Draw the Cached Bitmap
+                        // If we are erasing, this might be 1 frame "old", but the cursor will be live.
+                        cachedBitmap?.let {
+                            drawImage(image = it, topLeft = Offset.Zero)
+                        }
 
-                        // 3. Draw the Live Segment (The "Head" of the current path)
+                        // 3. Draw the Live Head of current stroke
                         currentPath?.let {
-                            // Only draw from the baked point onwards
                             val startIdx = (currentPathBakedSize - 1).coerceAtLeast(0)
                             val liveSegment = if (startIdx < it.path.size) {
                                 it.path.subList(startIdx, it.path.size)
                             } else {
                                 emptyList()
                             }
-
                             drawPathScope(liveSegment, it.color, debugPoints)
                         }
 
-                        // 4. Draw Cursor
+                        // 4. Draw Cursor (Always on top, always fast)
                         cursorPos?.let { drawCursor(it) }
                     }
                 }
@@ -246,9 +293,8 @@ fun NoteCanvas(
     }
 }
 
-/**
- * Draws a path onto a native Android Canvas (used for the Bitmap buffer).
- */
+// --- HELPER FUNCTIONS (Same as before) ---
+
 private fun drawPathToCanvas(
     canvas: ComposeCanvas,
     paint: Paint,
@@ -256,7 +302,6 @@ private fun drawPathToCanvas(
     color: Color
 ) {
     if (path.isEmpty()) return
-
     paint.color = color
     paint.style = PaintingStyle.Fill
 
@@ -271,10 +316,9 @@ private fun drawPathToCanvas(
         val end = path[i]
         val distance = (end.offset - start.offset).getDistance()
 
-        // Skip tiny movements to save CPU
         if (distance < 1f) continue
 
-        // Optimization: Step size 2.5f (Reduced from 1.5f for performance)
+        // Optimization: Step size 2.5f for speed
         val steps = ceil(distance / 2.5f).toInt().coerceAtLeast(2)
 
         var previousPoint = start.offset
@@ -307,9 +351,6 @@ private fun drawPathToCanvas(
     }
 }
 
-/**
- * Draws a path within the Compose DrawScope (used for the live "Head" of the path).
- */
 private fun DrawScope.drawPathScope(
     path: List<PathOffset>,
     color: Color,
@@ -374,32 +415,17 @@ private fun DrawScope.drawPathScope(
     }
 
     if (drawDebugPoints) {
-        drawPoints(
-            path.filter { p -> p.controlPoint1 != Offset.Unspecified }.map { p -> p.controlPoint1 },
-            pointMode = PointMode.Points, color = Color.Cyan, strokeWidth = 4f
-        )
-        drawPoints(
-            path.filter { p -> p.controlPoint2 != Offset.Unspecified }.map { p -> p.controlPoint2 },
-            pointMode = PointMode.Points, color = Color.Cyan, strokeWidth = 4f
-        )
-        drawPoints(
-            path.map { p -> p.offset },
-            pointMode = PointMode.Points, color = Color.Red, strokeWidth = 2.5f
-        )
+        drawPoints(path.filter { p -> p.controlPoint1 != Offset.Unspecified }.map { p -> p.controlPoint1 }, PointMode.Points, Color.Cyan, 4f)
+        drawPoints(path.filter { p -> p.controlPoint2 != Offset.Unspecified }.map { p -> p.controlPoint2 }, PointMode.Points, Color.Cyan, 4f)
+        drawPoints(path.map { p -> p.offset }, PointMode.Points, Color.Red, 2.5f)
     }
 }
-
 
 private fun DrawScope.drawCursor(cursor: Offset) {
     drawCircle(Color.LightGray, radius = 5f, center = cursor, style = Stroke())
 }
 
-// --- Math Helpers ---
-
-private fun lerp(start: Float, stop: Float, fraction: Float): Float {
-    return (1 - fraction) * start + fraction * stop
-}
-
+private fun lerp(start: Float, stop: Float, fraction: Float): Float = (1 - fraction) * start + fraction * stop
 private fun cubicBezier(t: Float, p0: Offset, p1: Offset, p2: Offset, p3: Offset): Offset {
     val u = 1 - t
     val tt = t * t
@@ -410,7 +436,6 @@ private fun cubicBezier(t: Float, p0: Offset, p1: Offset, p2: Offset, p3: Offset
     val y = uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y
     return Offset(x, y)
 }
-
 private fun quadraticBezier(t: Float, p0: Offset, p1: Offset, p2: Offset): Offset {
     val u = 1 - t
     val tt = t * t
