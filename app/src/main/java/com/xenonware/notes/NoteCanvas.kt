@@ -1,6 +1,7 @@
 package com.xenonware.notes
 
 import android.os.Build
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
@@ -30,9 +31,11 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
+import com.xenonware.notes.util.ShapeRecognizer
 import com.xenonware.notes.viewmodel.CurrentPathState
 import com.xenonware.notes.viewmodel.DrawingAction
 import com.xenonware.notes.viewmodel.DrawingAction.Draw
@@ -43,6 +46,8 @@ import com.xenonware.notes.viewmodel.DrawingAction.UpdateTool
 import com.xenonware.notes.viewmodel.PathData
 import com.xenonware.notes.viewmodel.PathOffset
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.ceil
@@ -67,65 +72,42 @@ fun NoteCanvas(
     var wasEraserMode by remember { mutableStateOf(false) }
 
     // --- BUFFERING STATE ---
-    // cachedBitmap: The active image shown on screen
     var cachedBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-    // drawnPathsCount: How many paths are currently baked into cachedBitmap
     var drawnPathsCount by remember { mutableIntStateOf(0) }
-    // currentPathBakedSize: How many points of the ACTIVE stroke are baked
     var currentPathBakedSize by remember { mutableIntStateOf(0) }
-
-    // Canvas Size tracker to ensure we create bitmaps of correct size
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
     val coroutineScope = rememberCoroutineScope()
+    val view = LocalView.current // Need this for Haptics
+
+    // --- SHAPE SNAP STATE ---
+    var holdJob by remember { mutableStateOf<Job?>(null) }
+    var lastTouchPosition by remember { mutableStateOf(Offset.Zero) }
 
     // 1. Handle Paths Updates (Drawing, Erasing, Undo)
     LaunchedEffect(paths) {
-        // Wait until layout gives us a size
         if (canvasSize == IntSize.Zero) return@LaunchedEffect
 
         val currentBitmap = cachedBitmap
-
-        // CASE A: LIST SHRUNK or CHANGED (Erasing / Undo)
-        // If the list is smaller, OR the count implies a modification/replacement, we must redraw fully.
-        // We also check if drawnPathsCount > paths.size to detect deletion.
         val needsFullRedraw = paths.size < drawnPathsCount || (paths.size == drawnPathsCount && paths.isNotEmpty()) || currentBitmap == null
-
-        // CASE B: APPEND (Normal Drawing)
-        // If we just added one new path to the end, we can draw it incrementally on the Main thread.
         val isAppend = paths.size == drawnPathsCount + 1 && currentBitmap != null
 
         if (isAppend && currentBitmap != null) {
-            // -- FAST PATH --
-            // Just draw the one new stroke onto the existing bitmap.
-            // This is safe to do on Main thread because it's just one stroke.
             val canvas = ComposeCanvas(currentBitmap)
             val paint = Paint().apply { isAntiAlias = true }
             val newPath = paths.last()
             drawPathToCanvas(canvas, paint, newPath.path, newPath.color)
             drawnPathsCount = paths.size
-
-            // Reset the baked size for the *next* potential active stroke
             currentPathBakedSize = 0
         }
         else if (needsFullRedraw) {
-            // -- SLOW PATH (Background Thread) --
-            // The list changed in a complex way (Eraser removed/split lines).
-            // We offload the reconstruction of the bitmap to a background thread.
-            // This prevents the UI (cursor) from freezing while we loop through 1000 paths.
-
             coroutineScope.launch(Dispatchers.Default) {
-                // Create a NEW bitmap in background
                 val newBitmap = ImageBitmap(canvasSize.width, canvasSize.height)
                 val canvas = ComposeCanvas(newBitmap)
                 val paint = Paint().apply { isAntiAlias = true }
-
-                // Draw ALL paths
                 paths.forEach { pathData ->
                     drawPathToCanvas(canvas, paint, pathData.path, pathData.color)
                 }
-
-                // Swap in the new bitmap on Main thread
                 withContext(Dispatchers.Main) {
                     cachedBitmap = newBitmap
                     drawnPathsCount = paths.size
@@ -143,6 +125,14 @@ fun NoteCanvas(
         if (pathData == null) {
             currentPathBakedSize = 0
             return@LaunchedEffect
+        }
+
+        // Logic to handle Shape Snap Redraw:
+        // If currentPath suddenly changes content significantly (snap happened),
+        // we might want to force the 'live segment' to redraw completely from start
+        // checking if size decreased or changed in a non-append way:
+        if (pathData.path.size < currentPathBakedSize) {
+            currentPathBakedSize = 0 // Reset baking for this stroke
         }
 
         val bufferSize = 4
@@ -169,15 +159,14 @@ fun NoteCanvas(
         Spacer(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInteropFilter {
+                .pointerInteropFilter { event ->
                     if (!interactable) return@pointerInteropFilter true
 
                     if (debugText) {
-                        debugString = "${it.action}\nPoints: ${currentPath?.path?.size ?: 0}\nBaked: $currentPathBakedSize"
+                        debugString = "${event.action}\nPoints: ${currentPath?.path?.size ?: 0}\nBaked: $currentPathBakedSize"
                     }
 
-                    // --- TOOL SWITCHING LOGIC ---
-                    val isDetectedToolEraser = it.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
+                    val isDetectedToolEraser = event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
                     if (isDetectedToolEraser != wasEraserMode) {
                         wasEraserMode = isDetectedToolEraser
                         onAction(UpdateTool(
@@ -188,23 +177,23 @@ fun NoteCanvas(
                         ))
                     }
 
-                    val isStylus = it.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS
-                    val isFinger = it.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER
+                    val isStylus = event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS
+                    val isFinger = event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER
                     val isEraser = currentToolState.isEraser
 
                     // --- ERASER INPUT ---
                     if (isEraser) {
-                        when (it.action) {
+                        when (event.action) {
                             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                                onAction(Erase(Offset(it.x, it.y)))
-                                cursorPos = Offset(it.x, it.y) // Update cursor even while erasing
+                                onAction(Erase(Offset(event.x, event.y)))
+                                cursorPos = Offset(event.x, event.y)
                             }
                             MotionEvent.ACTION_UP -> {
                                 onAction(PathEnd)
                                 cursorPos = null
                             }
                             MotionEvent.ACTION_HOVER_MOVE -> {
-                                cursorPos = Offset(it.x, it.y)
+                                cursorPos = Offset(event.x, event.y)
                             }
                             MotionEvent.ACTION_HOVER_EXIT -> {
                                 cursorPos = null
@@ -216,15 +205,62 @@ fun NoteCanvas(
                     // --- DRAWING INPUT ---
                     val canDraw = isStylus || (isHandwritingMode && isFinger)
                     if (canDraw) {
-                        when (it.action) {
-                            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP, MotionEvent.ACTION_MOVE -> {
+                        val currentPos = Offset(event.x, event.y)
+
+                        when (event.action) {
+                            MotionEvent.ACTION_DOWN -> {
                                 cursorPos = null
-                                if (it.action == MotionEvent.ACTION_DOWN) onAction(NewPathStart)
-                                onAction(Draw(Offset(it.x, it.y), it.pressure))
-                                if (it.action == MotionEvent.ACTION_UP) onAction(PathEnd)
+                                onAction(NewPathStart)
+                                onAction(Draw(currentPos, event.pressure))
+
+                                // Reset Snap Logic
+                                holdJob?.cancel()
+                                lastTouchPosition = currentPos
                             }
+
+                            MotionEvent.ACTION_MOVE -> {
+                                onAction(Draw(currentPos, event.pressure))
+
+                                // --- SHAPE SNAP LOGIC ---
+                                val dist = (currentPos - lastTouchPosition).getDistance()
+
+                                // If moved more than 20px radius, reset the timer
+                                if (dist > 20f) {
+                                    lastTouchPosition = currentPos
+                                    holdJob?.cancel()
+
+                                    // Restart the timer
+                                    holdJob = coroutineScope.launch {
+                                        delay(2000) // 2 Seconds Hold
+
+                                        // Timer finished! Check logic
+                                        currentPath?.let { activePath ->
+                                            val shapePath = ShapeRecognizer.recognizeAndCreatePath(
+                                                points = activePath.path,
+                                                originalThickness = currentToolState.strokeWidth
+                                            )
+
+                                            if (shapePath != null) {
+                                                // Haptic Feedback
+                                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+
+                                                // Replace Path
+                                                withContext(Dispatchers.Main) {
+                                                    onAction(DrawingAction.SnapToShape(shapePath))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                holdJob?.cancel() // Cancel snap if finger lifted
+                                onAction(PathEnd)
+                            }
+
                             MotionEvent.ACTION_HOVER_ENTER, MotionEvent.ACTION_HOVER_EXIT, MotionEvent.ACTION_HOVER_MOVE -> {
-                                cursorPos = if (it.action == MotionEvent.ACTION_HOVER_EXIT) null else Offset(it.x, it.y)
+                                cursorPos = if (event.action == MotionEvent.ACTION_HOVER_EXIT) null else currentPos
                             }
                         }
                         return@pointerInteropFilter true
@@ -232,17 +268,11 @@ fun NoteCanvas(
                     return@pointerInteropFilter true
                 }
                 .drawWithCache {
-                    // Update size tracker so LaunchedEffect knows how big the bitmap should be
                     val currentSize = IntSize(size.width.toInt(), size.height.toInt())
                     if (canvasSize != currentSize) {
                         canvasSize = currentSize
-                        // If size changed, we force a bitmap reset logic implicitly by null check in helper or effect
-                        // But practically, LaunchedEffect will catch the size change if we restart it or check inside
-                        // Since LaunchedEffect(paths) doesn't watch canvasSize, we trigger a manual update if needed
-                        // For simplicity, we assume size is stable after layout.
                     }
 
-                    // Ensure we have at least one bitmap to start
                     if (cachedBitmap == null && size.width > 0 && size.height > 0) {
                         cachedBitmap = ImageBitmap(size.width.toInt(), size.height.toInt())
                     }
@@ -253,7 +283,6 @@ fun NoteCanvas(
                     val yLines = (size.height / cellSizePx).toInt()
 
                     onDrawBehind {
-                        // 1. Draw Grid
                         if (gridEnabled) {
                             for (i in 0..xLines) {
                                 val x = i * cellSizePx.toFloat()
@@ -265,13 +294,10 @@ fun NoteCanvas(
                             }
                         }
 
-                        // 2. Draw the Cached Bitmap
-                        // If we are erasing, this might be 1 frame "old", but the cursor will be live.
                         cachedBitmap?.let {
                             drawImage(image = it, topLeft = Offset.Zero)
                         }
 
-                        // 3. Draw the Live Head of current stroke
                         currentPath?.let {
                             val startIdx = (currentPathBakedSize - 1).coerceAtLeast(0)
                             val liveSegment = if (startIdx < it.path.size) {
@@ -282,7 +308,6 @@ fun NoteCanvas(
                             drawPathScope(liveSegment, it.color, debugPoints)
                         }
 
-                        // 4. Draw Cursor (Always on top, always fast)
                         cursorPos?.let { drawCursor(it) }
                     }
                 }
@@ -293,7 +318,7 @@ fun NoteCanvas(
     }
 }
 
-// --- HELPER FUNCTIONS (Same as before) ---
+// --- HELPER FUNCTIONS ---
 
 private fun drawPathToCanvas(
     canvas: ComposeCanvas,
@@ -318,7 +343,6 @@ private fun drawPathToCanvas(
 
         if (distance < 1f) continue
 
-        // Optimization: Step size 2.5f for speed
         val steps = ceil(distance / 2.5f).toInt().coerceAtLeast(2)
 
         var previousPoint = start.offset
