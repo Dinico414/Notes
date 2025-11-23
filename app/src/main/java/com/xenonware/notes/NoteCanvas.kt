@@ -78,11 +78,12 @@ fun NoteCanvas(
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
     val coroutineScope = rememberCoroutineScope()
-    val view = LocalView.current // Need this for Haptics
+    val view = LocalView.current
 
     // --- SHAPE SNAP STATE ---
     var holdJob by remember { mutableStateOf<Job?>(null) }
     var lastTouchPosition by remember { mutableStateOf(Offset.Zero) }
+    var isShapeSnapped by remember { mutableStateOf(false) } // Blocks drawing after snap
 
     // 1. Handle Paths Updates (Drawing, Erasing, Undo)
     LaunchedEffect(paths) {
@@ -117,7 +118,7 @@ fun NoteCanvas(
         }
     }
 
-    // 2. Handle "Current" Active Path (Incremental Baking)
+    // 2. Handle "Current" Active Path
     LaunchedEffect(currentPath) {
         val pathData = currentPath
         val bitmap = cachedBitmap ?: return@LaunchedEffect
@@ -127,12 +128,9 @@ fun NoteCanvas(
             return@LaunchedEffect
         }
 
-        // Logic to handle Shape Snap Redraw:
-        // If currentPath suddenly changes content significantly (snap happened),
-        // we might want to force the 'live segment' to redraw completely from start
-        // checking if size decreased or changed in a non-append way:
+        // If the path shrunk (replaced by shape), reset baking to redraw the clean shape
         if (pathData.path.size < currentPathBakedSize) {
-            currentPathBakedSize = 0 // Reset baking for this stroke
+            currentPathBakedSize = 0
         }
 
         val bufferSize = 4
@@ -149,6 +147,27 @@ fun NoteCanvas(
             currentPathBakedSize = safeIndex
         }
     }
+    
+    LaunchedEffect(isShapeSnapped) {
+        if (isShapeSnapped) {
+            coroutineScope.launch(Dispatchers.Default) {
+                if (canvasSize.width > 0 && canvasSize.height > 0) {
+                    val newBitmap = ImageBitmap(canvasSize.width, canvasSize.height)
+                    val canvas = ComposeCanvas(newBitmap)
+                    val paint = Paint().apply { isAntiAlias = true }
+
+                    paths.forEach { pathData ->
+                        drawPathToCanvas(canvas, paint, pathData.path, pathData.color)
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        cachedBitmap = newBitmap
+                        currentPathBakedSize = 0
+                    }
+                }
+            }
+        }
+    }
 
     Box(
         modifier = modifier,
@@ -163,7 +182,7 @@ fun NoteCanvas(
                     if (!interactable) return@pointerInteropFilter true
 
                     if (debugText) {
-                        debugString = "${event.action}\nPoints: ${currentPath?.path?.size ?: 0}\nBaked: $currentPathBakedSize"
+                        debugString = "${event.action}\nPoints: ${currentPath?.path?.size ?: 0}\nSnapped: $isShapeSnapped"
                     }
 
                     val isDetectedToolEraser = event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
@@ -202,6 +221,7 @@ fun NoteCanvas(
                         return@pointerInteropFilter true
                     }
 
+
                     // --- DRAWING INPUT ---
                     val canDraw = isStylus || (isHandwritingMode && isFinger)
                     if (canDraw) {
@@ -210,43 +230,51 @@ fun NoteCanvas(
                         when (event.action) {
                             MotionEvent.ACTION_DOWN -> {
                                 cursorPos = null
-                                onAction(NewPathStart)
-                                onAction(Draw(currentPos, event.pressure))
-
-                                // Reset Snap Logic
+                                // Reset state
+                                isShapeSnapped = false
                                 holdJob?.cancel()
                                 lastTouchPosition = currentPos
+
+                                onAction(NewPathStart)
+                                onAction(Draw(currentPos, event.pressure))
                             }
 
                             MotionEvent.ACTION_MOVE -> {
-                                onAction(Draw(currentPos, event.pressure))
+                                // If snapped, we stop drawing to protect the perfect shape
+                                if (!isShapeSnapped) {
+                                    onAction(Draw(currentPos, event.pressure))
+                                }
 
-                                // --- SHAPE SNAP LOGIC ---
+                                // --- SNAP LOGIC ---
                                 val dist = (currentPos - lastTouchPosition).getDistance()
 
-                                // If moved more than 20px radius, reset the timer
+                                // If moved > 20px, reset timer
                                 if (dist > 20f) {
                                     lastTouchPosition = currentPos
                                     holdJob?.cancel()
 
-                                    // Restart the timer
-                                    holdJob = coroutineScope.launch {
-                                        delay(2000) // 2 Seconds Hold
+                                    // Only restart timer if we haven't already snapped
+                                    if (!isShapeSnapped) {
+                                        holdJob = coroutineScope.launch {
+                                            delay(1000L) // Reduced to 1 Second
 
-                                        // Timer finished! Check logic
-                                        currentPath?.let { activePath ->
-                                            val shapePath = ShapeRecognizer.recognizeAndCreatePath(
-                                                points = activePath.path,
-                                                originalThickness = currentToolState.strokeWidth
-                                            )
+                                            // Timer finished, analyze shape
+                                            currentPath?.let { activePath ->
+                                                val shapePath = ShapeRecognizer.recognizeAndCreatePath(
+                                                    points = activePath.path,
+                                                    originalThickness = currentToolState.strokeWidth
+                                                )
 
-                                            if (shapePath != null) {
-                                                // Haptic Feedback
-                                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                                if (shapePath != null) {
+                                                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
 
-                                                // Replace Path
-                                                withContext(Dispatchers.Main) {
-                                                    onAction(DrawingAction.SnapToShape(shapePath))
+                                                    // Stop further drawing events
+                                                    isShapeSnapped = true
+
+                                                    // Replace the path
+                                                    withContext(Dispatchers.Main) {
+                                                        onAction(DrawingAction.SnapToShape(shapePath))
+                                                    }
                                                 }
                                             }
                                         }
@@ -255,7 +283,8 @@ fun NoteCanvas(
                             }
 
                             MotionEvent.ACTION_UP -> {
-                                holdJob?.cancel() // Cancel snap if finger lifted
+                                holdJob?.cancel()
+                                isShapeSnapped = false
                                 onAction(PathEnd)
                             }
 
