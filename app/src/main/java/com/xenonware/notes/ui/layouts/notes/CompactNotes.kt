@@ -1324,8 +1324,8 @@ fun CompactNotes(
 
             AnimatedVisibility(
                 visible = showTextNoteCard,
-                enter = slideInVertically(animationSpec = tween(1000), initialOffsetY = { it }),
-                exit = slideOutVertically(animationSpec = tween(500), targetOffsetY = { it })
+                enter = slideInVertically( initialOffsetY = { it }),
+                exit = slideOutVertically( targetOffsetY = { it })
             ) {
                 BackHandler {
                     showTextNoteCard = false
@@ -1396,8 +1396,8 @@ fun CompactNotes(
 
             AnimatedVisibility(
                 visible = showSketchNoteCard,
-                enter = slideInVertically(animationSpec = tween(1000), initialOffsetY = { it }),
-                exit = slideOutVertically(animationSpec = tween(500), targetOffsetY = { it })
+                enter = slideInVertically( initialOffsetY = { it }),
+                exit = slideOutVertically( targetOffsetY = { it })
             ) {
                 BackHandler {
                     showSketchNoteCard = false
@@ -1475,8 +1475,8 @@ fun CompactNotes(
 
             AnimatedVisibility(
                 visible = showAudioNoteCard,
-                enter = slideInVertically(animationSpec = tween(1000), initialOffsetY = { it }),
-                exit = slideOutVertically(animationSpec = tween(500), targetOffsetY = { it })
+                enter = slideInVertically( initialOffsetY = { it }),
+                exit = slideOutVertically( targetOffsetY = { it })
             ) {
                 BackHandler {
                     showAudioNoteCard = false
@@ -1542,8 +1542,8 @@ fun CompactNotes(
 
             AnimatedVisibility(
                 visible = showListNoteCard,
-                enter = slideInVertically(animationSpec = tween(1000), initialOffsetY = { it }),
-                exit = slideOutVertically(animationSpec = tween(500), targetOffsetY = { it })
+                enter = slideInVertically( initialOffsetY = { it }),
+                exit = slideOutVertically( targetOffsetY = { it })
             ) {
                 BackHandler {
                     showListNoteCard = false
