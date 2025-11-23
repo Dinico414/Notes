@@ -147,23 +147,26 @@ fun NoteCanvas(
             currentPathBakedSize = safeIndex
         }
     }
-    
+
     LaunchedEffect(isShapeSnapped) {
         if (isShapeSnapped) {
             coroutineScope.launch(Dispatchers.Default) {
-                if (canvasSize.width > 0 && canvasSize.height > 0) {
-                    val newBitmap = ImageBitmap(canvasSize.width, canvasSize.height)
-                    val canvas = ComposeCanvas(newBitmap)
-                    val paint = Paint().apply { isAntiAlias = true }
+                // 1. Create a fresh bitmap
+                val newBitmap = ImageBitmap(canvasSize.width, canvasSize.height)
+                val canvas = ComposeCanvas(newBitmap)
+                val paint = Paint().apply { isAntiAlias = true }
 
-                    paths.forEach { pathData ->
-                        drawPathToCanvas(canvas, paint, pathData.path, pathData.color)
-                    }
+                // 2. Draw ONLY the completed paths (the viewmodel paths).
+                // The messy stroke currently in 'currentPath' is NOT drawn here.
+                paths.forEach { pathData ->
+                    drawPathToCanvas(canvas, paint, pathData.path, pathData.color)
+                }
 
-                    withContext(Dispatchers.Main) {
-                        cachedBitmap = newBitmap
-                        currentPathBakedSize = 0
-                    }
+                // 3. Swap the bitmap
+                withContext(Dispatchers.Main) {
+                    cachedBitmap = newBitmap
+                    drawnPathsCount = paths.size
+                    currentPathBakedSize = 0
                 }
             }
         }
