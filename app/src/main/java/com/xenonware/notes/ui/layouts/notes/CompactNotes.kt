@@ -1112,7 +1112,7 @@ fun CompactNotes(
                                                                 nextListItemId = 0L
                                                                 currentListSizeIndex = 1
                                                                 itemToEdit.description?.let { desc ->
-                                                                    val parsedItems = desc.split("")
+                                                                    val parsedItems = desc.split("\n")
                                                                         .mapNotNull { line ->
                                                                             if (line.isBlank()) null
                                                                             else {
@@ -1239,7 +1239,7 @@ fun CompactNotes(
                                                         currentListSizeIndex = 1
                                                         itemToEdit.description?.let { desc ->
                                                             val parsedItems =
-                                                                desc.split("").mapNotNull { line ->
+                                                                desc.split("\n").mapNotNull { line ->
                                                                     if (line.isBlank()) null
                                                                     else {
                                                                         val isChecked =
@@ -1563,7 +1563,7 @@ fun CompactNotes(
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onSave = { title, items, theme, labelId ->
-                        val description = items.joinToString("") {
+                        val description = items.joinToString("\n") {
                             "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
                         }
                         if (title.isNotBlank() || description.isNotBlank()) {

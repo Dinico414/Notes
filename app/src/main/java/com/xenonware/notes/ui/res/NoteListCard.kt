@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -67,7 +68,7 @@ fun NoteListCard(
     onEditItem: (NotesItems) -> Unit,
     modifier: Modifier = Modifier,
     maxLines: Int = Int.MAX_VALUE,
-    isNoteSheetOpen: Boolean, // Add isNoteSheetOpen parameter
+    isNoteSheetOpen: Boolean,
 ) {
     val isDarkTheme = LocalIsDarkTheme.current
     val colorToThemeName = remember {
@@ -127,7 +128,7 @@ fun NoteListCard(
                     )
                 )
                 .combinedClickable(
-                    enabled = !isNoteSheetOpen, // Disable clicks when a note sheet is open
+                    enabled = !isNoteSheetOpen,
                     onClick = {
                         if (isSelectionModeActive) {
                             onSelectItem()
@@ -161,30 +162,30 @@ fun NoteListCard(
                         Row(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-                                        CircleShape
-                                    )
-                                    .clip(CircleShape)
-                                    .border(
-                                        1.dp,
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                                        CircleShape
-                                    )
-                            )
+                           Icon(
+                                imageVector = if (listItemText.startsWith("[x]")) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                contentDescription = "List",
+                                tint = if (listItemText.startsWith("[x]")) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                           )
                             Spacer(modifier = Modifier.size(8.dp))
+
+                            val cleanText = listItemText
+                                .replace(Regex("""\[[x ]]""", RegexOption.IGNORE_CASE), "")
+                                .trim()
+
                             Text(
-                                text = listItemText.trim(),
+                                text = cleanText,
                                 style = MaterialTheme.typography.bodyLarge.copy(
-                                    textDecoration = if (listItemText.startsWith("[x]")) TextDecoration.LineThrough else TextDecoration.None
+                                    textDecoration = if (listItemText.startsWith("[x]", true))
+                                        TextDecoration.LineThrough
+                                    else
+                                        TextDecoration.None
                                 ),
                                 overflow = TextOverflow.Ellipsis,
                                 maxLines = 1,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                color = if (listItemText.startsWith("[x]")) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface
                             )
+
                         }
                     }
                 }
