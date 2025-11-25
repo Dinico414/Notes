@@ -9,6 +9,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,9 +21,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckBox
+import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,9 +39,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenon.mylibrary.values.LargerSpacing
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumCornerRadius
-import com.xenon.mylibrary.values.MediumSpacing
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.noteBlueDark
@@ -118,7 +120,9 @@ fun NoteListCard(
                 .clip(RoundedCornerShape(MediumCornerRadius))
                 .background(backgroundColor)
                 .border(
-                    width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
+                    width = 2.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(MediumCornerRadius)
                 )
                 .then(
                     Modifier.border(
@@ -151,41 +155,54 @@ fun NoteListCard(
                 )
 
                 if (!item.description.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(MediumSpacing))
+                    Spacer(modifier = Modifier.height(LargerSpacing))
                     val listItems = try {
                         item.description.split("\n").filter { it.isNotBlank() }
                     } catch (_: Exception) {
                         listOf(item.description)
                     }
 
-                    listItems.take(maxLines).forEach { listItemText ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                           Icon(
-                                imageVector = if (listItemText.startsWith("[x]")) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                                contentDescription = "List",
-                                tint = if (listItemText.startsWith("[x]")) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                           )
-                            Spacer(modifier = Modifier.size(8.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
-                            val cleanText = listItemText
-                                .replace(Regex("""\[[x ]]""", RegexOption.IGNORE_CASE), "")
-                                .trim()
-
-                            Text(
-                                text = cleanText,
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    textDecoration = if (listItemText.startsWith("[x]", true))
-                                        TextDecoration.LineThrough
+                        listItems.take(maxLines).forEach { listItemText ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (listItemText.startsWith("[x]"))
+                                        Icons.Default.CheckBox
                                     else
-                                        TextDecoration.None
-                                ),
-                                overflow = TextOverflow.Ellipsis,
-                                maxLines = 1,
-                                color = if (listItemText.startsWith("[x]")) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface
-                            )
+                                        Icons.Default.CheckBoxOutlineBlank,
+                                    contentDescription = "List",
+                                    tint = if (listItemText.startsWith("[x]"))
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurface.copy(
+                                        alpha = 0.7f
+                                    ),
+                                )
+                                Spacer(modifier = Modifier.size(8.dp))
 
+                                val cleanText = listItemText
+                                    .replace(Regex("""\[[x ]]""", RegexOption.IGNORE_CASE), "")
+                                    .trim()
+
+                                Text(
+                                    text = cleanText,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        textDecoration = if (listItemText.startsWith("[x]", true))
+                                            TextDecoration.LineThrough
+                                        else
+                                            TextDecoration.None
+                                    ),
+                                    overflow = TextOverflow.Ellipsis,
+                                    maxLines = 1,
+                                    color = if (listItemText.startsWith("[x]"))
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    else
+                                        MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
