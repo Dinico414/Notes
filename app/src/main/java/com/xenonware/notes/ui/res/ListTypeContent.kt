@@ -1,5 +1,6 @@
 package com.xenonware.notes.ui.res
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -234,11 +235,14 @@ fun ListContent(
                             .padding(vertical = LargestPadding),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        val outlineColor = colorScheme.onSurface
+
                         val isFilteringByDefaultColor = selectedColors.contains(null)
                         OutlinedIconButton(
                             onClick = { notesViewModel.toggleColorFilter(null) },
                             modifier = Modifier.weight(1f),
-                            colors = IconButtonDefaults.filledIconButtonColors(
+                            border = BorderStroke(1.dp, outlineColor),
+                            colors = IconButtonDefaults.outlinedIconButtonColors(
                                 containerColor = colorScheme.surfaceBright,
                                 contentColor = colorScheme.onSurface
                             )
@@ -256,10 +260,10 @@ fun ListContent(
                         OutlinedIconButton(
                             onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_RED) },
                             modifier = Modifier.weight(1f),
-                            colors = IconButtonDefaults.filledIconButtonColors(
+                            border = BorderStroke(1.dp, outlineColor),
+                            colors = IconButtonDefaults.outlinedIconButtonColors(
                                 containerColor = if (isDarkTheme) redInversePrimaryDark else redInversePrimaryLight,
-                                contentColor = if (isDarkTheme) redOnPrimaryLight else redOnPrimaryDark
-
+                                contentColor = if (isDarkTheme) redOnPrimaryLight else redOnPrimaryDark,
                             )
                         ) {
                             if (isRedSelected) {
@@ -275,7 +279,8 @@ fun ListContent(
                         OutlinedIconButton(
                             onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_ORANGE) },
                             modifier = Modifier.weight(1f),
-                            colors = IconButtonDefaults.filledIconButtonColors(
+                            border = BorderStroke(1.dp, outlineColor),
+                            colors = IconButtonDefaults.outlinedIconButtonColors(
                                 containerColor = if (isDarkTheme) orangeInversePrimaryDark else orangeInversePrimaryLight,
                                 contentColor = if (isDarkTheme) orangeOnPrimaryLight else orangeOnPrimaryDark
 
@@ -294,7 +299,8 @@ fun ListContent(
                         OutlinedIconButton(
                             onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_YELLOW) },
                             modifier = Modifier.weight(1f),
-                            colors = IconButtonDefaults.filledIconButtonColors(
+                            border = BorderStroke(1.dp, outlineColor),
+                            colors = IconButtonDefaults.outlinedIconButtonColors(
                                 containerColor = if (isDarkTheme) yellowInversePrimaryDark else yellowInversePrimaryLight,
                                 contentColor = if (isDarkTheme) yellowOnPrimaryLight else yellowOnPrimaryDark
 
@@ -313,7 +319,8 @@ fun ListContent(
                         OutlinedIconButton(
                             onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_GREEN) },
                             modifier = Modifier.weight(1f),
-                            colors = IconButtonDefaults.filledIconButtonColors(
+                            border = BorderStroke(1.dp, outlineColor),
+                            colors = IconButtonDefaults.outlinedIconButtonColors(
                                 containerColor = if (isDarkTheme) greenInversePrimaryDark else greenInversePrimaryLight,
                                 contentColor = if (isDarkTheme) greenOnPrimaryLight else greenOnPrimaryDark
 
@@ -333,7 +340,8 @@ fun ListContent(
                         OutlinedIconButton(
                             onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_TURQUOISE) },
                             modifier = Modifier.weight(1f),
-                            colors = IconButtonDefaults.filledIconButtonColors(
+                            border = BorderStroke(1.dp, outlineColor),
+                            colors = IconButtonDefaults.outlinedIconButtonColors(
                                 containerColor = if (isDarkTheme) turquoiseInversePrimaryDark else turquoiseInversePrimaryLight,
                                 contentColor = if (isDarkTheme) turquoiseOnPrimaryLight else turquoiseOnPrimaryDark
 
@@ -352,7 +360,8 @@ fun ListContent(
                         OutlinedIconButton(
                             onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_BLUE) },
                             modifier = Modifier.weight(1f),
-                            colors = IconButtonDefaults.filledIconButtonColors(
+                            border = BorderStroke(1.dp, outlineColor),
+                            colors = IconButtonDefaults.outlinedIconButtonColors(
                                 containerColor = if (isDarkTheme) blueInversePrimaryDark else blueInversePrimaryLight,
                                 contentColor = if (isDarkTheme) blueOnPrimaryLight else blueOnPrimaryDark
                             )
@@ -370,7 +379,8 @@ fun ListContent(
                         OutlinedIconButton(
                             onClick = { notesViewModel.toggleColorFilter(NotesViewModel.COLOR_PURPLE) },
                             modifier = Modifier.weight(1f),
-                            colors = IconButtonDefaults.filledIconButtonColors(
+                            border = BorderStroke(1.dp, outlineColor),
+                            colors = IconButtonDefaults.outlinedIconButtonColors(
                                 containerColor = if (isDarkTheme) purpleInversePrimaryDark else purpleInversePrimaryLight,
                                 contentColor = if (isDarkTheme) purpleOnPrimaryLight else purpleOnPrimaryDark
                             )
