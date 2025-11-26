@@ -1339,8 +1339,8 @@ fun CoverNotes(
                     initialContent = descriptionState,
                     onDismiss = {
                         showTextNoteCard = false
-                        isSearchActive = false // Disable search on dismiss
-                        notesViewModel.setSearchQuery("") // Clear search query
+                        isSearchActive = false
+                        notesViewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1379,6 +1379,9 @@ fun CoverNotes(
                     isBold = isBold,
                     isItalic = isItalic,
                     isUnderlined = isUnderlined,
+                    onIsBoldChange = { isBold = it },
+                    onIsItalicChange = { isItalic = it },
+                    onIsUnderlinedChange = { isUnderlined = it },
                     editorFontSize = editorFontSize,
                     toolbarHeight = 72.dp,
                     onThemeChange = { newThemeName ->
@@ -1388,8 +1391,6 @@ fun CoverNotes(
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
                     onAddNewLabel = { notesViewModel.addLabel(it) },
-//                    isVisible = showTextNoteCard,
-
                 )
             }
 

@@ -404,7 +404,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 id = currentNoteId++,
                 title = title.trim(),
                 description = description?.trim()?.takeIf { it.isNotBlank() },
-                listId = "", // Not used anymore
+                listId = "",
                 creationTimestamp = System.currentTimeMillis(),
                 displayOrder = determineNextDisplayOrder(),
                 noteType = noteType,
@@ -465,7 +465,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 listId = currentItem.listId,
                 creationTimestamp = currentItem.creationTimestamp,
                 displayOrder = currentItem.displayOrder,
-                color = updatedItem.color // Explicitly include color from updatedItem
+                color = updatedItem.color
             )
             saveAllNotes()
             applySortingAndFiltering()
@@ -536,7 +536,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         const val DEFAULT_LIST_ID = "default_list"
         const val MAX_LINES_FULL_NOTE = -1
 
-        // Define color constants here to ensure consistency
         val COLOR_RED = redInversePrimaryLight.toArgb().toLong()
         val COLOR_ORANGE = orangeInversePrimaryLight.toArgb().toLong()
         val COLOR_YELLOW = yellowInversePrimaryLight.toArgb().toLong()

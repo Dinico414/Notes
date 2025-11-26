@@ -53,7 +53,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -76,6 +79,53 @@ import dev.chrisbanes.haze.materials.HazeMaterials
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
+
+fun AnnotatedString.toSerialized(): String {
+    val json = JSONObject()
+    json.put("text", text)
+    val spansArray = JSONArray()
+    spanStyles.forEach { range ->
+        val spanJson = JSONObject()
+        spanJson.put("start", range.start)
+        spanJson.put("end", range.end)
+        val item = range.item
+        if (item.fontWeight == FontWeight.Bold) spanJson.put("bold", true)
+        if (item.fontStyle == FontStyle.Italic) spanJson.put("italic", true)
+        if (item.textDecoration?.contains(TextDecoration.Underline) == true) spanJson.put("underline", true)
+        if (spanJson.length() > 2) { // Only add if has styles
+            spansArray.put(spanJson)
+        }
+    }
+    json.put("spans", spansArray)
+    return json.toString()
+}
+
+fun String.fromSerialized(): AnnotatedString {
+    return try {
+        val json = JSONObject(this)
+        val text = json.getString("text")
+        val spansArray = json.getJSONArray("spans")
+        buildAnnotatedString {
+            append(text)
+            for (i in 0 until spansArray.length()) {
+                val spanJson = spansArray.getJSONObject(i)
+                val start = spanJson.getInt("start")
+                val end = spanJson.getInt("end")
+                val style = SpanStyle(
+                    fontWeight = if (spanJson.optBoolean("bold")) FontWeight.Bold else null,
+                    fontStyle = if (spanJson.optBoolean("italic")) FontStyle.Italic else null,
+                    textDecoration = if (spanJson.optBoolean("underline")) TextDecoration.Underline else null
+                )
+                addStyle(style, start, end)
+            }
+        }
+    } catch (e: JSONException) {
+        AnnotatedString(this)
+    }
+}
 
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
@@ -88,6 +138,9 @@ fun NoteTextSheet(
     isBold: Boolean,
     isItalic: Boolean,
     isUnderlined: Boolean,
+    onIsBoldChange: (Boolean) -> Unit,
+    onIsItalicChange: (Boolean) -> Unit,
+    onIsUnderlinedChange: (Boolean) -> Unit,
     editorFontSize: TextUnit,
     toolbarHeight: Dp,
     saveTrigger: Boolean,
@@ -112,7 +165,7 @@ fun NoteTextSheet(
         listOf("Default", "Red", "Orange", "Yellow", "Green", "Turquoise", "Blue", "Purple")
     }
 
-    var content by remember { mutableStateOf(TextFieldValue(initialContent)) }
+    var textFieldValue by remember { mutableStateOf(TextFieldValue(initialContent.fromSerialized())) }
     var showMenu by remember { mutableStateOf(false) }
     var isOffline by remember { mutableStateOf(false) }
 
@@ -124,7 +177,7 @@ fun NoteTextSheet(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(Unit) {
-        if (content.text.isEmpty()) {
+        if (textFieldValue.text.isEmpty()) {
             focusRequester.requestFocus()
             keyboardController?.show()
         }
@@ -132,8 +185,60 @@ fun NoteTextSheet(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(title, content.text, selectedTheme, selectedLabelId)
+            onSave(title, textFieldValue.annotatedString.toSerialized(), selectedTheme, selectedLabelId)
             onSaveTriggerConsumed()
+        }
+    }
+
+    val currentSpanStyle = remember(isBold, isItalic, isUnderlined) {
+        SpanStyle(
+            fontWeight = if (isBold) FontWeight.Bold else null,
+            fontStyle = if (isItalic) FontStyle.Italic else null,
+            textDecoration = if (isUnderlined) TextDecoration.Underline else null
+        )
+    }
+
+    LaunchedEffect(isBold, isItalic, isUnderlined) {
+        if (!textFieldValue.selection.collapsed) {
+            val builder = AnnotatedString.Builder(textFieldValue.annotatedString)
+            builder.addStyle(
+                SpanStyle(fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal),
+                textFieldValue.selection.min,
+                textFieldValue.selection.max
+            )
+            builder.addStyle(
+                SpanStyle(fontStyle = if (isItalic) FontStyle.Italic else FontStyle.Normal),
+                textFieldValue.selection.min,
+                textFieldValue.selection.max
+            )
+            builder.addStyle(
+                SpanStyle(textDecoration = if (isUnderlined) TextDecoration.Underline else TextDecoration.None),
+                textFieldValue.selection.min,
+                textFieldValue.selection.max
+            )
+            textFieldValue = textFieldValue.copy(annotatedString = builder.toAnnotatedString())
+        }
+    }
+
+    LaunchedEffect(textFieldValue.selection) {
+        if (textFieldValue.selection.collapsed) {
+            val pos = textFieldValue.selection.start - 1
+            if (pos >= 0) {
+                val spansAtPos = textFieldValue.annotatedString.spanStyles.filter {
+                    it.start <= pos && it.end > pos
+                }
+                var effectiveStyle = SpanStyle()
+                spansAtPos.forEach { range ->
+                    effectiveStyle = effectiveStyle.merge(range.item)
+                }
+                onIsBoldChange(effectiveStyle.fontWeight == FontWeight.Bold)
+                onIsItalicChange(effectiveStyle.fontStyle == FontStyle.Italic)
+                onIsUnderlinedChange(effectiveStyle.textDecoration?.contains(TextDecoration.Underline) ?: false)
+            } else {
+                onIsBoldChange(false)
+                onIsItalicChange(false)
+                onIsUnderlinedChange(false)
+            }
         }
     }
 
@@ -222,14 +327,64 @@ fun NoteTextSheet(
                     TextStyle(
                         color = colorScheme.onSurface,
                         fontSize = editorFontSize,
-                        fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
-                        fontStyle = if (isItalic) FontStyle.Italic else FontStyle.Normal,
-                        textDecoration = if (isUnderlined) TextDecoration.Underline else TextDecoration.None
                     )
                 )
                 BasicTextField(
-                    value = content,
-                    onValueChange = { content = it },
+                    value = textFieldValue,
+                    onValueChange = { newValue ->
+                        if (newValue.text == textFieldValue.text &&
+                            newValue.annotatedString.spanStyles.isEmpty() &&
+                            textFieldValue.annotatedString.spanStyles.isNotEmpty()) {
+                            // Spurious update on focus: preserve annotatedString, update selection/composition
+                            textFieldValue = textFieldValue.copy(
+                                selection = newValue.selection,
+                                composition = newValue.composition
+                            )
+                            return@BasicTextField
+                        }
+
+                        if (newValue.annotatedString.text == textFieldValue.annotatedString.text) {
+                            textFieldValue = newValue
+                            return@BasicTextField
+                        }
+
+                        val oldText = textFieldValue.text
+                        val newText = newValue.text
+                        val commonPrefixLength = oldText.commonPrefixWith(newText).length
+                        val commonSuffixLength = oldText.commonSuffixWith(newText).length
+                        val oldChangeStart = commonPrefixLength
+                        val oldChangeEnd = oldText.length - commonSuffixLength
+                        val newChangeStart = commonPrefixLength
+                        val newChangeEnd = newText.length - commonSuffixLength
+                        val delta = (newChangeEnd - newChangeStart) - (oldChangeEnd - oldChangeStart)
+
+                        val builder = AnnotatedString.Builder(newText)
+                        textFieldValue.annotatedString.spanStyles.forEach { range ->
+                            val rangeStart = range.start
+                            val rangeEnd = range.end
+                            if (rangeEnd <= oldChangeStart) {
+                                builder.addStyle(range.item, rangeStart, rangeEnd)
+                            } else if (rangeStart >= oldChangeEnd) {
+                                builder.addStyle(range.item, rangeStart + delta, rangeEnd + delta)
+                            } else {
+                                // Overlapping: add before part
+                                if (rangeStart < oldChangeStart) {
+                                    builder.addStyle(range.item, rangeStart, oldChangeStart)
+                                }
+                                // Add after part
+                                if (rangeEnd > oldChangeEnd) {
+                                    val newAfterStart = commonPrefixLength + (newChangeEnd - newChangeStart)
+                                    builder.addStyle(range.item, newAfterStart, newAfterStart + (rangeEnd - oldChangeEnd))
+                                }
+                            }
+                        }
+
+                        if (newChangeEnd > newChangeStart && currentSpanStyle != SpanStyle()) {
+                            builder.addStyle(currentSpanStyle, newChangeStart, newChangeEnd)
+                        }
+
+                        textFieldValue = newValue.copy(annotatedString = builder.toAnnotatedString())
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(IntrinsicSize.Min)
@@ -238,7 +393,7 @@ fun NoteTextSheet(
                     cursorBrush = SolidColor(colorScheme.primary),
                     decorationBox = { innerTextField ->
                         Box {
-                            if (content.text.isEmpty()) {
+                            if (textFieldValue.text.isEmpty()) {
                                 Text(
                                     text = "Note",
                                     style = noteTextStyle,
@@ -247,7 +402,8 @@ fun NoteTextSheet(
                             }
                             innerTextField()
                         }
-                    })
+                    }
+                )
                 Spacer(modifier = Modifier.height(bottomPadding))
 
             }

@@ -9,13 +9,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,22 +31,7 @@ import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumCornerRadius
 import com.xenon.mylibrary.values.MediumSpacing
-import com.xenonware.notes.ui.theme.LocalIsDarkTheme
-import com.xenonware.notes.ui.theme.XenonTheme
-import com.xenonware.notes.ui.theme.noteBlueDark
-import com.xenonware.notes.ui.theme.noteBlueLight
-import com.xenonware.notes.ui.theme.noteGreenDark
-import com.xenonware.notes.ui.theme.noteGreenLight
-import com.xenonware.notes.ui.theme.noteOrangeDark
-import com.xenonware.notes.ui.theme.noteOrangeLight
-import com.xenonware.notes.ui.theme.notePurpleDark
-import com.xenonware.notes.ui.theme.notePurpleLight
-import com.xenonware.notes.ui.theme.noteRedDark
-import com.xenonware.notes.ui.theme.noteRedLight
-import com.xenonware.notes.ui.theme.noteTurquoiseDark
-import com.xenonware.notes.ui.theme.noteTurquoiseLight
-import com.xenonware.notes.ui.theme.noteYellowDark
-import com.xenonware.notes.ui.theme.noteYellowLight
+import com.xenonware.notes.ui.theme.*
 import com.xenonware.notes.viewmodel.classes.NotesItems
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -64,26 +43,20 @@ fun NoteTextCard(
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
     modifier: Modifier = Modifier,
-    maxLines: Int = Int.MAX_VALUE, // Add maxLines parameter
-    isNoteSheetOpen: Boolean, // Add isNoteSheetOpen parameter
+    maxLines: Int = Int.MAX_VALUE,
+    isNoteSheetOpen: Boolean,
 ) {
     val isDarkTheme = LocalIsDarkTheme.current
+
     val colorToThemeName = remember {
         mapOf(
-            noteRedLight.value to "Red",
-            noteRedDark.value to "Red",
-            noteOrangeLight.value to "Orange",
-            noteOrangeDark.value to "Orange",
-            noteYellowLight.value to "Yellow",
-            noteYellowDark.value to "Yellow",
-            noteGreenLight.value to "Green",
-            noteGreenDark.value to "Green",
-            noteTurquoiseLight.value to "Turquoise",
-            noteTurquoiseDark.value to "Turquoise",
-            noteBlueLight.value to "Blue",
-            noteBlueDark.value to "Blue",
-            notePurpleLight.value to "Purple",
-            notePurpleDark.value to "Purple"
+            noteRedLight.value to "Red", noteRedDark.value to "Red",
+            noteOrangeLight.value to "Orange", noteOrangeDark.value to "Orange",
+            noteYellowLight.value to "Yellow", noteYellowDark.value to "Yellow",
+            noteGreenLight.value to "Green", noteGreenDark.value to "Green",
+            noteTurquoiseLight.value to "Turquoise", noteTurquoiseDark.value to "Turquoise",
+            noteBlueLight.value to "Blue", noteBlueDark.value to "Blue",
+            notePurpleLight.value to "Purple", notePurpleDark.value to "Purple"
         )
     }
 
@@ -103,40 +76,28 @@ fun NoteTextCard(
     ) {
         val borderColor by animateColorAsState(
             targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-            label = "Border Color Animation"
+            label = "border"
         )
 
-        val backgroundColor = if (selectedTheme == "Default") MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.inversePrimary
+        val backgroundColor = if (selectedTheme == "Default")
+            MaterialTheme.colorScheme.surfaceBright
+        else
+            MaterialTheme.colorScheme.inversePrimary
 
         Box(
             modifier = modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(MediumCornerRadius))
                 .background(backgroundColor)
-                .border(
-                    width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
-                )
-                .then(
-                    Modifier.border(
-                        width = 0.5.dp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
-                        shape = RoundedCornerShape(MediumCornerRadius)
-                    )
-                )
+                .border(2.dp, borderColor, RoundedCornerShape(MediumCornerRadius))
+                .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f), RoundedCornerShape(MediumCornerRadius))
                 .combinedClickable(
-                    enabled = !isNoteSheetOpen, // Disable clicks when a note sheet is open
-                    onClick = {
-                        if (isSelectionModeActive) {
-                            onSelectItem()
-                        } else {
-                            onEditItem(item)
-                        }
-                    }, onLongClick = onSelectItem
+                    enabled = !isNoteSheetOpen,
+                    onClick = { if (isSelectionModeActive) onSelectItem() else onEditItem(item) },
+                    onLongClick = onSelectItem
                 )
         ) {
-            Column(
-                modifier = Modifier.padding(LargestPadding)
-            ) {
+            Column(modifier = Modifier.padding(LargestPadding)) {
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleLarge,
@@ -147,17 +108,18 @@ fun NoteTextCard(
                 )
 
                 if (!item.description.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(MediumSpacing))
+                    Spacer(Modifier.height(MediumSpacing))
                     Text(
-                        text = item.description,
+                        text = item.description.fromRichTextJson(), // ← Here we show formatting
                         style = MaterialTheme.typography.bodyLarge,
                         overflow = TextOverflow.Ellipsis,
-                        maxLines = maxLines, // Apply maxLines here
+                        maxLines = maxLines,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                 }
             }
 
+            // Selection checkbox
             AnimatedVisibility(
                 visible = isSelectionModeActive,
                 modifier = Modifier.align(Alignment.TopStart),
@@ -171,47 +133,35 @@ fun NoteTextCard(
                         .background(backgroundColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
+                    Crossfade(isSelected) { selected ->
                         if (selected) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "Selected",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Icon(Icons.Default.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary)
                         } else {
                             Box(
-                                modifier = Modifier
+                                Modifier
                                     .padding(2.dp)
                                     .size(20.dp)
-                                    .border(
-                                        width = 2.dp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                        shape = CircleShape
-                                    )
+                                    .border(2.dp, MaterialTheme.colorScheme.onSurface.copy(0.6f), CircleShape)
                             )
                         }
                     }
                 }
             }
+
+            // Text note icon
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(bottom = 6.dp, end = 6.dp)
-                    .size(26.dp), contentAlignment = Alignment.Center
+                    .padding(6.dp)
+                    .size(26.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .background(MaterialTheme.colorScheme.onSurface, CircleShape)
-                ) {
+                Box(Modifier.size(22.dp).background(MaterialTheme.colorScheme.onSurface, CircleShape)) {
                     Icon(
-                        imageVector = Icons.Default.TextFields,
-                        contentDescription = "Text",
+                        Icons.Default.TextFields,
+                        contentDescription = "Text note",
                         tint = backgroundColor,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(18.dp)
+                        modifier = Modifier.size(18.dp).align(Alignment.Center)
                     )
                 }
             }

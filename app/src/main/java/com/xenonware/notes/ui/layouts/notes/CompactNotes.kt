@@ -1375,6 +1375,9 @@ fun CompactNotes(
                     isBold = isBold,
                     isItalic = isItalic,
                     isUnderlined = isUnderlined,
+                    onIsBoldChange = { isBold = it },
+                    onIsItalicChange = { isItalic = it },
+                    onIsUnderlinedChange = { isUnderlined = it },
                     editorFontSize = editorFontSize,
                     toolbarHeight = 72.dp,
                     onThemeChange = { newThemeName ->
