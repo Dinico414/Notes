@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -119,7 +120,7 @@ fun NoteListSheet(
     }
 
     var showMenu by remember { mutableStateOf(false) }
-    var currentListItems by remember { mutableStateOf(initialListItems) }
+    val currentListItems = remember { mutableStateListOf(*initialListItems.toTypedArray()) }
     var isOffline by remember { mutableStateOf(false) }
 
     var showLabelDialog by remember { mutableStateOf(false) }
@@ -133,7 +134,7 @@ fun NoteListSheet(
     LaunchedEffect(Unit) {
         if (initialListItems.isEmpty()) {
             val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
-            currentListItems = listOf(newItem)
+            currentListItems.add(newItem)
             focusOnNewItemId = newItem.id
         } else if (listTitle.isEmpty()) {
             listTitleFocusRequester.requestFocus()
@@ -150,7 +151,7 @@ fun NoteListSheet(
     LaunchedEffect(addItemTrigger) {
         if (addItemTrigger) {
             val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
-            currentListItems = currentListItems + newItem
+            currentListItems.add(newItem)
             focusOnNewItemId = newItem.id
             onAddItem()
             onAddItemTriggerConsumed()
@@ -250,6 +251,10 @@ fun NoteListSheet(
                     ) {
                         Checkbox(
                             checked = listItem.isChecked, onCheckedChange = { isChecked ->
+                                val index = currentListItems.indexOfFirst { it.id == listItem.id }
+                                if (index != -1) {
+                                    currentListItems[index] = currentListItems[index].copy(isChecked = isChecked)
+                                }
                                 onToggleItemChecked(
                                     listItem, isChecked
                                 )
@@ -267,8 +272,9 @@ fun NoteListSheet(
                             value = listItem.text,
                             singleLine = true,
                             onValueChange = { newText ->
-                                currentListItems = currentListItems.map { item ->
-                                    if (item.id == listItem.id) item.copy(text = newText) else item
+                                val index = currentListItems.indexOfFirst { it.id == listItem.id }
+                                if (index != -1) {
+                                    currentListItems[index] = currentListItems[index].copy(text = newText)
                                 }
                                 onItemTextChange(listItem, newText) },
                             modifier = Modifier
@@ -290,7 +296,12 @@ fun NoteListSheet(
                             })
 
                         IconButton(
-                            onClick = { onDeleteItem(listItem) }) {
+                            onClick = {
+                                val index = currentListItems.indexOfFirst { it.id == listItem.id }
+                                if (index != -1) {
+                                    currentListItems.removeAt(index)
+                                }
+                                onDeleteItem(listItem) }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete item")
                         }
                     }

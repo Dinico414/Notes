@@ -190,6 +190,7 @@ fun CoverNotes(
     var editingNoteColor by rememberSaveable(stateSaver = uLongSaver) { mutableStateOf(null) }
     var showTextNoteCard by rememberSaveable { mutableStateOf(false) }
     var saveTrigger by remember { mutableStateOf(false) }
+    var addListItemTrigger by remember { mutableStateOf(false) }
 
     var isBold by remember { mutableStateOf(false) }
     var isItalic by remember { mutableStateOf(false) }
@@ -450,11 +451,7 @@ fun CoverNotes(
                         ) {
                             FilledTonalButton(
                                 onClick = {
-                                    listItemsState.add(
-                                        ListItem(
-                                            nextListItemId++, "", false
-                                        )
-                                    )
+                                    addListItemTrigger = true
                                 },
                                 modifier = Modifier
                                     .width(140.dp)
@@ -1609,8 +1606,7 @@ fun CoverNotes(
                     onToggleItemChecked = { item, isChecked ->
                         val index = listItemsState.indexOfFirst { it.id == item.id }
                         if (index != -1) {
-                            listItemsState[index] =
-                                listItemsState[index].copy(isChecked = isChecked)
+                            listItemsState[index] = listItemsState[index].copy(isChecked = isChecked)
                         }
                     },
                     onItemTextChange = { item, newText ->
@@ -1619,10 +1615,9 @@ fun CoverNotes(
                             listItemsState[index] = listItemsState[index].copy(text = newText)
                         }
                     },
-
                     editorFontSize = listEditorFontSize,
-                    addItemTrigger = saveTrigger,
-                    onAddItemTriggerConsumed = { saveTrigger = false },
+                    addItemTrigger = addListItemTrigger,
+                    onAddItemTriggerConsumed = { addListItemTrigger = false },
                     onThemeChange = { newThemeName -> // Pass the lambda here
                         editingNoteColor = themeColorMap[newThemeName]
                     },
