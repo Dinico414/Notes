@@ -150,9 +150,14 @@ fun NoteListSheet(
 
     LaunchedEffect(addItemTrigger) {
         if (addItemTrigger) {
-            val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
-            currentListItems.add(newItem)
-            focusOnNewItemId = newItem.id
+            val lastItem = currentListItems.lastOrNull()
+            if (lastItem == null || lastItem.text.isNotEmpty()) {
+                val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
+                currentListItems.add(newItem)
+                focusOnNewItemId = newItem.id
+            } else {
+                focusOnNewItemId = lastItem.id
+            }
             onAddItem()
             onAddItemTriggerConsumed()
         }
@@ -300,6 +305,11 @@ fun NoteListSheet(
                                 val index = currentListItems.indexOfFirst { it.id == listItem.id }
                                 if (index != -1) {
                                     currentListItems.removeAt(index)
+                                    if (currentListItems.isEmpty()) {
+                                        val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
+                                        currentListItems.add(newItem)
+                                        focusOnNewItemId = newItem.id
+                                    }
                                 }
                                 onDeleteItem(listItem) }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete item")
