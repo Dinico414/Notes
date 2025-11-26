@@ -696,7 +696,11 @@ fun ColorPicker(
         modifier = modifier
             .wrapContentSize(Alignment.Center)
             .padding(8.dp)
-            .clickable {},
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = {}
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(spacing)
     ) {
@@ -765,7 +769,11 @@ fun PenSizePicker(
         modifier = modifier
             .wrapContentSize(Alignment.Center)
             .padding(8.dp)
-            .clickable {},
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = {}
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(spacing)
     ) {
