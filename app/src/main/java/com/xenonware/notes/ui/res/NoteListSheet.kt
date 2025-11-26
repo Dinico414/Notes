@@ -142,10 +142,6 @@ fun NoteListSheet(
         }
     }
 
-    LaunchedEffect(initialListItems) {
-        currentListItems = initialListItems
-    }
-
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
             onSave(listTitle, currentListItems, selectedTheme, selectedLabelId)
