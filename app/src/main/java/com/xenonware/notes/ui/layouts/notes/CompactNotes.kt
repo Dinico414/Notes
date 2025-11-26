@@ -152,7 +152,6 @@ import com.xenonware.notes.ui.theme.noteTurquoiseDark
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
-import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.NotesLayoutType
 import com.xenonware.notes.viewmodel.NotesViewModel
@@ -180,7 +179,6 @@ enum class AudioViewType {
 fun CompactNotes(
     notesViewModel: NotesViewModel = viewModel(),
     signInViewModel: SignInViewModel = viewModel(),
-    devSettingsViewModel: DevSettingsViewModel = viewModel(),
     layoutType: LayoutType,
     isLandscape: Boolean,
     onOpenSettings: () -> Unit,
