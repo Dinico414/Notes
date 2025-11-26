@@ -890,14 +890,14 @@ fun CoverNotes(
                             {
                                 FloatingActionButton(
                                     onClick = {
-                                        if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) saveTrigger =
+                                        if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() }) saveTrigger =
                                             true
                                     }, containerColor = colorScheme.primary
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Save,
                                         contentDescription = stringResource(R.string.save_list_note),
-                                        tint = if (listTitleState.isNotBlank() || listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimary else colorScheme.onPrimary.copy(
+                                        tint = if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimary else colorScheme.onPrimary.copy(
                                             alpha = 0.38f
                                         )
                                     )
@@ -1562,7 +1562,8 @@ fun CoverNotes(
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onSave = { title, items, theme, labelId ->
-                        val description = items.joinToString("\n") {
+                        val nonEmptyItems = items.filter { it.text.isNotBlank() }
+                        val description = nonEmptyItems.joinToString("\n") {
                             "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
                         }
                         if (title.isNotBlank() || description.isNotBlank()) {
