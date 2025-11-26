@@ -895,16 +895,17 @@ fun CompactNotes(
                             {
                                 FloatingActionButton(
                                     onClick = {
-                                        if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() }) saveTrigger =
-                                            true
-                                    }, containerColor = colorScheme.primary
+                                        if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() }) {
+                                            saveTrigger = true
+                                        }
+                                    },
+                                    containerColor = colorScheme.primary
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Save,
                                         contentDescription = stringResource(R.string.save_list_note),
-                                        tint = if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() }) colorScheme.onPrimary else colorScheme.onPrimary.copy(
-                                            alpha = 0.38f
-                                        )
+                                        tint = if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() })
+                                            colorScheme.onPrimary else colorScheme.onPrimary.copy(alpha = 0.38f)
                                     )
                                 }
                             }
@@ -1545,18 +1546,19 @@ fun CompactNotes(
             ) {
                 BackHandler {
                     showListNoteCard = false
-                    isSearchActive = false // Disable search on dismiss
-                    notesViewModel.setSearchQuery("") // Clear search query
+                    isSearchActive = false
+                    notesViewModel.setSearchQuery("")
                     resetNoteState()
                 }
+
                 NoteListSheet(
                     listTitle = listTitleState,
                     onListTitleChange = { listTitleState = it },
-                    initialListItems = listItemsState,
+                    listItems = listItemsState,
                     onDismiss = {
                         showListNoteCard = false
-                        isSearchActive = false // Disable search on dismiss
-                        notesViewModel.setSearchQuery("") // Clear search query
+                        isSearchActive = false
+                        notesViewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1568,17 +1570,16 @@ fun CompactNotes(
                         if (title.isNotBlank() || description.isNotBlank()) {
                             val color = themeColorMap[theme]
                             if (editingNoteId != null) {
-                                val updatedNote =
-                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
-                                        .find { it.id == editingNoteId }?.copy(
-                                            title = title,
-                                            description = description.takeIf { it.isNotBlank() },
-                                            color = color?.toLong(),
-                                            labels = labelId?.let { listOf(it) } ?: emptyList()
-                                        )
-                                if (updatedNote != null) {
-                                    notesViewModel.updateItem(updatedNote)
-                                }
+                                val updatedNote = notesViewModel.noteItems
+                                    .filterIsInstance<NotesItems>()
+                                    .find { it.id == editingNoteId }
+                                    ?.copy(
+                                        title = title,
+                                        description = description.takeIf { it.isNotBlank() },
+                                        color = color?.toLong(),
+                                        labels = labelId?.let { listOf(it) } ?: emptyList()
+                                    )
+                                updatedNote?.let { notesViewModel.updateItem(it) }
                             } else {
                                 notesViewModel.addItem(
                                     title = title,
@@ -1590,35 +1591,17 @@ fun CompactNotes(
                             }
                         }
                         showListNoteCard = false
-                        isSearchActive = false // Disable search on save
-                        notesViewModel.setSearchQuery("") // Clear search query
+                        isSearchActive = false
+                        notesViewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     toolbarHeight = 72.dp,
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
-                    onAddItem = {
-                        listItemsState.add(ListItem(nextListItemId++, "", false))
-                    },
-                    onDeleteItem = { itemToDelete ->
-                        listItemsState.remove(itemToDelete)
-                    },
-                    onToggleItemChecked = { item, isChecked ->
-                        val index = listItemsState.indexOfFirst { it.id == item.id }
-                        if (index != -1) {
-                            listItemsState[index] = listItemsState[index].copy(isChecked = isChecked)
-                        }
-                    },
-                    onItemTextChange = { item, newText ->
-                        val index = listItemsState.indexOfFirst { it.id == item.id }
-                        if (index != -1) {
-                            listItemsState[index] = listItemsState[index].copy(text = newText)
-                        }
-                    },
-                    editorFontSize = listEditorFontSize,
                     addItemTrigger = addListItemTrigger,
                     onAddItemTriggerConsumed = { addListItemTrigger = false },
-                    onThemeChange = { newThemeName -> // Pass the lambda here
+                    editorFontSize = listEditorFontSize,
+                    onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
                     },
                     allLabels = allLabels,
