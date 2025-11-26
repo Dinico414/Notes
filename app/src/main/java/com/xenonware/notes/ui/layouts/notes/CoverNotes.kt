@@ -1620,10 +1620,6 @@ fun CoverNotes(
                         }
                     },
 
-                    onAddItemClick = {
-                        listItemsState.add(ListItem(nextListItemId++, "", false))
-                    },
-                    onTextResizeClick = ::onListTextResizeClick,
                     editorFontSize = listEditorFontSize,
                     addItemTrigger = saveTrigger,
                     onAddItemTriggerConsumed = { saveTrigger = false },

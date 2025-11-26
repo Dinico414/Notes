@@ -1615,11 +1615,6 @@ fun CompactNotes(
                             listItemsState[index] = listItemsState[index].copy(text = newText)
                         }
                     },
-
-                    onAddItemClick = {
-                        listItemsState.add(ListItem(nextListItemId++, "", false))
-                    },
-                    onTextResizeClick = ::onListTextResizeClick,
                     editorFontSize = listEditorFontSize,
                     addItemTrigger = saveTrigger,
                     onAddItemTriggerConsumed = { saveTrigger = false },

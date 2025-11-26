@@ -97,8 +97,6 @@ fun NoteListSheet(
     onDeleteItem: (ListItem) -> Unit,
     onToggleItemChecked: (ListItem, Boolean) -> Unit,
     onItemTextChange: (ListItem, String) -> Unit,
-    onAddItemClick: () -> Unit,
-    onTextResizeClick: () -> Unit,
     editorFontSize: TextUnit,
     initialTheme: String = "Default",
     onThemeChange: (String) -> Unit,
@@ -267,7 +265,12 @@ fun NoteListSheet(
 
                         BasicTextField(
                             value = listItem.text,
-                            onValueChange = { newText -> onItemTextChange(listItem, newText) },
+                            singleLine = true,
+                            onValueChange = { newText ->
+                                currentListItems = currentListItems.map { item ->
+                                    if (item.id == listItem.id) item.copy(text = newText) else item
+                                }
+                                onItemTextChange(listItem, newText) },
                             modifier = Modifier
                                 .weight(1f)
                                 .focusRequester(itemFocusRequester),
