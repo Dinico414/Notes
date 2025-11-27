@@ -610,6 +610,19 @@ fun NoteAudioSheet(
                                     )
                                 }
 
+                                IconButton(
+                                    onClick = {
+                                        playerManager.stopAudio()
+                                    },
+                                    enabled = playerManager.currentPlaybackPositionMillis > 0 || playerManager.isPlaying
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Stop,
+                                        contentDescription = "Stop",
+                                        tint = colorScheme.primary
+                                    )
+                                }
+
                                 IconButton(onClick = {
                                     recorderManager.resetState()
                                     recorderManager.deleteRecording()
