@@ -214,51 +214,57 @@ class AudioPlayerManager {
     var isPlaying: Boolean by mutableStateOf(false)
     var currentPlaybackPositionMillis: Long by mutableLongStateOf(0L)
     var totalAudioDurationMillis: Long by mutableLongStateOf(0L)
+    private var currentFilePath: String? = null
 
     // This MUST be a var – we re-assign it every time we play a new file
-    private var mediaPlayer: MediaPlayer? = null
+    var mediaPlayer: MediaPlayer? = null
 
     fun playAudio(filePath: String) {
-        try {
+        // If we're already playing the same file → do nothing
+        if (isPlaying && currentFilePath == filePath) return
+
+        // If we have a different file or player is dead → create new one
+        if (mediaPlayer == null || currentFilePath != filePath) {
             mediaPlayer?.release()
             mediaPlayer = null
+            currentPlaybackPositionMillis = 0L
 
-            // FIX: Assign directly to 'mediaPlayer', not a local 'val player'
-            mediaPlayer = MediaPlayer().apply {
-                // FIX: Ensure audio plays on the Media stream (Speaker), not Voice Call stream
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .build()
-                )
+            try {
+                mediaPlayer = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .build()
+                    )
+                    setDataSource(filePath)
+                    prepare()
+                    this@AudioPlayerManager.totalAudioDurationMillis = duration.toLong()
+                    currentFilePath = filePath  // ← Remember which file we're playing
 
-                setDataSource(filePath)
-                prepare()
-                start()
-
-                // Update observable state
-                this@AudioPlayerManager.totalAudioDurationMillis = duration.toLong()
-                this@AudioPlayerManager.isPlaying = true
-                this@AudioPlayerManager.currentRecordingState = RecordingState.PLAYING
-
-                setOnCompletionListener {
-                    this@AudioPlayerManager.isPlaying = false
-                    this@AudioPlayerManager.currentPlaybackPositionMillis = 0L
-                    this@AudioPlayerManager.currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
+                    setOnCompletionListener {
+                        this@AudioPlayerManager.isPlaying = false
+                        currentPlaybackPositionMillis = 0L
+                        currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
+                    }
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                isPlaying = false
+                currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
+                return
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            isPlaying = false
-            currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
         }
+
+        // Now just start/resume the existing player
+        mediaPlayer?.start()
+        isPlaying = true
+        currentRecordingState = RecordingState.PLAYING
     }
 
     fun pauseAudio() {
         mediaPlayer?.pause()
         isPlaying = false
-        currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
     }
 
     fun resumeAudio() {
@@ -451,7 +457,7 @@ fun NoteAudioSheet(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .background(colorScheme.surfaceContainer)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
         ) {
             Column(
@@ -507,7 +513,7 @@ fun NoteAudioSheet(
                                     requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                 }
                             }) {
-                                Icon(Icons.Default.Mic, "Start recording", tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Default.Mic, "Start recording", tint = colorScheme.primary)
                             }
                         }
                         RecordingState.RECORDING -> {
@@ -530,13 +536,22 @@ fun NoteAudioSheet(
                             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                                 IconButton(onClick = {
                                     recorderManager.audioFilePath?.let { path ->
-                                        if (playerManager.isPlaying) playerManager.pauseAudio()
-                                        else playerManager.playAudio(path)
+                                        when {
+                                            playerManager.isPlaying -> {
+                                                playerManager.pauseAudio()
+                                            }
+                                            playerManager.currentPlaybackPositionMillis > 0 && playerManager.mediaPlayer != null -> {
+                                                playerManager.resumeAudio()
+                                            }
+                                            else -> {
+                                                playerManager.playAudio(path)
+                                            }
+                                        }
                                     }
                                 }) {
                                     Icon(
-                                        if (playerManager.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                        if (playerManager.isPlaying) "Pause" else "Play",
+                                        imageVector = if (playerManager.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
@@ -545,14 +560,14 @@ fun NoteAudioSheet(
                                     recorderManager.resetState()
                                     recorderManager.startRecording()
                                 }) {
-                                    Icon(Icons.Default.Mic, "Re-record", tint = MaterialTheme.colorScheme.error)
+                                    Icon(Icons.Default.Mic, "Re-record", tint = colorScheme.error)
                                 }
                                 if (recordingState == RecordingState.STOPPED_UNSAVED) {
                                     IconButton(onClick = {
                                         recorderManager.deleteRecording()
                                         playerManager.stopAudio()
                                     }) {
-                                        Icon(Icons.Default.Clear, "Discard", tint = MaterialTheme.colorScheme.error)
+                                        Icon(Icons.Default.Clear, "Discard", tint = colorScheme.error)
                                     }
                                 }
                             }
@@ -703,7 +718,7 @@ fun AudioTimerDisplay(
     Text(
         text = formatDuration(time) + total,
         style = MaterialTheme.typography.headlineSmall,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = colorScheme.onSurface,
         modifier = modifier
     )
 }
