@@ -1,6 +1,7 @@
 package com.xenonware.notes.ui.res
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
@@ -95,7 +96,10 @@ enum class RecordingState {
     IDLE, RECORDING, PAUSED, STOPPED_UNSAVED, PLAYING, VIEWING_SAVED_AUDIO
 }
 
-class AudioRecorderManager(private val context: Context) {
+class AudioRecorderManager(
+    private val context: Context,
+    private val onNewRecordingStarted: () -> Unit = {}
+) {
     private var mediaRecorder: MediaRecorder? = null
     var audioFilePath: String? = null
         private set
@@ -123,6 +127,8 @@ class AudioRecorderManager(private val context: Context) {
         val audioFile = File(context.filesDir, "$uniqueAudioId.mp3")
         audioFilePath = audioFile.absolutePath
         isPersistentAudio = false
+
+        onNewRecordingStarted()
 
         mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             MediaRecorder(context)
@@ -159,10 +165,12 @@ class AudioRecorderManager(private val context: Context) {
         if (currentRecordingState == RecordingState.RECORDING || currentRecordingState == RecordingState.PAUSED) {
             try {
                 mediaRecorder?.stop()
-            } catch (e: Exception) { /* sometimes throws if too short */ }
+            } catch (_: Exception) { /* sometimes throws if too short */
+            }
             mediaRecorder?.release()
             mediaRecorder = null
-            currentRecordingState = if (isPersistentAudio) RecordingState.VIEWING_SAVED_AUDIO else RecordingState.STOPPED_UNSAVED
+            currentRecordingState =
+                if (isPersistentAudio) RecordingState.VIEWING_SAVED_AUDIO else RecordingState.STOPPED_UNSAVED
         }
     }
 
@@ -192,11 +200,14 @@ class AudioRecorderManager(private val context: Context) {
     fun resetState() {
         if (currentRecordingState == RecordingState.RECORDING || currentRecordingState == RecordingState.PAUSED) {
             mediaRecorder?.apply {
-                stop()
+                try { stop() } catch (_: Exception) { /* ignore */ }
                 release()
             }
             mediaRecorder = null
         }
+
+        onNewRecordingStarted()
+
         deleteRecording()
     }
 
@@ -240,7 +251,7 @@ class AudioPlayerManager {
                     setDataSource(filePath)
                     prepare()
                     this@AudioPlayerManager.totalAudioDurationMillis = duration.toLong()
-                    currentFilePath = filePath  // ← Remember which file we're playing
+                    currentFilePath = filePath
 
                     setOnCompletionListener {
                         this@AudioPlayerManager.isPlaying = false
@@ -256,7 +267,6 @@ class AudioPlayerManager {
             }
         }
 
-        // Now just start/resume the existing player
         mediaPlayer?.start()
         isPlaying = true
         currentRecordingState = RecordingState.PLAYING
@@ -354,9 +364,14 @@ fun NoteAudioSheet(
     val isLabeled = selectedLabelId != null
 
     val context = LocalContext.current
-    val recorderManager = remember { AudioRecorderManager(context) }
     val playerManager = remember { AudioPlayerManager() }
-
+    val recorderManager = remember {
+        AudioRecorderManager(context) {
+            playerManager.totalAudioDurationMillis = 0L
+            playerManager.currentPlaybackPositionMillis = 0L
+            playerManager.stopAudio()
+        }
+    }
     var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
 
     // Sync state
@@ -375,7 +390,8 @@ fun NoteAudioSheet(
     LaunchedEffect(initialAudioFilePath) {
         if (initialAudioFilePath != null && File(initialAudioFilePath).exists()) {
             recorderManager.setInitialAudioFilePath(initialAudioFilePath)
-            playerManager.totalAudioDurationMillis = playerManager.getAudioDuration(initialAudioFilePath)
+            playerManager.totalAudioDurationMillis =
+                playerManager.getAudioDuration(initialAudioFilePath)
         }
     }
 
@@ -385,6 +401,17 @@ fun NoteAudioSheet(
             while (isActive) {
                 delay(1000L)
                 recorderManager.recordingDurationMillis += 1000L
+            }
+        }
+    }
+
+// ADD THIS BLOCK (playback timer)
+    LaunchedEffect(playerManager.isPlaying) {
+        if (playerManager.isPlaying) {
+            while (isActive) {
+                playerManager.currentPlaybackPositionMillis =
+                    playerManager.mediaPlayer?.currentPosition?.toLong() ?: 0L
+                delay(50L)
             }
         }
     }
@@ -413,7 +440,7 @@ fun NoteAudioSheet(
         }
     }
 
-    val systemUiController = rememberSystemUiController()
+    @Suppress("DEPRECATION") val systemUiController = rememberSystemUiController()
 
     XenonTheme(
         darkTheme = isDarkTheme,
@@ -491,7 +518,10 @@ fun NoteAudioSheet(
                     if (selectedAudioViewType == AudioViewType.Waveform) {
                         WaveformDisplay(recorderManager.audioFilePath, Modifier.fillMaxSize())
                     } else {
-                        Text("Transcript coming soon...", style = MaterialTheme.typography.headlineMedium)
+                        Text(
+                            "Transcript coming soon...",
+                            style = MaterialTheme.typography.headlineMedium
+                        )
                     }
                 }
 
@@ -499,7 +529,10 @@ fun NoteAudioSheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight + 16.dp)
+                        .padding(
+                            bottom = WindowInsets.navigationBars.asPaddingValues()
+                                .calculateBottomPadding() + toolbarHeight + 16.dp
+                        )
                         .padding(horizontal = 32.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
@@ -507,15 +540,24 @@ fun NoteAudioSheet(
                     when (recordingState) {
                         RecordingState.IDLE -> {
                             IconButton(onClick = {
-                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                if (ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.RECORD_AUDIO
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                ) {
                                     recorderManager.startRecording()
                                 } else {
                                     requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                 }
                             }) {
-                                Icon(Icons.Default.Mic, "Start recording", tint = colorScheme.primary)
+                                Icon(
+                                    Icons.Default.Mic,
+                                    "Start recording",
+                                    tint = colorScheme.primary
+                                )
                             }
                         }
+
                         RecordingState.RECORDING -> {
                             IconButton(onClick = { recorderManager.pauseRecording() }) {
                                 Icon(Icons.Default.Pause, "Pause")
@@ -524,6 +566,7 @@ fun NoteAudioSheet(
                                 Icon(Icons.Default.Stop, "Stop")
                             }
                         }
+
                         RecordingState.PAUSED -> {
                             IconButton(onClick = { recorderManager.startRecording() }) {
                                 Icon(Icons.Default.Mic, "Resume")
@@ -532,6 +575,7 @@ fun NoteAudioSheet(
                                 Icon(Icons.Default.Stop, "Stop")
                             }
                         }
+
                         else -> {
                             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                                 IconButton(onClick = {
@@ -540,9 +584,11 @@ fun NoteAudioSheet(
                                             playerManager.isPlaying -> {
                                                 playerManager.pauseAudio()
                                             }
+
                                             playerManager.currentPlaybackPositionMillis > 0 && playerManager.mediaPlayer != null -> {
                                                 playerManager.resumeAudio()
                                             }
+
                                             else -> {
                                                 playerManager.playAudio(path)
                                             }
@@ -552,23 +598,17 @@ fun NoteAudioSheet(
                                     Icon(
                                         imageVector = if (playerManager.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                         contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
-                                        tint = MaterialTheme.colorScheme.primary
+                                        tint = colorScheme.primary
                                     )
                                 }
+
                                 IconButton(onClick = {
-                                    playerManager.stopAudio()
                                     recorderManager.resetState()
-                                    recorderManager.startRecording()
+                                    recorderManager.deleteRecording()
+                                    playerManager.stopAudio()
                                 }) {
-                                    Icon(Icons.Default.Mic, "Re-record", tint = colorScheme.error)
-                                }
-                                if (recordingState == RecordingState.STOPPED_UNSAVED) {
-                                    IconButton(onClick = {
-                                        recorderManager.deleteRecording()
-                                        playerManager.stopAudio()
-                                    }) {
-                                        Icon(Icons.Default.Clear, "Discard", tint = colorScheme.error)
-                                    }
+                                    Icon(Icons.Default.Clear, "Discard", tint = colorScheme.error)
+
                                 }
                             }
                         }
@@ -704,6 +744,8 @@ fun NoteAudioSheet(
         }
     }
 }
+
+
 @Composable
 fun AudioTimerDisplay(
     isRecording: Boolean,
@@ -713,16 +755,18 @@ fun AudioTimerDisplay(
     totalAudioDurationMillis: Long,
     modifier: Modifier = Modifier,
 ) {
-    val time = if (isRecording) recordingDurationMillis else currentPlaybackPositionMillis
-    val total = if (totalAudioDurationMillis > 0) " / ${formatDuration(totalAudioDurationMillis)}" else ""
+    val currentTime = if (isRecording) recordingDurationMillis else currentPlaybackPositionMillis
+    val showTotal = !isRecording && totalAudioDurationMillis > 0
+
     Text(
-        text = formatDuration(time) + total,
+        text = formatDuration(currentTime) + if (showTotal) " / ${formatDuration(totalAudioDurationMillis)}" else "",
         style = MaterialTheme.typography.headlineSmall,
         color = colorScheme.onSurface,
         modifier = modifier
     )
 }
 
+@SuppressLint("DefaultLocale")
 fun formatDuration(millis: Long): String {
     val m = TimeUnit.MILLISECONDS.toMinutes(millis)
     val s = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
