@@ -1145,16 +1145,11 @@ fun CompactNotes(
                                                                     }
 
                                                                     NoteType.AUDIO -> {
-                                                                        isSearchActive =
-                                                                            false // Disable search
-                                                                        notesViewModel.setSearchQuery(
-                                                                            ""
-                                                                        ) // Clear search query
+                                                                        isSearchActive = false
+                                                                        notesViewModel.setSearchQuery("")
                                                                         showAudioNoteCard = true
-                                                                        selectedAudioViewType =
-                                                                            AudioViewType.Waveform // Default for editing
-                                                                        editingNoteColor =
-                                                                            itemToEdit.color?.toULong()
+                                                                        selectedAudioViewType = AudioViewType.Waveform
+                                                                        editingNoteColor = itemToEdit.color?.toULong()
                                                                     }
 
                                                                     NoteType.LIST -> {

@@ -427,6 +427,14 @@ fun NoteAudioSheet(
         }
     }
 
+    LaunchedEffect(initialAudioFilePath) {
+        if (initialAudioFilePath != null && File(initialAudioFilePath).exists()) {
+            recorderManager.setInitialAudioFilePath(initialAudioFilePath)
+            playerManager.totalAudioDurationMillis =
+                playerManager.getAudioDuration(initialAudioFilePath)
+        }
+    }
+
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->

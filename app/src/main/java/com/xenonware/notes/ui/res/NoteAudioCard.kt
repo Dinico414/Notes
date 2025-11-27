@@ -80,60 +80,57 @@ fun NoteAudioCard(
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
     modifier: Modifier = Modifier,
-    isNoteSheetOpen: Boolean, // Add isNoteSheetOpen parameter
+    isNoteSheetOpen: Boolean,
 ) {
     val isDarkTheme = LocalIsDarkTheme.current
     val colorToThemeName = remember {
         mapOf(
-            noteRedLight.value to "Red",
-            noteRedDark.value to "Red",
-            noteOrangeLight.value to "Orange",
-            noteOrangeDark.value to "Orange",
-            noteYellowLight.value to "Yellow",
-            noteYellowDark.value to "Yellow",
-            noteGreenLight.value to "Green",
-            noteGreenDark.value to "Green",
-            noteTurquoiseLight.value to "Turquoise",
-            noteTurquoiseDark.value to "Turquoise",
-            noteBlueLight.value to "Blue",
-            noteBlueDark.value to "Blue",
-            notePurpleLight.value to "Purple",
-            notePurpleDark.value to "Purple"
+            noteRedLight.value to "Red", noteRedDark.value to "Red",
+            noteOrangeLight.value to "Orange", noteOrangeDark.value to "Orange",
+            noteYellowLight.value to "Yellow", noteYellowDark.value to "Yellow",
+            noteGreenLight.value to "Green", noteGreenDark.value to "Green",
+            noteTurquoiseLight.value to "Turquoise", noteTurquoiseDark.value to "Turquoise",
+            noteBlueLight.value to "Blue", noteBlueDark.value to "Blue",
+            notePurpleLight.value to "Purple", notePurpleDark.value to "Purple"
         )
     }
 
     val selectedTheme = item.color?.let { colorToThemeName[it.toULong()] } ?: "Default"
-
     val context = LocalContext.current
     val playerManager = remember { AudioPlayerManager() }
-    var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
 
+    // Reconstruct audio file path
+    val audioFilePath = remember(item.description) {
+        item.description?.let { uniqueId ->
+            File(context.filesDir, "$uniqueId.mp3").takeIf { it.exists() }?.absolutePath
+        }
+    }
+
+    // Load duration once
+    LaunchedEffect(audioFilePath) {
+        if (audioFilePath != null && playerManager.totalAudioDurationMillis == 0L) {
+            playerManager.totalAudioDurationMillis = playerManager.getAudioDuration(audioFilePath)
+        }
+    }
+
+    var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
     LaunchedEffect(playerManager.currentRecordingState) {
         recordingState = playerManager.currentRecordingState
     }
 
-    LaunchedEffect(
-        recordingState, playerManager.isPlaying, playerManager.totalAudioDurationMillis
-    ) {
-        if (recordingState == RecordingState.PLAYING && playerManager.isPlaying) {
-            while (isActive && playerManager.isPlaying) {
+    // Accurate real-time playback timer (uses actual MediaPlayer position)
+    LaunchedEffect(playerManager.isPlaying) {
+        if (playerManager.isPlaying) {
+            while (isActive) {
                 playerManager.currentPlaybackPositionMillis =
-                    (playerManager.currentPlaybackPositionMillis + 10L).coerceAtMost(playerManager.totalAudioDurationMillis)
-                delay(10L)
-            }
-        } else if (recordingState == RecordingState.PAUSED) {
-            // Do nothing, just keep the current position
-        } else {
-            if (playerManager.currentPlaybackPositionMillis > 0L && playerManager.currentPlaybackPositionMillis >= playerManager.totalAudioDurationMillis) {
-                playerManager.currentPlaybackPositionMillis = 0L
+                    playerManager.mediaPlayer?.currentPosition?.toLong() ?: 0L
+                delay(100L) // Smooth and efficient
             }
         }
     }
 
     DisposableEffect(Unit) {
-        onDispose {
-            playerManager.dispose()
-        }
+        onDispose { playerManager.dispose() }
     }
 
     XenonTheme(
@@ -161,30 +158,27 @@ fun NoteAudioCard(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(MediumCornerRadius))
                 .background(backgroundColor)
-                .border(
-                    width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
-                )
+                .border(2.dp, borderColor, RoundedCornerShape(MediumCornerRadius))
                 .then(
                     Modifier.border(
-                        width = 0.5.dp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
-                        shape = RoundedCornerShape(MediumCornerRadius)
+                        0.5.dp,
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
+                        RoundedCornerShape(MediumCornerRadius)
                     )
                 )
                 .combinedClickable(
-                    enabled = !isNoteSheetOpen, // Disable clicks when a note sheet is open
+                    enabled = !isNoteSheetOpen,
                     onClick = {
                         if (isSelectionModeActive) {
                             onSelectItem()
                         } else {
-                            onEditItem(item)
+                            onEditItem(item) // Opens full editor
                         }
-                    }, onLongClick = onSelectItem
+                    },
+                    onLongClick = onSelectItem
                 )
         ) {
-            Column(
-                modifier = Modifier.padding(top = LargestPadding)
-            ) {
+            Column(modifier = Modifier.padding(top = LargestPadding)) {
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleLarge,
@@ -197,14 +191,11 @@ fun NoteAudioCard(
 
                 if (!item.description.isNullOrEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Column(
-                        modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start
-                    ) {
+
+                    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
                         val currentProgress = if (playerManager.totalAudioDurationMillis > 0) {
                             playerManager.currentPlaybackPositionMillis.toFloat() / playerManager.totalAudioDurationMillis
-                        } else {
-                            0f
-                        }
+                        } else 0f
 
                         Box(
                             modifier = Modifier
@@ -214,12 +205,14 @@ fun NoteAudioCard(
                                 .background(Color.Transparent)
                                 .pointerInput(playerManager) {
                                     detectTapGestures { offset ->
-                                        val newProgress = offset.x / size.width
-                                        val newPositionMillis =
-                                            (playerManager.totalAudioDurationMillis * newProgress).toLong()
-                                        playerManager.seekTo(newPositionMillis)
+                                        if (playerManager.totalAudioDurationMillis > 0L) {
+                                            val newProgress = offset.x / size.width
+                                            val seekTo = (playerManager.totalAudioDurationMillis * newProgress.coerceIn(0f, 1f)).toLong()
+                                            playerManager.seekTo(seekTo)
+                                        }
                                     }
-                                }) {
+                                }
+                        ) {
                             LinearProgressIndicator(
                                 progress = { currentProgress },
                                 modifier = Modifier
@@ -242,9 +235,7 @@ fun NoteAudioCard(
                         ) {
                             IconButton(
                                 onClick = {
-                                    val uniqueAudioId = item.description
-                                    val audioFilePath =
-                                        File(context.filesDir, "$uniqueAudioId.mp3").absolutePath
+                                    if (audioFilePath == null) return@IconButton
                                     if (playerManager.isPlaying) {
                                         playerManager.pauseAudio()
                                     } else {
@@ -254,13 +245,15 @@ fun NoteAudioCard(
                                             playerManager.playAudio(audioFilePath)
                                         }
                                     }
-                                }) {
+                                }
+                            ) {
                                 Icon(
                                     imageVector = if (playerManager.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
+
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(MediumCornerRadius))
@@ -269,9 +262,7 @@ fun NoteAudioCard(
                             ) {
                                 Text(
                                     text = "${formatDuration(playerManager.currentPlaybackPositionMillis)} / ${
-                                        formatDuration(
-                                            playerManager.totalAudioDurationMillis
-                                        )
+                                        formatDuration(playerManager.totalAudioDurationMillis)
                                     }",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -282,6 +273,7 @@ fun NoteAudioCard(
                 }
             }
 
+            // Selection checkbox
             AnimatedVisibility(
                 visible = isSelectionModeActive,
                 modifier = Modifier.align(Alignment.TopStart),
@@ -298,7 +290,7 @@ fun NoteAudioCard(
                     Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
                         if (selected) {
                             Icon(
-                                imageVector = Icons.Default.CheckCircle,
+                                Icons.Default.CheckCircle,
                                 contentDescription = "Selected",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp)
@@ -308,21 +300,20 @@ fun NoteAudioCard(
                                 modifier = Modifier
                                     .padding(2.dp)
                                     .size(20.dp)
-                                    .border(
-                                        width = 2.dp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                        shape = CircleShape
-                                    )
+                                    .border(2.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), CircleShape)
                             )
                         }
                     }
                 }
             }
+
+            // Mic badge
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(bottom = 6.dp, end = 6.dp)
-                    .size(26.dp), contentAlignment = Alignment.Center
+                    .size(26.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
@@ -330,7 +321,7 @@ fun NoteAudioCard(
                         .background(MaterialTheme.colorScheme.onSurface, CircleShape)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Mic,
+                        Icons.Default.Mic,
                         contentDescription = "Audio",
                         tint = backgroundColor,
                         modifier = Modifier
