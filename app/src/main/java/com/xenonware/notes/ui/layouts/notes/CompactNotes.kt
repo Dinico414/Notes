@@ -161,6 +161,7 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.launch
+import java.io.File
 
 
 // Define an enum for the audio view types
@@ -1478,6 +1479,7 @@ fun CompactNotes(
                     notesViewModel.setSearchQuery("") // Clear search query
                     resetNoteState()
                 }
+                val context = LocalContext.current  // ← Add this if not already there
                 NoteAudioSheet(
                     audioTitle = titleState,
                     onAudioTitleChange = { titleState = it },
@@ -1522,8 +1524,9 @@ fun CompactNotes(
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
                     selectedAudioViewType = selectedAudioViewType,
-                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() },
-                    onThemeChange = { newThemeName ->
+                    initialAudioFilePath = descriptionState?.let { uniqueId ->
+                        File(context.filesDir, "$uniqueId.mp3").takeIf { it.exists() }?.absolutePath
+                    },                    onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
                     },
                     allLabels = allLabels,
