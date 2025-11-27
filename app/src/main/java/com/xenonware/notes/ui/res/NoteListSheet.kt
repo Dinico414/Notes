@@ -35,6 +35,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -54,6 +55,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -176,8 +178,7 @@ fun NoteListSheet(
 
         DisposableEffect(systemUiController, isDarkTheme) {
             systemUiController.setStatusBarColor(
-                color = Color.Transparent,
-                darkIcons = !isDarkTheme
+                color = Color.Transparent, darkIcons = !isDarkTheme
             )
             onDispose {
                 systemUiController.setStatusBarColor(color = Color.Transparent)
@@ -193,13 +194,13 @@ fun NoteListSheet(
                     onLabelSelected(it)
                 },
                 onAddNewLabel = onAddNewLabel,
-                onDismiss = { showLabelDialog = false }
-            )
+                onDismiss = { showLabelDialog = false })
         }
 
         val hazeThinColor = MaterialTheme.colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
-        val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight
+        val bottomPadding =
+            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight
 
         Box(
             modifier = Modifier
@@ -212,7 +213,11 @@ fun NoteListSheet(
 
             Column(
                 modifier = Modifier
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Top
+                        )
+                    )
                     .padding(horizontal = 20.dp)
                     .padding(top = 4.dp)
                     .fillMaxSize()
@@ -232,14 +237,12 @@ fun NoteListSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
-                            checked = listItem.isChecked,
-                            onCheckedChange = { isChecked ->
+                            checked = listItem.isChecked, onCheckedChange = { isChecked ->
                                 val idx = listItems.indexOfFirst { it.id == listItem.id }
                                 if (idx != -1) {
                                     listItems[idx] = listItems[idx].copy(isChecked = isChecked)
                                 }
-                            }
-                        )
+                            })
 
                         val itemTextStyle = MaterialTheme.typography.bodyLarge.merge(
                             TextStyle(
@@ -269,13 +272,14 @@ fun NoteListSheet(
                                         Text(
                                             text = "New item",
                                             style = itemTextStyle,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.6f
+                                            )
                                         )
                                     }
                                     innerTextField()
                                 }
-                            }
-                        )
+                            })
 
                         IconButton(
                             onClick = {
@@ -283,13 +287,14 @@ fun NoteListSheet(
                                 if (idx != -1) {
                                     listItems.removeAt(idx)
                                     if (listItems.isEmpty()) {
-                                        val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
+                                        val newItem = ListItem(
+                                            id = System.nanoTime(), text = "", isChecked = false
+                                        )
                                         listItems.add(newItem)
                                         focusOnNewItemId = newItem.id
                                     }
                                 }
-                            }
-                        ) {
+                            }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete item")
                         }
                     }
@@ -308,25 +313,33 @@ fun NoteListSheet(
             // Toolbar
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                    .fillMaxWidth()
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Top
+                        )
+                    )
                     .padding(horizontal = 16.dp)
                     .padding(top = 4.dp)
                     .clip(RoundedCornerShape(100f))
-                    .background(MaterialTheme.colorScheme.surfaceDim)
-                    .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)),
-                verticalAlignment = Alignment.CenterVertically
+                    .background(colorScheme.surfaceDim)
+                    .hazeEffect(
+                        state = hazeState,
+                        style = HazeMaterials.ultraThin(hazeThinColor),
+                    ), verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onDismiss) {
+                IconButton(
+                    onClick = onDismiss, Modifier.padding(4.dp)
+                ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
 
                 val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
                     TextStyle(
                         fontFamily = QuicksandTitleVariable,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurface
+                        textAlign = TextAlign.Center,
+                        color = colorScheme.onSurface
                     )
                 )
 
@@ -336,81 +349,87 @@ fun NoteListSheet(
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     textStyle = titleTextStyle,
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    cursorBrush = SolidColor(colorScheme.primary),
                     decorationBox = { innerTextField ->
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             if (listTitle.isEmpty()) {
                                 Text(
                                     text = "Title",
                                     style = titleTextStyle,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    color = colorScheme.onSurface.copy(alpha = 0.6f),
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                             }
                             innerTextField()
                         }
-                    }
-                )
-
+                    })
                 Box {
-                    IconButton(onClick = { showMenu = !showMenu }) {
+                    IconButton(
+                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
+                    ) {
                         Icon(Icons.Default.MoreVert, contentDescription = "More options")
                     }
-
                     DropdownNoteMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
-                        items = listOf(
-                            MenuItem(
-                                text = "Label",
-                                onClick = { showLabelDialog = true; showMenu = false },
-                                dismissOnClick = true,
-                                icon = {
-                                    if (isLabeled) {
-                                        Icon(Icons.Default.Bookmark, contentDescription = "Label", tint = labelColor)
-                                    } else {
-                                        Icon(Icons.Default.BookmarkBorder, contentDescription = "Label")
-                                    }
+                        items = listOfNotNull(
+                            MenuItem(text = "Label", onClick = {
+                            showLabelDialog = true
+                            showMenu = false
+                        }, dismissOnClick = true, icon = {
+                            if (isLabeled) {
+                                Icon(
+                                    Icons.Default.Bookmark,
+                                    contentDescription = "Label",
+                                    tint = labelColor
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.BookmarkBorder,
+                                    contentDescription = "Label"
+                                )
+                            }
+                        }), MenuItem(
+                                text = colorMenuItemText, onClick = {
+                                val currentIndex = availableThemes.indexOf(selectedTheme)
+                                val nextIndex = (currentIndex + 1) % availableThemes.size
+                                selectedTheme = availableThemes[nextIndex]
+                                onThemeChange(selectedTheme) // Call the callback here
+                                colorChangeJob?.cancel()
+                                colorChangeJob = scope.launch {
+                                    colorMenuItemText = availableThemes[nextIndex]
+                                    isFadingOut = false
+                                    delay(2500)
+                                    isFadingOut = true
+                                    delay(500)
+                                    colorMenuItemText = "Color"
+                                    isFadingOut = false
                                 }
-                            ),
-                            MenuItem(
-                                text = colorMenuItemText,
-                                onClick = {
-                                    val currentIndex = availableThemes.indexOf(selectedTheme)
-                                    val nextIndex = (currentIndex + 1) % availableThemes.size
-                                    selectedTheme = availableThemes[nextIndex]
-                                    onThemeChange(selectedTheme)
-                                    colorChangeJob?.cancel()
-                                    colorChangeJob = scope.launch {
-                                        colorMenuItemText = availableThemes[nextIndex]
-                                        isFadingOut = false
-                                        delay(2500)
-                                        isFadingOut = true
-                                        delay(500)
-                                        colorMenuItemText = "Color"
-                                        isFadingOut = false
-                                    }
-                                },
-                                dismissOnClick = false,
-                                icon = {
+                            }, dismissOnClick = false, icon = {
+                                Icon(
+                                    Icons.Default.ColorLens,
+                                    contentDescription = "Color",
+                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                )
+                            }, textColor = animatedTextColor
+                        ), MenuItem(
+                            text = if (isOffline) "Offline note" else "Online note",
+                            onClick = { isOffline = !isOffline },
+                            dismissOnClick = false,
+                            textColor = if (isOffline) colorScheme.error else null,
+                            icon = {
+                                if (isOffline) {
                                     Icon(
-                                        Icons.Default.ColorLens,
-                                        contentDescription = "Color",
-                                        tint = if (selectedTheme == "Default") MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
+                                        Icons.Default.CloudOff,
+                                        contentDescription = "Offline note",
+                                        tint = colorScheme.error
                                     )
-                                },
-                                textColor = animatedTextColor
-                            ),
-                            MenuItem(
-                                text = if (isOffline) "Offline note" else "Online note",
-                                onClick = { isOffline = !isOffline },
-                                dismissOnClick = false,
-                                textColor = if (isOffline) MaterialTheme.colorScheme.error else null,
-                                icon = {
-                                    if (isOffline) Icon(Icons.Default.CloudOff, contentDescription = "Offline", tint = MaterialTheme.colorScheme.error)
-                                    else Icon(Icons.Default.Cloud, contentDescription = "Online")
+                                } else {
+                                    Icon(
+                                        Icons.Default.Cloud, contentDescription = "Online note"
+                                    )
                                 }
-                            )
+                            })
                         ),
                         hazeState = hazeState
                     )

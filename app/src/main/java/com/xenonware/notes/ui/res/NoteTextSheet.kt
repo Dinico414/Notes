@@ -130,8 +130,8 @@ fun String.fromSerialized(): AnnotatedString {
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun NoteTextSheet(
-    title: String,
-    onTitleChange: (String) -> Unit,
+    textTitel: String,
+    onTextTitleChange: (String) -> Unit,
     initialContent: String = "",
     onDismiss: () -> Unit,
     onSave: (String, String, String, String?) -> Unit,
@@ -185,7 +185,7 @@ fun NoteTextSheet(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(title, textFieldValue.annotatedString.toSerialized(), selectedTheme, selectedLabelId)
+            onSave(textTitel, textFieldValue.annotatedString.toSerialized(), selectedTheme, selectedLabelId)
             onSaveTriggerConsumed()
         }
     }
@@ -407,11 +407,11 @@ fun NoteTextSheet(
                 Spacer(modifier = Modifier.height(bottomPadding))
 
             }
-            //topbar
+            // Toolbar
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .align(Alignment.TopCenter)
+                    .fillMaxWidth()
                     .windowInsetsPadding(
                         WindowInsets.safeDrawing.only(
                             WindowInsetsSides.Top
@@ -439,20 +439,21 @@ fun NoteTextSheet(
                         color = colorScheme.onSurface
                     )
                 )
+
                 BasicTextField(
-                    value = title,
-                    onValueChange = { onTitleChange(it) },
+                    value = textTitel,
+                    onValueChange = onTextTitleChange,
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     textStyle = titleTextStyle,
                     cursorBrush = SolidColor(colorScheme.primary),
                     decorationBox = { innerTextField ->
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (title.isEmpty()) {
+                            if (textTitel.isEmpty()) {
                                 Text(
                                     text = "Title",
                                     style = titleTextStyle,
-                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    color = colorScheme.onSurface.copy(alpha = 0.6f),
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                             }
@@ -461,60 +462,54 @@ fun NoteTextSheet(
                     })
                 Box {
                     IconButton(
-                        onClick = { showMenu = !showMenu },
-                        modifier = Modifier.padding(4.dp)
+                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
                     ) {
                         Icon(Icons.Default.MoreVert, contentDescription = "More options")
                     }
                     DropdownNoteMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
-                        items = listOf(
-                            MenuItem(
-                                text = "Label",
-                                onClick = {
-                                    showLabelDialog = true
-                                    showMenu = false
-                                },
-                                dismissOnClick = true,
-                                icon = {
-                                    if (isLabeled) {
-                                        Icon(
-                                            Icons.Default.Bookmark,
-                                            contentDescription = "Label",
-                                            tint = labelColor
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Default.BookmarkBorder,
-                                            contentDescription = "Label"
-                                        )
-                                    }
-                                }),
-                            MenuItem(text = colorMenuItemText, onClick = {
-                                val currentIndex = availableThemes.indexOf(selectedTheme)
-                                val nextIndex = (currentIndex + 1) % availableThemes.size
-                                selectedTheme = availableThemes[nextIndex]
-                                onThemeChange(selectedTheme) // Call the callback here
-                                colorChangeJob?.cancel()
-                                colorChangeJob = scope.launch {
-                                    colorMenuItemText = availableThemes[nextIndex]
-                                    isFadingOut = false
-                                    delay(2500)
-                                    isFadingOut = true
-                                    delay(500)
-                                    colorMenuItemText = "Color"
-                                    isFadingOut = false
+                        items = listOfNotNull(
+                            MenuItem(text = "Label", onClick = {
+                                showLabelDialog = true
+                                showMenu = false
+                            }, dismissOnClick = true, icon = {
+                                if (isLabeled) {
+                                    Icon(
+                                        Icons.Default.Bookmark,
+                                        contentDescription = "Label",
+                                        tint = labelColor
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.BookmarkBorder,
+                                        contentDescription = "Label"
+                                    )
                                 }
-                            }, dismissOnClick = false, icon = {
-                                Icon(
-                                    Icons.Default.ColorLens,
-                                    contentDescription = "Color",
-                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                )
-                            }, textColor = animatedTextColor
-                            ),
-                            MenuItem(
+                            }), MenuItem(
+                                text = colorMenuItemText, onClick = {
+                                    val currentIndex = availableThemes.indexOf(selectedTheme)
+                                    val nextIndex = (currentIndex + 1) % availableThemes.size
+                                    selectedTheme = availableThemes[nextIndex]
+                                    onThemeChange(selectedTheme) // Call the callback here
+                                    colorChangeJob?.cancel()
+                                    colorChangeJob = scope.launch {
+                                        colorMenuItemText = availableThemes[nextIndex]
+                                        isFadingOut = false
+                                        delay(2500)
+                                        isFadingOut = true
+                                        delay(500)
+                                        colorMenuItemText = "Color"
+                                        isFadingOut = false
+                                    }
+                                }, dismissOnClick = false, icon = {
+                                    Icon(
+                                        Icons.Default.ColorLens,
+                                        contentDescription = "Color",
+                                        tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                    )
+                                }, textColor = animatedTextColor
+                            ), MenuItem(
                                 text = if (isOffline) "Offline note" else "Online note",
                                 onClick = { isOffline = !isOffline },
                                 dismissOnClick = false,

@@ -1331,8 +1331,8 @@ fun CompactNotes(
                 }
 
                 NoteTextSheet(
-                    title = titleState,
-                    onTitleChange = { titleState = it },
+                    textTitel = titleState,
+                    onTextTitleChange = { titleState = it },
                     initialContent = descriptionState,
                     onDismiss = {
                         showTextNoteCard = false

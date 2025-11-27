@@ -9,6 +9,8 @@ import android.media.MediaRecorder
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +32,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
@@ -41,6 +48,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -58,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -67,6 +76,7 @@ import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.layouts.notes.AudioViewType
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
+import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.viewmodel.classes.Label
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
@@ -76,6 +86,7 @@ import dev.chrisbanes.haze.materials.HazeMaterials
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -330,6 +341,8 @@ fun NoteAudioSheet(
     }
 
     var showMenu by remember { mutableStateOf(false) }
+    var isOffline by remember { mutableStateOf(false) }
+
     var showLabelDialog by remember { mutableStateOf(false) }
     var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
     val isLabeled = selectedLabelId != null
@@ -408,6 +421,12 @@ fun NoteAudioSheet(
         usePurpleTheme = selectedTheme == "Purple",
         dynamicColor = selectedTheme == "Default"
     ) {
+        val animatedTextColor by animateColorAsState(
+            targetValue = if (isFadingOut) colorScheme.onSurface.copy(alpha = 0f) else colorScheme.onSurface,
+            animationSpec = tween(durationMillis = 500),
+            label = "animatedTextColor"
+        )
+
         DisposableEffect(systemUiController, isDarkTheme) {
             systemUiController.setStatusBarColor(Color.Transparent, darkIcons = !isDarkTheme)
             onDispose { systemUiController.setStatusBarColor(Color.Transparent) }
@@ -425,6 +444,9 @@ fun NoteAudioSheet(
                 onDismiss = { showLabelDialog = false }
             )
         }
+
+        val hazeThinColor = colorScheme.surfaceDim
+        val labelColor = extendedMaterialColorScheme.label
 
         Box(
             modifier = Modifier
@@ -539,48 +561,126 @@ fun NoteAudioSheet(
                 }
             }
 
-            // Top bar
+            // Toolbar
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Top
+                        )
+                    )
                     .padding(horizontal = 16.dp)
                     .padding(top = 4.dp)
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                    .fillMaxWidth()
                     .clip(RoundedCornerShape(100f))
-                    .background(MaterialTheme.colorScheme.surfaceDim)
-                    .hazeEffect(hazeState, HazeMaterials.ultraThin(MaterialTheme.colorScheme.surfaceDim)),
-                verticalAlignment = Alignment.CenterVertically
+                    .background(colorScheme.surfaceDim)
+                    .hazeEffect(
+                        state = hazeState,
+                        style = HazeMaterials.ultraThin(hazeThinColor),
+                    ), verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                IconButton(
+                    onClick = onDismiss, Modifier.padding(4.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
+
+                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
+                    TextStyle(
+                        fontFamily = QuicksandTitleVariable,
+                        textAlign = TextAlign.Center,
+                        color = colorScheme.onSurface
+                    )
+                )
+
                 BasicTextField(
                     value = audioTitle,
                     onValueChange = onAudioTitleChange,
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.titleLarge.copy(
-                        fontFamily = QuicksandTitleVariable,
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    decorationBox = { inner ->
-                        Box(Modifier.fillMaxWidth(), Alignment.Center) {
-                            if (audioTitle.isEmpty()) Text("Title", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f))
-                            inner()
+                    textStyle = titleTextStyle,
+                    cursorBrush = SolidColor(colorScheme.primary),
+                    decorationBox = { innerTextField ->
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            if (audioTitle.isEmpty()) {
+                                Text(
+                                    text = "Title",
+                                    style = titleTextStyle,
+                                    color = colorScheme.onSurface.copy(alpha = 0.6f),
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                            innerTextField()
                         }
-                    }
-                )
+                    })
                 Box {
-                    IconButton(onClick = { showMenu = !showMenu }) {
-                        Icon(Icons.Default.MoreVert, "More")
+                    IconButton(
+                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
+                    ) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
                     }
                     DropdownNoteMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
-                        items = listOf(
-                            // ... your menu items (Label, Color, etc.)
+                        items = listOfNotNull(
+                            MenuItem(text = "Label", onClick = {
+                                showLabelDialog = true
+                                showMenu = false
+                            }, dismissOnClick = true, icon = {
+                                if (isLabeled) {
+                                    Icon(
+                                        Icons.Default.Bookmark,
+                                        contentDescription = "Label",
+                                        tint = labelColor
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.BookmarkBorder,
+                                        contentDescription = "Label"
+                                    )
+                                }
+                            }), MenuItem(
+                                text = colorMenuItemText, onClick = {
+                                    val currentIndex = availableThemes.indexOf(selectedTheme)
+                                    val nextIndex = (currentIndex + 1) % availableThemes.size
+                                    selectedTheme = availableThemes[nextIndex]
+                                    onThemeChange(selectedTheme) // Call the callback here
+                                    colorChangeJob?.cancel()
+                                    colorChangeJob = scope.launch {
+                                        colorMenuItemText = availableThemes[nextIndex]
+                                        isFadingOut = false
+                                        delay(2500)
+                                        isFadingOut = true
+                                        delay(500)
+                                        colorMenuItemText = "Color"
+                                        isFadingOut = false
+                                    }
+                                }, dismissOnClick = false, icon = {
+                                    Icon(
+                                        Icons.Default.ColorLens,
+                                        contentDescription = "Color",
+                                        tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                    )
+                                }, textColor = animatedTextColor
+                            ), MenuItem(
+                                text = if (isOffline) "Offline note" else "Online note",
+                                onClick = { isOffline = !isOffline },
+                                dismissOnClick = false,
+                                textColor = if (isOffline) colorScheme.error else null,
+                                icon = {
+                                    if (isOffline) {
+                                        Icon(
+                                            Icons.Default.CloudOff,
+                                            contentDescription = "Offline note",
+                                            tint = colorScheme.error
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.Cloud, contentDescription = "Online note"
+                                        )
+                                    }
+                                })
                         ),
                         hazeState = hazeState
                     )
@@ -589,7 +689,6 @@ fun NoteAudioSheet(
         }
     }
 }
-
 @Composable
 fun AudioTimerDisplay(
     isRecording: Boolean,

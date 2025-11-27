@@ -56,8 +56,8 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
-import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -312,7 +312,7 @@ fun NoteSketchSheet(
             }
 
 
-            // Top bar
+            // Toolbar
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -350,13 +350,14 @@ fun NoteSketchSheet(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
 
-                val titleTextStyle = typography.titleLarge.merge(
+                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
                     TextStyle(
                         fontFamily = QuicksandTitleVariable,
                         textAlign = TextAlign.Center,
                         color = colorScheme.onSurface
                     )
                 )
+
                 BasicTextField(
                     value = sketchTitle,
                     onValueChange = onSketchTitleChange,
@@ -387,51 +388,46 @@ fun NoteSketchSheet(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
                         items = listOfNotNull(
-                            MenuItem(
-                                text = "Label",
-                                onClick = {
-                                    showLabelDialog = true
-                                    showMenu = false
-                                },
-                                dismissOnClick = true,
-                                icon = {
-                                    if (isLabeled) {
-                                        Icon(
-                                            Icons.Default.Bookmark,
-                                            contentDescription = "Label",
-                                            tint = labelColor
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Default.BookmarkBorder,
-                                            contentDescription = "Label"
-                                        )
-                                    }
-                                }),
-                            MenuItem(text = colorMenuItemText, onClick = {
-                                val currentIndex = availableThemes.indexOf(selectedTheme)
-                                val nextIndex = (currentIndex + 1) % availableThemes.size
-                                selectedTheme = availableThemes[nextIndex]
-                                onThemeChange(selectedTheme) // Call the callback here
-                                colorChangeJob?.cancel()
-                                colorChangeJob = scope.launch {
-                                    colorMenuItemText = availableThemes[nextIndex]
-                                    isFadingOut = false
-                                    delay(2500)
-                                    isFadingOut = true
-                                    delay(500)
-                                    colorMenuItemText = "Color"
-                                    isFadingOut = false
+                            MenuItem(text = "Label", onClick = {
+                                showLabelDialog = true
+                                showMenu = false
+                            }, dismissOnClick = true, icon = {
+                                if (isLabeled) {
+                                    Icon(
+                                        Icons.Default.Bookmark,
+                                        contentDescription = "Label",
+                                        tint = labelColor
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.BookmarkBorder,
+                                        contentDescription = "Label"
+                                    )
                                 }
-                            }, dismissOnClick = false, icon = {
-                                Icon(
-                                    Icons.Default.ColorLens,
-                                    contentDescription = "Color",
-                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                )
-                            }, textColor = animatedTextColor
-                            ),
-                            MenuItem(
+                            }), MenuItem(
+                                text = colorMenuItemText, onClick = {
+                                    val currentIndex = availableThemes.indexOf(selectedTheme)
+                                    val nextIndex = (currentIndex + 1) % availableThemes.size
+                                    selectedTheme = availableThemes[nextIndex]
+                                    onThemeChange(selectedTheme) // Call the callback here
+                                    colorChangeJob?.cancel()
+                                    colorChangeJob = scope.launch {
+                                        colorMenuItemText = availableThemes[nextIndex]
+                                        isFadingOut = false
+                                        delay(2500)
+                                        isFadingOut = true
+                                        delay(500)
+                                        colorMenuItemText = "Color"
+                                        isFadingOut = false
+                                    }
+                                }, dismissOnClick = false, icon = {
+                                    Icon(
+                                        Icons.Default.ColorLens,
+                                        contentDescription = "Color",
+                                        tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                    )
+                                }, textColor = animatedTextColor
+                            ), MenuItem(
                                 text = if (isOffline) "Offline note" else "Online note",
                                 onClick = { isOffline = !isOffline },
                                 dismissOnClick = false,
@@ -449,7 +445,7 @@ fun NoteSketchSheet(
                                         )
                                     }
                                 }),
-                            if (isDeveloperOptionsEnabled) { // Conditionally add debug text option
+                            if (isDeveloperOptionsEnabled) {
                                 MenuItem(
                                     text = "Debug text",
                                     onClick = { debugTextEnabled = !debugTextEnabled },
@@ -467,8 +463,8 @@ fun NoteSketchSheet(
                                             )
                                         }
                                     })
-                            } else null // Ensure null is handled if developer options are not enabled
-                        ), // Filter out null items
+                            } else null
+                        ),
                         hazeState = hazeState
                     )
                 }
