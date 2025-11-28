@@ -1,3 +1,5 @@
+@file:Suppress("AssignedValueIsNeverRead")
+
 package com.xenonware.notes.ui.res
 
 import android.Manifest
@@ -56,7 +58,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -150,7 +151,7 @@ class AudioRecorderManager(
             setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
             setAudioSamplingRate(44100)
-            setAudioEncodingBitRate(192000) // High quality
+            setAudioEncodingBitRate(192000)
             setOutputFile(audioFilePath)
             try {
                 prepare()
@@ -172,14 +173,10 @@ class AudioRecorderManager(
 
     fun stopRecording() {
         if (currentRecordingState == RecordingState.RECORDING || currentRecordingState == RecordingState.PAUSED) {
-            try {
-                mediaRecorder?.stop()
-            } catch (_: Exception) { /* sometimes throws if too short */
-            }
+            try { mediaRecorder?.stop() } catch (_: Exception) {}
             mediaRecorder?.release()
             mediaRecorder = null
-            currentRecordingState =
-                if (isPersistentAudio) RecordingState.VIEWING_SAVED_AUDIO else RecordingState.STOPPED_UNSAVED
+            currentRecordingState = if (isPersistentAudio) RecordingState.VIEWING_SAVED_AUDIO else RecordingState.STOPPED_UNSAVED
         }
     }
 
@@ -191,14 +188,10 @@ class AudioRecorderManager(
         recordingDurationMillis = 0L
     }
 
-    fun markAudioAsPersistent() {
-        isPersistentAudio = true
-    }
+    fun markAudioAsPersistent() { isPersistentAudio = true }
 
     fun deleteRecording() {
-        if (!isPersistentAudio && audioFilePath != null) {
-            File(audioFilePath!!).delete()
-        }
+        if (!isPersistentAudio && audioFilePath != null) File(audioFilePath!!).delete()
         audioFilePath = null
         uniqueAudioId = null
         recordingDurationMillis = 0L
@@ -208,18 +201,10 @@ class AudioRecorderManager(
 
     fun resetState() {
         if (currentRecordingState == RecordingState.RECORDING || currentRecordingState == RecordingState.PAUSED) {
-            mediaRecorder?.apply {
-                try {
-                    stop()
-                } catch (_: Exception) { /* ignore */
-                }
-                release()
-            }
+            mediaRecorder?.apply { try { stop() } catch (_: Exception) {}; release() }
             mediaRecorder = null
         }
-
         onNewRecordingStarted()
-
         deleteRecording()
     }
 
@@ -230,111 +215,95 @@ class AudioRecorderManager(
     }
 }
 
+object GlobalAudioPlayer {
+    private var _instance: AudioPlayerManager? = null
+    private val lock = Any()
+
+    fun getInstance(): AudioPlayerManager = synchronized(lock) {
+        _instance ?: AudioPlayerManager().also { _instance = it }
+    }
+
+    fun release() = synchronized(lock) {
+        _instance?.dispose()
+        _instance = null
+    }
+}
+
 class AudioPlayerManager {
-
-    // These are mutable state holders (required for Compose recomposition)
-    var currentRecordingState: RecordingState by mutableStateOf(RecordingState.IDLE)
-    var isPlaying: Boolean by mutableStateOf(false)
-    var currentPlaybackPositionMillis: Long by mutableLongStateOf(0L)
-    var totalAudioDurationMillis: Long by mutableLongStateOf(0L)
-    private var currentFilePath: String? = null
-
-    // This MUST be a var – we re-assign it every time we play a new file
-    var mediaPlayer: MediaPlayer? = null
+    var mediaPlayer: MediaPlayer? = null; private set
+    var isPlaying by mutableStateOf(false); private set
+    var currentPlaybackPositionMillis by mutableLongStateOf(0L)
+    var totalAudioDurationMillis by mutableLongStateOf(0L)
+    var currentFilePath: String? = null; private set(value) {
+        field = value
+        if (value != null && value != field) currentPlaybackPositionMillis = 0L
+    }
+    var currentRecordingState by mutableStateOf(RecordingState.VIEWING_SAVED_AUDIO); private set
 
     fun playAudio(filePath: String) {
-        // If we're already playing the same file → do nothing
-        if (isPlaying && currentFilePath == filePath) return
+        if (currentFilePath != filePath || mediaPlayer == null) stopAudio()
+        if (currentFilePath == filePath && isPlaying) return
 
-        // If we have a different file or player is dead → create new one
-        if (mediaPlayer == null || currentFilePath != filePath) {
-            mediaPlayer?.release()
-            mediaPlayer = null
-            currentPlaybackPositionMillis = 0L
-
-            try {
-                mediaPlayer = MediaPlayer().apply {
-                    setAudioAttributes(
-                        AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                            .setUsage(AudioAttributes.USAGE_MEDIA).build()
-                    )
-                    setDataSource(filePath)
-                    prepare()
-                    this@AudioPlayerManager.totalAudioDurationMillis = duration.toLong()
-                    currentFilePath = filePath
-
-                    setOnCompletionListener {
-                        this@AudioPlayerManager.isPlaying = false
-                        currentPlaybackPositionMillis = 0L
-                        currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
-                    }
+        currentFilePath = filePath
+        try {
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .setUsage(AudioAttributes.USAGE_MEDIA).build())
+                setDataSource(filePath)
+                prepare()
+                totalAudioDurationMillis = duration.toLong()
+                setOnCompletionListener {
+                    this@AudioPlayerManager.isPlaying = false
+                    currentPlaybackPositionMillis = 0L
+                    currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                isPlaying = false
-                currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
-                return
+                start()
             }
+            isPlaying = true
+            currentRecordingState = RecordingState.PLAYING
+        } catch (e: Exception) {
+            e.printStackTrace()
+            isPlaying = false
         }
-
-        mediaPlayer?.start()
-        isPlaying = true
-        currentRecordingState = RecordingState.PLAYING
     }
 
-    fun pauseAudio() {
-        mediaPlayer?.pause()
-        isPlaying = false
-    }
-
+    fun pauseAudio() { mediaPlayer?.pause(); isPlaying = false }
     fun resumeAudio() {
+        if (mediaPlayer == null) {
+            currentFilePath?.let { playAudio(it) }
+            return
+        }
         mediaPlayer?.start()
         isPlaying = true
         currentRecordingState = RecordingState.PLAYING
     }
-
     fun stopAudio() {
         mediaPlayer?.apply {
-            stop()
+            if (isPlaying) stop()
             release()
         }
         mediaPlayer = null
         isPlaying = false
         currentPlaybackPositionMillis = 0L
+        currentFilePath = null
         currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
     }
 
     fun seekTo(positionMillis: Long) {
         mediaPlayer?.seekTo(positionMillis.toInt())
-        currentPlaybackPositionMillis = positionMillis
+        currentPlaybackPositionMillis = positionMillis.coerceIn(0L, totalAudioDurationMillis)
     }
 
-    fun getAudioDuration(filePath: String): Long {
-        var duration = 0L
-        val tempPlayer = MediaPlayer()
-        try {
-            tempPlayer.setDataSource(filePath)
-            tempPlayer.prepare()
-            duration = tempPlayer.duration.toLong()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            tempPlayer.release()
-        }
-        return duration
-    }
+    fun getAudioDuration(filePath: String): Long = try {
+        val p = MediaPlayer().apply { setDataSource(filePath); prepare() }
+        p.duration.toLong().also { p.release() }
+    } catch (_: Exception) { 0L }
 
-    fun dispose() {
-        mediaPlayer?.release()
-        mediaPlayer = null
-    }
+    fun dispose() = stopAudio()
 }
 
-@OptIn(
-    ExperimentalMaterial3Api::class,
-    ExperimentalMaterial3ExpressiveApi::class,
-    ExperimentalHazeMaterialsApi::class
-)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalHazeMaterialsApi::class)
 @Composable
 fun NoteAudioSheet(
     audioTitle: String,
@@ -355,72 +324,69 @@ fun NoteAudioSheet(
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
+    val context = LocalContext.current
+    val player = GlobalAudioPlayer.getInstance()
+    val recorder = remember {
+        AudioRecorderManager(context) {
+            player.totalAudioDurationMillis = 0L
+            player.currentPlaybackPositionMillis = 0L
+            player.stopAudio()
+        }
+    }
+
+    val currentSheetAudioPath = recorder.audioFilePath ?: initialAudioFilePath
+    val isSheetAudioActive = player.currentFilePath == currentSheetAudioPath
+    val isSheetAudioPlaying = player.isPlaying && isSheetAudioActive
+    val isSheetAudioPaused = !player.isPlaying && isSheetAudioActive && player.currentPlaybackPositionMillis > 0
 
     var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) }
     var colorMenuItemText by remember { mutableStateOf("Color") }
     val scope = rememberCoroutineScope()
     var isFadingOut by remember { mutableStateOf(false) }
     var colorChangeJob by remember { mutableStateOf<Job?>(null) }
-
-    val availableThemes = remember {
-        listOf("Default", "Red", "Orange", "Yellow", "Green", "Turquoise", "Blue", "Purple")
-    }
+    val availableThemes = remember { listOf("Default", "Red", "Orange", "Yellow", "Green", "Turquoise", "Blue", "Purple") }
 
     var showMenu by remember { mutableStateOf(false) }
     var isOffline by remember { mutableStateOf(false) }
-
     var showLabelDialog by remember { mutableStateOf(false) }
     var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
     val isLabeled = selectedLabelId != null
 
-    val context = LocalContext.current
-    val playerManager = remember { AudioPlayerManager() }
-    val recorderManager = remember {
-        AudioRecorderManager(context) {
-            playerManager.totalAudioDurationMillis = 0L
-            playerManager.currentPlaybackPositionMillis = 0L
-            playerManager.stopAudio()
-        }
-    }
     var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
 
     // Sync state
-    LaunchedEffect(recorderManager.currentRecordingState, playerManager.currentRecordingState) {
+    LaunchedEffect(recorder.currentRecordingState, player.currentRecordingState) {
         recordingState = when {
-            playerManager.currentRecordingState == RecordingState.PLAYING -> RecordingState.PLAYING
-            recorderManager.currentRecordingState == RecordingState.RECORDING -> RecordingState.RECORDING
-            recorderManager.currentRecordingState == RecordingState.PAUSED -> RecordingState.PAUSED
-            recorderManager.currentRecordingState == RecordingState.STOPPED_UNSAVED -> RecordingState.STOPPED_UNSAVED
-            recorderManager.currentRecordingState == RecordingState.VIEWING_SAVED_AUDIO -> RecordingState.VIEWING_SAVED_AUDIO
+            player.currentRecordingState == RecordingState.PLAYING -> RecordingState.PLAYING
+            recorder.currentRecordingState == RecordingState.RECORDING -> RecordingState.RECORDING
+            recorder.currentRecordingState == RecordingState.PAUSED -> RecordingState.PAUSED
+            recorder.currentRecordingState == RecordingState.STOPPED_UNSAVED -> RecordingState.STOPPED_UNSAVED
+            recorder.currentRecordingState == RecordingState.VIEWING_SAVED_AUDIO -> RecordingState.VIEWING_SAVED_AUDIO
             else -> RecordingState.IDLE
         }
     }
 
-    // Load existing audio
     LaunchedEffect(initialAudioFilePath) {
         if (initialAudioFilePath != null && File(initialAudioFilePath).exists()) {
-            recorderManager.setInitialAudioFilePath(initialAudioFilePath)
-            playerManager.totalAudioDurationMillis =
-                playerManager.getAudioDuration(initialAudioFilePath)
+            recorder.setInitialAudioFilePath(initialAudioFilePath)
         }
     }
 
-    // Timer updates
+    // Recording timer
     LaunchedEffect(recordingState) {
         if (recordingState == RecordingState.RECORDING) {
             while (isActive) {
                 delay(1000L)
-                recorderManager.recordingDurationMillis += 1000L
+                recorder.recordingDurationMillis += 1000L
             }
         }
     }
 
-// ADD THIS BLOCK (playback timer)
-    LaunchedEffect(playerManager.isPlaying) {
-        if (playerManager.isPlaying) {
+    // Playback position updater
+    LaunchedEffect(player.isPlaying) {
+        if (player.isPlaying) {
             while (isActive) {
-                playerManager.currentPlaybackPositionMillis =
-                    playerManager.mediaPlayer?.currentPosition?.toLong() ?: 0L
+                player.currentPlaybackPositionMillis = player.mediaPlayer?.currentPosition?.toLong() ?: 0L
                 delay(50L)
             }
         }
@@ -428,37 +394,42 @@ fun NoteAudioSheet(
 
     // Save trigger
     LaunchedEffect(saveTrigger) {
-        if (saveTrigger && recorderManager.audioFilePath != null) {
-            recorderManager.stopRecording()
-            playerManager.stopAudio()
-            recorderManager.markAudioAsPersistent()
-            onSave(audioTitle, recorderManager.uniqueAudioId ?: "", selectedTheme, selectedLabelId)
+        if (saveTrigger) {
+            val hasAudio = recorder.audioFilePath != null || initialAudioFilePath != null
+            if (audioTitle.isNotBlank() && hasAudio) {
+                recorder.stopRecording() // safely stops if recording
+                player.stopAudio()
+                recorder.markAudioAsPersistent()
+                val audioId = recorder.uniqueAudioId ?:
+                initialAudioFilePath?.let { File(it).nameWithoutExtension } ?: ""
+                onSave(audioTitle, audioId, selectedTheme, selectedLabelId)
+            }
             onSaveTriggerConsumed()
         }
     }
 
-    LaunchedEffect(initialAudioFilePath) {
-        if (initialAudioFilePath != null && File(initialAudioFilePath).exists()) {
-            recorderManager.setInitialAudioFilePath(initialAudioFilePath)
-            playerManager.totalAudioDurationMillis =
-                playerManager.getAudioDuration(initialAudioFilePath)
-        }
-    }
-
-    val requestPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) recorderManager.startRecording()
+    val requestPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) recorder.startRecording()
     }
 
     DisposableEffect(Unit) {
-        onDispose {
-            recorderManager.dispose()
-            playerManager.dispose()
-        }
+        onDispose { recorder.dispose() }
     }
 
     @Suppress("DEPRECATION") val systemUiController = rememberSystemUiController()
+
+    // === DURATION & VISIBILITY LOGIC ===
+    val hasAudioFile = currentSheetAudioPath != null
+    val isInRecordingMode = recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED
+
+    // Recompute duration only when entering playback mode
+    val sheetAudioDuration by remember(currentSheetAudioPath, recordingState) {
+        mutableLongStateOf(
+            if (hasAudioFile && !isInRecordingMode && currentSheetAudioPath != null) {
+                player.getAudioDuration(currentSheetAudioPath!!)
+            } else 0L
+        )
+    }
 
     XenonTheme(
         darkTheme = isDarkTheme,
@@ -473,9 +444,8 @@ fun NoteAudioSheet(
         dynamicColor = selectedTheme == "Default"
     ) {
         val animatedTextColor by animateColorAsState(
-            targetValue = if (isFadingOut) colorScheme.onSurface.copy(alpha = 0f) else colorScheme.onSurface,
-            animationSpec = tween(durationMillis = 500),
-            label = "animatedTextColor"
+            targetValue = if (isFadingOut) MaterialTheme.colorScheme.onSurface.copy(alpha = 0f) else MaterialTheme.colorScheme.onSurface,
+            animationSpec = tween(500)
         )
 
         DisposableEffect(systemUiController, isDarkTheme) {
@@ -487,47 +457,44 @@ fun NoteAudioSheet(
             LabelSelectionDialog(
                 allLabels = allLabels,
                 selectedLabelId = selectedLabelId,
-                onLabelSelected = {
-                    selectedLabelId = it
-                    onLabelSelected(it)
-                },
+                onLabelSelected = { selectedLabelId = it; onLabelSelected(it) },
                 onAddNewLabel = onAddNewLabel,
-                onDismiss = { showLabelDialog = false })
+                onDismiss = { showLabelDialog = false }
+            )
         }
 
-        val hazeThinColor = colorScheme.surfaceDim
+        val hazeThinColor = MaterialTheme.colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colorScheme.surfaceContainer)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
         ) {
             Column(
                 modifier = Modifier
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            WindowInsetsSides.Top
-                        )
-                    )
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                     .padding(horizontal = 20.dp)
                     .padding(top = 4.dp)
                     .fillMaxSize()
                     .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                    .hazeSource(hazeState), horizontalAlignment = Alignment.CenterHorizontally
+                    .hazeSource(hazeState),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(68.dp))
 
+                // Top Timer
                 AudioTimerDisplay(
                     isRecording = recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED,
-                    isPlaying = recordingState == RecordingState.PLAYING,
-                    recordingDurationMillis = recorderManager.recordingDurationMillis,
-                    currentPlaybackPositionMillis = playerManager.currentPlaybackPositionMillis,
-                    totalAudioDurationMillis = playerManager.totalAudioDurationMillis,
+                    isPlaying = isSheetAudioPlaying,
+                    recordingDurationMillis = recorder.recordingDurationMillis,
+                    currentPlaybackPositionMillis = player.currentPlaybackPositionMillis,
+                    totalAudioDurationMillis = if (hasAudioFile && !isInRecordingMode) sheetAudioDuration else 0L,
                     modifier = Modifier.padding(vertical = 16.dp)
                 )
 
+                // Waveform / Transcript
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -536,302 +503,196 @@ fun NoteAudioSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     if (selectedAudioViewType == AudioViewType.Waveform) {
-                        WaveformDisplay(recorderManager.audioFilePath, Modifier.fillMaxSize())
+                        WaveformDisplay(currentSheetAudioPath, Modifier.fillMaxSize())
                     } else {
-                        Text(
-                            "Transcript coming soon...",
-                            style = MaterialTheme.typography.headlineMedium
-                        )
+                        Text("Transcript coming soon...", style = MaterialTheme.typography.headlineMedium)
                     }
                 }
 
+                // PROGRESS BAR — Only when we have audio and not recording
+                if (hasAudioFile && !isInRecordingMode && sheetAudioDuration > 0L) {
+                    Spacer(Modifier.height(24.dp))
 
-                if (recorderManager.audioFilePath != null || initialAudioFilePath != null) {
-                    val hasAudioFile =
-                        recorderManager.audioFilePath != null || initialAudioFilePath != null
-                    val totalDuration = playerManager.totalAudioDurationMillis
-
-                    val currentProgress = if (totalDuration > 0L) {
-                        playerManager.currentPlaybackPositionMillis.toFloat() / totalDuration
-                    } else 0f
-
-                    val showSeekBar =
-                        recordingState == RecordingState.VIEWING_SAVED_AUDIO || recordingState == RecordingState.STOPPED_UNSAVED || recordingState == RecordingState.PLAYING
-
-                    if (showSeekBar && hasAudioFile && totalDuration > 0L) {
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.Transparent)
-                                .pointerInput(Unit) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .pointerInput(isSheetAudioActive) {
+                                if (isSheetAudioActive && sheetAudioDuration > 0L) {
                                     detectTapGestures { offset ->
-                                        val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
-                                        val seekTo = (totalDuration * newProgress).toLong()
-                                        playerManager.seekTo(seekTo)
+                                        val progress = (offset.x / size.width).coerceIn(0f, 1f)
+                                        player.seekTo((sheetAudioDuration * progress).toLong())
                                     }
-                                }) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                LinearProgressIndicator(
-                                    progress = { currentProgress },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(32.dp)
-                                        .clip(RoundedCornerShape(12.dp)),
-                                    color = colorScheme.primary,
-                                    trackColor = colorScheme.primary.copy(alpha = 0.12f),
-                                    strokeCap = StrokeCap.Round,
-                                )
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = formatDuration(playerManager.currentPlaybackPositionMillis),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = formatDuration(totalDuration),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                    )
                                 }
                             }
+                    ) {
+                        Column(Modifier.fillMaxWidth()) {
+                            LinearProgressIndicator(
+                                progress = {
+                                    if (isSheetAudioActive && sheetAudioDuration > 0L)
+                                        (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(1L)).coerceIn(0f, 1f)
+                                    else 0f
+                                },
+                                modifier = Modifier.fillMaxWidth().height(32.dp).clip(RoundedCornerShape(12.dp)),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                strokeCap = StrokeCap.Round
+                            )
+
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = formatDuration(player.currentPlaybackPositionMillis),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = formatDuration(sheetAudioDuration),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
+                    Spacer(Modifier.height(16.dp))
                 }
-                // Controls
+
+                // CONTROLS
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(
-                            bottom = WindowInsets.navigationBars.asPaddingValues()
-                                .calculateBottomPadding() + toolbarHeight + 16.dp
-                        ),
+                        .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight + 16.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val isActionActive = isSheetAudioPlaying || recordingState == RecordingState.RECORDING
+                    val animatedRadius by animateDpAsState(if (isActionActive) 32.dp else 64.dp, tween(250))
 
-                    // Inside the 'Controls' Row composable
-                    val isActionActive =
-                        (playerManager.isPlaying) || (recordingState == RecordingState.RECORDING)
-
-                    val targetCornerRadius = if (isActionActive) 32.dp else 64.dp
-
-                    val animatedRadius: Dp by animateDpAsState(
-                        targetValue = targetCornerRadius,
-                        animationSpec = tween(durationMillis = 250),
-                        label = "Corner Radius Animation"
-                    )
                     when (recordingState) {
                         RecordingState.IDLE -> {
                             FilledIconButton(
                                 onClick = {
-                                    if (ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.RECORD_AUDIO
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                    ) {
-                                        recorderManager.startRecording()
+                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                        recorder.startRecording()
                                     } else {
                                         requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                     }
                                 },
                                 shape = RoundedCornerShape(64.dp),
                                 colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = colorScheme.primary,
-                                    contentColor = colorScheme.onPrimary
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
                                 ),
-                                modifier = Modifier
-                                    .height(136.dp)
-                                    .weight(1f)
-                                    .widthIn(max = 184.dp)
-                                    .fillMaxWidth(),
+                                modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
                             ) {
-                                Icon(
-                                    Icons.Rounded.Mic,
-                                    "Start recording",
-                                    modifier = Modifier.size(40.dp)
-                                )
+                                Icon(Icons.Rounded.Mic, "Start recording", Modifier.size(40.dp))
                             }
                         }
 
                         RecordingState.RECORDING -> {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-
                                 FilledIconButton(
-                                    onClick = { recorderManager.pauseRecording() },
+                                    onClick = { recorder.pauseRecording() },
                                     shape = RoundedCornerShape(animatedRadius),
                                     colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = colorScheme.primary,
-                                        contentColor = colorScheme.onPrimary
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
                                     ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(1f)
-                                        .widthIn(max = 184.dp)
-                                        .fillMaxWidth(),
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Pause,
-                                        "Pause",
-                                        modifier = Modifier.size(40.dp)
-                                    )
-                                }
+                                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                                ) { Icon(Icons.Rounded.Pause, "Pause", Modifier.size(40.dp)) }
 
                                 FilledIconButton(
-                                    onClick = { recorderManager.stopRecording() },
+                                    onClick = { recorder.stopRecording() },
                                     shape = RoundedCornerShape(64.dp),
                                     colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = colorScheme.error,
-                                        contentColor = colorScheme.onError
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
                                     ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(1f)
-                                        .widthIn(max = 184.dp)
-                                        .fillMaxWidth(),
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Stop, "Stop", modifier = Modifier.size(40.dp)
-                                    )
-                                }
+                                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                                ) { Icon(Icons.Rounded.Stop, "Stop", Modifier.size(40.dp)) }
                             }
                         }
 
                         RecordingState.PAUSED -> {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-
                                 FilledIconButton(
-                                    onClick = { recorderManager.startRecording() },
+                                    onClick = { recorder.startRecording() },
                                     shape = RoundedCornerShape(animatedRadius),
                                     colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = colorScheme.primary,
-                                        contentColor = colorScheme.onPrimary
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
                                     ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(1f)
-                                        .widthIn(max = 184.dp)
-                                        .fillMaxWidth(),
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Mic, "Resume", modifier = Modifier.size(40.dp)
-                                    )
-                                }
+                                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                                ) { Icon(Icons.Rounded.Mic, "Resume", Modifier.size(40.dp)) }
 
                                 FilledIconButton(
-                                    onClick = { recorderManager.stopRecording() },
+                                    onClick = { recorder.stopRecording() },
                                     shape = RoundedCornerShape(64.dp),
                                     colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = colorScheme.error,
-                                        contentColor = colorScheme.onError
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
                                     ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(1f)
-                                        .widthIn(max = 184.dp)
-                                        .fillMaxWidth(),
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Stop, "Stop", modifier = Modifier.size(40.dp)
-                                    )
-                                }
+                                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                                ) { Icon(Icons.Rounded.Stop, "Stop", Modifier.size(40.dp)) }
                             }
                         }
 
-                        else -> {
+                        else -> { // Playback mode
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 FilledIconButton(
                                     onClick = {
-                                        recorderManager.audioFilePath?.let { path ->
+                                        currentSheetAudioPath?.let { path ->
                                             when {
-                                                playerManager.isPlaying -> {
-                                                    playerManager.pauseAudio()
-                                                }
-
-                                                playerManager.currentPlaybackPositionMillis > 0 && playerManager.mediaPlayer != null -> {
-                                                    playerManager.resumeAudio()
-                                                }
-
-                                                else -> {
-                                                    playerManager.playAudio(path)
-                                                }
+                                                isSheetAudioPlaying -> player.pauseAudio()
+                                                isSheetAudioPaused -> player.resumeAudio()
+                                                else -> player.playAudio(path)
                                             }
                                         }
                                     },
                                     shape = RoundedCornerShape(animatedRadius),
                                     colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = colorScheme.primary,
-                                        contentColor = colorScheme.onPrimary
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
                                     ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(1f)
-                                        .widthIn(max = 184.dp)
-                                        .fillMaxWidth(),
+                                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
                                 ) {
                                     Icon(
-                                        imageVector = if (playerManager.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                        contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
+                                        imageVector = if (isSheetAudioPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                        contentDescription = if (isSheetAudioPlaying) "Pause" else "Play",
                                         modifier = Modifier.size(40.dp)
                                     )
                                 }
 
                                 FilledIconButton(
-                                    onClick = {
-                                        playerManager.stopAudio()
-                                    },
-                                    enabled = playerManager.currentPlaybackPositionMillis > 0 || playerManager.isPlaying,
+                                    onClick = { player.stopAudio() },
+                                    enabled = player.currentPlaybackPositionMillis > 0 || player.isPlaying,
                                     shape = RoundedCornerShape(64.dp),
                                     colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = colorScheme.primaryContainer,
-                                        contentColor = colorScheme.onPrimaryContainer
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                                     ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(1f)
-                                        .widthIn(max = 184.dp)
-                                        .fillMaxWidth(),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Stop,
-                                        contentDescription = "Stop",
-                                        modifier = Modifier.size(40.dp)
-                                    )
-                                }
+                                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                                ) { Icon(Icons.Rounded.Stop, "Stop", Modifier.size(40.dp)) }
 
-                                FilledIconButton(
-                                    onClick = {
-                                        recorderManager.resetState()
-                                        recorderManager.deleteRecording()
-                                        playerManager.stopAudio()
-                                    },
-                                    shape = RoundedCornerShape(64.dp),
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = colorScheme.errorContainer,
-                                        contentColor = colorScheme.onErrorContainer
-                                    ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(0.5f)
-                                        .widthIn(max = 184.dp)
-                                        .fillMaxWidth(),
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Clear,
-                                        "Discard",
-                                        modifier = Modifier.size(40.dp)
-                                    )
+                                if (!recorder.isPersistentAudio && currentSheetAudioPath != null) {
+                                    FilledIconButton(
+                                        onClick = {
+                                            recorder.resetState()
+                                            recorder.deleteRecording()
+                                            player.stopAudio()
+                                        },
+                                        shape = RoundedCornerShape(64.dp),
+                                        colors = IconButtonDefaults.filledIconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                        ),
+                                        modifier = Modifier.height(136.dp).weight(0.5f).widthIn(max = 184.dp)
+                                    ) {
+                                        Icon(Icons.Rounded.Clear, "Discard", Modifier.size(40.dp))
+                                    }
                                 }
                             }
                         }
@@ -844,32 +705,20 @@ fun NoteAudioSheet(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            WindowInsetsSides.Top
-                        )
-                    )
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                     .padding(horizontal = 16.dp)
                     .padding(top = 4.dp)
                     .clip(RoundedCornerShape(100f))
-                    .background(colorScheme.surfaceDim)
-                    .hazeEffect(
-                        state = hazeState,
-                        style = HazeMaterials.ultraThin(hazeThinColor),
-                    ), verticalAlignment = Alignment.CenterVertically
+                    .background(MaterialTheme.colorScheme.surfaceDim)
+                    .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onDismiss, Modifier.padding(4.dp)
-                ) {
+                IconButton(onClick = onDismiss, Modifier.padding(4.dp)) {
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                 }
 
                 val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
-                    TextStyle(
-                        fontFamily = QuicksandTitleVariable,
-                        textAlign = TextAlign.Center,
-                        color = colorScheme.onSurface
-                    )
+                    TextStyle(fontFamily = QuicksandTitleVariable, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurface)
                 )
 
                 BasicTextField(
@@ -878,51 +727,33 @@ fun NoteAudioSheet(
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     textStyle = titleTextStyle,
-                    cursorBrush = SolidColor(colorScheme.primary),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     decorationBox = { innerTextField ->
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             if (audioTitle.isEmpty()) {
-                                Text(
-                                    text = "Title",
-                                    style = titleTextStyle,
-                                    color = colorScheme.onSurface.copy(alpha = 0.6f),
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
+                                Text("Title", style = titleTextStyle, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                             }
                             innerTextField()
                         }
-                    })
+                    }
+                )
+
                 Box {
-                    IconButton(
-                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
-                    ) {
+                    IconButton(onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)) {
                         Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
                     }
                     DropdownNoteMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
                         items = listOfNotNull(
-                            MenuItem(text = "Label", onClick = {
-                            showLabelDialog = true
-                            showMenu = false
-                        }, dismissOnClick = true, icon = {
-                            if (isLabeled) {
-                                Icon(
-                                    Icons.Rounded.Bookmark,
-                                    contentDescription = "Label",
-                                    tint = labelColor
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Rounded.BookmarkBorder, contentDescription = "Label"
-                                )
-                            }
-                        }), MenuItem(
-                                text = colorMenuItemText, onClick = {
-                                val currentIndex = availableThemes.indexOf(selectedTheme)
-                                val nextIndex = (currentIndex + 1) % availableThemes.size
+                            MenuItem(text = "Label", onClick = { showLabelDialog = true; showMenu = false }, dismissOnClick = true, icon = {
+                                if (isLabeled) Icon(Icons.Rounded.Bookmark, "Label", tint = labelColor)
+                                else Icon(Icons.Rounded.BookmarkBorder, "Label")
+                            }),
+                            MenuItem(text = colorMenuItemText, onClick = {
+                                val nextIndex = (availableThemes.indexOf(selectedTheme) + 1) % availableThemes.size
                                 selectedTheme = availableThemes[nextIndex]
-                                onThemeChange(selectedTheme) // Call the callback here
+                                onThemeChange(selectedTheme)
                                 colorChangeJob?.cancel()
                                 colorChangeJob = scope.launch {
                                     colorMenuItemText = availableThemes[nextIndex]
@@ -934,30 +765,13 @@ fun NoteAudioSheet(
                                     isFadingOut = false
                                 }
                             }, dismissOnClick = false, icon = {
-                                Icon(
-                                    Icons.Rounded.ColorLens,
-                                    contentDescription = "Color",
-                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                )
-                            }, textColor = animatedTextColor
-                        ), MenuItem(
-                            text = if (isOffline) "Offline note" else "Online note",
-                            onClick = { isOffline = !isOffline },
-                            dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else null,
-                            icon = {
-                                if (isOffline) {
-                                    Icon(
-                                        Icons.Rounded.CloudOff,
-                                        contentDescription = "Offline note",
-                                        tint = colorScheme.error
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Rounded.Cloud, contentDescription = "Online note"
-                                    )
-                                }
-                            })
+                                Icon(Icons.Rounded.ColorLens, "Color", tint = if (selectedTheme == "Default") MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
+                            }, textColor = animatedTextColor),
+                            MenuItem(text = if (isOffline) "Offline note" else "Online note", onClick = { isOffline = !isOffline }, dismissOnClick = false,
+                                textColor = if (isOffline) MaterialTheme.colorScheme.error else null, icon = {
+                                    if (isOffline) Icon(Icons.Rounded.CloudOff, "Offline note", tint = MaterialTheme.colorScheme.error)
+                                    else Icon(Icons.Rounded.Cloud, "Online note")
+                                })
                         ),
                         hazeState = hazeState
                     )
@@ -966,7 +780,6 @@ fun NoteAudioSheet(
         }
     }
 }
-
 
 @Composable
 fun AudioTimerDisplay(
@@ -977,17 +790,13 @@ fun AudioTimerDisplay(
     totalAudioDurationMillis: Long,
     modifier: Modifier = Modifier,
 ) {
-    val currentTime = if (isRecording) recordingDurationMillis else currentPlaybackPositionMillis
-    val showTotal = !isRecording && totalAudioDurationMillis > 0
+    val time = if (isRecording) recordingDurationMillis else currentPlaybackPositionMillis
+    val showTotal = totalAudioDurationMillis > 0L
 
     Text(
-        text = formatDuration(currentTime) + if (showTotal) " / ${
-            formatDuration(
-                totalAudioDurationMillis
-            )
-        }" else "",
+        text = formatDuration(time) + if (showTotal) " / ${formatDuration(totalAudioDurationMillis)}" else "",
         style = MaterialTheme.typography.headlineSmall,
-        color = colorScheme.onSurface,
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = modifier
     )
 }

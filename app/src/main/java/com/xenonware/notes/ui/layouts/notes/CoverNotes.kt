@@ -41,19 +41,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Article
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.Create
 import androidx.compose.material.icons.rounded.FormatBold
 import androidx.compose.material.icons.rounded.FormatItalic
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.FormatUnderlined
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.ViewModule
 import androidx.compose.material.icons.rounded.ViewStream
@@ -77,6 +77,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -125,6 +126,7 @@ import com.xenon.mylibrary.values.SmallPadding
 import com.xenonware.notes.R
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
+import com.xenonware.notes.ui.res.GlobalAudioPlayer
 import com.xenonware.notes.ui.res.GoogleProfilBorder
 import com.xenonware.notes.ui.res.GoogleProfilePicture
 import com.xenonware.notes.ui.res.ListContent
@@ -623,14 +625,13 @@ fun CoverNotes(
                                     Canvas(modifier = Modifier.fillMaxSize()) {
                                         val maxRadius = this.size.minDimension * 8f / 10f
                                         val rectWidth = (currentSketchSize / maxPenSize) * maxRadius
-                                        val rectHeight = maxRadius
                                         drawRoundRect(
                                             color = onSurface,
                                             topLeft = Offset(
                                                 x = (this.size.width - rectWidth) / 2f,
-                                                y = (this.size.height - rectHeight) / 2f
+                                                y = (this.size.height - maxRadius) / 2f
                                             ),
-                                            size = Size(width = rectWidth, height = rectHeight),
+                                            size = Size(width = rectWidth, height = maxRadius),
                                             cornerRadius = CornerRadius(100f)
                                         )
                                     }
@@ -767,7 +768,7 @@ fun CoverNotes(
                                     enabled = !isSearchActive && showActionIconsExceptSearch
                                 ) {
                                     Icon(
-                                        Icons.Filled.Settings,
+                                        Icons.Rounded.Settings,
                                         contentDescription = stringResource(R.string.settings),
                                         tint = colorScheme.onSurface
                                     )
@@ -808,11 +809,17 @@ fun CoverNotes(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 IconButton(onClick = {
-                                    resetNoteState()
-                                    isSearchActive =
-                                        false // Disable search when opening a new text note
-                                    notesViewModel.setSearchQuery("") // Clear search query
-                                    showTextNoteCard = true
+                                    GlobalAudioPlayer.getInstance().stopAudio()
+
+                                    if (showAudioNoteCard) {
+                                        showAudioNoteCard = false
+                                        resetNoteState()
+                                    } else {
+                                        resetNoteState()
+                                        isSearchActive = false
+                                        notesViewModel.setSearchQuery("")
+                                        showAudioNoteCard = true
+                                    }
                                     onAddModeToggle()
                                 }) {
                                     Icon(
@@ -844,7 +851,7 @@ fun CoverNotes(
                                     onAddModeToggle()
                                 }) {
                                     Icon(
-                                        Icons.Filled.Mic,
+                                        Icons.Rounded.Mic,
                                         contentDescription = stringResource(R.string.add_mic_note),
                                         tint = colorScheme.onSecondaryContainer
                                     )
@@ -857,7 +864,7 @@ fun CoverNotes(
                                     onAddModeToggle()
                                 }) {
                                     Icon(
-                                        Icons.Filled.Create,
+                                        Icons.Rounded.Create,
                                         contentDescription = stringResource(R.string.add_pen_note),
                                         tint = colorScheme.onSecondaryContainer
                                     )
@@ -983,7 +990,7 @@ fun CoverNotes(
 
                 navigationIcon = {
                     Icon(
-                        Icons.Filled.Menu,
+                        Icons.Rounded.Menu,
                         contentDescription = stringResource(R.string.open_navigation_menu),
                         modifier = Modifier.size(24.dp)
                     )
@@ -1479,6 +1486,11 @@ fun CoverNotes(
                 enter = slideInVertically( initialOffsetY = { it }),
                 exit = slideOutVertically( targetOffsetY = { it })
             ) {
+                LaunchedEffect(showAudioNoteCard) {
+                    if (!showAudioNoteCard) {
+                        GlobalAudioPlayer.getInstance().stopAudio()
+                    }
+                }
                 BackHandler {
                     showAudioNoteCard = false
                     isSearchActive = false // Disable search on dismiss

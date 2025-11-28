@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -82,12 +83,15 @@ private fun togglePlayback(
     recordingState: RecordingState
 ) {
     if (audioFilePath == null) return
-    if (playerManager.isPlaying) {
-        playerManager.pauseAudio()
-    } else {
-        if (recordingState == RecordingState.PAUSED) {
-            playerManager.resumeAudio()
-        } else {
+
+    when {
+        playerManager.isPlaying && playerManager.currentFilePath == audioFilePath -> {
+            playerManager.pauseAudio()
+        }
+        playerManager.currentFilePath == audioFilePath -> {
+            playerManager.playAudio(audioFilePath)
+        }
+        else -> {
             playerManager.playAudio(audioFilePath)
         }
     }
@@ -105,6 +109,10 @@ fun NoteAudioCard(
     isNoteSheetOpen: Boolean,
 ) {
     val isDarkTheme = LocalIsDarkTheme.current
+    val context = LocalContext.current
+    val player = GlobalAudioPlayer.getInstance()
+
+    // Map color to theme name
     val colorToThemeName = remember {
         mapOf(
             noteRedLight.value to "Red", noteRedDark.value to "Red",
@@ -116,45 +124,43 @@ fun NoteAudioCard(
             notePurpleLight.value to "Purple", notePurpleDark.value to "Purple"
         )
     }
-
     val selectedTheme = item.color?.let { colorToThemeName[it.toULong()] } ?: "Default"
-    val context = LocalContext.current
-    val playerManager = remember { AudioPlayerManager() }
 
-    // Reconstruct audio file path
+    // Resolve actual file path
     val audioFilePath = remember(item.description) {
         item.description?.let { uniqueId ->
             File(context.filesDir, "$uniqueId.mp3").takeIf { it.exists() }?.absolutePath
         }
     }
 
-    // Load duration once
-    LaunchedEffect(audioFilePath) {
-        if (audioFilePath != null && playerManager.totalAudioDurationMillis == 0L) {
-            playerManager.totalAudioDurationMillis = playerManager.getAudioDuration(audioFilePath)
-        }
+    // Duration of THIS specific audio file (cached once)
+    val thisAudioDuration by remember(audioFilePath) {
+        mutableLongStateOf(audioFilePath?.let { player.getAudioDuration(it) } ?: 0L)
     }
 
-    var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
-    LaunchedEffect(playerManager.currentRecordingState) {
-        recordingState = playerManager.currentRecordingState
-    }
+    // Determine if THIS card is the one currently active
+    val isThisAudioActive = player.currentFilePath == audioFilePath
+    val isPlayingThis = player.isPlaying && isThisAudioActive
+    val isPausedThis = !player.isPlaying && isThisAudioActive && player.currentPlaybackPositionMillis > 0
 
-
-    // Accurate real-time playback timer (uses actual MediaPlayer position)
-    LaunchedEffect(playerManager.isPlaying) {
-        if (playerManager.isPlaying) {
+    // Live playback position updater
+    LaunchedEffect(player.isPlaying) {
+        if (player.isPlaying) {
             while (isActive) {
-                playerManager.currentPlaybackPositionMillis =
-                    playerManager.mediaPlayer?.currentPosition?.toLong() ?: 0L
-                delay(100L) // Smooth and efficient
+                player.currentPlaybackPositionMillis = player.mediaPlayer?.currentPosition?.toLong() ?: 0L
+                delay(100L)
             }
         }
     }
 
-    DisposableEffect(Unit) {
-        onDispose { playerManager.dispose() }
+    // Sync recording state if needed (you can remove if not used here)
+    var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
+    LaunchedEffect(player.currentRecordingState) {
+        recordingState = player.currentRecordingState
     }
+
+    // Clean up on dispose (optional — singleton handles it)
+    DisposableEffect(Unit) { onDispose { /* no-op — singleton manages lifecycle */ } }
 
     XenonTheme(
         darkTheme = isDarkTheme,
@@ -170,11 +176,10 @@ fun NoteAudioCard(
     ) {
         val borderColor by animateColorAsState(
             targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-            label = "Border Color Animation"
+            label = "Border Color"
         )
-
-        val backgroundColor =
-            if (selectedTheme == "Default") MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.inversePrimary
+        val backgroundColor = if (selectedTheme == "Default")
+            MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.inversePrimary
 
         Box(
             modifier = modifier
@@ -182,22 +187,10 @@ fun NoteAudioCard(
                 .clip(RoundedCornerShape(MediumCornerRadius))
                 .background(backgroundColor)
                 .border(2.dp, borderColor, RoundedCornerShape(MediumCornerRadius))
-                .then(
-                    Modifier.border(
-                        0.5.dp,
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
-                        RoundedCornerShape(MediumCornerRadius)
-                    )
-                )
+                .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f), RoundedCornerShape(MediumCornerRadius))
                 .combinedClickable(
                     enabled = !isNoteSheetOpen,
-                    onClick = {
-                        if (isSelectionModeActive) {
-                            onSelectItem()
-                        } else {
-                            onEditItem(item) // Opens full editor
-                        }
-                    },
+                    onClick = { if (isSelectionModeActive) onSelectItem() else onEditItem(item) },
                     onLongClick = onSelectItem
                 )
         ) {
@@ -215,139 +208,131 @@ fun NoteAudioCard(
                 if (!item.description.isNullOrEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
-                        val currentProgress = if (playerManager.totalAudioDurationMillis > 0) {
-                            playerManager.currentPlaybackPositionMillis.toFloat() / playerManager.totalAudioDurationMillis
-                        } else 0f
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // Calculate progress for THIS file only
+                        val currentProgress = when {
+                            isThisAudioActive -> player.currentPlaybackPositionMillis.toFloat() / thisAudioDuration.coerceAtLeast(1L)
+                            else -> 0f
+                        }
 
-                        if (item.description.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                                val availableWidth = maxWidth
-                                val playButtonWidth = 42.dp
-                                val timerBoxApproxWidth = 120.dp
-                                val micBadgeWidth = 32.dp
-                                val extraPadding = 40.dp
+                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                            val hasEnoughSpace = maxWidth >= 360.dp // Rough threshold
 
-                                val minRequiredWidth = playButtonWidth + timerBoxApproxWidth + micBadgeWidth + extraPadding
-
-                                val hasEnoughSpace = availableWidth >= minRequiredWidth
-
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    // Progress bar (always full width)
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(16.dp)
-                                            .padding(horizontal = 8.dp)
-                                            .background(Color.Transparent)
-                                            .pointerInput(playerManager) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                // Seekable progress bar
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(16.dp)
+                                        .padding(horizontal = 8.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .pointerInput(Unit) {
+                                            if (thisAudioDuration > 0L && isThisAudioActive) {
                                                 detectTapGestures { offset ->
-                                                    if (playerManager.totalAudioDurationMillis > 0L) {
-                                                        val newProgress = offset.x / size.width
-                                                        val seekTo = (playerManager.totalAudioDurationMillis * newProgress.coerceIn(0f, 1f)).toLong()
-                                                        playerManager.seekTo(seekTo)
-                                                    }
+                                                    val progress = (offset.x / size.width).coerceIn(0f, 1f)
+                                                    val seekTo = (thisAudioDuration * progress).toLong()
+                                                    player.seekTo(seekTo)
                                                 }
                                             }
-                                    ) {
-                                        LinearProgressIndicator(
-                                            progress = { currentProgress },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(16.dp),
-                                            color = MaterialTheme.colorScheme.primary,
-                                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                            strokeCap = StrokeCap.Round
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    if (hasEnoughSpace) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(start = 4.dp, bottom = 4.dp, end = 40.dp),
-                                            horizontalArrangement = Arrangement.Start,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            FilledIconButton(
-                                                onClick = { togglePlayback(playerManager, audioFilePath, recordingState) },
-                                                colors = IconButtonDefaults.filledIconButtonColors(
-                                                    containerColor = MaterialTheme.colorScheme.primary,
-                                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                                ),
-                                                shape = CircleShape,
-                                                modifier = Modifier.size(42.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = if (playerManager.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                                    contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
-                                                    modifier = Modifier.size(28.dp)
-                                                )
-                                            }
-
-                                            Spacer(modifier = Modifier.width(12.dp))
-
-                                            Box(
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(MediumCornerRadius))
-                                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                                    .padding(horizontal = 10.dp, vertical = 6.dp)
-                                            ) {
-                                                Text(
-                                                    text = "${formatDuration(playerManager.currentPlaybackPositionMillis)} / ${
-                                                        formatDuration(playerManager.totalAudioDurationMillis)
-                                                    }",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
                                         }
-                                    } else {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 4.dp)
-                                                .padding(bottom = 4.dp),
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .padding(start = 4.dp, end = 4.dp)
-                                                    .clip(RoundedCornerShape(MediumCornerRadius))
-                                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                                            ) {
-                                                Text(
-                                                    text = "${formatDuration(playerManager.currentPlaybackPositionMillis)} / ${
-                                                        formatDuration(playerManager.totalAudioDurationMillis)
-                                                    }",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.height(8.dp))
+                                ) {
+                                    LinearProgressIndicator(
+                                        progress = { currentProgress },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(16.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                        strokeCap = StrokeCap.Round
+                                    )
+                                }
 
-                                            FilledIconButton(
-                                                onClick = { togglePlayback(playerManager, audioFilePath, recordingState) },
-                                                colors = IconButtonDefaults.filledIconButtonColors(
-                                                    containerColor = MaterialTheme.colorScheme.primary,
-                                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                                ),
-                                                shape = RoundedCornerShape(MediumCornerRadius),
-                                                modifier = Modifier
-                                                    .padding(end = 28.dp)
-                                                    .fillMaxWidth()
-                                                    .height(42.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = if (playerManager.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                                    contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
-                                                    modifier = Modifier.size(32.dp)
-                                                )
-                                            }
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                if (hasEnoughSpace) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 4.dp, end = 40.dp, bottom = 4.dp),
+                                        horizontalArrangement = Arrangement.Start,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Play/Pause Button — only shows Pause if THIS file is playing
+                                        FilledIconButton(
+                                            onClick = { togglePlayback(player, audioFilePath, recordingState) },
+                                            colors = IconButtonDefaults.filledIconButtonColors(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                            ),
+                                            shape = CircleShape,
+                                            modifier = Modifier.size(42.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isPlayingThis) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                                contentDescription = if (isPlayingThis) "Pause" else "Play",
+                                                modifier = Modifier.size(28.dp)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(MediumCornerRadius))
+                                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = when {
+                                                    isThisAudioActive -> "${formatDuration(player.currentPlaybackPositionMillis)} / ${formatDuration(thisAudioDuration)}"
+                                                    else -> "00:00 / ${formatDuration(thisAudioDuration)}"
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    // Compact layout
+                                    Column(modifier = Modifier
+                                        .padding(horizontal = 4.dp)
+                                        .padding(bottom = 4.dp)) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(MediumCornerRadius))
+                                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = if (isThisAudioActive)
+                                                    "${formatDuration(player.currentPlaybackPositionMillis)} / ${formatDuration(thisAudioDuration)}"
+                                                else "00:00 / ${formatDuration(thisAudioDuration)}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+
+                                        FilledIconButton(
+                                            onClick = { togglePlayback(player, audioFilePath, recordingState) },
+                                            colors = IconButtonDefaults.filledIconButtonColors(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                            ),
+                                            shape = RoundedCornerShape(MediumCornerRadius),
+                                            modifier = Modifier
+                                                .padding(end = 28.dp)
+                                                .fillMaxWidth()
+                                                .height(42.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isPlayingThis) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                                contentDescription = if (isPlayingThis) "Pause" else "Play",
+                                                modifier = Modifier.size(32.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -365,54 +350,28 @@ fun NoteAudioCard(
                 exit = fadeOut()
             ) {
                 Box(
-                    modifier = Modifier
-                        .padding(6.dp)
-                        .size(24.dp)
-                        .background(backgroundColor, CircleShape),
+                    modifier = Modifier.padding(6.dp).size(24.dp).background(backgroundColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
+                    Crossfade(targetState = isSelected) { selected ->
                         if (selected) {
-                            Icon(
-                                Icons.Rounded.CheckCircle,
-                                contentDescription = "Selected",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Icon(Icons.Rounded.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                         } else {
-                            Box(
-                                modifier = Modifier
-                                    .padding(2.dp)
-                                    .size(20.dp)
-                                    .border(2.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), CircleShape)
-                            )
+                            Box(Modifier.padding(2.dp).size(20.dp).border(2.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), CircleShape))
                         }
                     }
                 }
             }
 
             // Mic badge
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 6.dp, end = 6.dp)
-                    .size(26.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .background(MaterialTheme.colorScheme.onSurface, CircleShape)
-                ) {
-                    Icon(
-                        Icons.Rounded.Mic,
-                        contentDescription = "Audio",
-                        tint = backgroundColor,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(18.dp)
-                    )
-                }
+            Box(modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).size(26.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(22.dp).background(MaterialTheme.colorScheme.onSurface, CircleShape))
+                Icon(
+                    Icons.Rounded.Mic,
+                    contentDescription = "Audio",
+                    tint = backgroundColor,
+                    modifier = Modifier.align(Alignment.Center).size(18.dp)
+                )
             }
         }
     }

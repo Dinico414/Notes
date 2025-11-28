@@ -41,19 +41,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Article
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.Create
 import androidx.compose.material.icons.rounded.FormatBold
 import androidx.compose.material.icons.rounded.FormatItalic
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.FormatUnderlined
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.ViewModule
 import androidx.compose.material.icons.rounded.ViewStream
@@ -77,6 +77,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -125,6 +126,7 @@ import com.xenon.mylibrary.values.SmallPadding
 import com.xenonware.notes.R
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
+import com.xenonware.notes.ui.res.GlobalAudioPlayer
 import com.xenonware.notes.ui.res.GoogleProfilBorder
 import com.xenonware.notes.ui.res.GoogleProfilePicture
 import com.xenonware.notes.ui.res.ListContent
@@ -629,14 +631,13 @@ fun CompactNotes(
                                     Canvas(modifier = Modifier.fillMaxSize()) {
                                         val maxRadius = this.size.minDimension * 8f / 10f
                                         val rectWidth = (currentSketchSize / maxPenSize) * maxRadius
-                                        val rectHeight = maxRadius
                                         drawRoundRect(
                                             color = onSurface,
                                             topLeft = Offset(
                                                 x = (this.size.width - rectWidth) / 2f,
-                                                y = (this.size.height - rectHeight) / 2f
+                                                y = (this.size.height - maxRadius) / 2f
                                             ),
-                                            size = Size(width = rectWidth, height = rectHeight),
+                                            size = Size(width = rectWidth, height = maxRadius),
                                             cornerRadius = CornerRadius(100f)
                                         )
                                     }
@@ -773,7 +774,7 @@ fun CompactNotes(
                                     enabled = !isSearchActive && showActionIconsExceptSearch
                                 ) {
                                     Icon(
-                                        Icons.Filled.Settings,
+                                        Icons.Rounded.Settings,
                                         contentDescription = stringResource(R.string.settings),
                                         tint = colorScheme.onSurface
                                     )
@@ -842,15 +843,21 @@ fun CompactNotes(
                                     )
                                 }
                                 IconButton(onClick = {
-                                    resetNoteState() // Reset state when opening audio note
-                                    isSearchActive =
-                                        false // Disable search when opening a new audio note
-                                    notesViewModel.setSearchQuery("") // Clear search query
-                                    showAudioNoteCard = true
+                                    GlobalAudioPlayer.getInstance().stopAudio()
+
+                                    if (showAudioNoteCard) {
+                                        showAudioNoteCard = false
+                                        resetNoteState()
+                                    } else {
+                                        resetNoteState()
+                                        isSearchActive = false
+                                        notesViewModel.setSearchQuery("")
+                                        showAudioNoteCard = true
+                                    }
                                     onAddModeToggle()
                                 }) {
                                     Icon(
-                                        Icons.Filled.Mic,
+                                        Icons.Rounded.Mic,
                                         contentDescription = stringResource(R.string.add_mic_note),
                                         tint = colorScheme.onSecondaryContainer
                                     )
@@ -863,7 +870,7 @@ fun CompactNotes(
                                     onAddModeToggle()
                                 }) {
                                     Icon(
-                                        Icons.Filled.Create,
+                                        Icons.Rounded.Create,
                                         contentDescription = stringResource(R.string.add_pen_note),
                                         tint = colorScheme.onSecondaryContainer
                                     )
@@ -919,7 +926,8 @@ fun CompactNotes(
                                     Icon(
                                         imageVector = Icons.Rounded.Save,
                                         contentDescription = stringResource(R.string.save_audio_note),
-                                        tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
+
+                                    tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
                                             alpha = 0.38f
                                         )
                                     )
@@ -984,7 +992,7 @@ fun CompactNotes(
 
                 navigationIcon = {
                     Icon(
-                        Icons.Filled.Menu,
+                        Icons.Rounded.Menu,
                         contentDescription = stringResource(R.string.open_navigation_menu),
                         modifier = Modifier.size(24.dp)
                     )
@@ -1473,20 +1481,25 @@ fun CompactNotes(
                 enter = slideInVertically( initialOffsetY = { it }),
                 exit = slideOutVertically( targetOffsetY = { it })
             ) {
+                LaunchedEffect(showAudioNoteCard) {
+                    if (!showAudioNoteCard) {
+                        GlobalAudioPlayer.getInstance().stopAudio()
+                    }
+                }
                 BackHandler {
                     showAudioNoteCard = false
-                    isSearchActive = false // Disable search on dismiss
-                    notesViewModel.setSearchQuery("") // Clear search query
+                    isSearchActive = false
+                    notesViewModel.setSearchQuery("")
                     resetNoteState()
                 }
-                val context = LocalContext.current  // ← Add this if not already there
+                val context = LocalContext.current
                 NoteAudioSheet(
                     audioTitle = titleState,
                     onAudioTitleChange = { titleState = it },
                     onDismiss = {
                         showAudioNoteCard = false
-                        isSearchActive = false // Disable search on dismiss
-                        notesViewModel.setSearchQuery("") // Clear search query
+                        isSearchActive = false
+                        notesViewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1524,7 +1537,7 @@ fun CompactNotes(
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
                     selectedAudioViewType = selectedAudioViewType,
-                    initialAudioFilePath = descriptionState?.let { uniqueId ->
+                    initialAudioFilePath = descriptionState.let { uniqueId ->
                         File(context.filesDir, "$uniqueId.mp3").takeIf { it.exists() }?.absolutePath
                     },                    onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
