@@ -1,3 +1,5 @@
+@file:Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
+
 package com.xenonware.notes.ui.res
 
 import androidx.compose.animation.AnimatedVisibility
@@ -12,6 +14,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,8 +30,9 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -70,6 +75,23 @@ import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.io.File
+
+private fun togglePlayback(
+    playerManager: AudioPlayerManager,
+    audioFilePath: String?,
+    recordingState: RecordingState
+) {
+    if (audioFilePath == null) return
+    if (playerManager.isPlaying) {
+        playerManager.pauseAudio()
+    } else {
+        if (recordingState == RecordingState.PAUSED) {
+            playerManager.resumeAudio()
+        } else {
+            playerManager.playAudio(audioFilePath)
+        }
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -117,6 +139,7 @@ fun NoteAudioCard(
     LaunchedEffect(playerManager.currentRecordingState) {
         recordingState = playerManager.currentRecordingState
     }
+
 
     // Accurate real-time playback timer (uses actual MediaPlayer position)
     LaunchedEffect(playerManager.isPlaying) {
@@ -197,76 +220,137 @@ fun NoteAudioCard(
                             playerManager.currentPlaybackPositionMillis.toFloat() / playerManager.totalAudioDurationMillis
                         } else 0f
 
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(16.dp)
-                                .padding(horizontal = LargestPadding)
-                                .background(Color.Transparent)
-                                .pointerInput(playerManager) {
-                                    detectTapGestures { offset ->
-                                        if (playerManager.totalAudioDurationMillis > 0L) {
-                                            val newProgress = offset.x / size.width
-                                            val seekTo = (playerManager.totalAudioDurationMillis * newProgress.coerceIn(0f, 1f)).toLong()
-                                            playerManager.seekTo(seekTo)
-                                        }
+                        if (item.description.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                                val availableWidth = maxWidth
+                                val playButtonWidth = 42.dp
+                                val timerBoxApproxWidth = 120.dp
+                                val micBadgeWidth = 32.dp
+                                val extraPadding = 40.dp
+
+                                val minRequiredWidth = playButtonWidth + timerBoxApproxWidth + micBadgeWidth + extraPadding
+
+                                val hasEnoughSpace = availableWidth >= minRequiredWidth
+
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    // Progress bar (always full width)
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(16.dp)
+                                            .padding(horizontal = 8.dp)
+                                            .background(Color.Transparent)
+                                            .pointerInput(playerManager) {
+                                                detectTapGestures { offset ->
+                                                    if (playerManager.totalAudioDurationMillis > 0L) {
+                                                        val newProgress = offset.x / size.width
+                                                        val seekTo = (playerManager.totalAudioDurationMillis * newProgress.coerceIn(0f, 1f)).toLong()
+                                                        playerManager.seekTo(seekTo)
+                                                    }
+                                                }
+                                            }
+                                    ) {
+                                        LinearProgressIndicator(
+                                            progress = { currentProgress },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(16.dp),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                            strokeCap = StrokeCap.Round
+                                        )
                                     }
-                                }
-                        ) {
-                            LinearProgressIndicator(
-                                progress = { currentProgress },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(16.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                strokeCap = StrokeCap.Round
-                            )
-                        }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 4.dp, bottom = 4.dp, end = 40.dp),
-                            horizontalArrangement = Arrangement.Start,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    if (audioFilePath == null) return@IconButton
-                                    if (playerManager.isPlaying) {
-                                        playerManager.pauseAudio()
+                                    if (hasEnoughSpace) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(start = 4.dp, bottom = 4.dp, end = 40.dp),
+                                            horizontalArrangement = Arrangement.Start,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            FilledIconButton(
+                                                onClick = { togglePlayback(playerManager, audioFilePath, recordingState) },
+                                                colors = IconButtonDefaults.filledIconButtonColors(
+                                                    containerColor = MaterialTheme.colorScheme.primary,
+                                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                                ),
+                                                shape = CircleShape,
+                                                modifier = Modifier.size(42.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (playerManager.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                                    contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
+                                                    modifier = Modifier.size(28.dp)
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.width(12.dp))
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(MediumCornerRadius))
+                                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                                            ) {
+                                                Text(
+                                                    text = "${formatDuration(playerManager.currentPlaybackPositionMillis)} / ${
+                                                        formatDuration(playerManager.totalAudioDurationMillis)
+                                                    }",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
                                     } else {
-                                        if (recordingState == RecordingState.PAUSED) {
-                                            playerManager.resumeAudio()
-                                        } else {
-                                            playerManager.playAudio(audioFilePath)
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 4.dp)
+                                                .padding(bottom = 4.dp),
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .padding(start = 4.dp, end = 4.dp)
+                                                    .clip(RoundedCornerShape(MediumCornerRadius))
+                                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                                            ) {
+                                                Text(
+                                                    text = "${formatDuration(playerManager.currentPlaybackPositionMillis)} / ${
+                                                        formatDuration(playerManager.totalAudioDurationMillis)
+                                                    }",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(8.dp))
+
+                                            FilledIconButton(
+                                                onClick = { togglePlayback(playerManager, audioFilePath, recordingState) },
+                                                colors = IconButtonDefaults.filledIconButtonColors(
+                                                    containerColor = MaterialTheme.colorScheme.primary,
+                                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                                ),
+                                                shape = RoundedCornerShape(MediumCornerRadius),
+                                                modifier = Modifier
+                                                    .padding(end = 28.dp)
+                                                    .fillMaxWidth()
+                                                    .height(42.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (playerManager.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                                    contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
+                                                    modifier = Modifier.size(32.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = if (playerManager.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                    contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(MediumCornerRadius))
-                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "${formatDuration(playerManager.currentPlaybackPositionMillis)} / ${
-                                        formatDuration(playerManager.totalAudioDurationMillis)
-                                    }",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
                         }
                     }
