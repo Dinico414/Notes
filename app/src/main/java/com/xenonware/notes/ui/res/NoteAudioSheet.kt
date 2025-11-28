@@ -14,6 +14,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +54,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
@@ -71,6 +73,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -541,6 +545,71 @@ fun NoteAudioSheet(
                     }
                 }
 
+
+                if (recorderManager.audioFilePath != null || initialAudioFilePath != null) {
+                    val hasAudioFile =
+                        recorderManager.audioFilePath != null || initialAudioFilePath != null
+                    val totalDuration = playerManager.totalAudioDurationMillis
+
+                    val currentProgress = if (totalDuration > 0L) {
+                        playerManager.currentPlaybackPositionMillis.toFloat() / totalDuration
+                    } else 0f
+
+                    val showSeekBar =
+                        recordingState == RecordingState.VIEWING_SAVED_AUDIO || recordingState == RecordingState.STOPPED_UNSAVED || recordingState == RecordingState.PLAYING
+
+                    if (showSeekBar && hasAudioFile && totalDuration > 0L) {
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.Transparent)
+                                .pointerInput(Unit) {
+                                    detectTapGestures { offset ->
+                                        val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
+                                        val seekTo = (totalDuration * newProgress).toLong()
+                                        playerManager.seekTo(seekTo)
+                                    }
+                                }) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                LinearProgressIndicator(
+                                    progress = { currentProgress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(32.dp)
+                                        .clip(RoundedCornerShape(12.dp)),
+                                    color = colorScheme.primary,
+                                    trackColor = colorScheme.primary.copy(alpha = 0.12f),
+                                    strokeCap = StrokeCap.Round,
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = formatDuration(playerManager.currentPlaybackPositionMillis),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = formatDuration(totalDuration),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
                 // Controls
                 Row(
                     modifier = Modifier
@@ -633,9 +702,7 @@ fun NoteAudioSheet(
                                         .fillMaxWidth(),
                                 ) {
                                     Icon(
-                                        Icons.Default.Stop,
-                                        "Stop",
-                                        modifier = Modifier.size(40.dp)
+                                        Icons.Default.Stop, "Stop", modifier = Modifier.size(40.dp)
                                     )
                                 }
                             }
@@ -658,9 +725,7 @@ fun NoteAudioSheet(
                                         .fillMaxWidth(),
                                 ) {
                                     Icon(
-                                        Icons.Default.Mic,
-                                        "Resume",
-                                        modifier = Modifier.size(40.dp)
+                                        Icons.Default.Mic, "Resume", modifier = Modifier.size(40.dp)
                                     )
                                 }
 
@@ -678,9 +743,7 @@ fun NoteAudioSheet(
                                         .fillMaxWidth(),
                                 ) {
                                     Icon(
-                                        Icons.Default.Stop,
-                                        "Stop",
-                                        modifier = Modifier.size(40.dp)
+                                        Icons.Default.Stop, "Stop", modifier = Modifier.size(40.dp)
                                     )
                                 }
                             }
@@ -840,61 +903,61 @@ fun NoteAudioSheet(
                         onDismissRequest = { showMenu = false },
                         items = listOfNotNull(
                             MenuItem(text = "Label", onClick = {
-                                showLabelDialog = true
-                                showMenu = false
-                            }, dismissOnClick = true, icon = {
-                                if (isLabeled) {
+                            showLabelDialog = true
+                            showMenu = false
+                        }, dismissOnClick = true, icon = {
+                            if (isLabeled) {
+                                Icon(
+                                    Icons.Default.Bookmark,
+                                    contentDescription = "Label",
+                                    tint = labelColor
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.BookmarkBorder, contentDescription = "Label"
+                                )
+                            }
+                        }), MenuItem(
+                                text = colorMenuItemText, onClick = {
+                                val currentIndex = availableThemes.indexOf(selectedTheme)
+                                val nextIndex = (currentIndex + 1) % availableThemes.size
+                                selectedTheme = availableThemes[nextIndex]
+                                onThemeChange(selectedTheme) // Call the callback here
+                                colorChangeJob?.cancel()
+                                colorChangeJob = scope.launch {
+                                    colorMenuItemText = availableThemes[nextIndex]
+                                    isFadingOut = false
+                                    delay(2500)
+                                    isFadingOut = true
+                                    delay(500)
+                                    colorMenuItemText = "Color"
+                                    isFadingOut = false
+                                }
+                            }, dismissOnClick = false, icon = {
+                                Icon(
+                                    Icons.Default.ColorLens,
+                                    contentDescription = "Color",
+                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                )
+                            }, textColor = animatedTextColor
+                        ), MenuItem(
+                            text = if (isOffline) "Offline note" else "Online note",
+                            onClick = { isOffline = !isOffline },
+                            dismissOnClick = false,
+                            textColor = if (isOffline) colorScheme.error else null,
+                            icon = {
+                                if (isOffline) {
                                     Icon(
-                                        Icons.Default.Bookmark,
-                                        contentDescription = "Label",
-                                        tint = labelColor
+                                        Icons.Default.CloudOff,
+                                        contentDescription = "Offline note",
+                                        tint = colorScheme.error
                                     )
                                 } else {
                                     Icon(
-                                        Icons.Default.BookmarkBorder, contentDescription = "Label"
+                                        Icons.Default.Cloud, contentDescription = "Online note"
                                     )
                                 }
-                            }), MenuItem(
-                                text = colorMenuItemText, onClick = {
-                                    val currentIndex = availableThemes.indexOf(selectedTheme)
-                                    val nextIndex = (currentIndex + 1) % availableThemes.size
-                                    selectedTheme = availableThemes[nextIndex]
-                                    onThemeChange(selectedTheme) // Call the callback here
-                                    colorChangeJob?.cancel()
-                                    colorChangeJob = scope.launch {
-                                        colorMenuItemText = availableThemes[nextIndex]
-                                        isFadingOut = false
-                                        delay(2500)
-                                        isFadingOut = true
-                                        delay(500)
-                                        colorMenuItemText = "Color"
-                                        isFadingOut = false
-                                    }
-                                }, dismissOnClick = false, icon = {
-                                    Icon(
-                                        Icons.Default.ColorLens,
-                                        contentDescription = "Color",
-                                        tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                    )
-                                }, textColor = animatedTextColor
-                            ), MenuItem(
-                                text = if (isOffline) "Offline note" else "Online note",
-                                onClick = { isOffline = !isOffline },
-                                dismissOnClick = false,
-                                textColor = if (isOffline) colorScheme.error else null,
-                                icon = {
-                                    if (isOffline) {
-                                        Icon(
-                                            Icons.Default.CloudOff,
-                                            contentDescription = "Offline note",
-                                            tint = colorScheme.error
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Default.Cloud, contentDescription = "Online note"
-                                        )
-                                    }
-                                })
+                            })
                         ),
                         hazeState = hazeState
                     )
