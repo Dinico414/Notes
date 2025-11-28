@@ -297,6 +297,8 @@ fun CompactNotes(
     val allLabels by notesViewModel.labels.collectAsState()
     var selectedLabelId by rememberSaveable { mutableStateOf<String?>(null) }
 
+    var hasAudioContent by rememberSaveable { mutableStateOf(false) }
+
     fun onResizeClick() {
         if (notesLayoutType == NotesLayoutType.LIST) {
             listNoteLineLimitIndex = (listNoteLineLimitIndex + 1) % listLineLimits.size
@@ -913,25 +915,30 @@ fun CompactNotes(
                                         imageVector = Icons.Rounded.Save,
                                         contentDescription = stringResource(R.string.save_list_note),
                                         tint = if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() })
-                                            colorScheme.onPrimary else colorScheme.onPrimary.copy(alpha = 0.38f)
+                                            colorScheme.onPrimary else colorScheme.onPrimary.copy(
+                                            alpha = 0.38f
+                                        )
                                     )
                                 }
                             }
-                        } else if (showAudioNoteCard) { // FAB for Audio Note
+                        } else if (showAudioNoteCard) {
                             {
+                                val canSave = titleState.isNotBlank() && hasAudioContent
+
                                 FloatingActionButton(
-                                    onClick = { if (titleState.isNotBlank()) saveTrigger = true },
+                                    onClick = {
+                                        if (canSave) saveTrigger = true
+                                    },
                                     containerColor = colorScheme.primary
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Save,
                                         contentDescription = stringResource(R.string.save_audio_note),
-
-                                    tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
-                                            alpha = 0.38f
-                                        )
+                                        tint = if (canSave) colorScheme.onPrimary
+                                        else colorScheme.onPrimary.copy(alpha = 0.38f)
                                     )
                                 }
+
                             }
                         } else if (showSketchNoteCard) {
                             {
@@ -1117,28 +1124,29 @@ fun CompactNotes(
                                                                 nextListItemId = 0L
                                                                 currentListSizeIndex = 1
                                                                 itemToEdit.description?.let { desc ->
-                                                                    val parsedItems = desc.split("\n")
-                                                                        .mapNotNull { line ->
-                                                                            if (line.isBlank()) null
-                                                                            else {
-                                                                                val isChecked =
-                                                                                    line.startsWith(
-                                                                                        "[x]"
+                                                                    val parsedItems =
+                                                                        desc.split("\n")
+                                                                            .mapNotNull { line ->
+                                                                                if (line.isBlank()) null
+                                                                                else {
+                                                                                    val isChecked =
+                                                                                        line.startsWith(
+                                                                                            "[x]"
+                                                                                        )
+                                                                                    val text =
+                                                                                        if (isChecked) line.substringAfter(
+                                                                                            "[x] "
+                                                                                        )
+                                                                                            .trim() else line.substringAfter(
+                                                                                            "[ ] "
+                                                                                        ).trim()
+                                                                                    ListItem(
+                                                                                        nextListItemId++,
+                                                                                        text,
+                                                                                        isChecked
                                                                                     )
-                                                                                val text =
-                                                                                    if (isChecked) line.substringAfter(
-                                                                                        "[x] "
-                                                                                    )
-                                                                                        .trim() else line.substringAfter(
-                                                                                        "[ ] "
-                                                                                    ).trim()
-                                                                                ListItem(
-                                                                                    nextListItemId++,
-                                                                                    text,
-                                                                                    isChecked
-                                                                                )
+                                                                                }
                                                                             }
-                                                                        }
                                                                     listItemsState.addAll(
                                                                         parsedItems
                                                                     )
@@ -1155,10 +1163,14 @@ fun CompactNotes(
 
                                                                     NoteType.AUDIO -> {
                                                                         isSearchActive = false
-                                                                        notesViewModel.setSearchQuery("")
+                                                                        notesViewModel.setSearchQuery(
+                                                                            ""
+                                                                        )
                                                                         showAudioNoteCard = true
-                                                                        selectedAudioViewType = AudioViewType.Waveform
-                                                                        editingNoteColor = itemToEdit.color?.toULong()
+                                                                        selectedAudioViewType =
+                                                                            AudioViewType.Waveform
+                                                                        editingNoteColor =
+                                                                            itemToEdit.color?.toULong()
                                                                     }
 
                                                                     NoteType.LIST -> {
@@ -1239,25 +1251,26 @@ fun CompactNotes(
                                                         currentListSizeIndex = 1
                                                         itemToEdit.description?.let { desc ->
                                                             val parsedItems =
-                                                                desc.split("\n").mapNotNull { line ->
-                                                                    if (line.isBlank()) null
-                                                                    else {
-                                                                        val isChecked =
-                                                                            line.startsWith("[x]")
-                                                                        val text =
-                                                                            if (isChecked) line.substringAfter(
-                                                                                "[x] "
+                                                                desc.split("\n")
+                                                                    .mapNotNull { line ->
+                                                                        if (line.isBlank()) null
+                                                                        else {
+                                                                            val isChecked =
+                                                                                line.startsWith("[x]")
+                                                                            val text =
+                                                                                if (isChecked) line.substringAfter(
+                                                                                    "[x] "
+                                                                                )
+                                                                                    .trim() else line.substringAfter(
+                                                                                    "[ ] "
+                                                                                ).trim()
+                                                                            ListItem(
+                                                                                nextListItemId++,
+                                                                                text,
+                                                                                isChecked
                                                                             )
-                                                                                .trim() else line.substringAfter(
-                                                                                "[ ] "
-                                                                            ).trim()
-                                                                        ListItem(
-                                                                            nextListItemId++,
-                                                                            text,
-                                                                            isChecked
-                                                                        )
+                                                                        }
                                                                     }
-                                                                }
                                                             listItemsState.addAll(parsedItems)
                                                         }
                                                         when (itemToEdit.noteType) {
@@ -1324,8 +1337,8 @@ fun CompactNotes(
 
             AnimatedVisibility(
                 visible = showTextNoteCard,
-                enter = slideInVertically( initialOffsetY = { it }),
-                exit = slideOutVertically( targetOffsetY = { it })
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler {
                     showTextNoteCard = false
@@ -1399,8 +1412,8 @@ fun CompactNotes(
 
             AnimatedVisibility(
                 visible = showSketchNoteCard,
-                enter = slideInVertically( initialOffsetY = { it }),
-                exit = slideOutVertically( targetOffsetY = { it })
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler {
                     showSketchNoteCard = false
@@ -1428,7 +1441,7 @@ fun CompactNotes(
                                 val updatedNote =
                                     notesViewModel.noteItems.filterIsInstance<NotesItems>()
                                         .find { it.id == editingNoteId }?.copy(
-                                            title = title,   color = color?.toLong(),
+                                            title = title, color = color?.toLong(),
                                             labels = labelId?.let { listOf(it) } ?: emptyList()
                                         )
                                 if (updatedNote != null) {
@@ -1478,8 +1491,8 @@ fun CompactNotes(
 
             AnimatedVisibility(
                 visible = showAudioNoteCard,
-                enter = slideInVertically( initialOffsetY = { it }),
-                exit = slideOutVertically( targetOffsetY = { it })
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 LaunchedEffect(showAudioNoteCard) {
                     if (!showAudioNoteCard) {
@@ -1539,21 +1552,23 @@ fun CompactNotes(
                     selectedAudioViewType = selectedAudioViewType,
                     initialAudioFilePath = descriptionState.let { uniqueId ->
                         File(context.filesDir, "$uniqueId.mp3").takeIf { it.exists() }?.absolutePath
-                    },                    onThemeChange = { newThemeName ->
+                    },
+                    onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
                     },
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) }
+                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    onHasUnsavedAudioChange = { hasAudioContent = it },
                 )
 
             }
 
             AnimatedVisibility(
                 visible = showListNoteCard,
-                enter = slideInVertically( initialOffsetY = { it }),
-                exit = slideOutVertically( targetOffsetY = { it })
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler {
                     showListNoteCard = false

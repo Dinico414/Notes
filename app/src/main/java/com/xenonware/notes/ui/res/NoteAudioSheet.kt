@@ -321,6 +321,7 @@ fun NoteAudioSheet(
     initialSelectedLabelId: String?,
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
+    onHasUnsavedAudioChange: (Boolean) -> Unit = {},
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
@@ -353,6 +354,13 @@ fun NoteAudioSheet(
     val isLabeled = selectedLabelId != null
 
     var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
+
+
+    val hasAudioContent = initialAudioFilePath != null || recorder.audioFilePath != null
+
+    LaunchedEffect(hasAudioContent) {
+        onHasUnsavedAudioChange(hasAudioContent)
+    }
 
     // Sync state
     LaunchedEffect(recorder.currentRecordingState, player.currentRecordingState) {
