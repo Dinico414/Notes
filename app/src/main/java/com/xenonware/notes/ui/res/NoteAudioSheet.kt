@@ -11,6 +11,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,8 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -46,8 +49,10 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
@@ -98,7 +103,7 @@ enum class RecordingState {
 
 class AudioRecorderManager(
     private val context: Context,
-    private val onNewRecordingStarted: () -> Unit = {}
+    private val onNewRecordingStarted: () -> Unit = {},
 ) {
     private var mediaRecorder: MediaRecorder? = null
     var audioFilePath: String? = null
@@ -200,7 +205,10 @@ class AudioRecorderManager(
     fun resetState() {
         if (currentRecordingState == RecordingState.RECORDING || currentRecordingState == RecordingState.PAUSED) {
             mediaRecorder?.apply {
-                try { stop() } catch (_: Exception) { /* ignore */ }
+                try {
+                    stop()
+                } catch (_: Exception) { /* ignore */
+                }
                 release()
             }
             mediaRecorder = null
@@ -243,10 +251,8 @@ class AudioPlayerManager {
             try {
                 mediaPlayer = MediaPlayer().apply {
                     setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                            .setUsage(AudioAttributes.USAGE_MEDIA)
-                            .build()
+                        AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .setUsage(AudioAttributes.USAGE_MEDIA).build()
                     )
                     setDataSource(filePath)
                     prepare()
@@ -482,8 +488,7 @@ fun NoteAudioSheet(
                     onLabelSelected(it)
                 },
                 onAddNewLabel = onAddNewLabel,
-                onDismiss = { showLabelDialog = false }
-            )
+                onDismiss = { showLabelDialog = false })
         }
 
         val hazeThinColor = colorScheme.surfaceDim
@@ -493,17 +498,20 @@ fun NoteAudioSheet(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorScheme.surfaceContainer)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
         ) {
             Column(
                 modifier = Modifier
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            WindowInsetsSides.Top
+                        )
+                    )
                     .padding(horizontal = 20.dp)
                     .padding(top = 4.dp)
                     .fillMaxSize()
                     .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                    .hazeSource(hazeState),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .hazeSource(hazeState), horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(68.dp))
 
@@ -540,96 +548,227 @@ fun NoteAudioSheet(
                         .padding(
                             bottom = WindowInsets.navigationBars.asPaddingValues()
                                 .calculateBottomPadding() + toolbarHeight + 16.dp
-                        )
-                        .padding(horizontal = 32.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                        ),
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+
+                    // Inside the 'Controls' Row composable
+                    val isActionActive =
+                        (playerManager.isPlaying) || (recordingState == RecordingState.RECORDING)
+
+                    val targetCornerRadius = if (isActionActive) 32.dp else 64.dp
+
+                    val animatedRadius: Dp by animateDpAsState(
+                        targetValue = targetCornerRadius,
+                        animationSpec = tween(durationMillis = 250),
+                        label = "Corner Radius Animation"
+                    )
                     when (recordingState) {
                         RecordingState.IDLE -> {
-                            IconButton(onClick = {
-                                if (ContextCompat.checkSelfPermission(
-                                        context,
-                                        Manifest.permission.RECORD_AUDIO
-                                    ) == PackageManager.PERMISSION_GRANTED
-                                ) {
-                                    recorderManager.startRecording()
-                                } else {
-                                    requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                }
-                            }) {
+                            FilledIconButton(
+                                onClick = {
+                                    if (ContextCompat.checkSelfPermission(
+                                            context, Manifest.permission.RECORD_AUDIO
+                                        ) == PackageManager.PERMISSION_GRANTED
+                                    ) {
+                                        recorderManager.startRecording()
+                                    } else {
+                                        requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                    }
+                                },
+                                shape = RoundedCornerShape(64.dp),
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = colorScheme.primary,
+                                    contentColor = colorScheme.onPrimary
+                                ),
+                                modifier = Modifier
+                                    .height(136.dp)
+                                    .weight(1f)
+                                    .widthIn(max = 184.dp)
+                                    .fillMaxWidth(),
+                            ) {
                                 Icon(
                                     Icons.Default.Mic,
                                     "Start recording",
-                                    tint = colorScheme.primary
+                                    modifier = Modifier.size(40.dp)
                                 )
                             }
                         }
 
                         RecordingState.RECORDING -> {
-                            IconButton(onClick = { recorderManager.pauseRecording() }) {
-                                Icon(Icons.Default.Pause, "Pause")
-                            }
-                            IconButton(onClick = { recorderManager.stopRecording() }) {
-                                Icon(Icons.Default.Stop, "Stop")
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                                FilledIconButton(
+                                    onClick = { recorderManager.pauseRecording() },
+                                    shape = RoundedCornerShape(animatedRadius),
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = colorScheme.primary,
+                                        contentColor = colorScheme.onPrimary
+                                    ),
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(1f)
+                                        .widthIn(max = 184.dp)
+                                        .fillMaxWidth(),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Pause,
+                                        "Pause",
+                                        modifier = Modifier.size(40.dp)
+                                    )
+                                }
+
+                                FilledIconButton(
+                                    onClick = { recorderManager.stopRecording() },
+                                    shape = RoundedCornerShape(64.dp),
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = colorScheme.error,
+                                        contentColor = colorScheme.onError
+                                    ),
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(1f)
+                                        .widthIn(max = 184.dp)
+                                        .fillMaxWidth(),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Stop,
+                                        "Stop",
+                                        modifier = Modifier.size(40.dp)
+                                    )
+                                }
                             }
                         }
 
                         RecordingState.PAUSED -> {
-                            IconButton(onClick = { recorderManager.startRecording() }) {
-                                Icon(Icons.Default.Mic, "Resume")
-                            }
-                            IconButton(onClick = { recorderManager.stopRecording() }) {
-                                Icon(Icons.Default.Stop, "Stop")
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                                FilledIconButton(
+                                    onClick = { recorderManager.startRecording() },
+                                    shape = RoundedCornerShape(animatedRadius),
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = colorScheme.primary,
+                                        contentColor = colorScheme.onPrimary
+                                    ),
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(1f)
+                                        .widthIn(max = 184.dp)
+                                        .fillMaxWidth(),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Mic,
+                                        "Resume",
+                                        modifier = Modifier.size(40.dp)
+                                    )
+                                }
+
+                                FilledIconButton(
+                                    onClick = { recorderManager.stopRecording() },
+                                    shape = RoundedCornerShape(64.dp),
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = colorScheme.error,
+                                        contentColor = colorScheme.onError
+                                    ),
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(1f)
+                                        .widthIn(max = 184.dp)
+                                        .fillMaxWidth(),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Stop,
+                                        "Stop",
+                                        modifier = Modifier.size(40.dp)
+                                    )
+                                }
                             }
                         }
 
                         else -> {
-                            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                                IconButton(onClick = {
-                                    recorderManager.audioFilePath?.let { path ->
-                                        when {
-                                            playerManager.isPlaying -> {
-                                                playerManager.pauseAudio()
-                                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilledIconButton(
+                                    onClick = {
+                                        recorderManager.audioFilePath?.let { path ->
+                                            when {
+                                                playerManager.isPlaying -> {
+                                                    playerManager.pauseAudio()
+                                                }
 
-                                            playerManager.currentPlaybackPositionMillis > 0 && playerManager.mediaPlayer != null -> {
-                                                playerManager.resumeAudio()
-                                            }
+                                                playerManager.currentPlaybackPositionMillis > 0 && playerManager.mediaPlayer != null -> {
+                                                    playerManager.resumeAudio()
+                                                }
 
-                                            else -> {
-                                                playerManager.playAudio(path)
+                                                else -> {
+                                                    playerManager.playAudio(path)
+                                                }
                                             }
                                         }
-                                    }
-                                }) {
+                                    },
+                                    shape = RoundedCornerShape(animatedRadius),
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = colorScheme.primary,
+                                        contentColor = colorScheme.onPrimary
+                                    ),
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(1f)
+                                        .widthIn(max = 184.dp)
+                                        .fillMaxWidth(),
+                                ) {
                                     Icon(
                                         imageVector = if (playerManager.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                         contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
-                                        tint = colorScheme.primary
+                                        modifier = Modifier.size(40.dp)
                                     )
                                 }
 
-                                IconButton(
+                                FilledIconButton(
                                     onClick = {
                                         playerManager.stopAudio()
                                     },
-                                    enabled = playerManager.currentPlaybackPositionMillis > 0 || playerManager.isPlaying
+                                    enabled = playerManager.currentPlaybackPositionMillis > 0 || playerManager.isPlaying,
+                                    shape = RoundedCornerShape(64.dp),
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = colorScheme.primaryContainer,
+                                        contentColor = colorScheme.onPrimaryContainer
+                                    ),
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(1f)
+                                        .widthIn(max = 184.dp)
+                                        .fillMaxWidth(),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Stop,
                                         contentDescription = "Stop",
-                                        tint = colorScheme.primary
+                                        modifier = Modifier.size(40.dp)
                                     )
                                 }
 
-                                IconButton(onClick = {
-                                    recorderManager.resetState()
-                                    recorderManager.deleteRecording()
-                                    playerManager.stopAudio()
-                                }) {
-                                    Icon(Icons.Default.Clear, "Discard", tint = colorScheme.error)
-
+                                FilledIconButton(
+                                    onClick = {
+                                        recorderManager.resetState()
+                                        recorderManager.deleteRecording()
+                                        playerManager.stopAudio()
+                                    },
+                                    shape = RoundedCornerShape(64.dp),
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = colorScheme.errorContainer,
+                                        contentColor = colorScheme.onErrorContainer
+                                    ),
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(0.5f)
+                                        .widthIn(max = 184.dp)
+                                        .fillMaxWidth(),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Clear,
+                                        "Discard",
+                                        modifier = Modifier.size(40.dp)
+                                    )
                                 }
                             }
                         }
@@ -712,8 +851,7 @@ fun NoteAudioSheet(
                                     )
                                 } else {
                                     Icon(
-                                        Icons.Default.BookmarkBorder,
-                                        contentDescription = "Label"
+                                        Icons.Default.BookmarkBorder, contentDescription = "Label"
                                     )
                                 }
                             }), MenuItem(
@@ -780,7 +918,11 @@ fun AudioTimerDisplay(
     val showTotal = !isRecording && totalAudioDurationMillis > 0
 
     Text(
-        text = formatDuration(currentTime) + if (showTotal) " / ${formatDuration(totalAudioDurationMillis)}" else "",
+        text = formatDuration(currentTime) + if (showTotal) " / ${
+            formatDuration(
+                totalAudioDurationMillis
+            )
+        }" else "",
         style = MaterialTheme.typography.headlineSmall,
         color = colorScheme.onSurface,
         modifier = modifier
