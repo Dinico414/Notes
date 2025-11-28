@@ -386,6 +386,11 @@ fun NoteAudioSheet(
     LaunchedEffect(initialAudioFilePath) {
         if (initialAudioFilePath != null && File(initialAudioFilePath).exists()) {
             recorder.setInitialAudioFilePath(initialAudioFilePath)
+            val audioId = File(initialAudioFilePath).nameWithoutExtension
+            val loadedAmplitudes = loadAmplitudes(context, audioId)
+            if (loadedAmplitudes.isNotEmpty()) {
+                amplitudes.addAll(loadedAmplitudes)
+            }
         }
     }
 
@@ -429,6 +434,11 @@ fun NoteAudioSheet(
                 recorder.markAudioAsPersistent()
                 val audioId = recorder.uniqueAudioId ?:
                 initialAudioFilePath?.let { File(it).nameWithoutExtension } ?: ""
+
+                if (amplitudes.isNotEmpty()) {
+                    saveAmplitudes(context, audioId, amplitudes)
+                }
+
                 onSave(audioTitle, audioId, selectedTheme, selectedLabelId)
             }
             onSaveTriggerConsumed()
@@ -530,11 +540,16 @@ fun NoteAudioSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     if (selectedAudioViewType == AudioViewType.Waveform) {
+
+                        val progress = if (isSheetAudioActive && sheetAudioDuration > 0L)
+                            (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(1L)).coerceIn(0f, 1f)
+                        else 0f
+
                         WaveformDisplay(
                             modifier = Modifier.fillMaxSize(),
                             amplitudes = amplitudes,
                             isRecording = isInRecordingMode,
-                            audioFilePath = currentSheetAudioPath
+                            progress = progress
                         )
                     } else {
                         Text("Transcript coming soon...", style = MaterialTheme.typography.headlineMedium)
@@ -876,22 +891,32 @@ fun WaveformDisplay(
     modifier: Modifier = Modifier,
     amplitudes: List<Float>,
     isRecording: Boolean,
-    audioFilePath: String?
+    progress: Float
 ) {
+    if (amplitudes.isEmpty()) {
+        Box(modifier, Alignment.Center) {
+            Text(
+                text = "Start recording...",
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center
+            )
+        }
+        return
+    }
+
     val color = MaterialTheme.colorScheme.primary
+    val inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+    val maxAmplitudeValue = 32767f // Max amplitude from MediaRecorder
 
-    if (amplitudes.isNotEmpty() && isRecording) {
-        val maxAmplitudeValue = 32767f // Max amplitude from MediaRecorder
+    Canvas(modifier = modifier) {
+        val canvasWidth = size.width
+        val canvasHeight = size.height
+        val middleY = canvasHeight / 2
 
-        Canvas(modifier = modifier) {
-            val canvasWidth = size.width
-            val canvasHeight = size.height
-            val middleY = canvasHeight / 2
-
+        if (isRecording) {
             val barWidth = 3.dp.toPx()
             val spacing = 2.dp.toPx()
             val totalBarWidth = barWidth + spacing
-
             val maxBars = (canvasWidth / totalBarWidth).toInt()
             val startIndex = (amplitudes.size - maxBars).coerceAtLeast(0)
             val barsToDraw = amplitudes.subList(startIndex, amplitudes.size)
@@ -899,25 +924,73 @@ fun WaveformDisplay(
             barsToDraw.forEachIndexed { index, amplitude ->
                 val x = index * totalBarWidth
                 val normalized = (amplitude / maxAmplitudeValue).coerceIn(0f, 1f)
-                val barHeight = normalized * canvasHeight * 0.8f // Use 80% of height
+                val barHeight = normalized * canvasHeight * 0.8f
 
                 if (barHeight > 0) {
                     drawRoundRect(
                         color = color,
                         topLeft = Offset(x = x, y = middleY - barHeight / 2),
-                        size = Size(barWidth, barHeight.coerceAtLeast(2.dp.toPx())), // min height
+                        size = Size(barWidth, barHeight.coerceAtLeast(2.dp.toPx())),
+                        cornerRadius = CornerRadius(barWidth / 2)
+                    )
+                }
+            }
+        } else {
+            val maxBars = (canvasWidth / (3.dp.toPx() + 2.dp.toPx())).toInt()
+            val barsToDraw = if (amplitudes.size > maxBars) {
+                val groupSize = amplitudes.size.toFloat() / maxBars
+                (0 until maxBars).map { i ->
+                    val start = (i * groupSize).toInt()
+                    val end = ((i + 1) * groupSize).toInt().coerceAtMost(amplitudes.size)
+                    amplitudes.subList(start, end).average().toFloat()
+                }
+            } else {
+                amplitudes
+            }
+
+            val totalBarWidth = canvasWidth / barsToDraw.size
+            val barWidth = (totalBarWidth * 0.6f).coerceAtLeast(1.dp.toPx())
+            val progressX = progress * canvasWidth
+
+            barsToDraw.forEachIndexed { index, amplitude ->
+                val x = index * totalBarWidth
+                val normalized = (amplitude / maxAmplitudeValue).coerceIn(0f, 1f)
+                val barHeight = normalized * canvasHeight * 0.8f
+                val barColor = if (x < progressX) color else inactiveColor
+
+                if (barHeight > 0) {
+                    drawRoundRect(
+                        color = barColor,
+                        topLeft = Offset(x = x, y = middleY - barHeight / 2),
+                        size = Size(barWidth, barHeight.coerceAtLeast(2.dp.toPx())),
                         cornerRadius = CornerRadius(barWidth / 2)
                     )
                 }
             }
         }
-    } else {
-        Box(modifier, Alignment.Center) {
-            Text(
-                text = if (audioFilePath != null) "Waveform (coming soon)" else "Start recording...",
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center
-            )
+    }
+}
+
+private fun saveAmplitudes(context: Context, uniqueId: String, amplitudes: List<Float>) {
+    val file = File(context.filesDir, "$uniqueId.amp")
+    try {
+        file.bufferedWriter().use { out ->
+            out.write(amplitudes.joinToString(","))
         }
+    } catch (e: IOException) {
+        e.printStackTrace()
+    }
+}
+
+private fun loadAmplitudes(context: Context, uniqueId: String): List<Float> {
+    val file = File(context.filesDir, "$uniqueId.amp")
+    if (!file.exists()) return emptyList()
+    return try {
+        file.bufferedReader().use { it.readText() }
+            .split(',')
+            .mapNotNull { it.toFloatOrNull() }
+    } catch (e: IOException) {
+        e.printStackTrace()
+        emptyList()
     }
 }
