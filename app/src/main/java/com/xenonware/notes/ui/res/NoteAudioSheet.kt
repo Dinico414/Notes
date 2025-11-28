@@ -36,18 +36,18 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.ColorLens
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -658,7 +658,7 @@ fun NoteAudioSheet(
                                     .fillMaxWidth(),
                             ) {
                                 Icon(
-                                    Icons.Default.Mic,
+                                    Icons.Rounded.Mic,
                                     "Start recording",
                                     modifier = Modifier.size(40.dp)
                                 )
@@ -682,7 +682,7 @@ fun NoteAudioSheet(
                                         .fillMaxWidth(),
                                 ) {
                                     Icon(
-                                        Icons.Default.Pause,
+                                        Icons.Rounded.Pause,
                                         "Pause",
                                         modifier = Modifier.size(40.dp)
                                     )
@@ -702,7 +702,7 @@ fun NoteAudioSheet(
                                         .fillMaxWidth(),
                                 ) {
                                     Icon(
-                                        Icons.Default.Stop, "Stop", modifier = Modifier.size(40.dp)
+                                        Icons.Rounded.Stop, "Stop", modifier = Modifier.size(40.dp)
                                     )
                                 }
                             }
@@ -725,7 +725,7 @@ fun NoteAudioSheet(
                                         .fillMaxWidth(),
                                 ) {
                                     Icon(
-                                        Icons.Default.Mic, "Resume", modifier = Modifier.size(40.dp)
+                                        Icons.Rounded.Mic, "Resume", modifier = Modifier.size(40.dp)
                                     )
                                 }
 
@@ -743,7 +743,7 @@ fun NoteAudioSheet(
                                         .fillMaxWidth(),
                                 ) {
                                     Icon(
-                                        Icons.Default.Stop, "Stop", modifier = Modifier.size(40.dp)
+                                        Icons.Rounded.Stop, "Stop", modifier = Modifier.size(40.dp)
                                     )
                                 }
                             }
@@ -781,7 +781,7 @@ fun NoteAudioSheet(
                                         .fillMaxWidth(),
                                 ) {
                                     Icon(
-                                        imageVector = if (playerManager.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        imageVector = if (playerManager.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                                         contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
                                         modifier = Modifier.size(40.dp)
                                     )
@@ -804,7 +804,7 @@ fun NoteAudioSheet(
                                         .fillMaxWidth(),
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Stop,
+                                        imageVector = Icons.Rounded.Stop,
                                         contentDescription = "Stop",
                                         modifier = Modifier.size(40.dp)
                                     )
@@ -828,7 +828,7 @@ fun NoteAudioSheet(
                                         .fillMaxWidth(),
                                 ) {
                                     Icon(
-                                        Icons.Default.Clear,
+                                        Icons.Rounded.Clear,
                                         "Discard",
                                         modifier = Modifier.size(40.dp)
                                     )
@@ -861,7 +861,7 @@ fun NoteAudioSheet(
                 IconButton(
                     onClick = onDismiss, Modifier.padding(4.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                 }
 
                 val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
@@ -896,7 +896,7 @@ fun NoteAudioSheet(
                     IconButton(
                         onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
                     ) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                        Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
                     }
                     DropdownNoteMenu(
                         expanded = showMenu,
@@ -908,13 +908,13 @@ fun NoteAudioSheet(
                         }, dismissOnClick = true, icon = {
                             if (isLabeled) {
                                 Icon(
-                                    Icons.Default.Bookmark,
+                                    Icons.Rounded.Bookmark,
                                     contentDescription = "Label",
                                     tint = labelColor
                                 )
                             } else {
                                 Icon(
-                                    Icons.Default.BookmarkBorder, contentDescription = "Label"
+                                    Icons.Rounded.BookmarkBorder, contentDescription = "Label"
                                 )
                             }
                         }), MenuItem(
@@ -935,7 +935,7 @@ fun NoteAudioSheet(
                                 }
                             }, dismissOnClick = false, icon = {
                                 Icon(
-                                    Icons.Default.ColorLens,
+                                    Icons.Rounded.ColorLens,
                                     contentDescription = "Color",
                                     tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
                                 )
@@ -948,13 +948,13 @@ fun NoteAudioSheet(
                             icon = {
                                 if (isOffline) {
                                     Icon(
-                                        Icons.Default.CloudOff,
+                                        Icons.Rounded.CloudOff,
                                         contentDescription = "Offline note",
                                         tint = colorScheme.error
                                     )
                                 } else {
                                     Icon(
-                                        Icons.Default.Cloud, contentDescription = "Online note"
+                                        Icons.Rounded.Cloud, contentDescription = "Online note"
                                     )
                                 }
                             })

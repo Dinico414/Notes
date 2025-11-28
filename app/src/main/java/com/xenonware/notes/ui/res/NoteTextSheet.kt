@@ -24,13 +24,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.ColorLens
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -429,7 +429,7 @@ fun NoteTextSheet(
                 IconButton(
                     onClick = onDismiss, Modifier.padding(4.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                 }
 
                 val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
@@ -464,7 +464,7 @@ fun NoteTextSheet(
                     IconButton(
                         onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
                     ) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                        Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
                     }
                     DropdownNoteMenu(
                         expanded = showMenu,
@@ -476,13 +476,13 @@ fun NoteTextSheet(
                             }, dismissOnClick = true, icon = {
                                 if (isLabeled) {
                                     Icon(
-                                        Icons.Default.Bookmark,
+                                        Icons.Rounded.Bookmark,
                                         contentDescription = "Label",
                                         tint = labelColor
                                     )
                                 } else {
                                     Icon(
-                                        Icons.Default.BookmarkBorder,
+                                        Icons.Rounded.BookmarkBorder,
                                         contentDescription = "Label"
                                     )
                                 }
@@ -504,7 +504,7 @@ fun NoteTextSheet(
                                     }
                                 }, dismissOnClick = false, icon = {
                                     Icon(
-                                        Icons.Default.ColorLens,
+                                        Icons.Rounded.ColorLens,
                                         contentDescription = "Color",
                                         tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
                                     )
@@ -517,13 +517,13 @@ fun NoteTextSheet(
                                 icon = {
                                     if (isOffline) {
                                         Icon(
-                                            Icons.Default.CloudOff,
+                                            Icons.Rounded.CloudOff,
                                             contentDescription = "Offline note",
                                             tint = colorScheme.error
                                         )
                                     } else {
                                         Icon(
-                                            Icons.Default.Cloud, contentDescription = "Online note"
+                                            Icons.Rounded.Cloud, contentDescription = "Online note"
                                         )
                                     }
                                 })

@@ -22,10 +22,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -248,7 +248,7 @@ fun NoteAudioCard(
                                 }
                             ) {
                                 Icon(
-                                    imageVector = if (playerManager.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    imageVector = if (playerManager.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                                     contentDescription = if (playerManager.isPlaying) "Pause" else "Play",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
@@ -290,7 +290,7 @@ fun NoteAudioCard(
                     Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
                         if (selected) {
                             Icon(
-                                Icons.Default.CheckCircle,
+                                Icons.Rounded.CheckCircle,
                                 contentDescription = "Selected",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp)
@@ -321,7 +321,7 @@ fun NoteAudioCard(
                         .background(MaterialTheme.colorScheme.onSurface, CircleShape)
                 ) {
                     Icon(
-                        Icons.Default.Mic,
+                        Icons.Rounded.Mic,
                         contentDescription = "Audio",
                         tint = backgroundColor,
                         modifier = Modifier

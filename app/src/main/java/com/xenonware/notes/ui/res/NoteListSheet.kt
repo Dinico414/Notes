@@ -24,13 +24,13 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.ColorLens
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -295,7 +295,7 @@ fun NoteListSheet(
                                     }
                                 }
                             }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete item")
+                            Icon(Icons.Rounded.Delete, contentDescription = "Delete item")
                         }
                     }
 
@@ -367,7 +367,7 @@ fun NoteListSheet(
                     IconButton(
                         onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
                     ) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                        Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
                     }
                     DropdownNoteMenu(
                         expanded = showMenu,
@@ -379,13 +379,13 @@ fun NoteListSheet(
                         }, dismissOnClick = true, icon = {
                             if (isLabeled) {
                                 Icon(
-                                    Icons.Default.Bookmark,
+                                    Icons.Rounded.Bookmark,
                                     contentDescription = "Label",
                                     tint = labelColor
                                 )
                             } else {
                                 Icon(
-                                    Icons.Default.BookmarkBorder,
+                                    Icons.Rounded.BookmarkBorder,
                                     contentDescription = "Label"
                                 )
                             }
@@ -407,7 +407,7 @@ fun NoteListSheet(
                                 }
                             }, dismissOnClick = false, icon = {
                                 Icon(
-                                    Icons.Default.ColorLens,
+                                    Icons.Rounded.ColorLens,
                                     contentDescription = "Color",
                                     tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
                                 )
@@ -420,13 +420,13 @@ fun NoteListSheet(
                             icon = {
                                 if (isOffline) {
                                     Icon(
-                                        Icons.Default.CloudOff,
+                                        Icons.Rounded.CloudOff,
                                         contentDescription = "Offline note",
                                         tint = colorScheme.error
                                     )
                                 } else {
                                     Icon(
-                                        Icons.Default.Cloud, contentDescription = "Online note"
+                                        Icons.Rounded.Cloud, contentDescription = "Online note"
                                     )
                                 }
                             })

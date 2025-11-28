@@ -14,9 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -109,14 +109,14 @@ fun SettingsSwitchMenuTile(
             }
 
             if (onClick != null) {
-                Spacer(modifier = Modifier.Companion.width(MediumPadding))
+                Spacer(modifier = Modifier.width(MediumPadding))
                 Icon(
-                    imageVector = Icons.Filled.ChevronRight,
+                    imageVector = Icons.Rounded.ChevronRight,
                     contentDescription = "Navigate",
                     tint = arrowColor,
                     modifier = Modifier.size(24.dp)
                 )
-                Spacer(modifier = Modifier.Companion.width(MediumPadding))
+                Spacer(modifier = Modifier.width(MediumPadding))
             }
         }
 
@@ -140,14 +140,14 @@ fun SettingsSwitchMenuTile(
                     thumbContent = {
                         if (checked) {
                             Icon(
-                                imageVector = Icons.Filled.Check,
+                                imageVector = Icons.Rounded.Check,
                                 contentDescription = "Checked",
                                 modifier = Modifier.size(SwitchDefaults.IconSize),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Filled.Close,
+                                imageVector = Icons.Rounded.Close,
                                 contentDescription = "Not Checked",
                                 modifier = Modifier.size(SwitchDefaults.IconSize),
                                 tint = MaterialTheme.colorScheme.surfaceDim

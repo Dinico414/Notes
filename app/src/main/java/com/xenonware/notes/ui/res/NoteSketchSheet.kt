@@ -39,19 +39,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Redo
-import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.automirrored.rounded.Redo
+import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.ColorLens
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -347,7 +347,7 @@ fun NoteSketchSheet(
                         }
                     }, modifier = Modifier.padding(4.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                 }
 
                 val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
@@ -382,7 +382,7 @@ fun NoteSketchSheet(
                     IconButton(
                         onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
                     ) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                        Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
                     }
                     DropdownNoteMenu(
                         expanded = showMenu,
@@ -394,13 +394,13 @@ fun NoteSketchSheet(
                             }, dismissOnClick = true, icon = {
                                 if (isLabeled) {
                                     Icon(
-                                        Icons.Default.Bookmark,
+                                        Icons.Rounded.Bookmark,
                                         contentDescription = "Label",
                                         tint = labelColor
                                     )
                                 } else {
                                     Icon(
-                                        Icons.Default.BookmarkBorder,
+                                        Icons.Rounded.BookmarkBorder,
                                         contentDescription = "Label"
                                     )
                                 }
@@ -422,7 +422,7 @@ fun NoteSketchSheet(
                                     }
                                 }, dismissOnClick = false, icon = {
                                     Icon(
-                                        Icons.Default.ColorLens,
+                                        Icons.Rounded.ColorLens,
                                         contentDescription = "Color",
                                         tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
                                     )
@@ -435,13 +435,13 @@ fun NoteSketchSheet(
                                 icon = {
                                     if (isOffline) {
                                         Icon(
-                                            Icons.Default.CloudOff,
+                                            Icons.Rounded.CloudOff,
                                             contentDescription = "Offline note",
                                             tint = colorScheme.error
                                         )
                                     } else {
                                         Icon(
-                                            Icons.Default.Cloud, contentDescription = "Online note"
+                                            Icons.Rounded.Cloud, contentDescription = "Online note"
                                         )
                                     }
                                 }),
@@ -453,12 +453,12 @@ fun NoteSketchSheet(
                                     icon = {
                                         if (debugTextEnabled) {
                                             Icon(
-                                                Icons.Default.Visibility,
+                                                Icons.Rounded.Visibility,
                                                 contentDescription = "Debug text enabled"
                                             )
                                         } else {
                                             Icon(
-                                                Icons.Default.VisibilityOff,
+                                                Icons.Rounded.VisibilityOff,
                                                 contentDescription = "Debug text disabled"
                                             )
                                         }
@@ -615,7 +615,7 @@ fun VerticalFloatingToolbar(
             ) {
                 IconButton(onClick = {}) {
                     Icon(
-                        Icons.AutoMirrored.Filled.Undo,
+                        Icons.AutoMirrored.Rounded.Undo,
                         contentDescription = "Undo (Long press to clear)",
                         modifier = Modifier.pointerInput(Unit) {
                             detectTapGestures(
@@ -624,7 +624,7 @@ fun VerticalFloatingToolbar(
                         })
                 }
                 IconButton(onClick = { onAction(DrawingAction.Redo) }) {
-                    Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo")
+                    Icon(Icons.AutoMirrored.Rounded.Redo, contentDescription = "Redo")
                 }
             }
         }

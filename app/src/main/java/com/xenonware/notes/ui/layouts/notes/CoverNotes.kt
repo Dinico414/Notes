@@ -40,23 +40,23 @@ import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CenterFocusStrong
-import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.FormatBold
-import androidx.compose.material.icons.filled.FormatItalic
-import androidx.compose.material.icons.filled.FormatSize
-import androidx.compose.material.icons.filled.FormatUnderlined
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.TextFields
-import androidx.compose.material.icons.filled.ViewModule
-import androidx.compose.material.icons.filled.ViewStream
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CenterFocusStrong
+import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.FormatBold
+import androidx.compose.material.icons.rounded.FormatItalic
+import androidx.compose.material.icons.rounded.FormatSize
+import androidx.compose.material.icons.rounded.FormatUnderlined
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.TextFields
+import androidx.compose.material.icons.rounded.ViewModule
+import androidx.compose.material.icons.rounded.ViewStream
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -399,7 +399,7 @@ fun CoverNotes(
                                     )
                                 ) {
                                     Icon(
-                                        Icons.Default.FormatBold,
+                                        Icons.Rounded.FormatBold,
                                         contentDescription = stringResource(R.string.bold_text)
                                     )
                                 }
@@ -411,7 +411,7 @@ fun CoverNotes(
                                     )
                                 ) {
                                     Icon(
-                                        Icons.Default.FormatItalic,
+                                        Icons.Rounded.FormatItalic,
                                         contentDescription = stringResource(R.string.italic_text)
                                     )
                                 }
@@ -423,7 +423,7 @@ fun CoverNotes(
                                     )
                                 ) {
                                     Icon(
-                                        Icons.Default.FormatUnderlined,
+                                        Icons.Rounded.FormatUnderlined,
                                         contentDescription = stringResource(R.string.underline_text)
                                     )
                                 }
@@ -431,7 +431,7 @@ fun CoverNotes(
                                     currentSizeIndex = (currentSizeIndex + 1) % textSizes.size
                                 }) {
                                     Icon(
-                                        Icons.Default.FormatSize,
+                                        Icons.Rounded.FormatSize,
                                         contentDescription = stringResource(R.string.change_text_size)
                                     )
                                 }
@@ -462,7 +462,7 @@ fun CoverNotes(
                                 )
                             ) {
                                 Icon(
-                                    Icons.Default.Add,
+                                    Icons.Rounded.Add,
                                     contentDescription = stringResource(R.string.add_new_item_to_list)
                                 )
                             }
@@ -470,7 +470,7 @@ fun CoverNotes(
                                 onClick = ::onListTextResizeClick,
                             ) {
                                 Icon(
-                                    Icons.Default.FormatSize,
+                                    Icons.Rounded.FormatSize,
                                     contentDescription = stringResource(R.string.change_text_size)
                                 )
                             }
@@ -560,7 +560,7 @@ fun CoverNotes(
                                         .height(56.dp)
                                 ) {
                                     Icon(
-                                        Icons.Default.GraphicEq,
+                                        Icons.Rounded.GraphicEq,
                                         contentDescription = stringResource(R.string.waveform_view)
                                     )
                                 }
@@ -577,7 +577,7 @@ fun CoverNotes(
                                         .height(56.dp)
                                 ) {
                                     Icon(
-                                        Icons.AutoMirrored.Default.Article,
+                                        Icons.AutoMirrored.Rounded.Article,
                                         contentDescription = stringResource(R.string.transcript_view)
                                     )
                                 }
@@ -731,7 +731,7 @@ fun CoverNotes(
                                     enabled = !isSearchActive && showActionIconsExceptSearch
                                 ) {
                                     Icon(
-                                        imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Default.ViewStream else Icons.Default.ViewModule,
+                                        imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Rounded.ViewStream else Icons.Rounded.ViewModule,
                                         contentDescription = stringResource(R.string.change_layout),
                                         tint = colorScheme.onSurface
                                     )
@@ -749,7 +749,7 @@ fun CoverNotes(
                                     enabled = !isSearchActive && showActionIconsExceptSearch
                                 ) {
                                     Icon(
-                                        Icons.Default.CenterFocusStrong,
+                                        Icons.Rounded.CenterFocusStrong,
                                         contentDescription = stringResource(R.string.resize_notes),
                                         tint = colorScheme.onSurface
                                     )
@@ -816,7 +816,7 @@ fun CoverNotes(
                                     onAddModeToggle()
                                 }) {
                                     Icon(
-                                        Icons.Default.TextFields,
+                                        Icons.Rounded.TextFields,
                                         contentDescription = stringResource(R.string.add_text_note),
                                         tint = colorScheme.onSecondaryContainer
                                     )
@@ -830,7 +830,7 @@ fun CoverNotes(
                                     onAddModeToggle()
                                 }) {
                                     Icon(
-                                        Icons.Default.Checklist,
+                                        Icons.Rounded.Checklist,
                                         contentDescription = stringResource(R.string.add_list_note),
                                         tint = colorScheme.onSecondaryContainer
                                     )
@@ -878,7 +878,7 @@ fun CoverNotes(
                                     containerColor = colorScheme.primary
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Save,
+                                        imageVector = Icons.Rounded.Save,
                                         contentDescription = stringResource(R.string.save_note),
                                         tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
                                             alpha = 0.38f
@@ -897,7 +897,7 @@ fun CoverNotes(
                                     containerColor = colorScheme.primary
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Save,
+                                        imageVector = Icons.Rounded.Save,
                                         contentDescription = stringResource(R.string.save_list_note),
                                         tint = if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() })
                                             colorScheme.onPrimary else colorScheme.onPrimary.copy(alpha = 0.38f)
@@ -911,7 +911,7 @@ fun CoverNotes(
                                     containerColor = colorScheme.primary
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Save,
+                                        imageVector = Icons.Rounded.Save,
                                         contentDescription = stringResource(R.string.save_audio_note),
                                         tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
                                             alpha = 0.38f
@@ -926,7 +926,7 @@ fun CoverNotes(
                                     containerColor = colorScheme.primary
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Save,
+                                        imageVector = Icons.Rounded.Save,
                                         contentDescription = stringResource(R.string.save_sketch_note),
                                         tint = colorScheme.onPrimary
                                     )

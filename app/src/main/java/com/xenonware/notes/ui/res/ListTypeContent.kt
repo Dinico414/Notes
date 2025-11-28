@@ -24,14 +24,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Label
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.TextFields
-import androidx.compose.material.icons.filled.ViewComfy
+import androidx.compose.material.icons.automirrored.rounded.Label
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.TextFields
+import androidx.compose.material.icons.rounded.ViewComfy
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -199,28 +199,28 @@ fun ListContent(
                         modifier = Modifier.padding(vertical = LargestPadding)
                     ) {
                         FilterItem(
-                            icon = Icons.Default.ViewComfy,
+                            icon = Icons.Rounded.ViewComfy,
                             label = stringResource(R.string.all_notes),
                             isSelected = currentFilter == NoteFilterType.ALL,
                             onClick = { onFilterSelected(NoteFilterType.ALL) })
                         FilterItem(
-                            icon = Icons.Default.TextFields,
+                            icon = Icons.Rounded.TextFields,
                             label = stringResource(R.string.text_notes),
                             isSelected = currentFilter == NoteFilterType.TEXT,
                             onClick = { onFilterSelected(NoteFilterType.TEXT) })
 
                         FilterItem(
-                            icon = Icons.Default.Checklist,
+                            icon = Icons.Rounded.Checklist,
                             label = stringResource(R.string.list_notes),
                             isSelected = currentFilter == NoteFilterType.LIST,
                             onClick = { onFilterSelected(NoteFilterType.LIST) })
                         FilterItem(
-                            icon = Icons.Default.Mic,
+                            icon = Icons.Rounded.Mic,
                             label = stringResource(R.string.audio_notes),
                             isSelected = currentFilter == NoteFilterType.AUDIO,
                             onClick = { onFilterSelected(NoteFilterType.AUDIO) })
                         FilterItem(
-                            icon = Icons.Default.Edit,
+                            icon = Icons.Rounded.Edit,
                             label = stringResource(R.string.sketch_notes),
                             isSelected = currentFilter == NoteFilterType.SKETCH,
                             onClick = { onFilterSelected(NoteFilterType.SKETCH) })
@@ -249,7 +249,7 @@ fun ListContent(
                         ) {
                             if (isFilteringByDefaultColor) {
                                 Icon(
-                                    imageVector = Icons.Default.Check,
+                                    imageVector = Icons.Rounded.Check,
                                     contentDescription = "Default Color Selected"
                                 )
                             }
@@ -268,7 +268,7 @@ fun ListContent(
                         ) {
                             if (isRedSelected) {
                                 Icon(
-                                    imageVector = Icons.Default.Check,
+                                    imageVector = Icons.Rounded.Check,
                                     contentDescription = "Red Selected"
                                 )
                             }
@@ -288,7 +288,7 @@ fun ListContent(
                         ) {
                             if (isOrangeSelected) {
                                 Icon(
-                                    imageVector = Icons.Default.Check,
+                                    imageVector = Icons.Rounded.Check,
                                     contentDescription = "Orange Selected"
                                 )
                             }
@@ -308,7 +308,7 @@ fun ListContent(
                         ) {
                             if (isYellowSelected) {
                                 Icon(
-                                    imageVector = Icons.Default.Check,
+                                    imageVector = Icons.Rounded.Check,
                                     contentDescription = "Yellow Selected"
                                 )
                             }
@@ -328,7 +328,7 @@ fun ListContent(
                         ) {
                             if (isGreenSelected) {
                                 Icon(
-                                    imageVector = Icons.Default.Check,
+                                    imageVector = Icons.Rounded.Check,
                                     contentDescription = "Green Selected"
                                 )
                             }
@@ -349,7 +349,7 @@ fun ListContent(
                         ) {
                             if (isTurquoiseSelected) {
                                 Icon(
-                                    imageVector = Icons.Default.Check,
+                                    imageVector = Icons.Rounded.Check,
                                     contentDescription = "Turquoise Selected"
                                 )
                             }
@@ -368,7 +368,7 @@ fun ListContent(
                         ) {
                             if (isBlueSelected) {
                                 Icon(
-                                    imageVector = Icons.Default.Check,
+                                    imageVector = Icons.Rounded.Check,
                                     contentDescription = "Blue Selected"
                                 )
                             }
@@ -387,7 +387,7 @@ fun ListContent(
                         ) {
                             if (isPurpleSelected) {
                                 Icon(
-                                    imageVector = Icons.Default.Check,
+                                    imageVector = Icons.Rounded.Check,
                                     contentDescription = "Purple Selected"
                                 )
                             }
@@ -403,7 +403,7 @@ fun ListContent(
                         ) {
                             localLabel.forEach { label ->
                                 FilterItem(
-                                    icon = Icons.AutoMirrored.Default.Label,
+                                    icon = Icons.AutoMirrored.Rounded.Label,
                                     label = label.text,
                                     isSelected = selectedLabel == label.id,
                                     onClick = { notesViewModel.setLabelFilter(label.id) },
@@ -443,7 +443,7 @@ fun ListContent(
                             colors = IconButtonDefaults.filledIconButtonColors(containerColor = colorScheme.primary)
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.Add,
+                                imageVector = Icons.Rounded.Add,
                                 contentDescription = stringResource(R.string.add_new_label)
                             )
                         }

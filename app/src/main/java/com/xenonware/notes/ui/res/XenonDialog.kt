@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
@@ -40,7 +42,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -52,7 +53,6 @@ import com.xenon.mylibrary.values.DialogCornerRadius
 import com.xenon.mylibrary.values.DialogPadding
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumPadding
-import com.xenonware.notes.R
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @Composable
@@ -153,7 +153,7 @@ fun XenonDialog(
                         )
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.close),
+                            imageVector = Icons.Rounded.Close,
                             contentDescription = "Dismiss Dialog (Close)"
                         )
                     }

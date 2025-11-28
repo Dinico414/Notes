@@ -21,10 +21,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckBox
-import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.rounded.CheckBox
+import androidx.compose.material.icons.rounded.CheckBoxOutlineBlank
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -170,9 +170,9 @@ fun NoteListCard(
                             ) {
                                 Icon(
                                     imageVector = if (listItemText.startsWith("[x]"))
-                                        Icons.Default.CheckBox
+                                        Icons.Rounded.CheckBox
                                     else
-                                        Icons.Default.CheckBoxOutlineBlank,
+                                        Icons.Rounded.CheckBoxOutlineBlank,
                                     contentDescription = "List",
                                     tint = if (listItemText.startsWith("[x]"))
                                         MaterialTheme.colorScheme.primary
@@ -224,7 +224,7 @@ fun NoteListCard(
                     Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
                         if (selected) {
                             Icon(
-                                imageVector = Icons.Default.CheckCircle,
+                                imageVector = Icons.Rounded.CheckCircle,
                                 contentDescription = "Selected",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp)
@@ -256,7 +256,7 @@ fun NoteListCard(
                         .background(MaterialTheme.colorScheme.onSurface, CircleShape)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Checklist,
+                        imageVector = Icons.Rounded.Checklist,
                         contentDescription = "List",
                         tint = backgroundColor,
                         modifier = Modifier
