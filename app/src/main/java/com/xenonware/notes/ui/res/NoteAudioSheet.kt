@@ -549,7 +549,8 @@ fun NoteAudioSheet(
                             modifier = Modifier.fillMaxSize(),
                             amplitudes = amplitudes,
                             isRecording = isInRecordingMode,
-                            progress = progress
+                            progress = progress,
+                            recordingState = recordingState
                         )
                     } else {
                         Text("Transcript coming soon...", style = MaterialTheme.typography.headlineMedium)
@@ -891,12 +892,18 @@ fun WaveformDisplay(
     modifier: Modifier = Modifier,
     amplitudes: List<Float>,
     isRecording: Boolean,
-    progress: Float
+    progress: Float,
+    recordingState: RecordingState
 ) {
     if (amplitudes.isEmpty()) {
         Box(modifier, Alignment.Center) {
+            val text = if (recordingState == RecordingState.VIEWING_SAVED_AUDIO) {
+                "No waveform available"
+            } else {
+                "Start recording..."
+            }
             Text(
-                text = "Start recording...",
+                text = text,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center
             )

@@ -324,7 +324,7 @@ fun NoteAudioCard(
                                             ),
                                             shape = RoundedCornerShape(MediumCornerRadius),
                                             modifier = Modifier
-                                                .padding(end = 28.dp)
+                                                .padding(end = 32.dp)
                                                 .fillMaxWidth()
                                                 .height(42.dp)
                                         ) {
