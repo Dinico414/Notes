@@ -218,7 +218,7 @@ fun NoteAudioCard(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                            val hasEnoughSpace = maxWidth >= 360.dp // Rough threshold
+                            val hasEnoughSpace = maxWidth >= 220.dp // Rough threshold
 
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 // Seekable progress bar

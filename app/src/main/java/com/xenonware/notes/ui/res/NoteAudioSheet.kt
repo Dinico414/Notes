@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -64,6 +65,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,6 +74,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -121,6 +126,8 @@ class AudioRecorderManager(
         private set
     var isPersistentAudio: Boolean by mutableStateOf(false)
         private set
+
+    fun getMaxAmplitude(): Int = mediaRecorder?.maxAmplitude ?: 0
 
     fun startRecording() {
         if (currentRecordingState == RecordingState.RECORDING) return
@@ -327,11 +334,13 @@ fun NoteAudioSheet(
     val isDarkTheme = LocalIsDarkTheme.current
     val context = LocalContext.current
     val player = GlobalAudioPlayer.getInstance()
+    val amplitudes = remember { mutableStateListOf<Float>() }
     val recorder = remember {
         AudioRecorderManager(context) {
             player.totalAudioDurationMillis = 0L
             player.currentPlaybackPositionMillis = 0L
             player.stopAudio()
+            amplitudes.clear()
         }
     }
 
@@ -386,6 +395,16 @@ fun NoteAudioSheet(
             while (isActive) {
                 delay(1000L)
                 recorder.recordingDurationMillis += 1000L
+            }
+        }
+    }
+
+    // Amplitude updater
+    LaunchedEffect(recordingState) {
+        if (recordingState == RecordingState.RECORDING) {
+            while (isActive) {
+                amplitudes.add(recorder.getMaxAmplitude().toFloat())
+                delay(100L)
             }
         }
     }
@@ -511,7 +530,12 @@ fun NoteAudioSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     if (selectedAudioViewType == AudioViewType.Waveform) {
-                        WaveformDisplay(currentSheetAudioPath, Modifier.fillMaxSize())
+                        WaveformDisplay(
+                            modifier = Modifier.fillMaxSize(),
+                            amplitudes = amplitudes,
+                            isRecording = isInRecordingMode,
+                            audioFilePath = currentSheetAudioPath
+                        )
                     } else {
                         Text("Transcript coming soon...", style = MaterialTheme.typography.headlineMedium)
                     }
@@ -541,7 +565,10 @@ fun NoteAudioSheet(
                                         (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(1L)).coerceIn(0f, 1f)
                                     else 0f
                                 },
-                                modifier = Modifier.fillMaxWidth().height(32.dp).clip(RoundedCornerShape(12.dp)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(32.dp)
+                                    .clip(RoundedCornerShape(12.dp)),
                                 color = MaterialTheme.colorScheme.primary,
                                 trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                                 strokeCap = StrokeCap.Round
@@ -549,7 +576,9 @@ fun NoteAudioSheet(
 
                             Spacer(Modifier.height(8.dp))
                             Row(
-                                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
@@ -572,7 +601,9 @@ fun NoteAudioSheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight + 16.dp),
+                        .padding(bottom = WindowInsets.navigationBars
+                            .asPaddingValues()
+                            .calculateBottomPadding() + toolbarHeight + 16.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -594,7 +625,10 @@ fun NoteAudioSheet(
                                     containerColor = MaterialTheme.colorScheme.primary,
                                     contentColor = MaterialTheme.colorScheme.onPrimary
                                 ),
-                                modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                                modifier = Modifier
+                                    .height(136.dp)
+                                    .weight(1f)
+                                    .widthIn(max = 184.dp)
                             ) {
                                 Icon(Icons.Rounded.Mic, "Start recording", Modifier.size(40.dp))
                             }
@@ -609,7 +643,10 @@ fun NoteAudioSheet(
                                         containerColor = MaterialTheme.colorScheme.primary,
                                         contentColor = MaterialTheme.colorScheme.onPrimary
                                     ),
-                                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(1f)
+                                        .widthIn(max = 184.dp)
                                 ) { Icon(Icons.Rounded.Pause, "Pause", Modifier.size(40.dp)) }
 
                                 FilledIconButton(
@@ -619,7 +656,10 @@ fun NoteAudioSheet(
                                         containerColor = MaterialTheme.colorScheme.error,
                                         contentColor = MaterialTheme.colorScheme.onError
                                     ),
-                                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(1f)
+                                        .widthIn(max = 184.dp)
                                 ) { Icon(Icons.Rounded.Stop, "Stop", Modifier.size(40.dp)) }
                             }
                         }
@@ -633,7 +673,10 @@ fun NoteAudioSheet(
                                         containerColor = MaterialTheme.colorScheme.primary,
                                         contentColor = MaterialTheme.colorScheme.onPrimary
                                     ),
-                                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(1f)
+                                        .widthIn(max = 184.dp)
                                 ) { Icon(Icons.Rounded.Mic, "Resume", Modifier.size(40.dp)) }
 
                                 FilledIconButton(
@@ -643,7 +686,10 @@ fun NoteAudioSheet(
                                         containerColor = MaterialTheme.colorScheme.error,
                                         contentColor = MaterialTheme.colorScheme.onError
                                     ),
-                                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(1f)
+                                        .widthIn(max = 184.dp)
                                 ) { Icon(Icons.Rounded.Stop, "Stop", Modifier.size(40.dp)) }
                             }
                         }
@@ -665,7 +711,10 @@ fun NoteAudioSheet(
                                         containerColor = MaterialTheme.colorScheme.primary,
                                         contentColor = MaterialTheme.colorScheme.onPrimary
                                     ),
-                                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(1f)
+                                        .widthIn(max = 184.dp)
                                 ) {
                                     Icon(
                                         imageVector = if (isSheetAudioPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
@@ -682,7 +731,10 @@ fun NoteAudioSheet(
                                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                                     ),
-                                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                                    modifier = Modifier
+                                        .height(136.dp)
+                                        .weight(1f)
+                                        .widthIn(max = 184.dp)
                                 ) { Icon(Icons.Rounded.Stop, "Stop", Modifier.size(40.dp)) }
 
                                 if (!recorder.isPersistentAudio && currentSheetAudioPath != null) {
@@ -697,7 +749,10 @@ fun NoteAudioSheet(
                                             containerColor = MaterialTheme.colorScheme.errorContainer,
                                             contentColor = MaterialTheme.colorScheme.onErrorContainer
                                         ),
-                                        modifier = Modifier.height(136.dp).weight(0.5f).widthIn(max = 184.dp)
+                                        modifier = Modifier
+                                            .height(136.dp)
+                                            .weight(0.5f)
+                                            .widthIn(max = 184.dp)
                                     ) {
                                         Icon(Icons.Rounded.Clear, "Discard", Modifier.size(40.dp))
                                     }
@@ -817,12 +872,52 @@ fun formatDuration(millis: Long): String {
 }
 
 @Composable
-fun WaveformDisplay(audioFilePath: String?, modifier: Modifier = Modifier) {
-    Box(modifier, Alignment.Center) {
-        Text(
-            text = if (audioFilePath != null) "Waveform (coming soon)" else "Start recording...",
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center
-        )
+fun WaveformDisplay(
+    modifier: Modifier = Modifier,
+    amplitudes: List<Float>,
+    isRecording: Boolean,
+    audioFilePath: String?
+) {
+    val color = MaterialTheme.colorScheme.primary
+
+    if (amplitudes.isNotEmpty() && isRecording) {
+        val maxAmplitudeValue = 32767f // Max amplitude from MediaRecorder
+
+        Canvas(modifier = modifier) {
+            val canvasWidth = size.width
+            val canvasHeight = size.height
+            val middleY = canvasHeight / 2
+
+            val barWidth = 3.dp.toPx()
+            val spacing = 2.dp.toPx()
+            val totalBarWidth = barWidth + spacing
+
+            val maxBars = (canvasWidth / totalBarWidth).toInt()
+            val startIndex = (amplitudes.size - maxBars).coerceAtLeast(0)
+            val barsToDraw = amplitudes.subList(startIndex, amplitudes.size)
+
+            barsToDraw.forEachIndexed { index, amplitude ->
+                val x = index * totalBarWidth
+                val normalized = (amplitude / maxAmplitudeValue).coerceIn(0f, 1f)
+                val barHeight = normalized * canvasHeight * 0.8f // Use 80% of height
+
+                if (barHeight > 0) {
+                    drawRoundRect(
+                        color = color,
+                        topLeft = Offset(x = x, y = middleY - barHeight / 2),
+                        size = Size(barWidth, barHeight.coerceAtLeast(2.dp.toPx())), // min height
+                        cornerRadius = CornerRadius(barWidth / 2)
+                    )
+                }
+            }
+        }
+    } else {
+        Box(modifier, Alignment.Center) {
+            Text(
+                text = if (audioFilePath != null) "Waveform (coming soon)" else "Start recording...",
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
