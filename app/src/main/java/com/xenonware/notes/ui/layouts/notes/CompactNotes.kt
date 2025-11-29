@@ -1405,8 +1405,7 @@ fun CompactNotes(
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
                     onAddNewLabel = { notesViewModel.addLabel(it) },
-//                    isVisible = showTextNoteCard,
-
+                    isCoverModeActive = false
                 )
             }
 
@@ -1484,7 +1483,8 @@ fun CompactNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) }
+                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    isCoverModeActive = false
                 )
             }
 
@@ -1561,6 +1561,7 @@ fun CompactNotes(
                     onLabelSelected = { selectedLabelId = it },
                     onAddNewLabel = { notesViewModel.addLabel(it) },
                     onHasUnsavedAudioChange = { hasAudioContent = it },
+                    isCoverModeActive = false
                 )
 
             }
@@ -1633,7 +1634,8 @@ fun CompactNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) }
+                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    isCoverModeActive = false
                 )
             }
         }

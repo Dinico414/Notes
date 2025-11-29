@@ -329,6 +329,7 @@ fun NoteAudioSheet(
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
     onHasUnsavedAudioChange: (Boolean) -> Unit = {},
+    isCoverModeActive: Boolean = false
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
@@ -502,11 +503,12 @@ fun NoteAudioSheet(
 
         val hazeThinColor = MaterialTheme.colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
+        val backgroundColor = if (isCoverModeActive) Color.Black else MaterialTheme.colorScheme.surfaceContainer
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .background(backgroundColor)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
         ) {
             Column(

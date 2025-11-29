@@ -1406,6 +1406,7 @@ fun CoverNotes(
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
                     onAddNewLabel = { notesViewModel.addLabel(it) },
+                    isCoverModeActive = true
                 )
             }
 
@@ -1483,7 +1484,8 @@ fun CoverNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) }
+                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    isCoverModeActive = true
                 )
             }
 
@@ -1559,6 +1561,7 @@ fun CoverNotes(
                     onLabelSelected = { selectedLabelId = it },
                     onAddNewLabel = { notesViewModel.addLabel(it) },
                     onHasUnsavedAudioChange = { hasAudioContent = it },
+                    isCoverModeActive = true
                 )
 
             }
@@ -1631,7 +1634,8 @@ fun CoverNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) }
+                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    isCoverModeActive = true
                 )
             }
         }
