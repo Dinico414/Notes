@@ -163,6 +163,7 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.launch
+import java.io.File
 
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -290,6 +291,8 @@ fun CoverNotes(
     val gridMaxLines = 20
     val allLabels by notesViewModel.labels.collectAsState()
     var selectedLabelId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    var hasAudioContent by rememberSaveable { mutableStateOf(false) }
 
     fun onResizeClick() {
         if (notesLayoutType == NotesLayoutType.LIST) {
@@ -911,18 +914,21 @@ fun CoverNotes(
                                     )
                                 }
                             }
-                        } else if (showAudioNoteCard) { // FAB for Audio Note
+                        } else if (showAudioNoteCard) {
                             {
+                                val canSave = titleState.isNotBlank() && hasAudioContent
+
                                 FloatingActionButton(
-                                    onClick = { if (titleState.isNotBlank()) saveTrigger = true },
+                                    onClick = {
+                                        if (canSave) saveTrigger = true
+                                    },
                                     containerColor = colorScheme.primary
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Save,
                                         contentDescription = stringResource(R.string.save_audio_note),
-                                        tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
-                                            alpha = 0.38f
-                                        )
+                                        tint = if (canSave) colorScheme.onPrimary
+                                        else colorScheme.onPrimary.copy(alpha = 0.38f)
                                     )
                                 }
                             }
@@ -1120,28 +1126,29 @@ fun CoverNotes(
                                                                 nextListItemId = 0L
                                                                 currentListSizeIndex = 1
                                                                 itemToEdit.description?.let { desc ->
-                                                                    val parsedItems = desc.split("\n")
-                                                                        .mapNotNull { line ->
-                                                                            if (line.isBlank()) null
-                                                                            else {
-                                                                                val isChecked =
-                                                                                    line.startsWith(
-                                                                                        "[x]"
+                                                                    val parsedItems =
+                                                                        desc.split("\n")
+                                                                            .mapNotNull { line ->
+                                                                                if (line.isBlank()) null
+                                                                                else {
+                                                                                    val isChecked =
+                                                                                        line.startsWith(
+                                                                                            "[x]"
+                                                                                        )
+                                                                                    val text =
+                                                                                        if (isChecked) line.substringAfter(
+                                                                                            "[x] "
+                                                                                        )
+                                                                                            .trim() else line.substringAfter(
+                                                                                            "[ ] "
+                                                                                        ).trim()
+                                                                                    ListItem(
+                                                                                        nextListItemId++,
+                                                                                        text,
+                                                                                        isChecked
                                                                                     )
-                                                                                val text =
-                                                                                    if (isChecked) line.substringAfter(
-                                                                                        "[x] "
-                                                                                    )
-                                                                                        .trim() else line.substringAfter(
-                                                                                        "[ ] "
-                                                                                    ).trim()
-                                                                                ListItem(
-                                                                                    nextListItemId++,
-                                                                                    text,
-                                                                                    isChecked
-                                                                                )
+                                                                                }
                                                                             }
-                                                                        }
                                                                     listItemsState.addAll(
                                                                         parsedItems
                                                                     )
@@ -1157,14 +1164,13 @@ fun CoverNotes(
                                                                     }
 
                                                                     NoteType.AUDIO -> {
-                                                                        isSearchActive =
-                                                                            false // Disable search
+                                                                        isSearchActive = false
                                                                         notesViewModel.setSearchQuery(
                                                                             ""
-                                                                        ) // Clear search query
+                                                                        )
                                                                         showAudioNoteCard = true
                                                                         selectedAudioViewType =
-                                                                            AudioViewType.Waveform // Default for editing
+                                                                            AudioViewType.Waveform
                                                                         editingNoteColor =
                                                                             itemToEdit.color?.toULong()
                                                                     }
@@ -1247,25 +1253,26 @@ fun CoverNotes(
                                                         currentListSizeIndex = 1
                                                         itemToEdit.description?.let { desc ->
                                                             val parsedItems =
-                                                                desc.split("\n").mapNotNull { line ->
-                                                                    if (line.isBlank()) null
-                                                                    else {
-                                                                        val isChecked =
-                                                                            line.startsWith("[x]")
-                                                                        val text =
-                                                                            if (isChecked) line.substringAfter(
-                                                                                "[x] "
+                                                                desc.split("\n")
+                                                                    .mapNotNull { line ->
+                                                                        if (line.isBlank()) null
+                                                                        else {
+                                                                            val isChecked =
+                                                                                line.startsWith("[x]")
+                                                                            val text =
+                                                                                if (isChecked) line.substringAfter(
+                                                                                    "[x] "
+                                                                                )
+                                                                                    .trim() else line.substringAfter(
+                                                                                    "[ ] "
+                                                                                ).trim()
+                                                                            ListItem(
+                                                                                nextListItemId++,
+                                                                                text,
+                                                                                isChecked
                                                                             )
-                                                                                .trim() else line.substringAfter(
-                                                                                "[ ] "
-                                                                            ).trim()
-                                                                        ListItem(
-                                                                            nextListItemId++,
-                                                                            text,
-                                                                            isChecked
-                                                                        )
+                                                                        }
                                                                     }
-                                                                }
                                                             listItemsState.addAll(parsedItems)
                                                         }
                                                         when (itemToEdit.noteType) {
@@ -1502,8 +1509,8 @@ fun CoverNotes(
                     onAudioTitleChange = { titleState = it },
                     onDismiss = {
                         showAudioNoteCard = false
-                        isSearchActive = false // Disable search on dismiss
-                        notesViewModel.setSearchQuery("") // Clear search query
+                        isSearchActive = false
+                        notesViewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1541,14 +1548,17 @@ fun CoverNotes(
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
                     selectedAudioViewType = selectedAudioViewType,
-                    initialAudioFilePath = descriptionState.takeIf { it.isNotBlank() },
+                    initialAudioFilePath = descriptionState.let { uniqueId ->
+                        File(context.filesDir, "$uniqueId.mp3").takeIf { it.exists() }?.absolutePath
+                    },
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
                     },
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) }
+                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    onHasUnsavedAudioChange = { hasAudioContent = it },
                 )
 
             }
