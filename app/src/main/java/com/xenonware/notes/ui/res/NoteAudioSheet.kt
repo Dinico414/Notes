@@ -586,9 +586,10 @@ fun NoteAudioSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(32.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
+                                    .clip(RoundedCornerShape(100f))
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                                 color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.0f),
                                 strokeCap = StrokeCap.Round
                             )
 

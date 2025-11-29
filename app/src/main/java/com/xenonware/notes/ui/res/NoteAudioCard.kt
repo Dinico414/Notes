@@ -240,11 +240,14 @@ fun NoteAudioCard(
                                         progress = { currentProgress },
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(16.dp),
+                                            .height(16.dp)
+                                            .clip(RoundedCornerShape(100f))
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                                         color = MaterialTheme.colorScheme.primary,
-                                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                        trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.0f),
                                         strokeCap = StrokeCap.Round
                                     )
+
                                 }
 
                                 Spacer(modifier = Modifier.height(4.dp))
