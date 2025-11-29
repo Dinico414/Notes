@@ -215,7 +215,7 @@ fun NoteAudioCard(
                             else -> 0f
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                             val hasEnoughSpace = maxWidth >= 220.dp // Rough threshold
@@ -225,16 +225,14 @@ fun NoteAudioCard(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(16.dp)
+                                        .height(24.dp)
                                         .padding(horizontal = 8.dp)
                                         .clip(RoundedCornerShape(8.dp))
                                         .pointerInput(Unit) {
-                                            if (thisAudioDuration > 0L && isThisAudioActive) {
-                                                detectTapGestures { offset ->
-                                                    val progress = (offset.x / size.width).coerceIn(0f, 1f)
-                                                    val seekTo = (thisAudioDuration * progress).toLong()
-                                                    player.seekTo(seekTo)
-                                                }
+                                            detectTapGestures { offset ->
+                                                val progress = (offset.x / size.width).coerceIn(0f, 1f)
+                                                val seekTo = (thisAudioDuration * progress).toLong()
+                                                player.seekTo(seekTo)
                                             }
                                         }
                                 ) {
@@ -249,7 +247,7 @@ fun NoteAudioCard(
                                     )
                                 }
 
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
 
                                 if (hasEnoughSpace) {
                                     Row(
