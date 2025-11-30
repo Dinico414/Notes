@@ -1,6 +1,7 @@
 package com.xenonware.notes.ui.res
 
 import android.app.Application
+import android.content.res.Configuration
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
@@ -26,7 +27,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -81,6 +81,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -142,6 +143,13 @@ fun NoteSketchSheet(
     val isDarkTheme = LocalIsDarkTheme.current
     val context = LocalContext.current
     val application = context.applicationContext as Application
+
+
+    val configuration = LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val useHorizontalLayout = isLandscape || screenWidthDp <= 380
+
 
     var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) }
     var colorMenuItemText by remember { mutableStateOf("Color") }
@@ -247,13 +255,13 @@ fun NoteSketchSheet(
                     onLabelSelected(it)
                 },
                 onAddNewLabel = onAddNewLabel,
-                onDismiss = { showLabelDialog = false }
-            )
+                onDismiss = { showLabelDialog = false })
         }
 
         val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
-        val backgroundColor = if (isCoverModeActive) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+        val backgroundColor =
+            if (isCoverModeActive) Color.Black else MaterialTheme.colorScheme.surfaceContainer
 
         val currentExtendedColorScheme = extendedMaterialColorScheme
         val themeDrawColors = remember(isDarkTheme, currentExtendedColorScheme) {
@@ -402,8 +410,7 @@ fun NoteSketchSheet(
                                     )
                                 } else {
                                     Icon(
-                                        Icons.Rounded.BookmarkBorder,
-                                        contentDescription = "Label"
+                                        Icons.Rounded.BookmarkBorder, contentDescription = "Label"
                                     )
                                 }
                             }), MenuItem(
@@ -446,8 +453,7 @@ fun NoteSketchSheet(
                                             Icons.Rounded.Cloud, contentDescription = "Online note"
                                         )
                                     }
-                                }),
-                            if (isDeveloperOptionsEnabled) {
+                                }), if (isDeveloperOptionsEnabled) {
                                 MenuItem(
                                     text = "Debug text",
                                     onClick = { debugTextEnabled = !debugTextEnabled },
@@ -545,9 +551,9 @@ fun NoteSketchSheet(
 
             Box(
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
+                    .align(if (useHorizontalLayout) Alignment.TopEnd else Alignment.CenterEnd)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical))
-                    .padding(top = 16.dp, bottom = 16.dp, end = 16.dp)
+                    .padding(top = 68.dp, bottom = 68.dp, end = 16.dp)
                     .wrapContentHeight(),
                 contentAlignment = Alignment.Center
             ) {
@@ -581,10 +587,7 @@ class CanvasViewModelFactory(private val application: Application) : ViewModelPr
     }
 }
 
-@OptIn(
-    ExperimentalHazeMaterialsApi::class,
-    androidx.compose.foundation.ExperimentalFoundationApi::class
-)
+@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun VerticalFloatingToolbar(
     onAction: (DrawingAction) -> Unit,
@@ -596,88 +599,149 @@ fun VerticalFloatingToolbar(
     hazeThinColor: Color,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(100f))
-            .background(hazeThinColor)
-            .hazeEffect(
-                state = hazeState,
-                style = HazeMaterials.ultraThin(hazeThinColor),
-            )
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = if (isCollapsed) Arrangement.Center else Arrangement.spacedBy(
-            8.dp, Alignment.Top
-        )
-    ) {
-        if (!isCollapsed) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+    val configuration = LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+
+    val useHorizontalLayout = isLandscape || screenWidthDp <= 380
+
+    val content = @Composable {
+        if (useHorizontalLayout) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                IconButton(onClick = {}) {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.Undo,
-                        contentDescription = "Undo (Long press to clear)",
-                        modifier = Modifier.pointerInput(Unit) {
-                            detectTapGestures(
-                                onTap = { onAction(DrawingAction.Undo) },
-                                onLongPress = { onAction(DrawingAction.ClearCanvas) })
-                        })
+                if (!isCollapsed) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        IconButton(onClick = {}) {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.Undo,
+                                "Undo",
+                                modifier = Modifier.pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onTap = { onAction(DrawingAction.Undo) },
+                                        onLongPress = { onAction(DrawingAction.ClearCanvas) })
+                                })
+                        }
+                        IconButton(onClick = { onAction(DrawingAction.Redo) }) {
+                            Icon(Icons.AutoMirrored.Rounded.Redo, "Redo")
+                        }
+
+                        FilledIconButton(
+                            onClick = { onToggleHandwritingMode(true) },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = if (isHandwritingMode) colorScheme.tertiary else Color.Transparent,
+                                contentColor = if (isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurface
+                            )
+                        ) {
+                            Icon(painterResource(R.drawable.hand_drawn), "Hand")
+                        }
+                        FilledIconButton(
+                            onClick = { onToggleHandwritingMode(false) },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = if (!isHandwritingMode) colorScheme.tertiary else Color.Transparent,
+                                contentColor = if (!isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurface
+                            )
+                        ) {
+                            Icon(painterResource(R.drawable.pen_drawn), "Pen")
+                        }
+                    }
                 }
-                IconButton(onClick = { onAction(DrawingAction.Redo) }) {
-                    Icon(Icons.AutoMirrored.Rounded.Redo, contentDescription = "Redo")
+                FilledIconButton(
+                    onClick = { onCollapseChange(!isCollapsed) },
+                    modifier = Modifier.size(height = 48.dp, width = 56.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isCollapsed) Icons.AutoMirrored.Rounded.KeyboardArrowLeft
+                        else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                        contentDescription = null
+                    )
                 }
             }
-        }
-
-        FilledIconButton(
-            onClick = { onCollapseChange(!isCollapsed) },
-            modifier = Modifier
-                .height(56.dp)
-                .width(48.dp)
-        ) {
-            Icon(
-                imageVector = if (isCollapsed) Icons.AutoMirrored.Rounded.KeyboardArrowLeft else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = if (isCollapsed) "Expand toolbar" else "Collapse toolbar"
-            )
-        }
-
-        if (!isCollapsed) {
+        } else {
+            // VERTICAL MODE — normal phones in portrait, tablets
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = if (isCollapsed) Arrangement.Center else Arrangement.spacedBy(
+                    8.dp
+                )
             ) {
+                if (!isCollapsed) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        IconButton(onClick = {}) {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.Undo,
+                                "Undo",
+                                modifier = Modifier.pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onTap = { onAction(DrawingAction.Undo) },
+                                        onLongPress = { onAction(DrawingAction.ClearCanvas) })
+                                })
+                        }
+                        IconButton(onClick = { onAction(DrawingAction.Redo) }) {
+                            Icon(Icons.AutoMirrored.Rounded.Redo, "Redo")
+                        }
+                    }
+                }
 
                 FilledIconButton(
-                    onClick = { onToggleHandwritingMode(true) },
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = if (isHandwritingMode) colorScheme.tertiary else Color.Transparent,
-                        contentColor = if (isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurface,
-                    )
+                    onClick = { onCollapseChange(!isCollapsed) },
+                    modifier = Modifier.size(width = 48.dp, height = 56.dp)
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.hand_drawn),
-                        contentDescription = "Hand Mode"
+                        imageVector = if (isCollapsed) Icons.AutoMirrored.Rounded.KeyboardArrowLeft
+                        else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                        contentDescription = null
                     )
                 }
-                FilledIconButton(
-                    onClick = { onToggleHandwritingMode(false) },
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = if (!isHandwritingMode) colorScheme.tertiary else Color.Transparent,
-                        contentColor = if (!isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurface,
-                        )
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.pen_drawn),
-                        contentDescription = "Pen Mode"
-                    )
+
+                if (!isCollapsed) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        FilledIconButton(
+                            onClick = { onToggleHandwritingMode(true) },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = if (isHandwritingMode) colorScheme.tertiary else Color.Transparent,
+                                contentColor = if (isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurface
+                            )
+                        ) {
+                            Icon(painterResource(R.drawable.hand_drawn), "Hand")
+                        }
+                        FilledIconButton(
+                            onClick = { onToggleHandwritingMode(false) },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = if (!isHandwritingMode) colorScheme.tertiary else Color.Transparent,
+                                contentColor = if (!isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurface
+                            )
+                        ) {
+                            Icon(painterResource(R.drawable.pen_drawn), "Pen")
+                        }
+                    }
                 }
             }
         }
     }
-}
 
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(100f))
+            .background(hazeThinColor)
+            .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor))
+            .padding(if (useHorizontalLayout) 14.dp else 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
+    }
+}
 
 @Composable
 fun ColorPicker(
@@ -697,8 +761,7 @@ fun ColorPicker(
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
-                onClick = {}
-            ),
+                onClick = {}),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(spacing)
     ) {
@@ -770,8 +833,7 @@ fun PenSizePicker(
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
-                onClick = {}
-            ),
+                onClick = {}),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(spacing)
     ) {

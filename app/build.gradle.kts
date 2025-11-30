@@ -116,4 +116,5 @@ dependencies {
     implementation(libs.play.services.auth)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.coil.compose)
+    implementation(libs.androidx.compose.material3.window.size.class1)
 }
