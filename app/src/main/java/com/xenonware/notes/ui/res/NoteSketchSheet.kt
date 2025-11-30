@@ -1,7 +1,6 @@
 package com.xenonware.notes.ui.res
 
 import android.app.Application
-import android.content.res.Configuration
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
@@ -146,9 +145,9 @@ fun NoteSketchSheet(
 
 
     val configuration = LocalConfiguration.current
-    val screenWidthDp = configuration.screenWidthDp
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val useHorizontalLayout = isLandscape || screenWidthDp <= 380
+    val screenHeightDp = configuration.screenHeightDp
+
+    val useHorizontalLayout = screenHeightDp < 480
 
 
     var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) }
@@ -600,11 +599,9 @@ fun VerticalFloatingToolbar(
     modifier: Modifier = Modifier,
 ) {
     val configuration = LocalConfiguration.current
-    val screenWidthDp = configuration.screenWidthDp
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val screenHeightDp = configuration.screenHeightDp
 
-
-    val useHorizontalLayout = isLandscape || screenWidthDp <= 380
+    val useHorizontalLayout = screenHeightDp < 480
 
     val content = @Composable {
         if (useHorizontalLayout) {
