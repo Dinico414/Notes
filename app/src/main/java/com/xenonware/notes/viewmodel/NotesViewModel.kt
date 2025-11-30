@@ -5,17 +5,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xenonware.notes.SharedPreferenceManager
-import com.xenonware.notes.ui.theme.blueInversePrimaryLight
-import com.xenonware.notes.ui.theme.greenInversePrimaryLight
-import com.xenonware.notes.ui.theme.orangeInversePrimaryLight
-import com.xenonware.notes.ui.theme.purpleInversePrimaryLight
-import com.xenonware.notes.ui.theme.redInversePrimaryLight
-import com.xenonware.notes.ui.theme.turquoiseInversePrimaryLight
-import com.xenonware.notes.ui.theme.yellowInversePrimaryLight
+import com.xenonware.notes.ui.theme.noteBlueLight
+import com.xenonware.notes.ui.theme.noteGreenLight
+import com.xenonware.notes.ui.theme.noteOrangeLight
+import com.xenonware.notes.ui.theme.notePurpleLight
+import com.xenonware.notes.ui.theme.noteRedLight
+import com.xenonware.notes.ui.theme.noteTurquoiseLight
+import com.xenonware.notes.ui.theme.noteYellowLight
 import com.xenonware.notes.viewmodel.classes.Label
 import com.xenonware.notes.viewmodel.classes.NoteType
 import com.xenonware.notes.viewmodel.classes.NotesItems
@@ -536,12 +535,13 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         const val DEFAULT_LIST_ID = "default_list"
         const val MAX_LINES_FULL_NOTE = -1
 
-        val COLOR_RED = redInversePrimaryLight.toArgb().toLong()
-        val COLOR_ORANGE = orangeInversePrimaryLight.toArgb().toLong()
-        val COLOR_YELLOW = yellowInversePrimaryLight.toArgb().toLong()
-        val COLOR_GREEN = greenInversePrimaryLight.toArgb().toLong()
-        val COLOR_TURQUOISE = turquoiseInversePrimaryLight.toArgb().toLong()
-        val COLOR_BLUE = blueInversePrimaryLight.toArgb().toLong()
-        val COLOR_PURPLE = purpleInversePrimaryLight.toArgb().toLong()
+        // Use the ACTUAL colors used for note backgrounds
+        val COLOR_RED = noteRedLight.value.toLong()
+        val COLOR_ORANGE = noteOrangeLight.value.toLong()
+        val COLOR_YELLOW = noteYellowLight.value.toLong()
+        val COLOR_GREEN = noteGreenLight.value.toLong()
+        val COLOR_TURQUOISE = noteTurquoiseLight.value.toLong()
+        val COLOR_BLUE = noteBlueLight.value.toLong()
+        val COLOR_PURPLE = notePurpleLight.value.toLong()
     }
 }
