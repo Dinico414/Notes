@@ -1,5 +1,6 @@
 package com.xenonware.notes.ui.res
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.os.Build
 import android.provider.Settings
@@ -109,6 +110,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
+@Suppress("AssignedValueIsNeverRead")
+@SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalHazeMaterialsApi::class, ExperimentalComposeUiApi::class)
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
@@ -260,7 +263,7 @@ fun NoteSketchSheet(
         val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
         val backgroundColor =
-            if (isCoverModeActive) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+            if (isCoverModeActive) Color.Black else colorScheme.surfaceContainer
 
         val currentExtendedColorScheme = extendedMaterialColorScheme
         val themeDrawColors = remember(isDarkTheme, currentExtendedColorScheme) {
@@ -586,6 +589,7 @@ class CanvasViewModelFactory(private val application: Application) : ViewModelPr
     }
 }
 
+@SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun VerticalFloatingToolbar(
@@ -733,7 +737,7 @@ fun VerticalFloatingToolbar(
             .clip(RoundedCornerShape(100f))
             .background(hazeThinColor)
             .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor))
-            .padding(if (useHorizontalLayout) 14.dp else 8.dp),
+            .padding(8.dp),
         contentAlignment = Alignment.Center
     ) {
         content()
@@ -871,14 +875,13 @@ fun PenSizePicker(
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val maxRadius = this.size.minDimension * 8 / 10
                             val rectWidth = (size / maxPenSize) * maxRadius
-                            val rectHeight = maxRadius
                             drawRoundRect(
                                 color = if (isSelected) onSelectColor else onSurfaceColor,
                                 topLeft = Offset(
                                     x = (this.size.width - rectWidth) / 2,
-                                    y = (this.size.height - rectHeight) / 2
+                                    y = (this.size.height - maxRadius) / 2
                                 ),
-                                size = Size(width = rectWidth, height = rectHeight),
+                                size = Size(width = rectWidth, height = maxRadius),
                                 cornerRadius = CornerRadius(100f)
                             )
                         }
