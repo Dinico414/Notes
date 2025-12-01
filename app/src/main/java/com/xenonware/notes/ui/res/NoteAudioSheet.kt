@@ -2,20 +2,11 @@
 
 package com.xenonware.notes.ui.res
 
-import android.Manifest
 import android.annotation.SuppressLint
-import android.content.Context
-import android.content.pm.PackageManager
-import android.media.AudioAttributes
-import android.media.MediaPlayer
-import android.media.MediaRecorder
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -25,16 +16,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -42,21 +29,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
-import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.ColorLens
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -74,9 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -86,13 +63,15 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.layouts.notes.AudioViewType
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.util.AudioRecorderManager
+import com.xenonware.notes.util.GlobalAudioPlayer
+import com.xenonware.notes.util.RecordingState
 import com.xenonware.notes.viewmodel.classes.Label
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
@@ -104,211 +83,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-enum class RecordingState {
-    IDLE, RECORDING, PAUSED, STOPPED_UNSAVED, PLAYING, VIEWING_SAVED_AUDIO
-}
-
-class AudioRecorderManager(
-    private val context: Context,
-    private val onNewRecordingStarted: () -> Unit = {},
-) {
-    private var mediaRecorder: MediaRecorder? = null
-    var audioFilePath: String? = null
-        private set
-    var uniqueAudioId: String? = null
-        private set
-
-    var recordingDurationMillis: Long by mutableLongStateOf(0L)
-    var currentRecordingState: RecordingState by mutableStateOf(RecordingState.IDLE)
-        private set
-    var isPersistentAudio: Boolean by mutableStateOf(false)
-        private set
-
-    fun getMaxAmplitude(): Int = mediaRecorder?.maxAmplitude ?: 0
-
-    fun startRecording() {
-        if (currentRecordingState == RecordingState.RECORDING) return
-        if (currentRecordingState == RecordingState.PAUSED) {
-            mediaRecorder?.resume()
-            currentRecordingState = RecordingState.RECORDING
-            return
-        }
-        startNewRecording()
-    }
-
-    private fun startNewRecording() {
-        uniqueAudioId = "audio_${System.currentTimeMillis()}"
-        val audioFile = File(context.filesDir, "$uniqueAudioId.mp3")
-        audioFilePath = audioFile.absolutePath
-        isPersistentAudio = false
-
-        onNewRecordingStarted()
-
-        mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(context)
-        } else {
-            @Suppress("DEPRECATION") MediaRecorder()
-        }
-
-        mediaRecorder?.apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setAudioSamplingRate(44100)
-            setAudioEncodingBitRate(192000)
-            setOutputFile(audioFilePath)
-            try {
-                prepare()
-                start()
-                currentRecordingState = RecordingState.RECORDING
-                recordingDurationMillis = 0L
-            } catch (e: IOException) {
-                e.printStackTrace()
-                currentRecordingState = RecordingState.IDLE
-            }
-        }
-    }
-
-    fun pauseRecording() {
-        if (currentRecordingState != RecordingState.RECORDING) return
-        mediaRecorder?.pause()
-        currentRecordingState = RecordingState.PAUSED
-    }
-
-    fun stopRecording() {
-        if (currentRecordingState == RecordingState.RECORDING || currentRecordingState == RecordingState.PAUSED) {
-            try { mediaRecorder?.stop() } catch (_: Exception) {}
-            mediaRecorder?.release()
-            mediaRecorder = null
-            currentRecordingState = if (isPersistentAudio) RecordingState.VIEWING_SAVED_AUDIO else RecordingState.STOPPED_UNSAVED
-        }
-    }
-
-    fun setInitialAudioFilePath(filePath: String) {
-        audioFilePath = filePath
-        uniqueAudioId = File(filePath).nameWithoutExtension
-        isPersistentAudio = true
-        currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
-        recordingDurationMillis = 0L
-    }
-
-    fun markAudioAsPersistent() { isPersistentAudio = true }
-
-    fun deleteRecording() {
-        if (!isPersistentAudio && audioFilePath != null) File(audioFilePath!!).delete()
-        audioFilePath = null
-        uniqueAudioId = null
-        recordingDurationMillis = 0L
-        currentRecordingState = RecordingState.IDLE
-        isPersistentAudio = false
-    }
-
-    fun resetState() {
-        if (currentRecordingState == RecordingState.RECORDING || currentRecordingState == RecordingState.PAUSED) {
-            mediaRecorder?.apply { try { stop() } catch (_: Exception) {}; release() }
-            mediaRecorder = null
-        }
-        onNewRecordingStarted()
-        deleteRecording()
-    }
-
-    fun dispose() {
-        mediaRecorder?.release()
-        mediaRecorder = null
-        deleteRecording()
-    }
-}
-
-object GlobalAudioPlayer {
-    private var _instance: AudioPlayerManager? = null
-    private val lock = Any()
-
-    fun getInstance(): AudioPlayerManager = synchronized(lock) {
-        _instance ?: AudioPlayerManager().also { _instance = it }
-    }
-
-    fun release() = synchronized(lock) {
-        _instance?.dispose()
-        _instance = null
-    }
-}
-
-class AudioPlayerManager {
-    var mediaPlayer: MediaPlayer? = null; private set
-    var isPlaying by mutableStateOf(false); private set
-    var currentPlaybackPositionMillis by mutableLongStateOf(0L)
-    var totalAudioDurationMillis by mutableLongStateOf(0L)
-    var currentFilePath: String? = null; private set(value) {
-        field = value
-        if (value != null && value != field) currentPlaybackPositionMillis = 0L
-    }
-    var currentRecordingState by mutableStateOf(RecordingState.VIEWING_SAVED_AUDIO); private set
-
-    fun playAudio(filePath: String) {
-        if (currentFilePath != filePath || mediaPlayer == null) stopAudio()
-        if (currentFilePath == filePath && isPlaying) return
-
-        currentFilePath = filePath
-        try {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .setUsage(AudioAttributes.USAGE_MEDIA).build())
-                setDataSource(filePath)
-                prepare()
-                totalAudioDurationMillis = duration.toLong()
-                setOnCompletionListener {
-                    this@AudioPlayerManager.isPlaying = false
-                    currentPlaybackPositionMillis = 0L
-                    currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
-                }
-                start()
-            }
-            isPlaying = true
-            currentRecordingState = RecordingState.PLAYING
-        } catch (e: Exception) {
-            e.printStackTrace()
-            isPlaying = false
-        }
-    }
-
-    fun pauseAudio() { mediaPlayer?.pause(); isPlaying = false }
-    fun resumeAudio() {
-        if (mediaPlayer == null) {
-            currentFilePath?.let { playAudio(it) }
-            return
-        }
-        mediaPlayer?.start()
-        isPlaying = true
-        currentRecordingState = RecordingState.PLAYING
-    }
-    fun stopAudio() {
-        mediaPlayer?.apply {
-            if (isPlaying) stop()
-            release()
-        }
-        mediaPlayer = null
-        isPlaying = false
-        currentPlaybackPositionMillis = 0L
-        currentFilePath = null
-        currentRecordingState = RecordingState.VIEWING_SAVED_AUDIO
-    }
-
-    fun seekTo(positionMillis: Long) {
-        mediaPlayer?.seekTo(positionMillis.toInt())
-        currentPlaybackPositionMillis = positionMillis.coerceIn(0L, totalAudioDurationMillis)
-    }
-
-    fun getAudioDuration(filePath: String): Long = try {
-        val p = MediaPlayer().apply { setDataSource(filePath); prepare() }
-        p.duration.toLong().also { p.release() }
-    } catch (_: Exception) { 0L }
-
-    fun dispose() = stopAudio()
-}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalHazeMaterialsApi::class)
 @Composable
@@ -617,169 +393,23 @@ fun NoteAudioSheet(
                 }
 
                 // CONTROLS
-                Row(
+                NoteAudioToolbar(
+                    audioTitle = audioTitle,
+                    onAudioTitleChange = onAudioTitleChange,
+                    onBackClick = onDismiss,
+                    selectedTheme = selectedTheme,
+                    onThemeChange = { selectedTheme = it; onThemeChange(it) },
+                    isLabeled = isLabeled,
+                    onLabelClick = { showLabelDialog = true },
+                    isOffline = isOffline,
+                    onToggleOffline = { isOffline = !isOffline },
+                    hazeState = hazeState,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = WindowInsets.navigationBars
-                            .asPaddingValues()
-                            .calculateBottomPadding() + toolbarHeight + 16.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val isActionActive = isSheetAudioPlaying || recordingState == RecordingState.RECORDING
-                    val animatedRadius by animateDpAsState(if (isActionActive) 32.dp else 64.dp, tween(250))
-
-                    when (recordingState) {
-                        RecordingState.IDLE -> {
-                            FilledIconButton(
-                                onClick = {
-                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                                        recorder.startRecording()
-                                    } else {
-                                        requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                    }
-                                },
-                                shape = RoundedCornerShape(64.dp),
-                                colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                ),
-                                modifier = Modifier
-                                    .height(136.dp)
-                                    .weight(1f)
-                                    .widthIn(max = 184.dp)
-                            ) {
-                                Icon(Icons.Rounded.Mic, "Start recording", Modifier.size(40.dp))
-                            }
-                        }
-
-                        RecordingState.RECORDING -> {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                FilledIconButton(
-                                    onClick = { recorder.pauseRecording() },
-                                    shape = RoundedCornerShape(animatedRadius),
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary
-                                    ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(1f)
-                                        .widthIn(max = 184.dp)
-                                ) { Icon(Icons.Rounded.Pause, "Pause", Modifier.size(40.dp)) }
-
-                                FilledIconButton(
-                                    onClick = { recorder.stopRecording() },
-                                    shape = RoundedCornerShape(64.dp),
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.error,
-                                        contentColor = MaterialTheme.colorScheme.onError
-                                    ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(1f)
-                                        .widthIn(max = 184.dp)
-                                ) { Icon(Icons.Rounded.Stop, "Stop", Modifier.size(40.dp)) }
-                            }
-                        }
-
-                        RecordingState.PAUSED -> {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                FilledIconButton(
-                                    onClick = { recorder.startRecording() },
-                                    shape = RoundedCornerShape(animatedRadius),
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary
-                                    ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(1f)
-                                        .widthIn(max = 184.dp)
-                                ) { Icon(Icons.Rounded.Mic, "Resume", Modifier.size(40.dp)) }
-
-                                FilledIconButton(
-                                    onClick = { recorder.stopRecording() },
-                                    shape = RoundedCornerShape(64.dp),
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.error,
-                                        contentColor = MaterialTheme.colorScheme.onError
-                                    ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(1f)
-                                        .widthIn(max = 184.dp)
-                                ) { Icon(Icons.Rounded.Stop, "Stop", Modifier.size(40.dp)) }
-                            }
-                        }
-
-                        else -> { // Playback mode
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                FilledIconButton(
-                                    onClick = {
-                                        currentSheetAudioPath?.let { path ->
-                                            when {
-                                                isSheetAudioPlaying -> player.pauseAudio()
-                                                isSheetAudioPaused -> player.resumeAudio()
-                                                else -> player.playAudio(path)
-                                            }
-                                        }
-                                    },
-                                    shape = RoundedCornerShape(animatedRadius),
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary
-                                    ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(1f)
-                                        .widthIn(max = 184.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (isSheetAudioPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                        contentDescription = if (isSheetAudioPlaying) "Pause" else "Play",
-                                        modifier = Modifier.size(40.dp)
-                                    )
-                                }
-
-                                FilledIconButton(
-                                    onClick = { player.stopAudio() },
-                                    enabled = player.currentPlaybackPositionMillis > 0 || player.isPlaying,
-                                    shape = RoundedCornerShape(64.dp),
-                                    colors = IconButtonDefaults.filledIconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                    ),
-                                    modifier = Modifier
-                                        .height(136.dp)
-                                        .weight(1f)
-                                        .widthIn(max = 184.dp)
-                                ) { Icon(Icons.Rounded.Stop, "Stop", Modifier.size(40.dp)) }
-
-                                if (!recorder.isPersistentAudio && currentSheetAudioPath != null) {
-                                    FilledIconButton(
-                                        onClick = {
-                                            recorder.resetState()
-                                            recorder.deleteRecording()
-                                            player.stopAudio()
-                                        },
-                                        shape = RoundedCornerShape(64.dp),
-                                        colors = IconButtonDefaults.filledIconButtonColors(
-                                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                        ),
-                                        modifier = Modifier
-                                            .height(136.dp)
-                                            .weight(0.5f)
-                                            .widthIn(max = 184.dp)
-                                    ) {
-                                        Icon(Icons.Rounded.Clear, "Discard", Modifier.size(40.dp))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 4.dp)
+                )
             }
 
             // Toolbar
@@ -863,6 +493,144 @@ fun NoteAudioSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
+@Composable
+fun NoteAudioToolbar(
+    audioTitle: String,
+    onAudioTitleChange: (String) -> Unit,
+    onBackClick: () -> Unit,
+    selectedTheme: String,
+    onThemeChange: (String) -> Unit,
+    isLabeled: Boolean,
+    onLabelClick: () -> Unit,
+    isOffline: Boolean,
+    onToggleOffline: () -> Unit,
+    hazeState: HazeState,
+    modifier: Modifier = Modifier,
+) {
+    val availableThemes = listOf("Default", "Red", "Orange", "Yellow", "Green", "Turquoise", "Blue", "Purple")
+    var showMenu by remember { mutableStateOf(false) }
+    var colorMenuItemText by remember { mutableStateOf("Color") }
+    var isFadingOut by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var colorChangeJob by remember { mutableStateOf<Job?>(null) }
+
+    val animatedTextColor by animateColorAsState(
+        targetValue = if (isFadingOut) MaterialTheme.colorScheme.onSurface.copy(alpha = 0f)
+        else MaterialTheme.colorScheme.onSurface,
+        animationSpec = tween(500)
+    )
+
+    val hazeThinColor = MaterialTheme.colorScheme.surfaceDim
+    val labelColor = extendedMaterialColorScheme.label
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(100f))
+            .background(MaterialTheme.colorScheme.surfaceDim)
+            .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onBackClick) {
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+        }
+
+        val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
+            TextStyle(
+                fontFamily = QuicksandTitleVariable,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        )
+
+        BasicTextField(
+            value = audioTitle,
+            onValueChange = onAudioTitleChange,
+            modifier = Modifier.weight(1f),
+            singleLine = true,
+            textStyle = titleTextStyle,
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            decorationBox = { innerTextField ->
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    if (audioTitle.isEmpty()) {
+                        Text(
+                            "Title",
+                            style = titleTextStyle,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                    innerTextField()
+                }
+            }
+        )
+
+        Box {
+            IconButton(onClick = { showMenu = !showMenu }) {
+                Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
+            }
+
+            DropdownNoteMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
+                items = listOfNotNull(
+                    MenuItem(
+                        text = "Label",
+                        onClick = { onLabelClick(); showMenu = false },
+                        dismissOnClick = true,
+                        icon = {
+                            if (isLabeled) Icon(Icons.Rounded.Bookmark, "Label", tint = labelColor)
+                            else Icon(Icons.Rounded.BookmarkBorder, "Label")
+                        }
+                    ),
+                    MenuItem(
+                        text = colorMenuItemText,
+                        onClick = {
+                            val nextIndex = (availableThemes.indexOf(selectedTheme) + 1) % availableThemes.size
+                            val nextTheme = availableThemes[nextIndex]
+                            onThemeChange(nextTheme)
+
+                            colorChangeJob?.cancel()
+                            colorChangeJob = scope.launch {
+                                colorMenuItemText = nextTheme
+                                isFadingOut = false
+                                delay(2500)
+                                isFadingOut = true
+                                delay(500)
+                                colorMenuItemText = "Color"
+                                isFadingOut = false
+                            }
+                        },
+                        dismissOnClick = false,
+                        icon = {
+                            Icon(
+                                Icons.Rounded.ColorLens,
+                                "Color",
+                                tint = if (selectedTheme == "Default") MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        textColor = animatedTextColor
+                    ),
+                    MenuItem(
+                        text = if (isOffline) "Offline note" else "Online note",
+                        onClick = onToggleOffline,
+                        dismissOnClick = false,
+                        textColor = if (isOffline) MaterialTheme.colorScheme.error else null,
+                        icon = {
+                            if (isOffline) Icon(Icons.Rounded.CloudOff, "Offline", tint = MaterialTheme.colorScheme.error)
+                            else Icon(Icons.Rounded.Cloud, "Online")
+                        }
+                    )
+                ),
+                hazeState = hazeState
+            )
+        }
+    }
+}
+
+
 @Composable
 fun AudioTimerDisplay(
     isRecording: Boolean,
@@ -888,119 +656,4 @@ fun formatDuration(millis: Long): String {
     val m = TimeUnit.MILLISECONDS.toMinutes(millis)
     val s = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
     return String.format("%02d:%02d", m, s)
-}
-
-@Composable
-fun WaveformDisplay(
-    modifier: Modifier = Modifier,
-    amplitudes: List<Float>,
-    isRecording: Boolean,
-    progress: Float,
-    recordingState: RecordingState
-) {
-    if (amplitudes.isEmpty()) {
-        Box(modifier, Alignment.Center) {
-            val text = if (recordingState == RecordingState.VIEWING_SAVED_AUDIO) {
-                "No waveform available"
-            } else {
-                "Start recording..."
-            }
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center
-            )
-        }
-        return
-    }
-
-    val color = MaterialTheme.colorScheme.primary
-    val inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-    val maxAmplitudeValue = 32767f // Max amplitude from MediaRecorder
-
-    Canvas(modifier = modifier) {
-        val canvasWidth = size.width
-        val canvasHeight = size.height
-        val middleY = canvasHeight / 2
-
-        if (isRecording) {
-            val barWidth = 3.dp.toPx()
-            val spacing = 2.dp.toPx()
-            val totalBarWidth = barWidth + spacing
-            val maxBars = (canvasWidth / totalBarWidth).toInt()
-            val startIndex = (amplitudes.size - maxBars).coerceAtLeast(0)
-            val barsToDraw = amplitudes.subList(startIndex, amplitudes.size)
-
-            barsToDraw.forEachIndexed { index, amplitude ->
-                val x = index * totalBarWidth
-                val normalized = (amplitude / maxAmplitudeValue).coerceIn(0f, 1f)
-                val barHeight = normalized * canvasHeight * 0.8f
-
-                if (barHeight > 0) {
-                    drawRoundRect(
-                        color = color,
-                        topLeft = Offset(x = x, y = middleY - barHeight / 2),
-                        size = Size(barWidth, barHeight.coerceAtLeast(2.dp.toPx())),
-                        cornerRadius = CornerRadius(barWidth / 2)
-                    )
-                }
-            }
-        } else {
-            val maxBars = (canvasWidth / (3.dp.toPx() + 2.dp.toPx())).toInt()
-            val barsToDraw = if (amplitudes.size > maxBars) {
-                val groupSize = amplitudes.size.toFloat() / maxBars
-                (0 until maxBars).map { i ->
-                    val start = (i * groupSize).toInt()
-                    val end = ((i + 1) * groupSize).toInt().coerceAtMost(amplitudes.size)
-                    amplitudes.subList(start, end).average().toFloat()
-                }
-            } else {
-                amplitudes
-            }
-
-            val totalBarWidth = canvasWidth / barsToDraw.size
-            val barWidth = (totalBarWidth * 0.6f).coerceAtLeast(1.dp.toPx())
-            val progressX = progress * canvasWidth
-
-            barsToDraw.forEachIndexed { index, amplitude ->
-                val x = index * totalBarWidth
-                val normalized = (amplitude / maxAmplitudeValue).coerceIn(0f, 1f)
-                val barHeight = normalized * canvasHeight * 0.8f
-                val barColor = if (x < progressX) color else inactiveColor
-
-                if (barHeight > 0) {
-                    drawRoundRect(
-                        color = barColor,
-                        topLeft = Offset(x = x, y = middleY - barHeight / 2),
-                        size = Size(barWidth, barHeight.coerceAtLeast(2.dp.toPx())),
-                        cornerRadius = CornerRadius(barWidth / 2)
-                    )
-                }
-            }
-        }
-    }
-}
-
-private fun saveAmplitudes(context: Context, uniqueId: String, amplitudes: List<Float>) {
-    val file = File(context.filesDir, "$uniqueId.amp")
-    try {
-        file.bufferedWriter().use { out ->
-            out.write(amplitudes.joinToString(","))
-        }
-    } catch (e: IOException) {
-        e.printStackTrace()
-    }
-}
-
-private fun loadAmplitudes(context: Context, uniqueId: String): List<Float> {
-    val file = File(context.filesDir, "$uniqueId.amp")
-    if (!file.exists()) return emptyList()
-    return try {
-        file.bufferedReader().use { it.readText() }
-            .split(',')
-            .mapNotNull { it.toFloatOrNull() }
-    } catch (e: IOException) {
-        e.printStackTrace()
-        emptyList()
-    }
 }

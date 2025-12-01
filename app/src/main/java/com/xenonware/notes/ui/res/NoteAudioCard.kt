@@ -72,6 +72,9 @@ import com.xenonware.notes.ui.theme.noteTurquoiseDark
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
+import com.xenonware.notes.util.AudioPlayerManager
+import com.xenonware.notes.util.GlobalAudioPlayer
+import com.xenonware.notes.util.RecordingState
 import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
