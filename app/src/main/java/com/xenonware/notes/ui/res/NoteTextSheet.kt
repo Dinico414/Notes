@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION", "AssignedValueIsNeverRead")
+
 package com.xenonware.notes.ui.res
 
 import androidx.compose.animation.animateColorAsState
@@ -5,7 +7,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -95,7 +96,7 @@ fun AnnotatedString.toSerialized(): String {
         if (item.fontWeight == FontWeight.Bold) spanJson.put("bold", true)
         if (item.fontStyle == FontStyle.Italic) spanJson.put("italic", true)
         if (item.textDecoration?.contains(TextDecoration.Underline) == true) spanJson.put("underline", true)
-        if (spanJson.length() > 2) { // Only add if has styles
+        if (spanJson.length() > 2) {
             spansArray.put(spanJson)
         }
     }
@@ -130,7 +131,7 @@ fun String.fromSerialized(): AnnotatedString {
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun NoteTextSheet(
-    textTitel: String,
+    textTitle: String,
     onTextTitleChange: (String) -> Unit,
     initialContent: String = "",
     onDismiss: () -> Unit,
@@ -177,6 +178,20 @@ fun NoteTextSheet(
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    val currentSpanStyle = remember(isBold, isItalic, isUnderlined) {
+        SpanStyle(
+            fontWeight = if (isBold) FontWeight.Bold else null,
+            fontStyle = if (isItalic) FontStyle.Italic else null,
+            textDecoration = if (isUnderlined) TextDecoration.Underline else null
+        )
+    }
+
+    val systemUiController = rememberSystemUiController()
+    val originalStatusBarColor = Color.Transparent
+
+    val lineHeightFactor = 1.25
+
+
     LaunchedEffect(Unit) {
         if (textFieldValue.text.isEmpty()) {
             focusRequester.requestFocus()
@@ -186,17 +201,9 @@ fun NoteTextSheet(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(textTitel, textFieldValue.annotatedString.toSerialized(), selectedTheme, selectedLabelId)
+            onSave(textTitle, textFieldValue.annotatedString.toSerialized(), selectedTheme, selectedLabelId)
             onSaveTriggerConsumed()
         }
-    }
-
-    val currentSpanStyle = remember(isBold, isItalic, isUnderlined) {
-        SpanStyle(
-            fontWeight = if (isBold) FontWeight.Bold else null,
-            fontStyle = if (isItalic) FontStyle.Italic else null,
-            textDecoration = if (isUnderlined) TextDecoration.Underline else null
-        )
     }
 
     LaunchedEffect(isBold, isItalic, isUnderlined) {
@@ -242,9 +249,6 @@ fun NoteTextSheet(
             }
         }
     }
-
-    val systemUiController = rememberSystemUiController()
-    val originalStatusBarColor = Color.Transparent
 
     XenonTheme(
         darkTheme = isDarkTheme,
@@ -292,8 +296,8 @@ fun NoteTextSheet(
         val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
         val bottomPadding =
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight
-        val backgroundColor = if (isCoverModeActive) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight + 16.dp
+        val backgroundColor = if (isCoverModeActive) Color.Black else colorScheme.surfaceContainer
 
         Box(
             modifier = Modifier
@@ -329,6 +333,8 @@ fun NoteTextSheet(
                     TextStyle(
                         color = colorScheme.onSurface,
                         fontSize = editorFontSize,
+                        lineHeight = editorFontSize * lineHeightFactor,
+                        platformStyle = null
                     )
                 )
                 BasicTextField(
@@ -336,8 +342,8 @@ fun NoteTextSheet(
                     onValueChange = { newValue ->
                         if (newValue.text == textFieldValue.text &&
                             newValue.annotatedString.spanStyles.isEmpty() &&
-                            textFieldValue.annotatedString.spanStyles.isNotEmpty()) {
-                            // Spurious update on focus: preserve annotatedString, update selection/composition
+                            textFieldValue.annotatedString.spanStyles.isNotEmpty()
+                        ) {
                             textFieldValue = textFieldValue.copy(
                                 selection = newValue.selection,
                                 composition = newValue.composition
@@ -354,52 +360,52 @@ fun NoteTextSheet(
                         val newText = newValue.text
                         val commonPrefixLength = oldText.commonPrefixWith(newText).length
                         val commonSuffixLength = oldText.commonSuffixWith(newText).length
-                        val oldChangeStart = commonPrefixLength
                         val oldChangeEnd = oldText.length - commonSuffixLength
-                        val newChangeStart = commonPrefixLength
                         val newChangeEnd = newText.length - commonSuffixLength
-                        val delta = (newChangeEnd - newChangeStart) - (oldChangeEnd - oldChangeStart)
+                        val delta = (newChangeEnd - commonPrefixLength) - (oldChangeEnd - commonPrefixLength)
 
                         val builder = AnnotatedString.Builder(newText)
                         textFieldValue.annotatedString.spanStyles.forEach { range ->
                             val rangeStart = range.start
                             val rangeEnd = range.end
-                            if (rangeEnd <= oldChangeStart) {
+                            if (rangeEnd <= commonPrefixLength) {
                                 builder.addStyle(range.item, rangeStart, rangeEnd)
                             } else if (rangeStart >= oldChangeEnd) {
                                 builder.addStyle(range.item, rangeStart + delta, rangeEnd + delta)
                             } else {
-                                // Overlapping: add before part
-                                if (rangeStart < oldChangeStart) {
-                                    builder.addStyle(range.item, rangeStart, oldChangeStart)
+                                if (rangeStart < commonPrefixLength) {
+                                    builder.addStyle(range.item, rangeStart, commonPrefixLength)
                                 }
-                                // Add after part
                                 if (rangeEnd > oldChangeEnd) {
-                                    val newAfterStart = commonPrefixLength + (newChangeEnd - newChangeStart)
+                                    val newAfterStart = commonPrefixLength + (newChangeEnd - commonPrefixLength)
                                     builder.addStyle(range.item, newAfterStart, newAfterStart + (rangeEnd - oldChangeEnd))
                                 }
                             }
                         }
 
-                        if (newChangeEnd > newChangeStart && currentSpanStyle != SpanStyle()) {
-                            builder.addStyle(currentSpanStyle, newChangeStart, newChangeEnd)
+                        // Apply current formatting to newly typed text
+                        if (newChangeEnd > commonPrefixLength && currentSpanStyle != SpanStyle()) {
+                            builder.addStyle(currentSpanStyle, commonPrefixLength, newChangeEnd)
                         }
 
                         textFieldValue = newValue.copy(annotatedString = builder.toAnnotatedString())
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(IntrinsicSize.Min)
                         .focusRequester(focusRequester),
-                    textStyle = noteTextStyle,
+                    textStyle = noteTextStyle.copy(
+                        lineHeight = editorFontSize * lineHeightFactor
+                    ),
                     cursorBrush = SolidColor(colorScheme.primary),
                     decorationBox = { innerTextField ->
                         Box {
                             if (textFieldValue.text.isEmpty()) {
                                 Text(
                                     text = "Note",
-                                    style = noteTextStyle,
-                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    style = noteTextStyle.copy(
+                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                        lineHeight = editorFontSize * lineHeightFactor
+                                    )
                                 )
                             }
                             innerTextField()
@@ -407,7 +413,6 @@ fun NoteTextSheet(
                     }
                 )
                 Spacer(modifier = Modifier.height(bottomPadding))
-
             }
             // Toolbar
             Row(
@@ -443,7 +448,7 @@ fun NoteTextSheet(
                 )
 
                 BasicTextField(
-                    value = textTitel,
+                    value = textTitle,
                     onValueChange = onTextTitleChange,
                     modifier = Modifier.weight(1f),
                     singleLine = true,
@@ -451,7 +456,7 @@ fun NoteTextSheet(
                     cursorBrush = SolidColor(colorScheme.primary),
                     decorationBox = { innerTextField ->
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (textTitel.isEmpty()) {
+                            if (textTitle.isEmpty()) {
                                 Text(
                                     text = "Title",
                                     style = titleTextStyle,
@@ -493,7 +498,7 @@ fun NoteTextSheet(
                                     val currentIndex = availableThemes.indexOf(selectedTheme)
                                     val nextIndex = (currentIndex + 1) % availableThemes.size
                                     selectedTheme = availableThemes[nextIndex]
-                                    onThemeChange(selectedTheme) // Call the callback here
+                                    onThemeChange(selectedTheme)
                                     colorChangeJob?.cancel()
                                     colorChangeJob = scope.launch {
                                         colorMenuItemText = availableThemes[nextIndex]
