@@ -5,6 +5,9 @@ package com.xenonware.notes.ui.res
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,9 +56,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -325,6 +330,24 @@ fun NoteTextSheet(
                     .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
                     .verticalScroll(scrollState)
                     .hazeSource(state = hazeState)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        focusRequester.requestFocus()
+                        keyboardController?.show()
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = {
+                                focusRequester.requestFocus()
+                                keyboardController?.show()
+                                textFieldValue = textFieldValue.copy(
+                                    selection = TextRange(textFieldValue.text.length)
+                                )
+                            }
+                        )
+                    }
 
             ) {
 
