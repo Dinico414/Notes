@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -100,7 +100,9 @@ fun AnnotatedString.toSerialized(): String {
         val item = range.item
         if (item.fontWeight == FontWeight.Bold) spanJson.put("bold", true)
         if (item.fontStyle == FontStyle.Italic) spanJson.put("italic", true)
-        if (item.textDecoration?.contains(TextDecoration.Underline) == true) spanJson.put("underline", true)
+        if (item.textDecoration?.contains(TextDecoration.Underline) == true) spanJson.put(
+            "underline", true
+        )
         if (spanJson.length() > 2) {
             spansArray.put(spanJson)
         }
@@ -157,7 +159,7 @@ fun NoteTextSheet(
     initialSelectedLabelId: String?,
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
-    isCoverModeActive: Boolean = false
+    isCoverModeActive: Boolean = false,
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
@@ -206,7 +208,12 @@ fun NoteTextSheet(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(textTitle, textFieldValue.annotatedString.toSerialized(), selectedTheme, selectedLabelId)
+            onSave(
+                textTitle,
+                textFieldValue.annotatedString.toSerialized(),
+                selectedTheme,
+                selectedLabelId
+            )
             onSaveTriggerConsumed()
         }
     }
@@ -246,7 +253,9 @@ fun NoteTextSheet(
                 }
                 onIsBoldChange(effectiveStyle.fontWeight == FontWeight.Bold)
                 onIsItalicChange(effectiveStyle.fontStyle == FontStyle.Italic)
-                onIsUnderlinedChange(effectiveStyle.textDecoration?.contains(TextDecoration.Underline) ?: false)
+                onIsUnderlinedChange(
+                    effectiveStyle.textDecoration?.contains(TextDecoration.Underline) ?: false
+                )
             } else {
                 onIsBoldChange(false)
                 onIsItalicChange(false)
@@ -275,8 +284,7 @@ fun NoteTextSheet(
 
         DisposableEffect(systemUiController, isDarkTheme) {
             systemUiController.setStatusBarColor(
-                color = Color.Transparent,
-                darkIcons = !isDarkTheme
+                color = Color.Transparent, darkIcons = !isDarkTheme
             )
             onDispose {
                 systemUiController.setStatusBarColor(
@@ -294,14 +302,22 @@ fun NoteTextSheet(
                     onLabelSelected(it)
                 },
                 onAddNewLabel = onAddNewLabel,
-                onDismiss = { showLabelDialog = false }
-            )
+                onDismiss = { showLabelDialog = false })
         }
 
         val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
-        val bottomPadding =
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight + 16.dp
+
+        val safeDrawingPadding = if (WindowInsets.ime.asPaddingValues()
+                .calculateBottomPadding() > WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues()
+                .calculateBottomPadding()
+                )   {
+                        WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+                    } else {
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
+                    }
+
+        val bottomPadding = safeDrawingPadding + toolbarHeight + 16.dp
         val backgroundColor = if (isCoverModeActive) Color.Black else colorScheme.surfaceContainer
 
         Box(
@@ -332,8 +348,7 @@ fun NoteTextSheet(
                     .hazeSource(state = hazeState)
                     .clickable(
                         indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) {
+                        interactionSource = remember { MutableInteractionSource() }) {
                         focusRequester.requestFocus()
                         keyboardController?.show()
                     }
@@ -345,8 +360,7 @@ fun NoteTextSheet(
                                 textFieldValue = textFieldValue.copy(
                                     selection = TextRange(textFieldValue.text.length)
                                 )
-                            }
-                        )
+                            })
                     }
 
             ) {
@@ -363,13 +377,9 @@ fun NoteTextSheet(
                 BasicTextField(
                     value = textFieldValue,
                     onValueChange = { newValue ->
-                        if (newValue.text == textFieldValue.text &&
-                            newValue.annotatedString.spanStyles.isEmpty() &&
-                            textFieldValue.annotatedString.spanStyles.isNotEmpty()
-                        ) {
+                        if (newValue.text == textFieldValue.text && newValue.annotatedString.spanStyles.isEmpty() && textFieldValue.annotatedString.spanStyles.isNotEmpty()) {
                             textFieldValue = textFieldValue.copy(
-                                selection = newValue.selection,
-                                composition = newValue.composition
+                                selection = newValue.selection, composition = newValue.composition
                             )
                             return@BasicTextField
                         }
@@ -385,7 +395,8 @@ fun NoteTextSheet(
                         val commonSuffixLength = oldText.commonSuffixWith(newText).length
                         val oldChangeEnd = oldText.length - commonSuffixLength
                         val newChangeEnd = newText.length - commonSuffixLength
-                        val delta = (newChangeEnd - commonPrefixLength) - (oldChangeEnd - commonPrefixLength)
+                        val delta =
+                            (newChangeEnd - commonPrefixLength) - (oldChangeEnd - commonPrefixLength)
 
                         val builder = AnnotatedString.Builder(newText)
                         textFieldValue.annotatedString.spanStyles.forEach { range ->
@@ -400,8 +411,13 @@ fun NoteTextSheet(
                                     builder.addStyle(range.item, rangeStart, commonPrefixLength)
                                 }
                                 if (rangeEnd > oldChangeEnd) {
-                                    val newAfterStart = commonPrefixLength + (newChangeEnd - commonPrefixLength)
-                                    builder.addStyle(range.item, newAfterStart, newAfterStart + (rangeEnd - oldChangeEnd))
+                                    val newAfterStart =
+                                        commonPrefixLength + (newChangeEnd - commonPrefixLength)
+                                    builder.addStyle(
+                                        range.item,
+                                        newAfterStart,
+                                        newAfterStart + (rangeEnd - oldChangeEnd)
+                                    )
                                 }
                             }
                         }
@@ -411,7 +427,8 @@ fun NoteTextSheet(
                             builder.addStyle(currentSpanStyle, commonPrefixLength, newChangeEnd)
                         }
 
-                        textFieldValue = newValue.copy(annotatedString = builder.toAnnotatedString())
+                        textFieldValue =
+                            newValue.copy(annotatedString = builder.toAnnotatedString())
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -424,8 +441,7 @@ fun NoteTextSheet(
                         Box {
                             if (textFieldValue.text.isEmpty()) {
                                 Text(
-                                    text = "Note",
-                                    style = noteTextStyle.copy(
+                                    text = "Note", style = noteTextStyle.copy(
                                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                         lineHeight = editorFontSize * lineHeightFactor
                                     )
@@ -433,8 +449,7 @@ fun NoteTextSheet(
                             }
                             innerTextField()
                         }
-                    }
-                )
+                    })
                 Spacer(modifier = Modifier.height(bottomPadding))
             }
             // Toolbar
@@ -501,62 +516,61 @@ fun NoteTextSheet(
                         onDismissRequest = { showMenu = false },
                         items = listOfNotNull(
                             MenuItem(text = "Label", onClick = {
-                                showLabelDialog = true
-                                showMenu = false
-                            }, dismissOnClick = true, icon = {
-                                if (isLabeled) {
+                            showLabelDialog = true
+                            showMenu = false
+                        }, dismissOnClick = true, icon = {
+                            if (isLabeled) {
+                                Icon(
+                                    Icons.Rounded.Bookmark,
+                                    contentDescription = "Label",
+                                    tint = labelColor
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Rounded.BookmarkBorder, contentDescription = "Label"
+                                )
+                            }
+                        }), MenuItem(
+                                text = colorMenuItemText, onClick = {
+                                val currentIndex = availableThemes.indexOf(selectedTheme)
+                                val nextIndex = (currentIndex + 1) % availableThemes.size
+                                selectedTheme = availableThemes[nextIndex]
+                                onThemeChange(selectedTheme)
+                                colorChangeJob?.cancel()
+                                colorChangeJob = scope.launch {
+                                    colorMenuItemText = availableThemes[nextIndex]
+                                    isFadingOut = false
+                                    delay(2500)
+                                    isFadingOut = true
+                                    delay(500)
+                                    colorMenuItemText = "Color"
+                                    isFadingOut = false
+                                }
+                            }, dismissOnClick = false, icon = {
+                                Icon(
+                                    Icons.Rounded.ColorLens,
+                                    contentDescription = "Color",
+                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                )
+                            }, textColor = animatedTextColor
+                        ), MenuItem(
+                            text = if (isOffline) "Offline note" else "Online note",
+                            onClick = { isOffline = !isOffline },
+                            dismissOnClick = false,
+                            textColor = if (isOffline) colorScheme.error else null,
+                            icon = {
+                                if (isOffline) {
                                     Icon(
-                                        Icons.Rounded.Bookmark,
-                                        contentDescription = "Label",
-                                        tint = labelColor
+                                        Icons.Rounded.CloudOff,
+                                        contentDescription = "Offline note",
+                                        tint = colorScheme.error
                                     )
                                 } else {
                                     Icon(
-                                        Icons.Rounded.BookmarkBorder,
-                                        contentDescription = "Label"
+                                        Icons.Rounded.Cloud, contentDescription = "Online note"
                                     )
                                 }
-                            }), MenuItem(
-                                text = colorMenuItemText, onClick = {
-                                    val currentIndex = availableThemes.indexOf(selectedTheme)
-                                    val nextIndex = (currentIndex + 1) % availableThemes.size
-                                    selectedTheme = availableThemes[nextIndex]
-                                    onThemeChange(selectedTheme)
-                                    colorChangeJob?.cancel()
-                                    colorChangeJob = scope.launch {
-                                        colorMenuItemText = availableThemes[nextIndex]
-                                        isFadingOut = false
-                                        delay(2500)
-                                        isFadingOut = true
-                                        delay(500)
-                                        colorMenuItemText = "Color"
-                                        isFadingOut = false
-                                    }
-                                }, dismissOnClick = false, icon = {
-                                    Icon(
-                                        Icons.Rounded.ColorLens,
-                                        contentDescription = "Color",
-                                        tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                    )
-                                }, textColor = animatedTextColor
-                            ), MenuItem(
-                                text = if (isOffline) "Offline note" else "Online note",
-                                onClick = { isOffline = !isOffline },
-                                dismissOnClick = false,
-                                textColor = if (isOffline) colorScheme.error else null,
-                                icon = {
-                                    if (isOffline) {
-                                        Icon(
-                                            Icons.Rounded.CloudOff,
-                                            contentDescription = "Offline note",
-                                            tint = colorScheme.error
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Rounded.Cloud, contentDescription = "Online note"
-                                        )
-                                    }
-                                })
+                            })
                         ),
                         hazeState = hazeState
                     )

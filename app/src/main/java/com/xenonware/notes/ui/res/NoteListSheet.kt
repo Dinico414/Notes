@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -200,8 +200,17 @@ fun NoteListSheet(
 
         val hazeThinColor = MaterialTheme.colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
-        val bottomPadding =
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + toolbarHeight
+
+        val safeDrawingPadding = if (WindowInsets.ime.asPaddingValues()
+                .calculateBottomPadding() > WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues()
+                .calculateBottomPadding()
+        )   {
+            WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+        } else {
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
+        }
+
+        val bottomPadding = safeDrawingPadding + toolbarHeight + 16.dp
         val backgroundColor = if (isCoverModeActive) Color.Black else MaterialTheme.colorScheme.surfaceContainer
 
         Box(
