@@ -111,7 +111,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     init {
         loadAllNotes()
         loadLabels()
+        loadLayoutSettings()
         applySortingAndFiltering()
+    }
+
+    private fun loadLayoutSettings() {
+        _notesLayoutType.value = prefsManager.notesLayoutType
+        _gridColumnCount.value = prefsManager.gridColumnCount
+        _listItemLineCount.value = prefsManager.listItemLineCount
     }
 
     fun setNotesLayoutType(layoutType: NotesLayoutType) {
@@ -257,13 +264,15 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun applySortingAndFiltering(preserveRecentlyDeleted: Boolean = false) {
         val currentRecentlyDeleted = if (preserveRecentlyDeleted) recentlyDeletedItem else null
+
         val tempAllNoteItems = _allNotesItems.toMutableList()
         if (currentRecentlyDeleted != null && !tempAllNoteItems.contains(currentRecentlyDeleted)) {
+            val insertIndex = recentlyDeletedItemOriginalIndex.coerceIn(0, tempAllNoteItems.size)
+            tempAllNoteItems.add(insertIndex, currentRecentlyDeleted)
         }
 
-
         _displayedNotesItems.clear()
-        var notesToDisplay = _allNotesItems.toList()
+        var notesToDisplay = tempAllNoteItems.toList()
 
         val currentQuery = searchQuery.value
         if (currentQuery.isNotBlank()) {
