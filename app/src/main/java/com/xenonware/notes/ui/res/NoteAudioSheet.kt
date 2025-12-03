@@ -328,7 +328,7 @@ fun NoteAudioSheet(
                     .hazeSource(hazeState)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical))
                     .padding(horizontal = 20.dp)
-                    .padding(bottom = toolbarHeight + 16.dp) // space for bottom toolbar
+                    .padding(bottom = toolbarHeight + 8.dp) // space for bottom toolbar
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -346,7 +346,7 @@ fun NoteAudioSheet(
                             // Top row – 30% of height
                             Row(
                                 modifier = Modifier
-                                    .weight(0.3f)
+                                    .weight(0.35f)
                                     .fillMaxWidth()
                             ) {
                                 // Start Top – Timer centered
@@ -362,7 +362,6 @@ fun NoteAudioSheet(
                                         recordingDurationMillis = recorder.recordingDurationMillis,
                                         currentPlaybackPositionMillis = player.currentPlaybackPositionMillis,
                                         totalAudioDurationMillis = if (hasAudioFile && !isInRecordingMode) sheetAudioDuration else 0L,
-                                        modifier = Modifier.padding(vertical = 16.dp)
                                     )
                                 }
 
@@ -371,7 +370,7 @@ fun NoteAudioSheet(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                                        .padding(horizontal = 16.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (hasAudioFile && !isInRecordingMode && sheetAudioDuration > 0L) {
@@ -380,7 +379,7 @@ fun NoteAudioSheet(
                                             totalDurationMillis = sheetAudioDuration,
                                             isActive = isSheetAudioActive,
                                             onSeek = { player.seekTo(it) },
-                                            modifier = Modifier.fillMaxWidth()
+                                            modifier = Modifier.padding(top=positionTextHeight).fillMaxWidth()
                                         )
                                     }
                                 }
@@ -389,7 +388,7 @@ fun NoteAudioSheet(
                             // Bottom row – 70% of height
                             Row(
                                 modifier = Modifier
-                                    .weight(0.7f)
+                                    .weight(0.65f)
                                     .fillMaxWidth()
                             ) {
                                 // Start Bottom – Waveform / Transcript (full height)
