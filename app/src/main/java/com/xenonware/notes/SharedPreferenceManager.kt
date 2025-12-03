@@ -26,10 +26,8 @@ class SharedPreferenceManager(context: Context) {
     private val taskSortOrderKey = "task_sort_order"
     private val taskListKey = "task_list_json"
     private val labelsListKey = "labels_list_json"
-    private val drawerTodoItemsKey = "drawer_todo_items_json"
     private val blackedOutModeKey = "blacked_out_mode_enabled"
     private val developerModeKey = "developer_mode_enabled"
-    private val showDummyProfileKey = "show_dummy_profile_enabled"
     private val notesLayoutTypeKey = "notes_layout_type"
     private val gridColumnCountKey = "grid_column_count"
     private val listItemLineCountKey = "list_item_line_count"
@@ -66,6 +64,18 @@ class SharedPreferenceManager(context: Context) {
                 putInt(coverDisplayDimension2Key, max(value.width, value.height))
             }
         }
+    
+    var blackedOutModeEnabled: Boolean
+        get() = sharedPreferences.getBoolean(blackedOutModeKey, false)
+        set(value) = sharedPreferences.edit { putBoolean(blackedOutModeKey, value) }
+
+    var developerModeEnabled: Boolean
+        get() = sharedPreferences.getBoolean(developerModeKey, false)
+        set(value) = sharedPreferences.edit { putBoolean(developerModeKey, value) }
+
+    var isUserLoggedIn: Boolean
+        get() = sharedPreferences.getBoolean(isUserLoggedInKey, false)
+        set(value) = sharedPreferences.edit { putBoolean(isUserLoggedInKey, value) }
 
     var notesItems: List<NotesItems>
         get() {
@@ -120,7 +130,8 @@ class SharedPreferenceManager(context: Context) {
             val option = sharedPreferences.getString(taskSortOptionKey, null)
             try {
                 if (option != null) return SortOption.valueOf(option)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             return SortOption.FREE_SORTING
         }
         set(value) {
@@ -132,31 +143,20 @@ class SharedPreferenceManager(context: Context) {
             val order = sharedPreferences.getString(taskSortOrderKey, null)
             try {
                 if (order != null) return SortOrder.valueOf(order)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             return SortOrder.ASCENDING
         }
         set(value) {
             sharedPreferences.edit { putString(taskSortOrderKey, value.name) }
         }
-
-    var blackedOutModeEnabled: Boolean
-        get() = sharedPreferences.getBoolean(blackedOutModeKey, false)
-        set(value) = sharedPreferences.edit { putBoolean(blackedOutModeKey, value) }
-
-    var developerModeEnabled: Boolean
-        get() = sharedPreferences.getBoolean(developerModeKey, false)
-        set(value) = sharedPreferences.edit { putBoolean(developerModeKey, value) }
-
-    var showDummyProfileEnabled: Boolean
-        get() = sharedPreferences.getBoolean(showDummyProfileKey, false)
-        set(value) = sharedPreferences.edit { putBoolean(showDummyProfileKey, value) }
-
     var notesLayoutType: NotesLayoutType
         get() {
             val type = sharedPreferences.getString(notesLayoutTypeKey, null)
             try {
                 if (type != null) return NotesLayoutType.valueOf(type)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             return NotesLayoutType.LIST
         }
         set(value) {
@@ -171,10 +171,6 @@ class SharedPreferenceManager(context: Context) {
         get() = sharedPreferences.getInt(listItemLineCountKey, 3) // Default to 3 lines
         set(value) = sharedPreferences.edit { putInt(listItemLineCountKey, value) }
 
-    var isUserLoggedIn: Boolean
-        get() = sharedPreferences.getBoolean(isUserLoggedInKey, false)
-        set(value) = sharedPreferences.edit { putBoolean(isUserLoggedInKey, value) }
-
     fun isCoverThemeApplied(currentDisplaySize: IntSize): Boolean {
         if (!coverThemeEnabled) return false
         val storedDimension1 = sharedPreferences.getInt(coverDisplayDimension1Key, 0)
@@ -188,7 +184,6 @@ class SharedPreferenceManager(context: Context) {
         return currentMatchesStoredOrder || currentMatchesSwappedOrder
     }
 
-
     fun clearSettings() {
         sharedPreferences.edit {
             putInt(themeKey, ThemeSetting.SYSTEM.ordinal)
@@ -197,9 +192,8 @@ class SharedPreferenceManager(context: Context) {
             remove(coverDisplayDimension2Key)
             putBoolean(blackedOutModeKey, false)
             putBoolean(developerModeKey, false)
-            putBoolean(showDummyProfileKey, false)
-            remove(notesLayoutTypeKey)
             remove(gridColumnCountKey)
+            remove(notesLayoutTypeKey)
             remove(listItemLineCountKey)
             remove(labelsListKey)
         }
