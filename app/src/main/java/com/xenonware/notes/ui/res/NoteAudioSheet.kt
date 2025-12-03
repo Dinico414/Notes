@@ -81,7 +81,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
-import com.xenonware.notes.ui.layouts.notes.AudioViewType
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
@@ -828,7 +827,9 @@ fun AudioControlButtons(
         }
     }
 }
-
+enum class AudioViewType {
+    Waveform, Transcript
+}
 // Alternative version (sometimes nicer)
 @Composable
 fun AudioContentDisplay(

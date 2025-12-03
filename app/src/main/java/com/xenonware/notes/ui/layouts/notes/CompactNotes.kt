@@ -129,6 +129,7 @@ import com.xenonware.notes.R
 import com.xenonware.notes.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
+import com.xenonware.notes.ui.res.AudioViewType
 import com.xenonware.notes.ui.res.GoogleProfilBorder
 import com.xenonware.notes.ui.res.GoogleProfilePicture
 import com.xenonware.notes.ui.res.ListContent
@@ -167,12 +168,6 @@ import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.launch
 import java.io.File
-
-
-// Define an enum for the audio view types
-enum class AudioViewType {
-    Waveform, Transcript
-}
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @SuppressLint("ConfigurationScreenWidthHeight")
