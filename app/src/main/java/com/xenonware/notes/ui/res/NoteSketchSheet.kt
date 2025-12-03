@@ -139,6 +139,7 @@ fun NoteSketchSheet(
     initialSelectedLabelId: String?,
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
+    isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false
 ) {
     val hazeState = remember { HazeState() }
@@ -262,8 +263,8 @@ fun NoteSketchSheet(
 
         val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
-        val backgroundColor =
-            if (isCoverModeActive) Color.Black else colorScheme.surfaceContainer
+        val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
+
 
         val currentExtendedColorScheme = extendedMaterialColorScheme
         val themeDrawColors = remember(isDarkTheme, currentExtendedColorScheme) {

@@ -3,6 +3,7 @@
 package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
+import android.content.SharedPreferences
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
@@ -85,6 +86,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
@@ -124,6 +126,7 @@ import com.xenon.mylibrary.values.NoCornerRadius
 import com.xenon.mylibrary.values.NoSpacing
 import com.xenon.mylibrary.values.SmallPadding
 import com.xenonware.notes.R
+import com.xenonware.notes.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.res.GoogleProfilBorder
@@ -340,6 +343,21 @@ fun CoverNotes(
 
     val isDarkTheme = LocalIsDarkTheme.current
     val selectedTextNoteTheme = colorThemeMap[editingNoteColor] ?: "Default"
+    val context = LocalContext.current.applicationContext
+    val sharedPreferenceManager = remember { SharedPreferenceManager(context) }
+    val isBlackedOut by produceState(
+        initialValue = sharedPreferenceManager.blackedOutModeEnabled && isDarkTheme
+    ) {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "blacked_out_mode_enabled") {
+                value = sharedPreferenceManager.blackedOutModeEnabled
+            }
+        }
+        sharedPreferenceManager.sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
+        awaitDispose {
+            sharedPreferenceManager.sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
 
     val themeColorMap = remember {
         mapOf(
@@ -1406,6 +1424,7 @@ fun CoverNotes(
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
                     onAddNewLabel = { notesViewModel.addLabel(it) },
+                    isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = true
                 )
             }
@@ -1485,6 +1504,7 @@ fun CoverNotes(
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
                     onAddNewLabel = { notesViewModel.addLabel(it) },
+                    isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = true
                 )
             }
@@ -1561,6 +1581,7 @@ fun CoverNotes(
                     onLabelSelected = { selectedLabelId = it },
                     onAddNewLabel = { notesViewModel.addLabel(it) },
                     onHasUnsavedAudioChange = { hasAudioContent = it },
+                    isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = true
                 )
 
@@ -1635,6 +1656,7 @@ fun CoverNotes(
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
                     onAddNewLabel = { notesViewModel.addLabel(it) },
+                    isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = true
                 )
             }

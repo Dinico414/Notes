@@ -159,6 +159,7 @@ fun NoteTextSheet(
     initialSelectedLabelId: String?,
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
+    isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false,
 ) {
     val hazeState = remember { HazeState() }
@@ -318,7 +319,7 @@ fun NoteTextSheet(
                     }
 
         val bottomPadding = safeDrawingPadding + toolbarHeight + 16.dp
-        val backgroundColor = if (isCoverModeActive) Color.Black else colorScheme.surfaceContainer
+        val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
 
         Box(
             modifier = Modifier

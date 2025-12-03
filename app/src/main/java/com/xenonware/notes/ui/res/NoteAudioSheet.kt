@@ -52,6 +52,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -73,7 +74,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -102,6 +102,7 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 
+@SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(
     ExperimentalMaterial3Api::class,
     ExperimentalMaterial3ExpressiveApi::class,
@@ -125,6 +126,7 @@ fun NoteAudioSheet(
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
     onHasUnsavedAudioChange: (Boolean) -> Unit = {},
+    isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false,
 ) {
     val isLandscape =
@@ -290,7 +292,7 @@ fun NoteAudioSheet(
         dynamicColor = selectedTheme == "Default"
     ) {
         val animatedTextColor by animateColorAsState(
-            targetValue = if (isFadingOut) MaterialTheme.colorScheme.onSurface.copy(alpha = 0f) else MaterialTheme.colorScheme.onSurface,
+            targetValue = if (isFadingOut) colorScheme.onSurface.copy(alpha = 0f) else colorScheme.onSurface,
             animationSpec = tween(500)
         )
 
@@ -308,10 +310,11 @@ fun NoteAudioSheet(
                 onDismiss = { showLabelDialog = false })
         }
 
-        val hazeThinColor = MaterialTheme.colorScheme.surfaceDim
+        val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
         val backgroundColor =
-            if (isCoverModeActive) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+            if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
+
 
         Box(
             modifier = Modifier
@@ -335,10 +338,8 @@ fun NoteAudioSheet(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Spacer(Modifier.height(68.dp))
-                    val density = LocalDensity.current
-                    val positionTextHeight =
-                        with(density) { MaterialTheme.typography.labelMedium.fontSize.toDp() }
-                    val totalHeight = 60.dp + positionTextHeight
+
+                    val totalHeight = 52.dp
 
                     if (isLandscape) {
                         // ────── LANDSCAPE: 2×2 grid exactly as you asked ──────
@@ -347,7 +348,8 @@ fun NoteAudioSheet(
                             Row(
                                 modifier = Modifier
                                     .weight(0.35f)
-                                    .fillMaxWidth()
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 // Start Top – Timer centered
                                 Box(
@@ -369,17 +371,18 @@ fun NoteAudioSheet(
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .fillMaxHeight()
-                                        .padding(horizontal = 16.dp),
+                                        .fillMaxHeight(),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (hasAudioFile && !isInRecordingMode && sheetAudioDuration > 0L) {
                                         AudioProgressBar(
+                                            modifier = Modifier
+                                                .fillMaxWidth(),
+
                                             currentPositionMillis = player.currentPlaybackPositionMillis,
                                             totalDurationMillis = sheetAudioDuration,
                                             isActive = isSheetAudioActive,
                                             onSeek = { player.seekTo(it) },
-                                            modifier = Modifier.padding(top=positionTextHeight).fillMaxWidth()
                                         )
                                     }
                                 }
@@ -389,19 +392,21 @@ fun NoteAudioSheet(
                             Row(
                                 modifier = Modifier
                                     .weight(0.65f)
-                                    .fillMaxWidth()
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 // Start Bottom – Waveform / Transcript (full height)
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .fillMaxHeight()
-                                        .padding(horizontal = 16.dp),
+                                        .fillMaxHeight(),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    val progress = if (isSheetAudioActive && sheetAudioDuration > 0L)
-                                        (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(1L)).coerceIn(0f, 1f)
-                                    else 0f
+                                    val progress =
+                                        if (isSheetAudioActive && sheetAudioDuration > 0L) (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(
+                                            1L
+                                        )).coerceIn(0f, 1f)
+                                        else 0f
 
                                     AudioContentDisplay(
                                         selectedAudioViewType = selectedAudioViewType,
@@ -409,8 +414,7 @@ fun NoteAudioSheet(
                                         isRecordingMode = isInRecordingMode,
                                         recordingState = recordingState,
                                         progress = progress,
-                                        modifier = Modifier
-                                            .fillMaxSize()
+                                        modifier = Modifier.fillMaxSize()
                                     )
                                 }
 
@@ -429,8 +433,9 @@ fun NoteAudioSheet(
                                         hasUnsavedRecording = !recorder.isPersistentAudio,
                                         toolbarHeight = toolbarHeight,
                                         onRecordClick = {
-                                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
-                                                == PackageManager.PERMISSION_GRANTED
+                                            if (ContextCompat.checkSelfPermission(
+                                                    context, Manifest.permission.RECORD_AUDIO
+                                                ) == PackageManager.PERMISSION_GRANTED
                                             ) {
                                                 recorder.startRecording()
                                             } else {
@@ -454,12 +459,11 @@ fun NoteAudioSheet(
                                             recorder.resetState()
                                             recorder.deleteRecording()
                                             player.stopAudio()
-                                        }
-                                    )
+                                        })
                                 }
                             }
                         }
-                    }else {
+                    } else {
                         // ────── PORTRAIT: vertical stack ──────
                         Column(
                             modifier = Modifier.weight(1f),
@@ -471,12 +475,13 @@ fun NoteAudioSheet(
                                 recordingDurationMillis = recorder.recordingDurationMillis,
                                 currentPlaybackPositionMillis = player.currentPlaybackPositionMillis,
                                 totalAudioDurationMillis = if (hasAudioFile && !isInRecordingMode) sheetAudioDuration else 0L,
-                                modifier = Modifier.padding(vertical = 16.dp)
                             )
 
-                            val progress = if (isSheetAudioActive && sheetAudioDuration > 0L)
-                                (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(1L)).coerceIn(0f, 1f)
-                            else 0f
+                            val progress =
+                                if (isSheetAudioActive && sheetAudioDuration > 0L) (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(
+                                    1L
+                                )).coerceIn(0f, 1f)
+                                else 0f
 
                             AudioContentDisplay(
                                 selectedAudioViewType = selectedAudioViewType,
@@ -501,6 +506,7 @@ fun NoteAudioSheet(
                             } else {
                                 Spacer(modifier = Modifier.height(totalHeight))
                             }
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
 
                         // Controls at bottom
@@ -534,119 +540,116 @@ fun NoteAudioSheet(
                                 }
                             },
                             onStopPlaybackClick = { player.stopAudio() },
-                            onDiscardClick = { recorder.resetState(); recorder.deleteRecording(); player.stopAudio() }
-                        )
+                            onDiscardClick = { recorder.resetState(); recorder.deleteRecording(); player.stopAudio() })
                     }
                 }
             }
 
 
+            // Toolbar
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 4.dp)
+                    .clip(RoundedCornerShape(100f))
+                    .background(colorScheme.surfaceDim)
+                    .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onDismiss, Modifier.padding(4.dp)) {
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                }
 
-
-                // Toolbar
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 4.dp)
-                        .clip(RoundedCornerShape(100f))
-                        .background(MaterialTheme.colorScheme.surfaceDim)
-                        .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onDismiss, Modifier.padding(4.dp)) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-                    }
-
-                    val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
-                        TextStyle(
-                            fontFamily = QuicksandTitleVariable,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
+                    TextStyle(
+                        fontFamily = QuicksandTitleVariable,
+                        textAlign = TextAlign.Center,
+                        color = colorScheme.onSurface
                     )
+                )
 
-                    BasicTextField(
-                        value = audioTitle,
-                        onValueChange = onAudioTitleChange,
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        textStyle = titleTextStyle,
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        decorationBox = { innerTextField ->
-                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                if (audioTitle.isEmpty()) {
-                                    Text(
-                                        "Title",
-                                        style = titleTextStyle,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        })
-
-                    Box {
-                        IconButton(
-                            onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
-                        ) {
-                            Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
-                        }
-                        DropdownNoteMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                            items = listOfNotNull(
-                                MenuItem(
-                                text = "Label",
-                                onClick = { showLabelDialog = true; showMenu = false },
-                                dismissOnClick = true,
-                                icon = {
-                                    if (isLabeled) Icon(
-                                        Icons.Rounded.Bookmark, "Label", tint = labelColor
-                                    )
-                                    else Icon(Icons.Rounded.BookmarkBorder, "Label")
-                                }), MenuItem(text = colorMenuItemText, onClick = {
-                                val nextIndex =
-                                    (availableThemes.indexOf(selectedTheme) + 1) % availableThemes.size
-                                selectedTheme = availableThemes[nextIndex]
-                                onThemeChange(selectedTheme)
-                                colorChangeJob?.cancel()
-                                colorChangeJob = scope.launch {
-                                    colorMenuItemText = availableThemes[nextIndex]
-                                    isFadingOut = false
-                                    delay(2500)
-                                    isFadingOut = true
-                                    delay(500)
-                                    colorMenuItemText = "Color"
-                                    isFadingOut = false
-                                }
-                            }, dismissOnClick = false, icon = {
-                                Icon(
-                                    Icons.Rounded.ColorLens,
-                                    "Color",
-                                    tint = if (selectedTheme == "Default") MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
+                BasicTextField(
+                    value = audioTitle,
+                    onValueChange = onAudioTitleChange,
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    textStyle = titleTextStyle,
+                    cursorBrush = SolidColor(colorScheme.primary),
+                    decorationBox = { innerTextField ->
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            if (audioTitle.isEmpty()) {
+                                Text(
+                                    "Title",
+                                    style = titleTextStyle,
+                                    color = colorScheme.onSurface.copy(alpha = 0.6f)
                                 )
-                            }, textColor = animatedTextColor), MenuItem(
-                                text = if (isOffline) "Offline note" else "Online note",
-                                onClick = { isOffline = !isOffline },
-                                dismissOnClick = false,
-                                textColor = if (isOffline) MaterialTheme.colorScheme.error else null,
-                                icon = {
-                                    if (isOffline) Icon(
-                                        Icons.Rounded.CloudOff,
-                                        "Offline note",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                    else Icon(Icons.Rounded.Cloud, "Online note")
-                                })
-                            ),
-                            hazeState = hazeState
-                        )
+                            }
+                            innerTextField()
+                        }
+                    })
+
+                Box {
+                    IconButton(
+                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
+                    ) {
+                        Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
                     }
+                    DropdownNoteMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        items = listOfNotNull(
+                            MenuItem(
+                            text = "Label",
+                            onClick = { showLabelDialog = true; showMenu = false },
+                            dismissOnClick = true,
+                            icon = {
+                                if (isLabeled) Icon(
+                                    Icons.Rounded.Bookmark, "Label", tint = labelColor
+                                )
+                                else Icon(Icons.Rounded.BookmarkBorder, "Label")
+                            }), MenuItem(text = colorMenuItemText, onClick = {
+                            val nextIndex =
+                                (availableThemes.indexOf(selectedTheme) + 1) % availableThemes.size
+                            selectedTheme = availableThemes[nextIndex]
+                            onThemeChange(selectedTheme)
+                            colorChangeJob?.cancel()
+                            colorChangeJob = scope.launch {
+                                colorMenuItemText = availableThemes[nextIndex]
+                                isFadingOut = false
+                                delay(2500)
+                                isFadingOut = true
+                                delay(500)
+                                colorMenuItemText = "Color"
+                                isFadingOut = false
+                            }
+                        }, dismissOnClick = false, icon = {
+                            Icon(
+                                Icons.Rounded.ColorLens,
+                                "Color",
+                                tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                            )
+                        }, textColor = animatedTextColor), MenuItem(
+                            text = if (isOffline) "Offline note" else "Online note",
+                            onClick = { isOffline = !isOffline },
+                            dismissOnClick = false,
+                            textColor = if (isOffline) colorScheme.error else null,
+                            icon = {
+                                if (isOffline) Icon(
+                                    Icons.Rounded.CloudOff,
+                                    "Offline note",
+                                    tint = colorScheme.error
+                                )
+                                else Icon(Icons.Rounded.Cloud, "Online note")
+                            })
+                        ),
+                        hazeState = hazeState
+                    )
                 }
             }
+        }
     }
 }
 
@@ -654,6 +657,7 @@ fun NoteAudioSheet(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudioControlButtons(
+    modifier: Modifier = Modifier,
     recordingState: RecordingState,
     isSheetAudioPlaying: Boolean,
     isSheetAudioPaused: Boolean,
@@ -667,7 +671,6 @@ fun AudioControlButtons(
     onPlayPauseClick: () -> Unit,
     onStopPlaybackClick: () -> Unit,
     onDiscardClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val isActionActive = isSheetAudioPlaying || recordingState == RecordingState.RECORDING
     val animatedRadius by animateDpAsState(
@@ -677,14 +680,12 @@ fun AudioControlButtons(
     )
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
 //            .padding(
 //                bottom = WindowInsets.navigationBars.asPaddingValues()
 //                    .calculateBottomPadding() + toolbarHeight + 16.dp
 //            ),
-        ,horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+        , horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
     ) {
         when (recordingState) {
             RecordingState.IDLE -> {
@@ -692,8 +693,7 @@ fun AudioControlButtons(
                     onClick = onRecordClick,
                     shape = RoundedCornerShape(64.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = colorScheme.primary, contentColor = colorScheme.onPrimary
                     ),
                     modifier = Modifier
                         .height(136.dp)
@@ -710,8 +710,8 @@ fun AudioControlButtons(
                         onClick = onPauseRecordingClick,
                         shape = RoundedCornerShape(animatedRadius),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                            containerColor = colorScheme.primary,
+                            contentColor = colorScheme.onPrimary
                         ),
                         modifier = Modifier
                             .height(136.dp)
@@ -725,8 +725,7 @@ fun AudioControlButtons(
                         onClick = onStopRecordingClick,
                         shape = RoundedCornerShape(64.dp),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
+                            containerColor = colorScheme.error, contentColor = colorScheme.onError
                         ),
                         modifier = Modifier
                             .height(136.dp)
@@ -744,8 +743,8 @@ fun AudioControlButtons(
                         onClick = onResumeRecordingClick,
                         shape = RoundedCornerShape(animatedRadius),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                            containerColor = colorScheme.primary,
+                            contentColor = colorScheme.onPrimary
                         ),
                         modifier = Modifier
                             .height(136.dp)
@@ -759,8 +758,7 @@ fun AudioControlButtons(
                         onClick = onStopRecordingClick,
                         shape = RoundedCornerShape(64.dp),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
+                            containerColor = colorScheme.error, contentColor = colorScheme.onError
                         ),
                         modifier = Modifier
                             .height(136.dp)
@@ -778,8 +776,8 @@ fun AudioControlButtons(
                         onClick = onPlayPauseClick,
                         shape = RoundedCornerShape(animatedRadius),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                            containerColor = colorScheme.primary,
+                            contentColor = colorScheme.onPrimary
                         ),
                         modifier = Modifier
                             .height(136.dp)
@@ -798,8 +796,8 @@ fun AudioControlButtons(
                         enabled = isSheetAudioPlaying || isSheetAudioPaused,
                         shape = RoundedCornerShape(64.dp),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            containerColor = colorScheme.primaryContainer,
+                            contentColor = colorScheme.onPrimaryContainer
                         ),
                         modifier = Modifier
                             .height(136.dp)
@@ -814,8 +812,8 @@ fun AudioControlButtons(
                             onClick = onDiscardClick,
                             shape = RoundedCornerShape(64.dp),
                             colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                containerColor = colorScheme.errorContainer,
+                                contentColor = colorScheme.onErrorContainer
                             ),
                             modifier = Modifier
                                 .height(136.dp)
@@ -858,11 +856,11 @@ fun AudioContentDisplay(
 
 @Composable
 fun AudioProgressBar(
+    modifier: Modifier = Modifier,
     currentPositionMillis: Long,
     totalDurationMillis: Long,
-    isActive: Boolean = true, // whether this audio is the one currently controlled
+    isActive: Boolean = true,
     onSeek: (Long) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     require(totalDurationMillis > 0L) { "totalDurationMillis must be > 0 when showing progress bar" }
 
@@ -882,42 +880,20 @@ fun AudioProgressBar(
                     }
                 }
             }) {
-        Column(Modifier.fillMaxWidth()) {
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(32.dp)
-                    .clip(RoundedCornerShape(100f))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = Color.Transparent, // fully transparent track
-                strokeCap = StrokeCap.Round
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = formatDuration(currentPositionMillis),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = formatDuration(totalDurationMillis),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-        }
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .clip(RoundedCornerShape(100f))
+                .background(colorScheme.primary.copy(alpha = 0.1f)),
+            color = colorScheme.primary,
+            trackColor = Color.Transparent,
+            strokeCap = StrokeCap.Round
+        )
     }
 }
+
 
 @Composable
 fun AudioTimerDisplay(
@@ -935,7 +911,7 @@ fun AudioTimerDisplay(
         text = formatDuration(time) + if (showTotal) " / ${formatDuration(totalAudioDurationMillis)}" else "",
         fontFamily = QuicksandTitleVariable,
         style = MaterialTheme.typography.headlineSmall,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = colorScheme.onSurface,
         modifier = modifier
     )
 }
