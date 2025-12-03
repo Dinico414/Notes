@@ -228,7 +228,7 @@ fun DefaultSettings(
             DialogVersionNumber(
                 onDismiss = { viewModel.dismissVersionDialog() }, versionInfo = VersionInfo(
                     appVersion = appVersion,
-                    xenonUIVersion = "3.0",
+                    xenonUIVersion = "3.1",
                     xenonCommonsVersion = BuildConfig.XENON_COMMONS_VERSION
                 )
             )

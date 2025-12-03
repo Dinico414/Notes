@@ -48,7 +48,7 @@ fun SettingsSwitchMenuTile(
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     icon: (@Composable () -> Unit)? = null,
-    backgroundColor: Color = MaterialTheme.colorScheme.secondaryContainer,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceBright,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     subtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     arrowColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
