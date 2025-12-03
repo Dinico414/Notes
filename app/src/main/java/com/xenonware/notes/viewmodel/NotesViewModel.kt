@@ -128,46 +128,28 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun cycleGridColumnCount(screenWidthDp: Int) {
-        val nextColumnCount = when (screenWidthDp) {
-            in 0 until 600 -> // Compact/Small (assuming < 600dp)
-                when (_gridColumnCount.value) {
-                    2 -> 3
-                    3 -> 2
-                    else -> 2 // Default if somehow outside expected range
-                }
-            in 600 until 840 -> // Medium (assuming 600dp to 839dp)
-                when (_gridColumnCount.value) {
-                    3 -> 4
-                    4 -> 5
-                    5 -> 3
-                    else -> 3
-                }
-            else -> // Expanded (assuming >= 840dp)
-                when (_gridColumnCount.value) {
-                    4 -> 5
-                    5 -> 6
-                    6 -> 4
-                    else -> 4
-                }
-        }
-        if (_gridColumnCount.value != nextColumnCount) {
-            _gridColumnCount.value = nextColumnCount
-            prefsManager.gridColumnCount = nextColumnCount
-        }
-    }
-
     fun cycleListItemLineCount() {
         val nextLineCount = when (_listItemLineCount.value) {
             3 -> 9
-            9 -> MAX_LINES_FULL_NOTE // Representing "entire file"
-            MAX_LINES_FULL_NOTE -> 3
+            9 -> MAX_LINES_FULL_NOTE
             else -> 3
         }
-        if (_listItemLineCount.value != nextLineCount) {
-            _listItemLineCount.value = nextLineCount
-            prefsManager.listItemLineCount = nextLineCount
+        _listItemLineCount.value = nextLineCount
+        prefsManager.listItemLineCount = nextLineCount
+    }
+
+    fun cycleGridColumnCount(screenWidthDp: Int) {
+        val nextColumnCount = when (screenWidthDp) {
+            in 0 until 600 -> if (_gridColumnCount.value == 2) 3 else 2
+            in 600 until 840 -> when (_gridColumnCount.value) {
+                3 -> 4; 4 -> 5; else -> 3
+            }
+            else -> when (_gridColumnCount.value) {
+                4 -> 5; 5 -> 6; else -> 4
+            }
         }
+        _gridColumnCount.value = nextColumnCount
+        prefsManager.gridColumnCount = nextColumnCount
     }
 
     fun setNoteFilterType(filterType: NoteFilterType) {

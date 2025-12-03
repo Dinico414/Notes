@@ -164,11 +164,11 @@ class SharedPreferenceManager(context: Context) {
         }
 
     var gridColumnCount: Int
-        get() = sharedPreferences.getInt(gridColumnCountKey, 2) // Default to 2 columns
+        get() = sharedPreferences.getInt(gridColumnCountKey, 2)
         set(value) = sharedPreferences.edit { putInt(gridColumnCountKey, value) }
 
     var listItemLineCount: Int
-        get() = sharedPreferences.getInt(listItemLineCountKey, 3) // Default to 3 lines
+        get() = sharedPreferences.getInt(listItemLineCountKey, 3)
         set(value) = sharedPreferences.edit { putInt(listItemLineCountKey, value) }
 
     fun isCoverThemeApplied(currentDisplaySize: IntSize): Boolean {

@@ -281,35 +281,30 @@ fun CompactNotes(
     var isAddModeActive by rememberSaveable { mutableStateOf(false) }
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
 
-    var listNoteLineLimitIndex by rememberSaveable { mutableIntStateOf(0) } // 0: 3 lines, 1: 9 lines, 2: Unlimited
-    var gridNoteColumnCountIndex by rememberSaveable { mutableIntStateOf(0) } // Cycles through column options
+    val listItemLineCount by notesViewModel.listItemLineCount.collectAsState()
+    val gridColumnCount by notesViewModel.gridColumnCount.collectAsState()
 
-    val listLineLimits = remember { listOf(3, 9, Int.MAX_VALUE) }
-
-    val gridColumnCountOptions = remember(layoutType) {
-        when (layoutType) {
-            LayoutType.COVER, LayoutType.SMALL, LayoutType.COMPACT -> listOf(2, 3)
-            LayoutType.MEDIUM -> listOf(2, 3, 4)
-            else -> listOf(4, 5, 6)
-        }
+    val currentListMaxLines = when (listItemLineCount) {
+        3 -> 3
+        9 -> 9
+        else -> Int.MAX_VALUE
     }
+    val currentGridColumns = gridColumnCount
 
-    val currentListMaxLines = listLineLimits[listNoteLineLimitIndex]
-    val currentGridColumns = gridColumnCountOptions[gridNoteColumnCountIndex]
     val gridMaxLines = 20
     val allLabels by notesViewModel.labels.collectAsState()
     var selectedLabelId by rememberSaveable { mutableStateOf<String?>(null) }
 
     var hasAudioContent by rememberSaveable { mutableStateOf(false) }
 
+    val screenWidthDp = with(density) { appSize.width.toDp() }.value.toInt()
+
     fun onResizeClick() {
-        if (notesLayoutType == NotesLayoutType.LIST) {
-            listNoteLineLimitIndex = (listNoteLineLimitIndex + 1) % listLineLimits.size
-        } else {
-            gridNoteColumnCountIndex = (gridNoteColumnCountIndex + 1) % gridColumnCountOptions.size
+        when (notesLayoutType) {
+            NotesLayoutType.LIST -> notesViewModel.cycleListItemLineCount()
+            NotesLayoutType.GRID -> notesViewModel.cycleGridColumnCount(screenWidthDp)
         }
     }
-
     fun onListTextResizeClick() {
         currentListSizeIndex = (currentListSizeIndex + 1) % listTextSizes.size
     }
