@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -340,91 +341,126 @@ fun NoteAudioSheet(
                     val totalHeight = 60.dp + positionTextHeight
 
                     if (isLandscape) {
-                        // ────── LANDSCAPE: two columns side by side ──────
-                        Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            // Left: Timer + Waveform
-                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                                AudioTimerDisplay(
-                                    isRecording = recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED,
-                                    isPlaying = isSheetAudioPlaying,
-                                    recordingDurationMillis = recorder.recordingDurationMillis,
-                                    currentPlaybackPositionMillis = player.currentPlaybackPositionMillis,
-                                    totalAudioDurationMillis = if (hasAudioFile && !isInRecordingMode) sheetAudioDuration else 0L,
-                                    modifier = Modifier.padding(vertical = 16.dp)
-                                )
-
-                                val progress = if (isSheetAudioActive && sheetAudioDuration > 0L)
-                                    (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(1L)).coerceIn(0f, 1f)
-                                else 0f
-
-                                AudioContentDisplay(
-                                    selectedAudioViewType = selectedAudioViewType,
-                                    amplitudes = amplitudes,
-                                    isRecordingMode = isInRecordingMode,
-                                    recordingState = recordingState,
-                                    progress = progress,
+                        // ────── LANDSCAPE: 2×2 grid exactly as you asked ──────
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            // Top row – 30% of height
+                            Row(
+                                modifier = Modifier
+                                    .weight(0.3f)
+                                    .fillMaxWidth()
+                            ) {
+                                // Start Top – Timer centered
+                                Box(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp)
-                                )
-                            }
-
-
-                            // Right: Progress + Controls
-                            Column(Modifier.weight(1f)) {
-                                if (hasAudioFile && !isInRecordingMode && sheetAudioDuration > 0L) {
-                                    AudioProgressBar(
-                                        currentPositionMillis = player.currentPlaybackPositionMillis,
-                                        totalDurationMillis = sheetAudioDuration,
-                                        isActive = isSheetAudioActive,
-                                        onSeek = { position -> player.seekTo(position) },
-                                        modifier = Modifier.fillMaxWidth()
+                                        .fillMaxHeight(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AudioTimerDisplay(
+                                        isRecording = isInRecordingMode,
+                                        isPlaying = isSheetAudioPlaying,
+                                        recordingDurationMillis = recorder.recordingDurationMillis,
+                                        currentPlaybackPositionMillis = player.currentPlaybackPositionMillis,
+                                        totalAudioDurationMillis = if (hasAudioFile && !isInRecordingMode) sheetAudioDuration else 0L,
+                                        modifier = Modifier.padding(vertical = 16.dp)
                                     )
-                                } else {
-                                    Spacer(modifier = Modifier.height(totalHeight))
                                 }
 
-                                AudioControlButtons(
-                                    recordingState = recordingState,
-                                    isSheetAudioPlaying = isSheetAudioPlaying,
-                                    isSheetAudioPaused = isSheetAudioPaused,
-                                    currentSheetAudioPath = currentSheetAudioPath,
-                                    hasUnsavedRecording = !recorder.isPersistentAudio,
-                                    toolbarHeight = toolbarHeight,
-                                    onRecordClick = {
-                                        if (ContextCompat.checkSelfPermission(
-                                                context, Manifest.permission.RECORD_AUDIO
-                                            ) == PackageManager.PERMISSION_GRANTED
-                                        ) {
-                                            recorder.startRecording()
-                                        } else {
-                                            requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                        }
-                                    },
-                                    onPauseRecordingClick = { recorder.pauseRecording() },
-                                    onResumeRecordingClick = { recorder.startRecording() }, // resumes
-                                    onStopRecordingClick = { recorder.stopRecording() },
-                                    onPlayPauseClick = {
-                                        currentSheetAudioPath?.let { path ->
-                                            when {
-                                                isSheetAudioPlaying -> player.pauseAudio()
-                                                isSheetAudioPaused -> player.resumeAudio()
-                                                else -> player.playAudio(path)
+                                // End Top – Progress bar
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (hasAudioFile && !isInRecordingMode && sheetAudioDuration > 0L) {
+                                        AudioProgressBar(
+                                            currentPositionMillis = player.currentPlaybackPositionMillis,
+                                            totalDurationMillis = sheetAudioDuration,
+                                            isActive = isSheetAudioActive,
+                                            onSeek = { player.seekTo(it) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Bottom row – 70% of height
+                            Row(
+                                modifier = Modifier
+                                    .weight(0.7f)
+                                    .fillMaxWidth()
+                            ) {
+                                // Start Bottom – Waveform / Transcript (full height)
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .padding(horizontal = 16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val progress = if (isSheetAudioActive && sheetAudioDuration > 0L)
+                                        (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(1L)).coerceIn(0f, 1f)
+                                    else 0f
+
+                                    AudioContentDisplay(
+                                        selectedAudioViewType = selectedAudioViewType,
+                                        amplitudes = amplitudes,
+                                        isRecordingMode = isInRecordingMode,
+                                        recordingState = recordingState,
+                                        progress = progress,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                    )
+                                }
+
+                                // End Bottom – Controls vertically centered
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AudioControlButtons(
+                                        recordingState = recordingState,
+                                        isSheetAudioPlaying = isSheetAudioPlaying,
+                                        isSheetAudioPaused = isSheetAudioPaused,
+                                        currentSheetAudioPath = currentSheetAudioPath,
+                                        hasUnsavedRecording = !recorder.isPersistentAudio,
+                                        toolbarHeight = toolbarHeight,
+                                        onRecordClick = {
+                                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+                                                == PackageManager.PERMISSION_GRANTED
+                                            ) {
+                                                recorder.startRecording()
+                                            } else {
+                                                requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                             }
+                                        },
+                                        onPauseRecordingClick = { recorder.pauseRecording() },
+                                        onResumeRecordingClick = { recorder.startRecording() },
+                                        onStopRecordingClick = { recorder.stopRecording() },
+                                        onPlayPauseClick = {
+                                            currentSheetAudioPath?.let { path ->
+                                                when {
+                                                    isSheetAudioPlaying -> player.pauseAudio()
+                                                    isSheetAudioPaused -> player.resumeAudio()
+                                                    else -> player.playAudio(path)
+                                                }
+                                            }
+                                        },
+                                        onStopPlaybackClick = { player.stopAudio() },
+                                        onDiscardClick = {
+                                            recorder.resetState()
+                                            recorder.deleteRecording()
+                                            player.stopAudio()
                                         }
-                                    },
-                                    onStopPlaybackClick = { player.stopAudio() },
-                                    onDiscardClick = { recorder.resetState(); recorder.deleteRecording(); player.stopAudio() }
-                                )
+                                    )
+                                }
                             }
                         }
-                    } else {
+                    }else {
                         // ────── PORTRAIT: vertical stack ──────
                         Column(
                             modifier = Modifier.weight(1f),
