@@ -43,7 +43,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.Create
 import androidx.compose.material.icons.rounded.FormatBold
@@ -53,6 +52,7 @@ import androidx.compose.material.icons.rounded.FormatUnderlined
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TextFields
@@ -761,12 +761,12 @@ fun CompactNotes(
                                     ), label = "ResizeIconAlpha"
                                 )
                                 IconButton(
-                                    onClick = ::onResizeClick, // Use the new callback
+                                    onClick = ::onResizeClick,
                                     modifier = Modifier.alpha(resizeIconAlpha),
                                     enabled = !isSearchActive && showActionIconsExceptSearch
                                 ) {
                                     Icon(
-                                        Icons.Rounded.CenterFocusStrong,
+                                        Icons.Rounded.OpenWith,
                                         contentDescription = stringResource(R.string.resize_notes),
                                         tint = colorScheme.onSurface
                                     )
