@@ -1045,7 +1045,7 @@ fun CoverNotes(
 
                 expandable = isAppBarCollapsible,
                 screenBackgroundColor = coverScreenBackgroundColor,
-                contentBackgroundColor = coverScreenContentColor,
+                contentBackgroundColor = coverScreenBackgroundColor,
                 appBarNavigationIconContentColor = coverScreenContentColor,
                 contentCornerRadius = NoCornerRadius,
                 navigationIconStartPadding = MediumPadding,
