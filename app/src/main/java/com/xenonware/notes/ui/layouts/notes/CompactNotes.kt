@@ -12,6 +12,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
@@ -166,6 +168,7 @@ import com.xenonware.notes.viewmodel.classes.NotesItems
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.rememberHazeState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -276,6 +279,9 @@ fun CompactNotes(
     var isAddModeActive by rememberSaveable { mutableStateOf(false) }
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
 
+    var showResizeValue by remember { mutableStateOf(false) }
+    var resizeTimerKey by remember { mutableIntStateOf(0) }
+
     val listItemLineCount by notesViewModel.listItemLineCount.collectAsState()
     val gridColumnCount by notesViewModel.gridColumnCount.collectAsState()
 
@@ -299,7 +305,17 @@ fun CompactNotes(
             NotesLayoutType.LIST -> notesViewModel.cycleListItemLineCount()
             NotesLayoutType.GRID -> notesViewModel.cycleGridColumnCount(screenWidthDp)
         }
+        showResizeValue = true
+        resizeTimerKey++
     }
+
+    LaunchedEffect(resizeTimerKey) {
+        if (showResizeValue) {
+            delay(2000)
+            showResizeValue = false
+        }
+    }
+
     fun onListTextResizeClick() {
         currentListSizeIndex = (currentListSizeIndex + 1) % listTextSizes.size
     }
@@ -765,11 +781,35 @@ fun CompactNotes(
                                     modifier = Modifier.alpha(resizeIconAlpha),
                                     enabled = !isSearchActive && showActionIconsExceptSearch
                                 ) {
-                                    Icon(
-                                        Icons.Rounded.OpenWith,
-                                        contentDescription = stringResource(R.string.resize_notes),
-                                        tint = colorScheme.onSurface
-                                    )
+                                    Box(contentAlignment = Alignment.Center) {
+                                        androidx.compose.animation.AnimatedVisibility(
+                                            visible = showResizeValue,
+                                            enter = fadeIn(animationSpec = tween(0)),
+                                            exit = fadeOut(animationSpec = tween(500))
+                                        ) {
+                                            val text = when (notesLayoutType) {
+                                                NotesLayoutType.LIST -> if (listItemLineCount == 3 || listItemLineCount == 9) listItemLineCount.toString() else "Max"
+                                                NotesLayoutType.GRID -> gridColumnCount.toString()
+                                            }
+                                            Text(
+                                                text = text,
+                                                style = typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = colorScheme.onSurface
+                                            )
+                                        }
+                                        androidx.compose.animation.AnimatedVisibility(
+                                            visible = !showResizeValue,
+                                            enter = fadeIn(animationSpec = tween(500)),
+                                            exit = fadeOut(animationSpec = tween(0))
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.OpenWith,
+                                                contentDescription = stringResource(R.string.resize_notes),
+                                                tint = colorScheme.onSurface
+                                            )
+                                        }
+                                    }
                                 }
 
                                 val settingsIconAlpha by animateFloatAsState(
