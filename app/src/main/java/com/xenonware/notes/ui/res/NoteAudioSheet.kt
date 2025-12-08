@@ -87,7 +87,9 @@ import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.util.AudioRecorderManager
 import com.xenonware.notes.util.GlobalAudioPlayer
 import com.xenonware.notes.util.RecordingState
+import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.classes.Label
+import com.xenonware.notes.viewmodel.classes.NotesItems
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -112,7 +114,7 @@ fun NoteAudioSheet(
     audioTitle: String,
     onAudioTitleChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onSave: (String, String, String, String?) -> Unit,
+    onSave: (String, String, String, String?, Boolean) -> Unit,
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
@@ -124,6 +126,8 @@ fun NoteAudioSheet(
     initialSelectedLabelId: String?,
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
+    editingNoteId: Int?,
+    notesViewModel: NotesViewModel,
     onHasUnsavedAudioChange: (Boolean) -> Unit = {},
     isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false,
@@ -162,7 +166,19 @@ fun NoteAudioSheet(
     }
 
     var showMenu by remember { mutableStateOf(false) }
-    var isOffline by remember { mutableStateOf(false) }
+    var isOffline by rememberSaveable(
+        inputs = arrayOf(editingNoteId)
+    ) {
+        mutableStateOf(
+            editingNoteId?.let { id ->
+                notesViewModel.noteItems
+                    .filterIsInstance<NotesItems>()
+                    .find { it.id == id }
+                    ?.isOffline == true
+            } ?: false
+        )
+    }
+
     var showLabelDialog by remember { mutableStateOf(false) }
     var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
     val isLabeled = selectedLabelId != null
@@ -245,7 +261,7 @@ fun NoteAudioSheet(
                     saveAmplitudes(context, audioId, amplitudes)
                 }
 
-                onSave(audioTitle, audioId, selectedTheme, selectedLabelId)
+                onSave(audioTitle, audioId, selectedTheme, selectedLabelId, isOffline)
             }
             onSaveTriggerConsumed()
         }
@@ -609,7 +625,8 @@ fun NoteAudioSheet(
                                     Icons.Rounded.Bookmark, "Label", tint = labelColor
                                 )
                                 else Icon(Icons.Rounded.BookmarkBorder, "Label")
-                            }), MenuItem(text = colorMenuItemText, onClick = {
+                            }),
+                            MenuItem(text = colorMenuItemText, onClick = {
                             val nextIndex =
                                 (availableThemes.indexOf(selectedTheme) + 1) % availableThemes.size
                             selectedTheme = availableThemes[nextIndex]
@@ -630,19 +647,22 @@ fun NoteAudioSheet(
                                 "Color",
                                 tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
                             )
-                        }, textColor = animatedTextColor), MenuItem(
-                            text = if (isOffline) "Offline note" else "Online note",
-                            onClick = { isOffline = !isOffline },
-                            dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else null,
-                            icon = {
-                                if (isOffline) Icon(
-                                    Icons.Rounded.CloudOff,
-                                    "Offline note",
-                                    tint = colorScheme.error
-                                )
-                                else Icon(Icons.Rounded.Cloud, "Online note")
-                            })
+                        }, textColor = animatedTextColor),
+                            MenuItem(
+                                text = if (isOffline) "Offline note" else "Online note",
+                                onClick = {
+                                    isOffline = !isOffline
+                                },
+                                dismissOnClick = false,
+                                textColor = if (isOffline) colorScheme.error else null,
+                                icon = {
+                                    if (isOffline) {
+                                        Icon(Icons.Rounded.CloudOff, "Local only", tint = colorScheme.error)
+                                    } else {
+                                        Icon(Icons.Rounded.Cloud, "Synced")
+                                    }
+                                }
+                            )
                         ),
                         hazeState = hazeState
                     )
@@ -680,10 +700,6 @@ fun AudioControlButtons(
 
     Row(
         modifier = modifier.fillMaxWidth()
-//            .padding(
-//                bottom = WindowInsets.navigationBars.asPaddingValues()
-//                    .calculateBottomPadding() + toolbarHeight + 16.dp
-//            ),
         , horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
     ) {
         when (recordingState) {

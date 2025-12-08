@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
     implementation(libs.firebase.database)
+    implementation(libs.firebase.firestore)
     val composeBom = platform("androidx.compose:compose-bom:2025.05.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)

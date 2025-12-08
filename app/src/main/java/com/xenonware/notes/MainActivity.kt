@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -18,6 +19,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.auth.api.identity.Identity
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
+import com.xenonware.notes.presentation.sign_in.SignInEvent
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.layouts.NotesListLayout
 import com.xenonware.notes.ui.theme.ScreenEnvironment
@@ -30,10 +32,9 @@ class MainActivity : ComponentActivity() {
 
     private val notesViewModel: NotesViewModel by viewModels()
     private val signInViewModel: SignInViewModel by viewModels {
-        SignInViewModel.SignInViewModelFactory(
-            application
-        )
+        SignInViewModel.SignInViewModelFactory(application)
     }
+
     private lateinit var sharedPreferenceManager: SharedPreferenceManager
 
     private val googleAuthUiClient by lazy {
@@ -64,10 +65,18 @@ class MainActivity : ComponentActivity() {
         lastAppliedBlackedOutMode = initialBlackedOutMode
 
         setContent {
-
             val currentContext = LocalContext.current
             val currentContainerSize = LocalWindowInfo.current.containerSize
             val applyCoverTheme = sharedPreferenceManager.isCoverThemeApplied(currentContainerSize)
+
+            // REAL-TIME SYNC ON SIGN-IN
+            LaunchedEffect(Unit) {
+                signInViewModel.signInEvent.collect { event ->
+                    if (event is SignInEvent.SignedInSuccessfully) {
+                        notesViewModel.onSignedIn()
+                    }
+                }
+            }
 
             ScreenEnvironment(
                 themePreference = lastAppliedTheme,
@@ -95,16 +104,27 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val user = googleAuthUiClient.getSignedInUser()
             val isSignedIn = user != null
-            sharedPreferenceManager.isUserLoggedIn = isSignedIn  // Sync pref if out of sync
-            signInViewModel.updateSignInState(isSignedIn)  // Assuming you add this function to SignInViewModel
+
+            // Sync login state
+            sharedPreferenceManager.isUserLoggedIn = isSignedIn
+            signInViewModel.updateSignInState(isSignedIn)
+
+            // Start real-time sync when app resumes (if already signed in)
+            // DELETE THIS LINE — IT WIPES LOCAL DATA!
+            if (isSignedIn) {
+                notesViewModel.onSignedIn() // ← This is correct
+            }
         }
 
-
+        // Theme handling
         val currentThemePref = sharedPreferenceManager.theme
         val currentCoverThemeEnabledSetting = sharedPreferenceManager.coverThemeEnabled
         val currentBlackedOutMode = sharedPreferenceManager.blackedOutModeEnabled
 
-        if (currentThemePref != lastAppliedTheme || currentCoverThemeEnabledSetting != lastAppliedCoverThemeEnabled || currentBlackedOutMode != lastAppliedBlackedOutMode) {
+        if (currentThemePref != lastAppliedTheme ||
+            currentCoverThemeEnabledSetting != lastAppliedCoverThemeEnabled ||
+            currentBlackedOutMode != lastAppliedBlackedOutMode
+        ) {
             if (currentThemePref != lastAppliedTheme) {
                 updateAppCompatDelegateTheme(currentThemePref)
             }
@@ -116,6 +136,7 @@ class MainActivity : ComponentActivity() {
             recreate()
         }
     }
+
     override fun onDestroy() {
         GlobalAudioPlayer.release()
         super.onDestroy()
@@ -149,6 +170,5 @@ fun XenonApp(
             modifier = Modifier.weight(1f),
             appSize = appSize
         )
-
     }
 }

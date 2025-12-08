@@ -3,6 +3,12 @@ package com.xenonware.notes.ui.res
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -25,6 +31,9 @@ import androidx.compose.material.icons.rounded.CheckBox
 import androidx.compose.material.icons.rounded.CheckBoxOutlineBlank
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.CloudDone
+import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,6 +68,7 @@ import com.xenonware.notes.ui.theme.noteTurquoiseDark
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
+import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.classes.NotesItems
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -68,6 +79,7 @@ fun NoteListCard(
     isSelectionModeActive: Boolean,
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
+    notesViewModel: NotesViewModel,
     modifier: Modifier = Modifier,
     maxLines: Int = Int.MAX_VALUE,
     isNoteSheetOpen: Boolean,
@@ -221,29 +233,62 @@ fun NoteListCard(
                         .background(backgroundColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Crossfade(targetState = isSelected, label = "Selection Animation") { selected ->
+                    Crossfade(isSelected) { selected ->
                         if (selected) {
-                            Icon(
-                                imageVector = Icons.Rounded.CheckCircle,
-                                contentDescription = "Selected",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Icon(Icons.Rounded.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary)
                         } else {
                             Box(
-                                modifier = Modifier
-                                    .padding(2.dp)
-                                    .size(20.dp)
-                                    .border(
-                                        width = 2.dp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                        shape = CircleShape
-                                    )
+                                Modifier.padding(2.dp).size(20.dp)
+                                    .border(2.dp, MaterialTheme.colorScheme.onSurface.copy(0.6f), CircleShape)
                             )
                         }
                     }
                 }
             }
+
+            //Sync Icon
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .size(20.dp)
+            ) {
+                val isLocalOnly = item.isOffline
+                val isSyncing = notesViewModel.isNoteBeingSynced(item.id)
+
+                when {
+                    isSyncing -> {
+                        val infiniteTransition = rememberInfiniteTransition(label = "spin")
+
+                        val angle by infiniteTransition.animateFloat(
+                            initialValue = 0f,
+                            targetValue = 360f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(1000, easing = LinearEasing),
+                                repeatMode = RepeatMode.Restart
+                            ),
+                            label = "spinAngle"
+                        )
+
+                        Icon(
+                            imageVector = Icons.Rounded.Refresh,
+                            contentDescription = "Syncing",
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .rotate(angle)
+                        )
+                    }
+                    isLocalOnly -> {
+                        Icon(Icons.Rounded.CloudOff, "Local only", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                    }
+                    else -> {
+                        Icon(Icons.Rounded.CloudDone, "Synced", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
+
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)

@@ -5,6 +5,12 @@ package com.xenonware.notes.ui.res
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -27,9 +33,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.CloudDone
+import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -47,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -75,6 +85,7 @@ import com.xenonware.notes.ui.theme.noteYellowLight
 import com.xenonware.notes.util.AudioPlayerManager
 import com.xenonware.notes.util.GlobalAudioPlayer
 import com.xenonware.notes.util.RecordingState
+import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -108,6 +119,7 @@ fun NoteAudioCard(
     isSelectionModeActive: Boolean,
     onSelectItem: () -> Unit,
     onEditItem: (NotesItems) -> Unit,
+    notesViewModel: NotesViewModel,
     modifier: Modifier = Modifier,
     isNoteSheetOpen: Boolean,
 ) {
@@ -357,15 +369,61 @@ fun NoteAudioCard(
                     modifier = Modifier.padding(6.dp).size(24.dp).background(backgroundColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Crossfade(targetState = isSelected) { selected ->
+                    Crossfade(isSelected) { selected ->
                         if (selected) {
-                            Icon(Icons.Rounded.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Rounded.CheckCircle, "Selected", tint = MaterialTheme.colorScheme.primary)
                         } else {
-                            Box(Modifier.padding(2.dp).size(20.dp).border(2.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), CircleShape))
+                            Box(
+                                Modifier.padding(2.dp).size(20.dp)
+                                    .border(2.dp, MaterialTheme.colorScheme.onSurface.copy(0.6f), CircleShape)
+                            )
                         }
                     }
                 }
             }
+
+            //Sync Icon
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .size(20.dp)
+            ) {
+                val isLocalOnly = item.isOffline
+                val isSyncing = notesViewModel.isNoteBeingSynced(item.id)
+
+                when {
+                    isSyncing -> {
+                        val infiniteTransition = rememberInfiniteTransition(label = "spin")
+
+                        val angle by infiniteTransition.animateFloat(
+                            initialValue = 0f,
+                            targetValue = 360f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(1000, easing = LinearEasing),
+                                repeatMode = RepeatMode.Restart
+                            ),
+                            label = "spinAngle"
+                        )
+
+                        Icon(
+                            imageVector = Icons.Rounded.Refresh,
+                            contentDescription = "Syncing",
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .rotate(angle)
+                        )
+                    }
+                    isLocalOnly -> {
+                        Icon(Icons.Rounded.CloudOff, "Local only", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                    }
+                    else -> {
+                        Icon(Icons.Rounded.CloudDone, "Synced", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
 
             // Mic badge
             Box(modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).size(26.dp), contentAlignment = Alignment.Center) {

@@ -1159,6 +1159,7 @@ fun CoverNotes(
                                                     is NotesItems -> {
                                                         NoteCard(
                                                             item = item,
+                                                            notesViewModel = notesViewModel,
                                                             isSelected = selectedNoteIds.contains(
                                                                 item.id
                                                             ),
@@ -1287,93 +1288,55 @@ fun CoverNotes(
                                             items(noteItemsWithHeaders.filterIsInstance<NotesItems>()) { item ->
                                                 NoteCard(
                                                     item = item,
+                                                    notesViewModel = notesViewModel, // ← THIS WAS MISSING!
                                                     isSelected = selectedNoteIds.contains(item.id),
                                                     isSelectionModeActive = isSelectionModeActive,
                                                     onSelectItem = {
-                                                        if (selectedNoteIds.contains(item.id)) {
-                                                            selectedNoteIds -= item.id
+                                                        selectedNoteIds = if (selectedNoteIds.contains(item.id)) {
+                                                            selectedNoteIds - item.id
                                                         } else {
-                                                            selectedNoteIds += item.id
+                                                            selectedNoteIds + item.id
                                                         }
                                                     },
                                                     onEditItem = { itemToEdit ->
                                                         editingNoteId = itemToEdit.id
                                                         titleState = itemToEdit.title
-                                                        descriptionState =
-                                                            itemToEdit.description ?: ""
+                                                        descriptionState = itemToEdit.description ?: ""
                                                         listTitleState = itemToEdit.title
-                                                        editingNoteColor =
-                                                            itemToEdit.color?.toULong()
-                                                        selectedLabelId =
-                                                            itemToEdit.labels.firstOrNull()
+                                                        editingNoteColor = itemToEdit.color?.toULong()
+                                                        selectedLabelId = itemToEdit.labels.firstOrNull()
                                                         listItemsState.clear()
                                                         nextListItemId = 0L
                                                         currentListSizeIndex = 1
+
                                                         itemToEdit.description?.let { desc ->
-                                                            val parsedItems =
-                                                                desc.split("\n")
-                                                                    .mapNotNull { line ->
-                                                                        if (line.isBlank()) null
-                                                                        else {
-                                                                            val isChecked =
-                                                                                line.startsWith("[x]")
-                                                                            val text =
-                                                                                if (isChecked) line.substringAfter(
-                                                                                    "[x] "
-                                                                                )
-                                                                                    .trim() else line.substringAfter(
-                                                                                    "[ ] "
-                                                                                ).trim()
-                                                                            ListItem(
-                                                                                nextListItemId++,
-                                                                                text,
-                                                                                isChecked
-                                                                            )
-                                                                        }
-                                                                    }
+                                                            val parsedItems = desc.split("\n").mapNotNull { line ->
+                                                                if (line.isBlank()) return@mapNotNull null
+                                                                val isChecked = line.startsWith("[x]")
+                                                                val text = if (isChecked) {
+                                                                    line.substringAfter("[x] ").trim()
+                                                                } else {
+                                                                    line.substringAfter("[ ] ").trim()
+                                                                }
+                                                                ListItem(nextListItemId++, text, isChecked)
+                                                            }
                                                             listItemsState.addAll(parsedItems)
                                                         }
+
+                                                        isSearchActive = false
+                                                        notesViewModel.setSearchQuery("")
+
                                                         when (itemToEdit.noteType) {
-                                                            NoteType.TEXT -> {
-                                                                isSearchActive =
-                                                                    false // Disable search
-                                                                notesViewModel.setSearchQuery("") // Clear search query
-                                                                showTextNoteCard = true
-                                                                editingNoteColor =
-                                                                    itemToEdit.color?.toULong()
-                                                            }
-
+                                                            NoteType.TEXT -> showTextNoteCard = true
                                                             NoteType.AUDIO -> {
-                                                                isSearchActive =
-                                                                    false // Disable search
-                                                                notesViewModel.setSearchQuery("") // Clear search query
                                                                 showAudioNoteCard = true
-                                                                selectedAudioViewType =
-                                                                    AudioViewType.Waveform // Default for editing
-                                                                editingNoteColor =
-                                                                    itemToEdit.color?.toULong()
+                                                                selectedAudioViewType = AudioViewType.Waveform
                                                             }
-
-                                                            NoteType.LIST -> {
-                                                                isSearchActive =
-                                                                    false // Disable search
-                                                                notesViewModel.setSearchQuery("") // Clear search query
-                                                                showListNoteCard = true
-                                                                editingNoteColor =
-                                                                    itemToEdit.color?.toULong()
-                                                            }
-
-                                                            NoteType.SKETCH -> {
-                                                                isSearchActive =
-                                                                    false // Disable search
-                                                                notesViewModel.setSearchQuery("") // Clear search query
-                                                                showSketchNoteCard = true
-                                                                editingNoteColor =
-                                                                    itemToEdit.color?.toULong()
-                                                            }
+                                                            NoteType.LIST -> showListNoteCard = true
+                                                            NoteType.SKETCH -> showSketchNoteCard = true
                                                         }
                                                     },
-                                                    maxLines = gridMaxLines,
+                                                    maxLines = if (notesLayoutType == NotesLayoutType.LIST) currentListMaxLines else gridMaxLines,
                                                     isNoteSheetOpen = isAnyNoteSheetOpen
                                                 )
                                             }
@@ -1417,31 +1380,50 @@ fun CoverNotes(
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onSave = { title, description, theme, labelId ->
-                        if (title.isNotBlank() || description.isNotBlank()) {
-                            val color = themeColorMap[theme]
-                            if (editingNoteId != null) {
-                                val updatedNote =
-                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
-                                        .find { it.id == editingNoteId }?.copy(
-                                            title = title,
-                                            description = description.takeIf { it.isNotBlank() },
-                                            color = color?.toLong(),
-                                            labels = labelId?.let { listOf(it) } ?: emptyList()
-                                        )
-                                if (updatedNote != null) {
-                                    notesViewModel.updateItem(updatedNote)
-                                }
+                    onSave = { title, description, theme, labelId, isOffline ->
+                        if (title.isBlank() && description.isBlank()) {
+                            showTextNoteCard = false
+                            resetNoteState()
+                            return@NoteTextSheet
+                        }
+
+                        val colorLong = themeColorMap[theme]?.toLong()
+
+                        if (editingNoteId != null) {
+                            val existingNote = notesViewModel.noteItems
+                                .filterIsInstance<NotesItems>()
+                                .find { it.id == editingNoteId }
+
+                            if (existingNote != null) {
+                                val updatedNote = existingNote.copy(
+                                    title = title.trim(),
+                                    description = description.takeIf { it.isNotBlank() },
+                                    color = colorLong,
+                                    labels = labelId?.let { listOf(it) } ?: emptyList(),
+                                    isOffline = isOffline
+                                )
+                                notesViewModel.updateItem(updatedNote, forceLocal = isOffline)
                             } else {
                                 notesViewModel.addItem(
-                                    title = title,
+                                    title = title.trim(),
                                     description = description.takeIf { it.isNotBlank() },
                                     noteType = NoteType.TEXT,
-                                    color = color?.toLong(),
-                                    labels = labelId?.let { listOf(it) } ?: emptyList()
+                                    color = colorLong,
+                                    labels = labelId?.let { listOf(it) } ?: emptyList(),
+                                    forceLocal = isOffline
                                 )
                             }
+                        } else {
+                            notesViewModel.addItem(
+                                title = title.trim(),
+                                description = description.takeIf { it.isNotBlank() },
+                                noteType = NoteType.TEXT,
+                                color = colorLong,
+                                labels = labelId?.let { listOf(it) } ?: emptyList(),
+                                forceLocal = isOffline
+                            )
                         }
+
                         showTextNoteCard = false
                         isSearchActive = false
                         notesViewModel.setSearchQuery("")
@@ -1465,7 +1447,9 @@ fun CoverNotes(
                     onLabelSelected = { selectedLabelId = it },
                     onAddNewLabel = { notesViewModel.addLabel(it) },
                     isBlackThemeActive = isBlackedOut,
-                    isCoverModeActive = true
+                    isCoverModeActive = true,
+                    editingNoteId = editingNoteId,
+                    notesViewModel = notesViewModel,
                 )
             }
 
@@ -1493,32 +1477,43 @@ fun CoverNotes(
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
                     },
-                    onSave = { title, theme, labelId ->
-                        if (title.isNotBlank()) {
-                            val color = themeColorMap[theme]
-                            if (editingNoteId != null) {
-                                val updatedNote =
-                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
-                                        .find { it.id == editingNoteId }?.copy(
-                                            title = title,   color = color?.toLong(),
-                                            labels = labelId?.let { listOf(it) } ?: emptyList()
-                                        )
-                                if (updatedNote != null) {
-                                    notesViewModel.updateItem(updatedNote)
-                                }
-                            } else {
-                                notesViewModel.addItem(
-                                    title = title,
-                                    description = null, // No text description for a sketch
-                                    noteType = NoteType.SKETCH,
-                                    color = color?.toLong(),
-                                    labels = labelId?.let { listOf(it) } ?: emptyList()
-                                )
-                            }
+                    onSave = { title, theme, labelId, isOffline ->
+                        if (title.isBlank()) {
+                            showSketchNoteCard = false
+                            resetNoteState()
+                            return@NoteSketchSheet
                         }
+
+                        val colorLong = themeColorMap[theme]?.toLong()
+
+                        if (editingNoteId != null) {
+                            val existingNote = notesViewModel.noteItems
+                                .filterIsInstance<NotesItems>()
+                                .find { it.id == editingNoteId }
+
+                            existingNote?.let {
+                                val updatedNote = it.copy(
+                                    title = title.trim(),
+                                    color = colorLong,
+                                    labels = labelId?.let { listOf(it) } ?: emptyList(),
+                                    isOffline = isOffline
+                                )
+                                notesViewModel.updateItem(updatedNote, forceLocal = isOffline)
+                            }
+                        } else {
+                            notesViewModel.addItem(
+                                title = title.trim(),
+                                description = null,
+                                noteType = NoteType.SKETCH,
+                                color = colorLong,
+                                labels = labelId?.let { listOf(it) } ?: emptyList(),
+                                forceLocal = isOffline
+                            )
+                        }
+
                         showSketchNoteCard = false
-                        isSearchActive = false // Disable search on save
-                        notesViewModel.setSearchQuery("") // Clear search query
+                        isSearchActive = false
+                        notesViewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     saveTrigger = saveTrigger,
@@ -1545,7 +1540,9 @@ fun CoverNotes(
                     onLabelSelected = { selectedLabelId = it },
                     onAddNewLabel = { notesViewModel.addLabel(it) },
                     isBlackThemeActive = isBlackedOut,
-                    isCoverModeActive = true
+                    isCoverModeActive = true,
+                    editingNoteId = editingNoteId,
+                    notesViewModel = notesViewModel,
                 )
             }
 
@@ -1576,34 +1573,44 @@ fun CoverNotes(
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onSave = { title, uniqueAudioId, theme, labelId ->
-                        if (title.isNotBlank() || uniqueAudioId.isNotBlank()) {
-                            val color = themeColorMap[theme]
-                            if (editingNoteId != null) {
-                                val updatedNote =
-                                    notesViewModel.noteItems.filterIsInstance<NotesItems>()
-                                        .find { it.id == editingNoteId }?.copy(
-                                            title = title,
-                                            description = uniqueAudioId,
-                                            color = color?.toLong(),
-                                            labels = labelId?.let { listOf(it) } ?: emptyList()
-                                        )
-                                if (updatedNote != null) {
-                                    notesViewModel.updateItem(updatedNote)
-                                }
-                            } else {
-                                notesViewModel.addItem(
-                                    title = title,
-                                    description = uniqueAudioId.takeIf { it.isNotBlank() },
-                                    noteType = NoteType.AUDIO,
-                                    color = color?.toLong(),
-                                    labels = labelId?.let { listOf(it) } ?: emptyList()
-                                )
-                            }
+                    onSave = { title, uniqueAudioId, theme, labelId, isOffline ->
+                        if (title.isBlank() && uniqueAudioId.isBlank()) {
+                            showAudioNoteCard = false
+                            resetNoteState()
+                            return@NoteAudioSheet
                         }
+
+                        val colorLong = themeColorMap[theme]?.toLong()
+
+                        if (editingNoteId != null) {
+                            val existingNote = notesViewModel.noteItems
+                                .filterIsInstance<NotesItems>()
+                                .find { it.id == editingNoteId }
+
+                            existingNote?.let {
+                                val updatedNote = it.copy(
+                                    title = title.trim(),
+                                    description = uniqueAudioId.takeIf { it.isNotBlank() },
+                                    color = colorLong,
+                                    labels = labelId?.let { listOf(it) } ?: emptyList(),
+                                    isOffline = isOffline
+                                )
+                                notesViewModel.updateItem(updatedNote, forceLocal = isOffline)
+                            }
+                        } else {
+                            notesViewModel.addItem(
+                                title = title.trim(),
+                                description = uniqueAudioId.takeIf { it.isNotBlank() },
+                                noteType = NoteType.AUDIO,
+                                color = colorLong,
+                                labels = labelId?.let { listOf(it) } ?: emptyList(),
+                                forceLocal = isOffline
+                            )
+                        }
+
                         showAudioNoteCard = false
-                        isSearchActive = false // Disable search on save
-                        notesViewModel.setSearchQuery("") // Clear search query
+                        isSearchActive = false
+                        notesViewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     toolbarHeight = 72.dp,
@@ -1622,7 +1629,9 @@ fun CoverNotes(
                     onAddNewLabel = { notesViewModel.addLabel(it) },
                     onHasUnsavedAudioChange = { hasAudioContent = it },
                     isBlackThemeActive = isBlackedOut,
-                    isCoverModeActive = true
+                    isCoverModeActive = true,
+                    editingNoteId = editingNoteId,
+                    notesViewModel = notesViewModel,
                 )
 
             }
@@ -1650,34 +1659,46 @@ fun CoverNotes(
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                    onSave = { title, items, theme, labelId ->
+                    onSave = { title, items, theme, labelId, isOffline ->
                         val nonEmptyItems = items.filter { it.text.isNotBlank() }
                         val description = nonEmptyItems.joinToString("\n") {
                             "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
                         }
-                        if (title.isNotBlank() || description.isNotBlank()) {
-                            val color = themeColorMap[theme]
-                            if (editingNoteId != null) {
-                                val updatedNote = notesViewModel.noteItems
-                                    .filterIsInstance<NotesItems>()
-                                    .find { it.id == editingNoteId }
-                                    ?.copy(
-                                        title = title,
-                                        description = description.takeIf { it.isNotBlank() },
-                                        color = color?.toLong(),
-                                        labels = labelId?.let { listOf(it) } ?: emptyList()
-                                    )
-                                updatedNote?.let { notesViewModel.updateItem(it) }
-                            } else {
-                                notesViewModel.addItem(
-                                    title = title,
-                                    description = description.takeIf { it.isNotBlank() },
-                                    noteType = NoteType.LIST,
-                                    color = color?.toLong(),
-                                    labels = labelId?.let { listOf(it) } ?: emptyList()
-                                )
-                            }
+
+                        if (title.isBlank() && description.isBlank()) {
+                            showListNoteCard = false
+                            resetNoteState()
+                            return@NoteListSheet
                         }
+
+                        val colorLong = themeColorMap[theme]?.toLong()
+
+                        if (editingNoteId != null) {
+                            val existingNote = notesViewModel.noteItems
+                                .filterIsInstance<NotesItems>()
+                                .find { it.id == editingNoteId }
+
+                            existingNote?.let {
+                                val updatedNote = it.copy(
+                                    title = title.trim(),
+                                    description = description.takeIf { it.isNotBlank() },
+                                    color = colorLong,
+                                    labels = labelId?.let { listOf(it) } ?: emptyList(),
+                                    isOffline = isOffline
+                                )
+                                notesViewModel.updateItem(updatedNote, forceLocal = isOffline)
+                            }
+                        } else {
+                            notesViewModel.addItem(
+                                title = title.trim(),
+                                description = description.takeIf { it.isNotBlank() },
+                                noteType = NoteType.LIST,
+                                color = colorLong,
+                                labels = labelId?.let { listOf(it) } ?: emptyList(),
+                                forceLocal = isOffline
+                            )
+                        }
+
                         showListNoteCard = false
                         isSearchActive = false
                         notesViewModel.setSearchQuery("")
@@ -1697,7 +1718,9 @@ fun CoverNotes(
                     onLabelSelected = { selectedLabelId = it },
                     onAddNewLabel = { notesViewModel.addLabel(it) },
                     isBlackThemeActive = isBlackedOut,
-                    isCoverModeActive = true
+                    isCoverModeActive = true,
+                    editingNoteId = editingNoteId,
+                    notesViewModel = notesViewModel,
                 )
             }
         }

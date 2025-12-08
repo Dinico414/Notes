@@ -65,7 +65,9 @@ import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.classes.Label
+import com.xenonware.notes.viewmodel.classes.NotesItems
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -86,9 +88,9 @@ data class ListItem(
 fun NoteListSheet(
     listTitle: String,
     onListTitleChange: (String) -> Unit,
-    listItems: SnapshotStateList<ListItem>,               // ← NOW mutable & shared
+    listItems: SnapshotStateList<ListItem>,
     onDismiss: () -> Unit,
-    onSave: (String, List<ListItem>, String, String?) -> Unit,
+    onSave: (String, List<ListItem>, String, String?, Boolean) -> Unit,
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
@@ -101,6 +103,8 @@ fun NoteListSheet(
     initialSelectedLabelId: String?,
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
+    editingNoteId: Int?,
+    notesViewModel: NotesViewModel,
     isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false
 ) {
@@ -118,7 +122,18 @@ fun NoteListSheet(
     }
 
     var showMenu by remember { mutableStateOf(false) }
-    var isOffline by remember { mutableStateOf(false) }
+    var isOffline by rememberSaveable(
+        inputs = arrayOf(editingNoteId)
+    ) {
+        mutableStateOf(
+            editingNoteId?.let { id ->
+                notesViewModel.noteItems
+                    .filterIsInstance<NotesItems>()
+                    .find { it.id == id }
+                    ?.isOffline == true
+            } ?: false
+        )
+    }
 
     var showLabelDialog by remember { mutableStateOf(false) }
     var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
@@ -139,7 +154,7 @@ fun NoteListSheet(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(listTitle, listItems.toList(), selectedTheme, selectedLabelId)
+            onSave(listTitle, listItems.toList(), selectedTheme, selectedLabelId, isOffline)
             onSaveTriggerConsumed()
         }
     }
@@ -424,24 +439,21 @@ fun NoteListSheet(
                                     tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
                                 )
                             }, textColor = animatedTextColor
-                        ), MenuItem(
-                            text = if (isOffline) "Offline note" else "Online note",
-                            onClick = { isOffline = !isOffline },
-                            dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else null,
-                            icon = {
-                                if (isOffline) {
-                                    Icon(
-                                        Icons.Rounded.CloudOff,
-                                        contentDescription = "Offline note",
-                                        tint = colorScheme.error
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Rounded.Cloud, contentDescription = "Online note"
-                                    )
+                        ),  MenuItem(
+                                text = if (isOffline) "Offline note" else "Online note",
+                                onClick = {
+                                    isOffline = !isOffline
+                                },
+                                dismissOnClick = false,
+                                textColor = if (isOffline) colorScheme.error else null,
+                                icon = {
+                                    if (isOffline) {
+                                        Icon(Icons.Rounded.CloudOff, "Local only", tint = colorScheme.error)
+                                    } else {
+                                        Icon(Icons.Rounded.Cloud, "Synced")
+                                    }
                                 }
-                            })
+                            )
                         ),
                         hazeState = hazeState
                     )

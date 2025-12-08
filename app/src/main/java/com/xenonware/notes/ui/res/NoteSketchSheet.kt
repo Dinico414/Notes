@@ -99,7 +99,9 @@ import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.viewmodel.CanvasViewModel
 import com.xenonware.notes.viewmodel.DrawingAction
+import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.classes.Label
+import com.xenonware.notes.viewmodel.classes.NotesItems
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -121,7 +123,7 @@ fun NoteSketchSheet(
     onDismiss: () -> Unit,
     initialTheme: String = "Default",
     onThemeChange: (String) -> Unit,
-    onSave: (String, String, String?) -> Unit,
+    onSave: (String, String, String?, Boolean) -> Unit,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
     isEraserMode: Boolean,
@@ -139,6 +141,8 @@ fun NoteSketchSheet(
     initialSelectedLabelId: String?,
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
+    editingNoteId: Int?,
+    notesViewModel: NotesViewModel,
     isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false
 ) {
@@ -165,7 +169,18 @@ fun NoteSketchSheet(
     }
 
     var showMenu by remember { mutableStateOf(false) }
-    var isOffline by remember { mutableStateOf(false) }
+    var isOffline by rememberSaveable(
+        inputs = arrayOf(editingNoteId)
+    ) {
+        mutableStateOf(
+            editingNoteId?.let { id ->
+                notesViewModel.noteItems
+                    .filterIsInstance<NotesItems>()
+                    .find { it.id == id }
+                    ?.isOffline == true
+            } ?: false
+        )
+    }
 
     var showLabelDialog by remember { mutableStateOf(false) }
     var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
@@ -207,7 +222,7 @@ fun NoteSketchSheet(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(sketchTitle, selectedTheme, selectedLabelId)
+            onSave(sketchTitle, selectedTheme, selectedLabelId, isOffline)
             onSaveTriggerConsumed()
         }
     }
@@ -439,24 +454,21 @@ fun NoteSketchSheet(
                                         tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
                                     )
                                 }, textColor = animatedTextColor
-                            ), MenuItem(
+                            ),  MenuItem(
                                 text = if (isOffline) "Offline note" else "Online note",
-                                onClick = { isOffline = !isOffline },
+                                onClick = {
+                                    isOffline = !isOffline
+                                },
                                 dismissOnClick = false,
                                 textColor = if (isOffline) colorScheme.error else null,
                                 icon = {
                                     if (isOffline) {
-                                        Icon(
-                                            Icons.Rounded.CloudOff,
-                                            contentDescription = "Offline note",
-                                            tint = colorScheme.error
-                                        )
+                                        Icon(Icons.Rounded.CloudOff, "Local only", tint = colorScheme.error)
                                     } else {
-                                        Icon(
-                                            Icons.Rounded.Cloud, contentDescription = "Online note"
-                                        )
+                                        Icon(Icons.Rounded.Cloud, "Synced")
                                     }
-                                }), if (isDeveloperOptionsEnabled) {
+                                }
+                            ), if (isDeveloperOptionsEnabled) {
                                 MenuItem(
                                     text = "Debug text",
                                     onClick = { debugTextEnabled = !debugTextEnabled },
