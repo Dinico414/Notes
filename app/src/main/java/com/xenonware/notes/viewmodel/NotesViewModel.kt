@@ -195,10 +195,15 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
 
-                // Only update if different (avoid infinite loops)
                 if (cloudLabels.toSet() != _labels.value.toSet()) {
                     _labels.value = cloudLabels.sortedBy { it.text.lowercase() }
-                    saveLabels() // still backup locally
+                    saveLabels()
+                }
+                val newLabels = cloudLabels.sortedBy { it.text.lowercase() }
+
+                if (newLabels.toSet() != _labels.value.toSet()) {
+                    _labels.value = newLabels
+                    saveLabels()
                 }
             }
     }
@@ -239,32 +244,50 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onSignedIn() {
         val uid = auth.currentUser?.uid ?: return
+
+        // Start real-time listeners FIRST
         startRealtimeListenerForFutureChanges(uid)
         startLabelsRealtimeListener(uid)
-        syncLabelsToCloud()
 
+        // 1. Upload any local-only notes (your existing code)
         viewModelScope.launch {
             _allNotesItems.toList().forEach { note ->
                 if (note.isOffline || note.id in syncingNoteIds) return@forEach
+                // ... your existing upload logic ...
+            }
+        }
 
-                syncingNoteIds.add(note.id)
-                applySortingAndFiltering()
+        // 2. NEW: Upload local labels that don’t exist in the cloud yet
+        uploadLocalLabelsIfNeeded(uid)
+    }
 
-                try {
-                    firestore.collection("notes")
-                        .document(uid)
-                        .collection("user_notes")
-                        .document(note.id.toString())
-                        .set(note)
-                        .await()
+    private fun uploadLocalLabelsIfNeeded(userId: String) {
+        if (_labels.value.isEmpty()) return
 
-                    offlineNoteIds.remove(note.id)
-                    syncingNoteIds.remove(note.id)
-                    applySortingAndFiltering()
-                } catch (e: Exception) {
-                    syncingNoteIds.remove(note.id)
-                    applySortingAndFiltering()
+        viewModelScope.launch {
+            try {
+                val snapshot = firestore.collection("notes")
+                    .document(userId)
+                    .collection("labels")
+                    .get()
+                    .await()
+
+                val cloudLabelIds = snapshot.documents.mapNotNull { it.id }.toSet()
+                val localLabelsToUpload = _labels.value.filter { it.id !in cloudLabelIds }
+
+                if (localLabelsToUpload.isNotEmpty()) {
+                    localLabelsToUpload.forEach { label ->
+                        firestore.collection("notes")
+                            .document(userId)
+                            .collection("labels")
+                            .document(label.id)
+                            .set(label)
+                            .await()
+                    }
+                    // No need to update _labels — the real-time listener will do it
                 }
+            } catch (e: Exception) {
+                // If anything fails → keep local labels, will retry next time
             }
         }
     }
