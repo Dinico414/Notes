@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.auth.api.identity.Identity
+import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInEvent
 import com.xenonware.notes.presentation.sign_in.SignInViewModel

@@ -17,7 +17,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.xenonware.notes.R
-import com.xenonware.notes.SharedPreferenceManager
+import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.ui.res.LanguageOption // Ensure this path is correct
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

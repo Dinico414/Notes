@@ -11,7 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
-import com.xenonware.notes.SharedPreferenceManager
+import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.ui.theme.noteBlueLight
 import com.xenonware.notes.ui.theme.noteGreenLight
 import com.xenonware.notes.ui.theme.noteOrangeLight

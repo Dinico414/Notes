@@ -23,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.ApiException
+import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.layouts.SettingsLayout

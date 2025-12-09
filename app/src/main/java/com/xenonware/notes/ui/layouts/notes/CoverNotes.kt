@@ -128,7 +128,7 @@ import com.xenon.mylibrary.values.NoCornerRadius
 import com.xenon.mylibrary.values.NoSpacing
 import com.xenon.mylibrary.values.SmallPadding
 import com.xenonware.notes.R
-import com.xenonware.notes.SharedPreferenceManager
+import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.res.AudioViewType
