@@ -115,8 +115,10 @@ fun SettingsItems(
     }
 
     SettingsGoogleTile(
-        title = if (state.isSignInSuccessful) userData?.username else "Sign in",
+        title = if (state.isSignInSuccessful) userData?.username ?: "Signed in" else "Sign in with Google",
         subtitle = if (state.isSignInSuccessful) userData?.email else null,
+        profilePictureUrl = userData?.profilePictureUrl,
+        isSignedIn = state.isSignInSuccessful,
         onClick = if (state.isSignInSuccessful) onSignOutClick else onSignInClick,
         shape = tileShapeOverride ?: standaloneShape,
         backgroundColor = Color.Transparent,
@@ -124,8 +126,7 @@ fun SettingsItems(
         subtitleColor = tileSubtitleColor,
         horizontalPadding = tileHorizontalPadding,
         verticalPadding = tileVerticalPadding,
-        state = state,
-        userData = userData
+        iconContentDescription = stringResource(R.string.profile_picture)
     )
     Spacer(Modifier.height(actualOuterGroupSpacing))
 

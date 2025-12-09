@@ -35,7 +35,6 @@ import com.xenon.mylibrary.res.DialogSignOut
 import com.xenon.mylibrary.res.DialogThemeSelection
 import com.xenon.mylibrary.res.DialogVersionNumber
 import com.xenon.mylibrary.res.ThemeSetting
-import com.xenon.mylibrary.res.VersionInfo
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoCornerRadius
 import com.xenon.mylibrary.values.NoSpacing

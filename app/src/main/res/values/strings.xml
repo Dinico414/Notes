@@ -117,6 +117,12 @@
     <string name="sign_out">Sign out</string>
     <string name="sign_out_dialog_description">Are you sure you want to sign out?</string>
     <string name="add_new_label">Add label</string>
+    <string name="profile_picture">Profilepicture</string>
+    <string name="more_infos">More infos</string>
+    <string name="app_version">App Version</string>
+    <string name="xenon_ui_version">Xenon-UI Version</string>
+    <string name="xenon_commons_version">Xenon-Commons Version</string>
+    <string name="sign_out_description">Are you sure you want to sign out?</string>
 
 
 </resources>

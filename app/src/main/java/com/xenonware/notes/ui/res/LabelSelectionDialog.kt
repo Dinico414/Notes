@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -26,9 +28,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.xenon.mylibrary.res.XenonDialog
 import com.xenon.mylibrary.res.XenonTextField
 import com.xenon.mylibrary.values.MediumPadding
@@ -48,43 +53,33 @@ fun LabelSelectionDialog(
     XenonDialog(
         onDismissRequest = onDismiss,
         title = "Choose a label",
+        properties = DialogProperties(usePlatformDefaultWidth = true),
+        contentManagesScrolling = true,
         content = {
-            Column {
+            Column(modifier = Modifier.heightIn(max = 560.dp)) {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     item {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onLabelSelected(null) }
-                                .padding(vertical = 4.dp),
+                                .clip(RoundedCornerShape(100f))
+                                .clickable { onLabelSelected(null) },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(
-                                selected = selectedLabelId == null,
-                                onClick = { onLabelSelected(null) }
-                            )
-                            Text(
-                                text = "None",
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
+                            RadioButton(selected = selectedLabelId == null, onClick = { onLabelSelected(null) })
+                            Text("None", modifier = Modifier.padding(start = 8.dp))
                         }
                     }
                     items(allLabels) { label ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onLabelSelected(label.id) }
-                                .padding(vertical = 4.dp),
+                                .clip(RoundedCornerShape(100f))
+                                .clickable { onLabelSelected(label.id) },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(
-                                selected = selectedLabelId == label.id,
-                                onClick = { onLabelSelected(label.id) }
-                            )
-                            Text(
-                                text = label.text,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
+                            RadioButton(selected = selectedLabelId == label.id, onClick = { onLabelSelected(label.id) })
+                            Text(label.text, modifier = Modifier.padding(start = 8.dp),maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -111,18 +106,13 @@ fun LabelSelectionDialog(
                                 newLabelName = ""
                             }
                         },
-                        modifier = Modifier
-                            .height(50.dp)
-                            .width(40.dp),
+                        modifier = Modifier.height(50.dp).width(40.dp),
                         enabled = newLabelName.isNotBlank(),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Add,
-                            contentDescription = stringResource(R.string.add_new_label)
-                        )
+                        Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_new_label))
                     }
                 }
             }

@@ -135,8 +135,6 @@ import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.res.AudioViewType
-import com.xenonware.notes.ui.res.GoogleProfilBorder
-import com.xenonware.notes.ui.res.GoogleProfilePicture
 import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.ListItem
 import com.xenonware.notes.ui.res.NoteAudioSheet
@@ -144,7 +142,6 @@ import com.xenonware.notes.ui.res.NoteCard
 import com.xenonware.notes.ui.res.NoteListSheet
 import com.xenonware.notes.ui.res.NoteSketchSheet
 import com.xenonware.notes.ui.res.NoteTextSheet
-import com.xenonware.notes.ui.res.XenonSnackbar
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
