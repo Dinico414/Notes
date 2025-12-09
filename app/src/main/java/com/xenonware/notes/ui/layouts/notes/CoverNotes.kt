@@ -121,6 +121,9 @@ import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.ActivityScreen
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.res.FloatingToolbarContent
+import com.xenon.mylibrary.res.GoogleProfilBorder
+import com.xenon.mylibrary.res.GoogleProfilePicture
+import com.xenon.mylibrary.res.XenonSnackbar
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.MediumSpacing
@@ -1070,16 +1073,16 @@ fun CoverNotes(
 
                 navigationIconExtraContent = {
                     if (state.isSignInSuccessful) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                        ) {
+                        Box(contentAlignment = Alignment.Center) {
                             GoogleProfilBorder(
+                                isSignedIn = state.isSignInSuccessful,
                                 modifier = Modifier.size(32.dp),
-                                state = state
+                                strokeWidth = 2.5.dp
                             )
+
                             GoogleProfilePicture(
-                                state = state,
-                                userData = userData,
+                                profilePictureUrl = userData?.profilePictureUrl,
+                                iconContentDescription = stringResource(R.string.profile_picture),
                                 modifier = Modifier.size(26.dp)
                             )
                         }

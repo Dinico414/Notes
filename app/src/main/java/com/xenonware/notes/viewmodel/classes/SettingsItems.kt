@@ -23,6 +23,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.xenon.mylibrary.res.SettingsGoogleTile
+import com.xenon.mylibrary.res.SettingsSwitchMenuTile
+import com.xenon.mylibrary.res.SettingsSwitchTile
+import com.xenon.mylibrary.res.SettingsTile
 import com.xenon.mylibrary.values.ExtraLargeSpacing
 import com.xenon.mylibrary.values.LargerPadding
 import com.xenon.mylibrary.values.MediumCornerRadius
@@ -32,10 +36,6 @@ import com.xenon.mylibrary.values.SmallestCornerRadius
 import com.xenonware.notes.R
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInState
-import com.xenonware.notes.ui.res.SettingsGoogleTile
-import com.xenonware.notes.ui.res.SettingsSwitchMenuTile
-import com.xenonware.notes.ui.res.SettingsSwitchTile
-import com.xenonware.notes.ui.res.SettingsTile
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.SettingsViewModel
 

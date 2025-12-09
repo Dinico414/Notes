@@ -121,6 +121,9 @@ import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.ActivityScreen
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.res.FloatingToolbarContent
+import com.xenon.mylibrary.res.GoogleProfilBorder
+import com.xenon.mylibrary.res.GoogleProfilePicture
+import com.xenon.mylibrary.res.XenonSnackbar
 import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.ExtraLargeSpacing
 import com.xenon.mylibrary.values.LargestPadding
@@ -132,8 +135,6 @@ import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.res.AudioViewType
-import com.xenonware.notes.ui.res.GoogleProfilBorder
-import com.xenonware.notes.ui.res.GoogleProfilePicture
 import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.ListItem
 import com.xenonware.notes.ui.res.NoteAudioSheet
@@ -141,7 +142,6 @@ import com.xenonware.notes.ui.res.NoteCard
 import com.xenonware.notes.ui.res.NoteListSheet
 import com.xenonware.notes.ui.res.NoteSketchSheet
 import com.xenonware.notes.ui.res.NoteTextSheet
-import com.xenonware.notes.ui.res.XenonSnackbar
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
@@ -1064,14 +1064,17 @@ fun CompactNotes(
 
                 navigationIconExtraContent = {
                     if (state.isSignInSuccessful) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                        ) {
+                        Box(contentAlignment = Alignment.Center) {
                             GoogleProfilBorder(
-                                modifier = Modifier.size(32.dp), state = state
+                                isSignedIn = state.isSignInSuccessful,
+                                modifier = Modifier.size(32.dp),
+                                strokeWidth = 2.5.dp
                             )
+
                             GoogleProfilePicture(
-                                state = state, userData = userData, modifier = Modifier.size(26.dp)
+                                profilePictureUrl = userData?.profilePictureUrl,
+                                iconContentDescription = stringResource(R.string.profile_picture),
+                                modifier = Modifier.size(26.dp)
                             )
                         }
                     }

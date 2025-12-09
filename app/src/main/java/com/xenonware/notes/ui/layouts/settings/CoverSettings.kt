@@ -27,18 +27,22 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.ActivityScreen
+import com.xenon.mylibrary.res.DialogClearDataConfirmation
+import com.xenon.mylibrary.res.DialogCoverDisplaySelection
+import com.xenon.mylibrary.res.DialogLanguageSelection
+import com.xenon.mylibrary.res.DialogResetSettingsConfirmation
+import com.xenon.mylibrary.res.DialogSignOut
+import com.xenon.mylibrary.res.DialogThemeSelection
+import com.xenon.mylibrary.res.DialogVersionNumber
+import com.xenon.mylibrary.res.ThemeSetting
+import com.xenon.mylibrary.res.VersionInfo
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoCornerRadius
 import com.xenon.mylibrary.values.NoSpacing
+import com.xenonware.notes.BuildConfig
 import com.xenonware.notes.R
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInState
-import com.xenonware.notes.ui.res.DialogClearDataConfirmation
-import com.xenonware.notes.ui.res.DialogCoverDisplaySelection
-import com.xenonware.notes.ui.res.DialogLanguageSelection
-import com.xenonware.notes.ui.res.DialogResetSettingsConfirmation
-import com.xenonware.notes.ui.res.DialogSignOut
-import com.xenonware.notes.ui.res.DialogThemeSelection
 import com.xenonware.notes.viewmodel.SettingsViewModel
 import com.xenonware.notes.viewmodel.classes.SettingsItems
 import dev.chrisbanes.haze.hazeEffect
@@ -55,13 +59,13 @@ fun CoverSettings(
     googleAuthUiClient: GoogleAuthUiClient,
     onSignInClick: () -> Unit,
     onSignOutClick: () -> Unit,
-    onConfirmSignOut: () -> Unit
+    onConfirmSignOut: () -> Unit,
 ) {
     val context = LocalContext.current
 
     val currentThemeTitle by viewModel.currentThemeTitle.collectAsState()
     val showThemeDialog by viewModel.showThemeDialog.collectAsState()
-    val themeOptions = viewModel.themeOptions
+    val themeOptions = remember { ThemeSetting.entries.toTypedArray() }
     val dialogSelectedThemeIndex by viewModel.dialogPreviewThemeIndex.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
     val showClearDataDialog by viewModel.showClearDataDialog.collectAsState()
@@ -72,6 +76,7 @@ fun CoverSettings(
     val showLanguageDialog by viewModel.showLanguageDialog.collectAsState()
     val availableLanguages by viewModel.availableLanguages.collectAsState()
     val selectedLanguageTagInDialog by viewModel.selectedLanguageTagInDialog.collectAsState()
+    val showVersionDialog by viewModel.showVersionDialog.collectAsState()
     val showSignOutDialog by viewModel.showSignOutDialog.collectAsState()
 
     val packageManager = context.packageManager
@@ -84,6 +89,8 @@ fun CoverSettings(
         }
     }
     val appVersion = packageInfo?.versionName ?: "N/A"
+    val xenonUIVersion = BuildConfig.XENON_UI_VERSION
+    val xenonCommonsVersion = BuildConfig.XENON_COMMONS_VERSION
 
     val containerSize = LocalWindowInfo.current.containerSize
     val applyCoverThemeActual = remember(containerSize, coverThemeEnabled) {
@@ -164,7 +171,10 @@ fun CoverSettings(
                 currentThemeIndex = dialogSelectedThemeIndex,
                 onThemeSelected = { index -> viewModel.onThemeOptionSelectedInDialog(index) },
                 onDismiss = { viewModel.dismissThemeDialog() },
-                onConfirm = { viewModel.applySelectedTheme() })
+                onConfirm = { viewModel.applySelectedTheme() },
+                dialogTitle = stringResource(id = R.string.theme),
+                confirmText = stringResource(id = R.string.ok)
+            )
         }
     }
     if (showCoverSelectionDialog) {
@@ -179,7 +189,12 @@ fun CoverSettings(
                         containerSize
                     )
                 },
-                onDismiss = { viewModel.dismissCoverThemeDialog() })
+                onDismiss = { viewModel.dismissCoverThemeDialog() },
+                dialogTitle = stringResource(id = R.string.cover_screen_dialog_title),
+                confirmText = stringResource(id = R.string.yes),
+                action2Text = stringResource(id = R.string.no),
+                descriptionText = stringResource(id = R.string.cover_dialog_description)
+            )
         }
     }
     if (showClearDataDialog) {
@@ -190,7 +205,11 @@ fun CoverSettings(
         ) {
             DialogClearDataConfirmation(
                 onConfirm = { viewModel.confirmClearData() },
-                onDismiss = { viewModel.dismissClearDataDialog() })
+                onDismiss = { viewModel.dismissClearDataDialog() },
+                dialogTitle = stringResource(id = R.string.clear_data_dialog_title),
+                confirmText = stringResource(id = R.string.confirm),
+                descriptionText = stringResource(id = R.string.clear_data_dialog_description)
+            )
         }
     }
     if (showResetSettingsDialog) {
@@ -201,7 +220,11 @@ fun CoverSettings(
         ) {
             DialogResetSettingsConfirmation(
                 onConfirm = { viewModel.confirmResetSettings() },
-                onDismiss = { viewModel.dismissResetSettingsDialog() })
+                onDismiss = { viewModel.dismissResetSettingsDialog() },
+                dialogTitle = stringResource(id = R.string.reset_settings_dialog_title),
+                confirmText = stringResource(id = R.string.confirm),
+                descriptionText = stringResource(id = R.string.reset_settings_dialog_description)
+            )
         }
     }
     if (showLanguageDialog && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -215,7 +238,29 @@ fun CoverSettings(
                 currentLanguageTag = selectedLanguageTagInDialog,
                 onLanguageSelected = { tag -> viewModel.onLanguageSelectedInDialog(tag) },
                 onDismiss = { viewModel.dismissLanguageDialog() },
-                onConfirm = { viewModel.applySelectedLanguage() })
+                onConfirm = { viewModel.applySelectedLanguage() },
+                dialogTitle = stringResource(id = R.string.language),
+                confirmText = stringResource(id = R.string.ok)
+            )
+        }
+    }
+    if (showVersionDialog) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeEffect(hazeState)
+        ) {
+            DialogVersionNumber(
+                onDismiss = { viewModel.dismissVersionDialog() },
+                dialogTitle = stringResource(id = R.string.version),
+                confirmText = stringResource(id = R.string.more_infos),
+                appString = stringResource(id = R.string.app_version),
+                appVersion = appVersion,
+                xenonUiString = stringResource(id = R.string.xenon_ui_version),
+                xenonUIVersion = xenonUIVersion,
+                xenonCommonsString = stringResource(id = R.string.xenon_commons_version),
+                xenonCommonsVersion = xenonCommonsVersion
+            )
         }
     }
     if (showSignOutDialog) {
@@ -226,7 +271,10 @@ fun CoverSettings(
         ) {
             DialogSignOut(
                 onConfirm = onConfirmSignOut,
-                onDismiss = { viewModel.dismissSignOutDialog() }
+                onDismiss = { viewModel.dismissSignOutDialog() },
+                dialogTitle = stringResource(id = R.string.sign_out),
+                confirmText = stringResource(id = R.string.confirm),
+                descriptionText = stringResource(id = R.string.sign_out_description)
             )
         }
     }

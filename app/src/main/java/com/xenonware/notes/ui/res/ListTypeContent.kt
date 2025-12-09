@@ -64,6 +64,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenon.mylibrary.res.GoogleProfilBorder
+import com.xenon.mylibrary.res.GoogleProfilePicture
 import com.xenon.mylibrary.res.XenonTextField
 import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.LargerCornerRadius
@@ -181,17 +183,21 @@ fun ListContent(
 
 
                     if (state.isSignInSuccessful) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                        ) {
+                        Box(contentAlignment = Alignment.Center) {
                             GoogleProfilBorder(
-                                modifier = Modifier.size(32.dp), state = state
+                                isSignedIn = state.isSignInSuccessful,
+                                modifier = Modifier.size(32.dp),
+                                strokeWidth = 2.5.dp
                             )
+
                             GoogleProfilePicture(
-                                state = state, userData = userData, modifier = Modifier.size(26.dp)
+                                profilePictureUrl = userData?.profilePictureUrl,
+                                iconContentDescription = stringResource(R.string.profile_picture),
+                                modifier = Modifier.size(26.dp)
                             )
                         }
                     }
+
                 }
                 HorizontalDivider(
                     thickness = 1.dp, color = colorScheme.outlineVariant
