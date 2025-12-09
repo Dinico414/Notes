@@ -174,7 +174,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         startRealtimeListenerForFutureChanges(uid)
 
         viewModelScope.launch {
-            _allNotesItems.forEach { note ->
+            _allNotesItems.toList().forEach { note ->
                 if (note.isOffline || note.id in syncingNoteIds) return@forEach
 
                 syncingNoteIds.add(note.id)
