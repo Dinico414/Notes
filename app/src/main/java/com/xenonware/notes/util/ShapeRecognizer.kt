@@ -18,7 +18,7 @@ object ShapeRecognizer {
     private const val MIN_CORNER_ANGLE = 160.0     // Degrees. Angles less than this are corners.
     private const val MERGE_CORNER_DIST = 30f      // Reduced from 40f to stop Rect->Tri merging
 
-    enum class ShapeType { CIRCLE, OVAL, TRIANGLE, QUAD, LINE }
+    enum class ShapeType { CIRCLE, OVAL, TRIANGLE, QUAD, LINE, RECT }
 
     fun recognizeAndCreatePath(
         points: List<PathOffset>,
@@ -48,7 +48,6 @@ object ShapeRecognizer {
 
         // CASE A: It looks like a Triangle (3 corners)
         if (corners.size == 3) {
-            // CRITICAL CHECK: Is it actually a Circle?
             // Triangles have straight sides. Circles have bulging sides.
             if (areSidesBulging(corners, rawPoints)) {
                 // It's a circle/oval disguised as a triangle
@@ -94,17 +93,9 @@ object ShapeRecognizer {
      * Returns TRUE if it's likely a circle, FALSE if it's a triangle.
      */
     private fun areSidesBulging(corners: List<Offset>, allPoints: List<Offset>): Boolean {
-        // We check the midpoint of the drawn path between corners.
-        // If that midpoint is far away from the straight line connecting corners, it's bulging.
         var maxBulge = 0f
         val threshold = 40f // Pixels of deviation allowed for a straight side
 
-        // Map raw points to the closest corner index to segment them
-        // (Simplified approach: Just check global variance again if corners are ambiguous)
-
-        // Better approach for this context:
-        // If we found 3 corners, a Triangle has a high radius variance (corners far, sides close).
-        // A Circle has low radius variance.
         val center = calculateCentroid(allPoints)
         val (_, cv) = getCircularityMetrics(allPoints, center)
 
