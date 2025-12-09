@@ -77,9 +77,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _editingAudioNoteColor = MutableStateFlow<Long?>(null)
-    val editingAudioNoteColor: StateFlow<Long?> = _editingAudioNoteColor.asStateFlow()
-
     private val _showLocalOnly = MutableStateFlow(prefsManager.showLocalOnlyNotes)
     val showLocalOnly: StateFlow<Boolean> = _showLocalOnly.asStateFlow()
 
@@ -170,20 +167,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 try {
                     firestore.collection("notes").document(uid).collection("labels")
                         .document(label.id).set(label).await()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                 }
-            }
-        }
-    }
-
-    fun deleteLabelFromCloud(labelId: String) {
-        val uid = auth.currentUser?.uid ?: return
-
-        viewModelScope.launch {
-            try {
-                firestore.collection("notes").document(uid).collection("labels").document(labelId)
-                    .delete().await()
-            } catch (e: Exception) {
             }
         }
     }
@@ -207,7 +192,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
                     offlineNoteIds.remove(note.id)
                     syncingNoteIds.remove(note.id)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     syncingNoteIds.remove(note.id)
 
                 }
@@ -215,6 +200,24 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         uploadLocalLabelsIfNeeded(uid)
+        viewModelScope.launch {
+            try {
+                val cloudSnapshot = firestore.collection("notes")
+                    .document(uid)
+                    .collection("labels")
+                    .get()
+                    .await()
+
+                val cloudLabelIds = cloudSnapshot.documents.map { it.id }.toSet()
+                val localLabelIds = _labels.value.map { it.id }.toSet()
+
+                val orphaned = cloudLabelIds - localLabelIds
+                orphaned.forEach { id ->
+                    firestore.collection("notes").document(uid).collection("labels")
+                        .document(id).delete().await()
+                }
+            } catch (_: Exception) { }
+        }
     }
 
     private fun uploadLocalLabelsIfNeeded(userId: String) {
@@ -235,7 +238,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                             .document(label.id).set(label).await()
                     }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
             }
         }
     }
@@ -315,17 +318,17 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
                     syncingNoteIds.remove(finalNote.id)
                     applySortingAndFiltering()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     syncingNoteIds.remove(finalNote.id)
                     applySortingAndFiltering()
                 }
             }
-        } else if (wasOffline == false && nowShouldBeOffline && auth.currentUser != null) {
+        } else if (!wasOffline && nowShouldBeOffline && auth.currentUser != null) {
             viewModelScope.launch {
                 try {
                     firestore.collection("notes").document(auth.currentUser!!.uid)
                         .collection("user_notes").document(finalNote.id.toString()).delete().await()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                 }
             }
         }
@@ -343,7 +346,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     try {
                         firestore.collection("notes").document(auth.currentUser!!.uid)
                             .collection("user_notes").document(id.toString()).delete().await()
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                     }
                 }
             }
@@ -450,7 +453,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 try {
                     firestore.collection("notes").document(it.uid).collection("labels")
                         .document(newLabel.id).set(newLabel).await()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
 
                 }
             }
@@ -467,12 +470,29 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         _allNotesItems.addAll(updatedNotes)
         saveAllNotes()
 
-        if (_selectedLabel.value == labelId) _selectedLabel.value = null
+        _labels.value = _labels.value.filter { it.id != labelId }
+        saveLabels()
+
+        if (_selectedLabel.value == labelId) {
+            _selectedLabel.value = null
+        }
+
         applySortingAndFiltering()
 
-        deleteLabelFromCloud(labelId)
+        auth.currentUser?.let {
+            viewModelScope.launch {
+                try {
+                    firestore.collection("notes")
+                        .document(it.uid)
+                        .collection("labels")
+                        .document(labelId)
+                        .delete()
+                        .await()
+                } catch (_: Exception) {
+                }
+            }
+        }
     }
-
     fun toggleShowLocalOnly() {
         val newValue = !prefsManager.showLocalOnlyNotes
         prefsManager.showLocalOnlyNotes = newValue
@@ -564,7 +584,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             var lastHeader: String? = null
 
             for (note in sortedNotes) {
-                note.currentHeader = getHeaderForNote(note, currentSortOption, currentSortOrder)
+                note.currentHeader = getHeaderForNote(note, currentSortOption)
                 if (note.currentHeader != lastHeader) {
                     groupedItems.add(note.currentHeader)
                     lastHeader = note.currentHeader
@@ -581,7 +601,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private fun getHeaderForNote(
         note: NotesItems,
         sortOption: SortOption,
-        sortOrder: SortOrder,
     ): String {
         return when (sortOption) {
             SortOption.CREATION_DATE -> {
@@ -609,7 +628,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     companion object {
-        const val DEFAULT_LIST_ID = "default_list"
         const val MAX_LINES_FULL_NOTE = -1
 
         val COLOR_RED = noteRedLight.value.toLong()
