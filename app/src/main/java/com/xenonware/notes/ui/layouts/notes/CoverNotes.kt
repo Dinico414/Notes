@@ -838,6 +838,7 @@ fun CoverNotes(
 
                         },
                         onAddModeToggle = onAddModeToggle,
+                        isSelectedColor = extendedMaterialColorScheme.inverseErrorContainer,
                         selectionContentOverride = {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -856,7 +857,7 @@ fun CoverNotes(
                                         textAlign = TextAlign.Center,
                                         style = typography.bodyLarge.copy(
                                             fontFamily = QuicksandTitleVariable,
-                                            color = extendedMaterialColorScheme.inverseErrorContainer
+                                            color = extendedMaterialColorScheme.inverseOnErrorContainer
 
                                         )
                                     )

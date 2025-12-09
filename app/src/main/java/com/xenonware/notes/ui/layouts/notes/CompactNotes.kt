@@ -833,6 +833,7 @@ fun CompactNotes(
 
                         },
                         onAddModeToggle = onAddModeToggle,
+                        isSelectedColor = extendedMaterialColorScheme.inverseErrorContainer,
                         selectionContentOverride = {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -851,7 +852,7 @@ fun CompactNotes(
                                         textAlign = TextAlign.Center,
                                         style = typography.bodyLarge.copy(
                                             fontFamily = QuicksandTitleVariable,
-                                            color = extendedMaterialColorScheme.inverseErrorContainer
+                                            color = extendedMaterialColorScheme.inverseOnErrorContainer
 
                                         )
                                     )
