@@ -2,6 +2,7 @@ package com.xenonware.notes.ui.res
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
+import com.xenon.mylibrary.values.SmallPadding
 import com.xenonware.notes.R
 
 
@@ -41,35 +43,41 @@ fun FilterItem(
     } else {
         Color.Transparent
     }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(100f))
             .background(backgroundColor)
             .clickable { onClick() }
-            .padding(LargestPadding),
+            .padding(start = LargestPadding, end = SmallPadding),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            modifier = Modifier.size(24.dp),
-            tint = colorScheme.onSurface
-        )
-        Text(
-            text = label,
-            fontFamily = QuicksandTitleVariable,
-            style = MaterialTheme.typography.bodyLarge,
+
+        Row(
             modifier = Modifier
-                .padding(start = LargestPadding)
+                .padding(vertical = LargestPadding)
                 .weight(1f),
-            color = colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+            horizontalArrangement = Arrangement.spacedBy(LargestPadding),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(24.dp),
+                tint = colorScheme.onSurface
+            )
+            Text(
+                text = label,
+                fontFamily = QuicksandTitleVariable,
+                style = MaterialTheme.typography.bodyLarge,
+                color = colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
         onDeleteClick?.let {
             IconButton(
-                onClick = it, modifier = Modifier.size(24.dp)
+                onClick = it
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Delete,
