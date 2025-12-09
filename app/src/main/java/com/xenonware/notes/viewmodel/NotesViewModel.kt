@@ -22,11 +22,8 @@ import com.xenonware.notes.ui.theme.noteYellowLight
 import com.xenonware.notes.viewmodel.classes.Label
 import com.xenonware.notes.viewmodel.classes.NoteType
 import com.xenonware.notes.viewmodel.classes.NotesItems
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -40,47 +37,25 @@ enum class SortOrder { ASCENDING, DESCENDING }
 enum class NoteFilterType { ALL, TEXT, AUDIO, LIST, SKETCH }
 enum class NotesLayoutType { LIST, GRID }
 
-sealed class SnackbarEvent {
-    data class ShowUndoDeleteSnackbar(val notesItems: NotesItems) : SnackbarEvent()
-}
-
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefsManager = SharedPreferenceManager(application.applicationContext)
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
 
-    // Source of truth — all notes
     private val _allNotesItems = mutableStateListOf<NotesItems>()
     private val _displayedNotesItems = mutableStateListOf<Any>()
     val noteItems: List<Any> get() = _displayedNotesItems
 
     private var currentNoteId = 1
 
-    // Sync tracking
     private val syncingNoteIds = mutableStateSetOf<Int>()
     private val offlineNoteIds = mutableStateSetOf<Int>()
 
     fun isNoteBeingSynced(noteId: Int) = syncingNoteIds.contains(noteId)
 
-    fun isNoteSynced(noteId: Int): Boolean =
-        auth.currentUser != null && noteItems
-            .filterIsInstance<NotesItems>()
-            .find { it.id == noteId }
-            ?.isOffline == false
-
-    fun isLocalOnlyNote(noteId: Int): Boolean =
-        noteItems
-            .filterIsInstance<NotesItems>()
-            .find { it.id == noteId }
-            ?.isOffline == true
-
-
     private var recentlyDeletedItem: NotesItems? = null
     private var recentlyDeletedItemOriginalIndex: Int = -1
-
-    private val _snackbarEvent = MutableSharedFlow<SnackbarEvent>()
-    val snackbarEvent: SharedFlow<SnackbarEvent> = _snackbarEvent.asSharedFlow()
 
     private val _noteFilterType = MutableStateFlow(NoteFilterType.ALL)
     val noteFilterType: StateFlow<NoteFilterType> = _noteFilterType.asStateFlow()
@@ -126,15 +101,12 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
         auth.currentUser?.uid?.let { uid ->
             startRealtimeListenerForFutureChanges(uid)
-            startLabelsRealtimeListener(uid)  // ← ADD THIS
+            startLabelsRealtimeListener(uid)
         }
     }
 
-    // REAL-TIME LISTENER — ONLY ADDS NEW NOTES
     private fun startRealtimeListenerForFutureChanges(userId: String) {
-        firestore.collection("notes")
-            .document(userId)
-            .collection("user_notes")
+        firestore.collection("notes").document(userId).collection("user_notes")
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
 
@@ -151,6 +123,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                                 }
                             }
                         }
+
                         DocumentChange.Type.MODIFIED -> {
                             if (!offlineNoteIds.contains(note.id)) {
                                 val index = _allNotesItems.indexOfFirst { it.id == note.id }
@@ -161,6 +134,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                                 }
                             }
                         }
+
                         DocumentChange.Type.REMOVED -> {
                             if (!offlineNoteIds.contains(note.id)) {
                                 _allNotesItems.removeAll { it.id == note.id }
@@ -174,14 +148,11 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun startLabelsRealtimeListener(userId: String) {
-        firestore.collection("notes")
-            .document(userId)
-            .collection("labels")
+        firestore.collection("notes").document(userId).collection("labels")
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
 
-                val cloudLabels = snapshot.documents
-                    .mapNotNull { it.toObject(Label::class.java) }
+                val cloudLabels = snapshot.documents.mapNotNull { it.toObject(Label::class.java) }
                     .sortedBy { it.text.lowercase() }
 
                 if (cloudLabels != _labels.value) {
@@ -197,14 +168,9 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _labels.value.forEach { label ->
                 try {
-                    firestore.collection("notes")
-                        .document(uid)
-                        .collection("labels")
-                        .document(label.id)
-                        .set(label)
-                        .await()
+                    firestore.collection("notes").document(uid).collection("labels")
+                        .document(label.id).set(label).await()
                 } catch (e: Exception) {
-                    // ignore individual failures
                 }
             }
         }
@@ -215,32 +181,39 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             try {
-                firestore.collection("notes")
-                    .document(uid)
-                    .collection("labels")
-                    .document(labelId)
-                    .delete()
-                    .await()
-            } catch (e: Exception) { }
+                firestore.collection("notes").document(uid).collection("labels").document(labelId)
+                    .delete().await()
+            } catch (e: Exception) {
+            }
         }
     }
 
     fun onSignedIn() {
         val uid = auth.currentUser?.uid ?: return
 
-        // Start real-time listeners FIRST
         startRealtimeListenerForFutureChanges(uid)
         startLabelsRealtimeListener(uid)
+        syncLabelsToCloud()
 
-        // 1. Upload any local-only notes (your existing code)
+
         viewModelScope.launch {
             _allNotesItems.toList().forEach { note ->
                 if (note.isOffline || note.id in syncingNoteIds) return@forEach
-                // ... your existing upload logic ...
+
+                syncingNoteIds.add(note.id)
+                try {
+                    firestore.collection("notes").document(uid).collection("user_notes")
+                        .document(note.id.toString()).set(note).await()
+
+                    offlineNoteIds.remove(note.id)
+                    syncingNoteIds.remove(note.id)
+                } catch (e: Exception) {
+                    syncingNoteIds.remove(note.id)
+
+                }
             }
         }
 
-        // 2. NEW: Upload local labels that don’t exist in the cloud yet
         uploadLocalLabelsIfNeeded(uid)
     }
 
@@ -249,28 +222,20 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             try {
-                val snapshot = firestore.collection("notes")
-                    .document(userId)
-                    .collection("labels")
-                    .get()
-                    .await()
+                val snapshot =
+                    firestore.collection("notes").document(userId).collection("labels").get()
+                        .await()
 
                 val cloudLabelIds = snapshot.documents.mapNotNull { it.id }.toSet()
                 val localLabelsToUpload = _labels.value.filter { it.id !in cloudLabelIds }
 
                 if (localLabelsToUpload.isNotEmpty()) {
                     localLabelsToUpload.forEach { label ->
-                        firestore.collection("notes")
-                            .document(userId)
-                            .collection("labels")
-                            .document(label.id)
-                            .set(label)
-                            .await()
+                        firestore.collection("notes").document(userId).collection("labels")
+                            .document(label.id).set(label).await()
                     }
-                    // No need to update _labels — the real-time listener will do it
                 }
             } catch (e: Exception) {
-                // If anything fails → keep local labels, will retry next time
             }
         }
     }
@@ -281,7 +246,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         noteType: NoteType = NoteType.TEXT,
         color: Long? = null,
         labels: List<String> = emptyList(),
-        forceLocal: Boolean = false
+        forceLocal: Boolean = false,
     ) {
         if (title.isBlank()) return
 
@@ -309,12 +274,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             applySortingAndFiltering()
 
             val uid = auth.currentUser!!.uid
-            firestore.collection("notes")
-                .document(uid)
-                .collection("user_notes")
-                .document(newId.toString())
-                .set(newItem)
-                .addOnSuccessListener {
+            firestore.collection("notes").document(uid).collection("user_notes")
+                .document(newId.toString()).set(newItem).addOnSuccessListener {
                     syncingNoteIds.remove(newId)
                     applySortingAndFiltering()
                 }
@@ -348,11 +309,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
             viewModelScope.launch {
                 try {
-                    firestore.collection("notes")
-                        .document(auth.currentUser!!.uid)
-                        .collection("user_notes")
-                        .document(finalNote.id.toString())
-                        .set(finalNote)
+                    firestore.collection("notes").document(auth.currentUser!!.uid)
+                        .collection("user_notes").document(finalNote.id.toString()).set(finalNote)
                         .await()
 
                     syncingNoteIds.remove(finalNote.id)
@@ -362,86 +320,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     applySortingAndFiltering()
                 }
             }
-        }
-
-        // CRITICAL: If it was online before, and now it's offline → delete from cloud
-        else if (wasOffline == false && nowShouldBeOffline && auth.currentUser != null) {
+        } else if (wasOffline == false && nowShouldBeOffline && auth.currentUser != null) {
             viewModelScope.launch {
                 try {
-                    firestore.collection("notes")
-                        .document(auth.currentUser!!.uid)
-                        .collection("user_notes")
-                        .document(finalNote.id.toString())
-                        .delete()
-                        .await()
-                    // Successfully removed from cloud → now truly local-only
+                    firestore.collection("notes").document(auth.currentUser!!.uid)
+                        .collection("user_notes").document(finalNote.id.toString()).delete().await()
                 } catch (e: Exception) {
-                    // Failed to delete → still keep as local-only (safe)
                 }
             }
-        }
-    }
-
-    fun setNoteOffline(noteId: Int) {
-        val index = _allNotesItems.indexOfFirst { it.id == noteId }
-        if (index == -1) return
-
-        val note = _allNotesItems[index]
-
-        // Just mark as offline locally first
-        val offlineNote = note.copy(isOffline = true)
-        _allNotesItems[index] = offlineNote
-        offlineNoteIds.add(noteId)
-        saveAllNotes()
-        applySortingAndFiltering()
-
-        // Now try to delete from cloud (fire-and-forget, non-blocking)
-        if (auth.currentUser != null && !note.isOffline) {
-            viewModelScope.launch {
-                try {
-                    firestore.collection("notes")
-                        .document(auth.currentUser!!.uid)
-                        .collection("user_notes")
-                        .document(noteId.toString())
-                        .delete()
-                        .await()
-                    // Success → it's now truly local-only
-                } catch (e: Exception) {
-                    // Failed to delete from cloud → revert to online?
-                    // Or keep as local-only anyway? Your call.
-                    // Currently we keep it local-only even if delete fails → safer
-                }
-            }
-        }
-    }
-
-    fun prepareRemoveItem(itemId: Int) {
-        val item = _allNotesItems.find { it.id == itemId } ?: return
-        val index = _allNotesItems.indexOf(item)
-
-        recentlyDeletedItem = item
-        recentlyDeletedItemOriginalIndex = index
-
-        _allNotesItems.remove(item)
-        offlineNoteIds.remove(itemId)
-        saveAllNotes()
-        applySortingAndFiltering(preserveRecentlyDeleted = true)
-
-        if (auth.currentUser != null && !item.isOffline) {
-            viewModelScope.launch {
-                try {
-                    firestore.collection("notes")
-                        .document(auth.currentUser!!.uid)
-                        .collection("user_notes")
-                        .document(itemId.toString())
-                        .delete()
-                        .await()
-                } catch (e: Exception) { }
-            }
-        }
-
-        viewModelScope.launch {
-            _snackbarEvent.emit(SnackbarEvent.ShowUndoDeleteSnackbar(item))
         }
     }
 
@@ -455,53 +341,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 itemIds.forEach { id ->
                     try {
-                        firestore.collection("notes")
-                            .document(auth.currentUser!!.uid)
-                            .collection("user_notes")
-                            .document(id.toString())
-                            .delete()
-                            .await()
-                    } catch (e: Exception) { }
+                        firestore.collection("notes").document(auth.currentUser!!.uid)
+                            .collection("user_notes").document(id.toString()).delete().await()
+                    } catch (e: Exception) {
+                    }
                 }
             }
         }
     }
-
-    fun undoRemoveItem() {
-        recentlyDeletedItem?.let { item ->
-            if (recentlyDeletedItemOriginalIndex in 0.._allNotesItems.size) {
-                _allNotesItems.add(recentlyDeletedItemOriginalIndex, item)
-            } else {
-                _allNotesItems.add(0, item)
-            }
-            saveAllNotes()
-            applySortingAndFiltering()
-
-            if (auth.currentUser != null && !item.isOffline) {
-                viewModelScope.launch {
-                    try {
-                        firestore.collection("notes")
-                            .document(auth.currentUser!!.uid)
-                            .collection("user_notes")
-                            .document(item.id.toString())
-                            .set(item)
-                            .await()
-                    } catch (e: Exception) { }
-                }
-            }
-
-            recentlyDeletedItem = null
-            recentlyDeletedItemOriginalIndex = -1
-        }
-    }
-
-    fun confirmRemoveItem() {
-        recentlyDeletedItem = null
-        recentlyDeletedItemOriginalIndex = -1
-        saveAllNotes()
-    }
-
-    // All your other functions (loadAllNotes, saveAllNotes, sorting, etc.) — unchanged and perfect
 
     private fun loadAllNotes() {
         currentSortOption = prefsManager.sortOption
@@ -549,6 +396,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             in 600 until 840 -> when (_gridColumnCount.value) {
                 3 -> 4; 4 -> 5; else -> 3
             }
+
             else -> when (_gridColumnCount.value) {
                 4 -> 5; 5 -> 6; else -> 4
             }
@@ -600,12 +448,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         auth.currentUser?.let {
             viewModelScope.launch {
                 try {
-                    firestore.collection("notes")
-                        .document(it.uid)
-                        .collection("labels")
-                        .document(newLabel.id)
-                        .set(newLabel)
-                        .await()
+                    firestore.collection("notes").document(it.uid).collection("labels")
+                        .document(newLabel.id).set(newLabel).await()
                 } catch (e: Exception) {
 
                 }
@@ -641,10 +485,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         applySortingAndFiltering()
     }
 
-    fun updateEditingAudioNoteColor(color: Long?) {
-        _editingAudioNoteColor.value = color
-    }
-
     fun moveItemInFreeSort(itemIdToMove: Int, newDisplayOrderCandidate: Int) {
         if (currentSortOption != SortOption.FREE_SORTING) return
 
@@ -659,17 +499,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         itemsInList.forEachIndexed { newOrder, noteItem ->
             val originalIndex = _allNotesItems.indexOfFirst { it.id == noteItem.id }
             if (originalIndex != -1 && _allNotesItems[originalIndex].displayOrder != newOrder) {
-                _allNotesItems[originalIndex] = _allNotesItems[originalIndex].copy(displayOrder = newOrder)
+                _allNotesItems[originalIndex] =
+                    _allNotesItems[originalIndex].copy(displayOrder = newOrder)
             }
         }
 
         saveAllNotes()
         applySortingAndFiltering()
     }
-
-    var showLocalOnlyNotes: Boolean
-        get() = prefsManager.showLocalOnlyNotes
-        set(value) { prefsManager.showLocalOnlyNotes = value }
 
     private fun applySortingAndFiltering(preserveRecentlyDeleted: Boolean = false) {
         val currentRecentlyDeleted = if (preserveRecentlyDeleted) recentlyDeletedItem else null
@@ -685,8 +522,9 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
         if (searchQuery.value.isNotBlank()) {
             notesToDisplay = notesToDisplay.filter { note ->
-                note.title.contains(searchQuery.value, ignoreCase = true) ||
-                        (note.description?.contains(searchQuery.value, ignoreCase = true) == true)
+                note.title.contains(
+                    searchQuery.value, ignoreCase = true
+                ) || (note.description?.contains(searchQuery.value, ignoreCase = true) == true)
             }
         }
 
@@ -740,12 +578,17 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun getHeaderForNote(note: NotesItems, sortOption: SortOption, sortOrder: SortOrder): String {
+    private fun getHeaderForNote(
+        note: NotesItems,
+        sortOption: SortOption,
+        sortOrder: SortOrder,
+    ): String {
         return when (sortOption) {
             SortOption.CREATION_DATE -> {
                 val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
                 sdf.format(Date(note.creationTimestamp))
             }
+
             SortOption.NAME -> note.title.firstOrNull()?.uppercaseChar()?.toString() ?: "Unknown"
             SortOption.FREE_SORTING -> ""
         }
@@ -759,21 +602,10 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         val comparator: Comparator<NotesItems> = when (option) {
             SortOption.FREE_SORTING -> compareBy { it.displayOrder }
             SortOption.CREATION_DATE -> compareBy<NotesItems> { it.creationTimestamp }.thenBy { it.displayOrder }
-            SortOption.NAME -> compareBy<NotesItems, String>(String.CASE_INSENSITIVE_ORDER) { it.title }
-                .thenBy { it.displayOrder }
+            SortOption.NAME -> compareBy<NotesItems, String>(String.CASE_INSENSITIVE_ORDER) { it.title }.thenBy { it.displayOrder }
         }
         return if (order == SortOrder.ASCENDING) notes.sortedWith(comparator)
         else notes.sortedWith(comparator.reversed())
-    }
-
-    fun setSortCriteria(option: SortOption, order: SortOrder) {
-        if (currentSortOption != option || currentSortOrder != order) {
-            currentSortOption = option
-            currentSortOrder = order
-            prefsManager.sortOption = option
-            prefsManager.sortOrder = order
-            applySortingAndFiltering()
-        }
     }
 
     companion object {
