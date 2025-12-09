@@ -105,6 +105,10 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _editingAudioNoteColor = MutableStateFlow<Long?>(null)
     val editingAudioNoteColor: StateFlow<Long?> = _editingAudioNoteColor.asStateFlow()
 
+    private val _showLocalOnly = MutableStateFlow(prefsManager.showLocalOnlyNotes)
+    val showLocalOnly: StateFlow<Boolean> = _showLocalOnly.asStateFlow()
+
+
     private val _selectedColors = MutableStateFlow<Set<Long?>>(emptySet())
     val selectedColors: StateFlow<Set<Long?>> = _selectedColors.asStateFlow()
 
@@ -649,6 +653,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         deleteLabelFromCloud(labelId)
     }
 
+    // Add this function (public is fine — it's a command, not state)
+    fun toggleShowLocalOnly() {
+        val newValue = !prefsManager.showLocalOnlyNotes
+        prefsManager.showLocalOnlyNotes = newValue
+        _showLocalOnly.value = newValue
+        applySortingAndFiltering()  // private is fine here — called from inside VM
+    }
+
     fun setLabelFilter(labelId: String?) {
         _selectedLabel.value = if (_selectedLabel.value == labelId) null else labelId
         applySortingAndFiltering()
@@ -679,6 +691,10 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         saveAllNotes()
         applySortingAndFiltering()
     }
+
+    var showLocalOnlyNotes: Boolean
+        get() = prefsManager.showLocalOnlyNotes
+        set(value) { prefsManager.showLocalOnlyNotes = value }
 
     private fun applySortingAndFiltering(preserveRecentlyDeleted: Boolean = false) {
         val currentRecentlyDeleted = if (preserveRecentlyDeleted) recentlyDeletedItem else null
@@ -716,6 +732,10 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     currentSelectedColors.contains(note.color)
                 }
             }
+        }
+
+        if (_showLocalOnly.value) {
+            notesToDisplay = notesToDisplay.filter { it.isOffline }
         }
 
         if (_selectedLabel.value != null) {

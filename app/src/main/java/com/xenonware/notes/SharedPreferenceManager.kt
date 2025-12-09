@@ -22,13 +22,13 @@ class SharedPreferenceManager(context: Context) {
     private val coverThemeEnabledKey = "cover_theme_enabled"
     private val coverDisplayDimension1Key = "cover_display_dimension_1"
     private val coverDisplayDimension2Key = "cover_display_dimension_2"
-    private val taskSortOptionKey = "task_sort_option"
-    private val taskSortOrderKey = "task_sort_order"
-    private val taskListKey = "task_list_json"
+    private val sortOptionKey = "task_sort_option"
+    private val sortOrderKey = "task_sort_order"
+    private val listKey = "task_list_json"
     private val labelsListKey = "labels_list_json"
     private val blackedOutModeKey = "blacked_out_mode_enabled"
     private val developerModeKey = "developer_mode_enabled"
-    private val notesLayoutTypeKey = "notes_layout_type"
+    private val layoutTypeKey = "notes_layout_type"
     private val gridColumnCountKey = "grid_column_count"
     private val listItemLineCountKey = "list_item_line_count"
     private val isUserLoggedInKey = "is_user_logged_in"
@@ -79,13 +79,13 @@ class SharedPreferenceManager(context: Context) {
 
     var notesItems: List<NotesItems>
         get() {
-            val jsonString = sharedPreferences.getString(taskListKey, null)
+            val jsonString = sharedPreferences.getString(listKey, null)
             return if (jsonString != null) {
                 try {
                     json.decodeFromString<List<NotesItems>>(jsonString)
                 } catch (e: Exception) {
                     System.err.println("Error decoding task items, deleting old data: ${e.localizedMessage}")
-                    sharedPreferences.edit { remove(taskListKey) }
+                    sharedPreferences.edit { remove(listKey) }
                     emptyList()
                 }
             } else {
@@ -95,7 +95,7 @@ class SharedPreferenceManager(context: Context) {
         set(value) {
             try {
                 val jsonString = json.encodeToString(value)
-                sharedPreferences.edit { putString(taskListKey, jsonString) }
+                sharedPreferences.edit { putString(listKey, jsonString) }
             } catch (e: Exception) {
                 System.err.println("Error encoding task items: ${e.localizedMessage}")
             }
@@ -127,7 +127,7 @@ class SharedPreferenceManager(context: Context) {
 
     var sortOption: SortOption
         get() {
-            val option = sharedPreferences.getString(taskSortOptionKey, null)
+            val option = sharedPreferences.getString(sortOptionKey, null)
             try {
                 if (option != null) return SortOption.valueOf(option)
             } catch (_: Exception) {
@@ -135,12 +135,12 @@ class SharedPreferenceManager(context: Context) {
             return SortOption.FREE_SORTING
         }
         set(value) {
-            sharedPreferences.edit { putString(taskSortOptionKey, value.name) }
+            sharedPreferences.edit { putString(sortOptionKey, value.name) }
         }
 
     var sortOrder: SortOrder
         get() {
-            val order = sharedPreferences.getString(taskSortOrderKey, null)
+            val order = sharedPreferences.getString(sortOrderKey, null)
             try {
                 if (order != null) return SortOrder.valueOf(order)
             } catch (_: Exception) {
@@ -148,11 +148,11 @@ class SharedPreferenceManager(context: Context) {
             return SortOrder.ASCENDING
         }
         set(value) {
-            sharedPreferences.edit { putString(taskSortOrderKey, value.name) }
+            sharedPreferences.edit { putString(sortOrderKey, value.name) }
         }
     var notesLayoutType: NotesLayoutType
         get() {
-            val type = sharedPreferences.getString(notesLayoutTypeKey, null)
+            val type = sharedPreferences.getString(layoutTypeKey, null)
             try {
                 if (type != null) return NotesLayoutType.valueOf(type)
             } catch (_: Exception) {
@@ -160,7 +160,7 @@ class SharedPreferenceManager(context: Context) {
             return NotesLayoutType.LIST
         }
         set(value) {
-            sharedPreferences.edit { putString(notesLayoutTypeKey, value.name) }
+            sharedPreferences.edit { putString(layoutTypeKey, value.name) }
         }
 
     var gridColumnCount: Int
@@ -170,6 +170,10 @@ class SharedPreferenceManager(context: Context) {
     var listItemLineCount: Int
         get() = sharedPreferences.getInt(listItemLineCountKey, 3)
         set(value) = sharedPreferences.edit { putInt(listItemLineCountKey, value) }
+
+    var showLocalOnlyNotes: Boolean
+        get() = sharedPreferences.getBoolean("show_local_only_notes", false)
+        set(value) = sharedPreferences.edit { putBoolean("show_local_only_notes", value) }
 
     fun isCoverThemeApplied(currentDisplaySize: IntSize): Boolean {
         if (!coverThemeEnabled) return false
@@ -193,7 +197,7 @@ class SharedPreferenceManager(context: Context) {
             putBoolean(blackedOutModeKey, false)
             putBoolean(developerModeKey, false)
             remove(gridColumnCountKey)
-            remove(notesLayoutTypeKey)
+            remove(layoutTypeKey)
             remove(listItemLineCountKey)
             remove(labelsListKey)
         }

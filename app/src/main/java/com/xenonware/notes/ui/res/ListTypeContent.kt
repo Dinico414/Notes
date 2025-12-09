@@ -28,6 +28,8 @@ import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.TextFields
@@ -40,6 +42,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -55,6 +59,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.gms.auth.api.identity.Identity
@@ -224,7 +229,65 @@ fun ListContent(
                             label = stringResource(R.string.sketch_notes),
                             isSelected = currentFilter == NoteFilterType.SKETCH,
                             onClick = { onFilterSelected(NoteFilterType.SKETCH) })
+
+                        Spacer(modifier = Modifier.height(MediumPadding))
+
+                        val showLocalOnly by notesViewModel.showLocalOnly.collectAsState()
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(100f))
+                                .padding(horizontal = LargestPadding),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = LargestPadding),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(LargestPadding)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.CloudOff,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Show local only",
+                                    fontFamily = QuicksandTitleVariable,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+
+                                )
+                            }
+
+                            Switch(
+                                checked = showLocalOnly,
+                                onCheckedChange = { notesViewModel.toggleShowLocalOnly() },
+                                colors = SwitchDefaults.colors(),
+                                thumbContent = {
+                                    if (showLocalOnly) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Check,
+                                            contentDescription = "Checked",
+                                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                                            tint = colorScheme.onPrimaryContainer
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Close,
+                                            contentDescription = "Not Checked",
+                                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                                            tint = colorScheme.surfaceDim
+                                        )
+                                    }
+                                })
+                        }
                     }
+
                     HorizontalDivider(
                         thickness = 1.dp, color = colorScheme.outlineVariant
                     )
@@ -393,6 +456,7 @@ fun ListContent(
                             }
                         }
                     }
+
                     HorizontalDivider(
                         thickness = 1.dp, color = colorScheme.outlineVariant
                     )
