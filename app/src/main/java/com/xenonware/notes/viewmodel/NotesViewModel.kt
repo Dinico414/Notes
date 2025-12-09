@@ -120,9 +120,9 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         loadLayoutSettings()
         applySortingAndFiltering()
 
-        // Start real-time listener if already signed in
         auth.currentUser?.uid?.let { uid ->
             startRealtimeListenerForFutureChanges(uid)
+            startLabelsRealtimeListener(uid)  // ← ADD THIS
         }
     }
 
@@ -169,9 +169,79 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
+    private fun startLabelsRealtimeListener(userId: String) {
+        firestore.collection("notes")
+            .document(userId)
+            .collection("labels")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+
+                val cloudLabels = mutableListOf<Label>()
+                for (change in snapshot.documentChanges) {
+                    val label = change.document.toObject(Label::class.java)
+                    when (change.type) {
+                        DocumentChange.Type.ADDED,
+                        DocumentChange.Type.MODIFIED -> {
+                            if (cloudLabels.none { it.id == label.id }) {
+                                cloudLabels.add(label)
+                            } else {
+                                cloudLabels.removeAll { it.id == label.id }
+                                cloudLabels.add(label)
+                            }
+                        }
+                        DocumentChange.Type.REMOVED -> {
+                            cloudLabels.removeAll { it.id == label.id }
+                        }
+                    }
+                }
+
+                // Only update if different (avoid infinite loops)
+                if (cloudLabels.toSet() != _labels.value.toSet()) {
+                    _labels.value = cloudLabels.sortedBy { it.text.lowercase() }
+                    saveLabels() // still backup locally
+                }
+            }
+    }
+
+    fun syncLabelsToCloud() {
+        val uid = auth.currentUser?.uid ?: return
+
+        viewModelScope.launch {
+            _labels.value.forEach { label ->
+                try {
+                    firestore.collection("notes")
+                        .document(uid)
+                        .collection("labels")
+                        .document(label.id)
+                        .set(label)
+                        .await()
+                } catch (e: Exception) {
+                    // ignore individual failures
+                }
+            }
+        }
+    }
+
+    fun deleteLabelFromCloud(labelId: String) {
+        val uid = auth.currentUser?.uid ?: return
+
+        viewModelScope.launch {
+            try {
+                firestore.collection("notes")
+                    .document(uid)
+                    .collection("labels")
+                    .document(labelId)
+                    .delete()
+                    .await()
+            } catch (e: Exception) { }
+        }
+    }
+
     fun onSignedIn() {
         val uid = auth.currentUser?.uid ?: return
         startRealtimeListenerForFutureChanges(uid)
+        startLabelsRealtimeListener(uid)
+        syncLabelsToCloud()
 
         viewModelScope.launch {
             _allNotesItems.toList().forEach { note ->
@@ -244,6 +314,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 }
         }
     }
+
 
     fun updateItem(updatedItem: NotesItems, forceLocal: Boolean = false) {
         val index = _allNotesItems.indexOfFirst { it.id == updatedItem.id }
@@ -514,10 +585,25 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addLabel(labelText: String) {
-        if (labelText.isNotBlank()) {
-            val newLabel = Label(id = UUID.randomUUID().toString(), text = labelText.trim())
-            _labels.value = _labels.value + newLabel
-            saveLabels()
+        if (labelText.isBlank()) return
+
+        val newLabel = Label(id = UUID.randomUUID().toString(), text = labelText.trim())
+        _labels.value = (_labels.value + newLabel).sortedBy { it.text.lowercase() }
+        saveLabels()
+
+        auth.currentUser?.let {
+            viewModelScope.launch {
+                try {
+                    firestore.collection("notes")
+                        .document(it.uid)
+                        .collection("labels")
+                        .document(newLabel.id)
+                        .set(newLabel)
+                        .await()
+                } catch (e: Exception) {
+
+                }
+            }
         }
     }
 
@@ -536,6 +622,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
         if (_selectedLabel.value == labelId) _selectedLabel.value = null
         applySortingAndFiltering()
+
+        deleteLabelFromCloud(labelId)
     }
 
     fun setLabelFilter(labelId: String?) {
