@@ -180,33 +180,12 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
 
-                val cloudLabels = mutableListOf<Label>()
-                for (change in snapshot.documentChanges) {
-                    val label = change.document.toObject(Label::class.java)
-                    when (change.type) {
-                        DocumentChange.Type.ADDED,
-                        DocumentChange.Type.MODIFIED -> {
-                            if (cloudLabels.none { it.id == label.id }) {
-                                cloudLabels.add(label)
-                            } else {
-                                cloudLabels.removeAll { it.id == label.id }
-                                cloudLabels.add(label)
-                            }
-                        }
-                        DocumentChange.Type.REMOVED -> {
-                            cloudLabels.removeAll { it.id == label.id }
-                        }
-                    }
-                }
+                val cloudLabels = snapshot.documents
+                    .mapNotNull { it.toObject(Label::class.java) }
+                    .sortedBy { it.text.lowercase() }
 
-                if (cloudLabels.toSet() != _labels.value.toSet()) {
-                    _labels.value = cloudLabels.sortedBy { it.text.lowercase() }
-                    saveLabels()
-                }
-                val newLabels = cloudLabels.sortedBy { it.text.lowercase() }
-
-                if (newLabels.toSet() != _labels.value.toSet()) {
-                    _labels.value = newLabels
+                if (cloudLabels != _labels.value) {
+                    _labels.value = cloudLabels
                     saveLabels()
                 }
             }
@@ -644,21 +623,17 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         _allNotesItems.addAll(updatedNotes)
         saveAllNotes()
 
-        _labels.value = _labels.value.filter { it.id != labelId }
-        saveLabels()
-
         if (_selectedLabel.value == labelId) _selectedLabel.value = null
         applySortingAndFiltering()
 
         deleteLabelFromCloud(labelId)
     }
 
-    // Add this function (public is fine — it's a command, not state)
     fun toggleShowLocalOnly() {
         val newValue = !prefsManager.showLocalOnlyNotes
         prefsManager.showLocalOnlyNotes = newValue
         _showLocalOnly.value = newValue
-        applySortingAndFiltering()  // private is fine here — called from inside VM
+        applySortingAndFiltering()
     }
 
     fun setLabelFilter(labelId: String?) {
