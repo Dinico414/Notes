@@ -118,6 +118,7 @@ fun SettingsItems(
         title = if (state.isSignInSuccessful) userData?.username ?: "Signed in" else "Sign in with Google",
         subtitle = if (state.isSignInSuccessful) userData?.email else null,
         profilePictureUrl = userData?.profilePictureUrl,
+        noAccIcon = painterResource(R.drawable.default_icon),
         isSignedIn = state.isSignInSuccessful,
         onClick = if (state.isSignInSuccessful) onSignOutClick else onSignInClick,
         shape = tileShapeOverride ?: standaloneShape,

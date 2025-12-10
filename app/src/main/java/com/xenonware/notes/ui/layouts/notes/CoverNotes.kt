@@ -1086,7 +1086,7 @@ fun CoverNotes(
                             )
 
                             GoogleProfilePicture(
-                                noAccIcon = painterResource(id = R.mipmap.default_icon),
+                                noAccIcon = painterResource(id = R.drawable.default_icon),
                                 profilePictureUrl = userData?.profilePictureUrl,
                                 contentDescription = stringResource(R.string.profile_picture),
                                 modifier = Modifier.size(26.dp)

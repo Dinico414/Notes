@@ -34,7 +34,7 @@ googleid = "1.1.1"
 firebaseDatabase = "22.0.1"
 firebaseFirestore = "26.0.2"
 
-xenonCommons = "2.1.7"
+xenonCommons = "2.1.9"
 #noinspection UnusedVersionCatalogEntry
 xenonUi = "3.1"
 

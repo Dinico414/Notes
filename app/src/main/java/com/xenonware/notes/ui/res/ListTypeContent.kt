@@ -114,7 +114,7 @@ fun ListContent(
         profilePictureUrl = userData?.profilePictureUrl,
         hasBottomContent = false,
         isSignedIn = state.isSignInSuccessful,
-        noAccIcon = painterResource(R.mipmap.default_icon),
+        noAccIcon = painterResource(R.drawable.default_icon),
         profilePicDesc = stringResource(R.string.profile_picture)
     ) {
         Column {
