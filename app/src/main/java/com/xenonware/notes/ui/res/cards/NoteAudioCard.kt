@@ -1,6 +1,6 @@
 @file:Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 
-package com.xenonware.notes.ui.res
+package com.xenonware.notes.ui.res.cards
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumCornerRadius
+import com.xenonware.notes.ui.res.sheets.formatDuration
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.noteBlueDark
@@ -302,8 +303,16 @@ fun NoteAudioCard(
                                         ) {
                                             Text(
                                                 text = when {
-                                                    isThisAudioActive -> "${formatDuration(player.currentPlaybackPositionMillis)} / ${formatDuration(thisAudioDuration)}"
-                                                    else -> "00:00 / ${formatDuration(thisAudioDuration)}"
+                                                    isThisAudioActive -> "${formatDuration(player.currentPlaybackPositionMillis)} / ${
+                                                        formatDuration(
+                                                            thisAudioDuration
+                                                        )
+                                                    }"
+                                                    else -> "00:00 / ${
+                                                        formatDuration(
+                                                            thisAudioDuration
+                                                        )
+                                                    }"
                                                 },
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -323,7 +332,11 @@ fun NoteAudioCard(
                                         ) {
                                             Text(
                                                 text = if (isThisAudioActive)
-                                                    "${formatDuration(player.currentPlaybackPositionMillis)} / ${formatDuration(thisAudioDuration)}"
+                                                    "${formatDuration(player.currentPlaybackPositionMillis)} / ${
+                                                        formatDuration(
+                                                            thisAudioDuration
+                                                        )
+                                                    }"
                                                 else "00:00 / ${formatDuration(thisAudioDuration)}",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant

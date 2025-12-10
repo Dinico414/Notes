@@ -1,4 +1,4 @@
-package com.xenonware.notes.ui.res
+package com.xenonware.notes.ui.res.sheets
 
 import android.annotation.SuppressLint
 import android.app.Application
@@ -58,6 +58,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -92,8 +93,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
-import com.xenonware.notes.NoteCanvas
+import com.xenonware.notes.util.NoteCanvas
 import com.xenonware.notes.R
+import com.xenonware.notes.ui.res.DropdownNoteMenu
+import com.xenonware.notes.ui.res.LabelSelectionDialog
+import com.xenonware.notes.ui.res.MenuItem
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
@@ -213,7 +217,7 @@ fun NoteSketchSheet(
             scope.launch {
                 snackbarHostState.showSnackbar(
                     message = context.getString(R.string.navigate_back_description),
-                    duration = androidx.compose.material3.SnackbarDuration.Short
+                    duration = SnackbarDuration.Short
                 )
             }
             lastBackPressTime = currentTime
@@ -368,7 +372,7 @@ fun NoteSketchSheet(
                             scope.launch {
                                 snackbarHostState.showSnackbar(
                                     message = context.getString(R.string.open_navigation_menu),
-                                    duration = androidx.compose.material3.SnackbarDuration.Short
+                                    duration = SnackbarDuration.Short
                                 )
                             }
                             lastBackPressTime = currentTime
@@ -454,7 +458,7 @@ fun NoteSketchSheet(
                                         tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
                                     )
                                 }, textColor = animatedTextColor
-                            ),  MenuItem(
+                            ), MenuItem(
                                 text = if (isOffline) "Offline note" else "Online note",
                                 onClick = {
                                     isOffline = !isOffline
@@ -463,7 +467,11 @@ fun NoteSketchSheet(
                                 textColor = if (isOffline) colorScheme.error else null,
                                 icon = {
                                     if (isOffline) {
-                                        Icon(Icons.Rounded.CloudOff, "Local only", tint = colorScheme.error)
+                                        Icon(
+                                            Icons.Rounded.CloudOff,
+                                            "Local only",
+                                            tint = colorScheme.error
+                                        )
                                     } else {
                                         Icon(Icons.Rounded.Cloud, "Synced")
                                     }

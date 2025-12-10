@@ -1,6 +1,6 @@
 @file:Suppress("DEPRECATION", "AssignedValueIsNeverRead")
 
-package com.xenonware.notes.ui.res
+package com.xenonware.notes.ui.res.sheets
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -73,6 +73,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenonware.notes.ui.res.DropdownNoteMenu
+import com.xenonware.notes.ui.res.LabelSelectionDialog
+import com.xenonware.notes.ui.res.MenuItem
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
@@ -498,7 +501,11 @@ fun NoteTextSheet(
                                 showMenu = false
                             }, dismissOnClick = true, icon = {
                                 if (isLabeled) {
-                                    Icon(Icons.Rounded.Bookmark, contentDescription = "Label", tint = labelColor)
+                                    Icon(
+                                        Icons.Rounded.Bookmark,
+                                        contentDescription = "Label",
+                                        tint = labelColor
+                                    )
                                 } else {
                                     Icon(Icons.Rounded.BookmarkBorder, contentDescription = "Label")
                                 }
@@ -534,7 +541,11 @@ fun NoteTextSheet(
                                 textColor = if (isOffline) colorScheme.error else null,
                                 icon = {
                                     if (isOffline) {
-                                        Icon(Icons.Rounded.CloudOff, "Local only", tint = colorScheme.error)
+                                        Icon(
+                                            Icons.Rounded.CloudOff,
+                                            "Local only",
+                                            tint = colorScheme.error
+                                        )
                                     } else {
                                         Icon(Icons.Rounded.Cloud, "Synced")
                                     }

@@ -1,4 +1,4 @@
-package com.xenonware.notes.ui.res
+package com.xenonware.notes.ui.res.sheets
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -62,6 +62,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenonware.notes.ui.res.DropdownNoteMenu
+import com.xenonware.notes.ui.res.LabelSelectionDialog
+import com.xenonware.notes.ui.res.MenuItem
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
@@ -188,7 +191,7 @@ fun NoteListSheet(
         dynamicColor = selectedTheme == "Default"
     ) {
         val animatedTextColor by animateColorAsState(
-            targetValue = if (isFadingOut) MaterialTheme.colorScheme.onSurface.copy(alpha = 0f) else MaterialTheme.colorScheme.onSurface,
+            targetValue = if (isFadingOut) colorScheme.onSurface.copy(alpha = 0f) else colorScheme.onSurface,
             animationSpec = tween(durationMillis = 500),
             label = "animatedTextColor"
         )
@@ -214,7 +217,7 @@ fun NoteListSheet(
                 onDismiss = { showLabelDialog = false })
         }
 
-        val hazeThinColor = MaterialTheme.colorScheme.surfaceDim
+        val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
 
         val safeDrawingPadding = if (WindowInsets.ime.asPaddingValues()
@@ -273,7 +276,7 @@ fun NoteListSheet(
 
                         val itemTextStyle = MaterialTheme.typography.bodyLarge.merge(
                             TextStyle(
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = colorScheme.onSurface,
                                 textDecoration = if (listItem.isChecked) TextDecoration.LineThrough else TextDecoration.None,
                                 fontSize = editorFontSize
                             )
@@ -292,14 +295,14 @@ fun NoteListSheet(
                                 .weight(1f)
                                 .focusRequester(itemFocusRequester),
                             textStyle = itemTextStyle,
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            cursorBrush = SolidColor(colorScheme.primary),
                             decorationBox = { innerTextField ->
                                 Box {
                                     if (listItem.text.isEmpty()) {
                                         Text(
                                             text = "New item",
                                             style = itemTextStyle,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                            color = colorScheme.onSurfaceVariant.copy(
                                                 alpha = 0.6f
                                             )
                                         )
@@ -401,45 +404,45 @@ fun NoteListSheet(
                         onDismissRequest = { showMenu = false },
                         items = listOfNotNull(
                             MenuItem(text = "Label", onClick = {
-                            showLabelDialog = true
-                            showMenu = false
-                        }, dismissOnClick = true, icon = {
-                            if (isLabeled) {
-                                Icon(
-                                    Icons.Rounded.Bookmark,
-                                    contentDescription = "Label",
-                                    tint = labelColor
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Rounded.BookmarkBorder,
-                                    contentDescription = "Label"
-                                )
-                            }
-                        }), MenuItem(
-                                text = colorMenuItemText, onClick = {
-                                val currentIndex = availableThemes.indexOf(selectedTheme)
-                                val nextIndex = (currentIndex + 1) % availableThemes.size
-                                selectedTheme = availableThemes[nextIndex]
-                                onThemeChange(selectedTheme) // Call the callback here
-                                colorChangeJob?.cancel()
-                                colorChangeJob = scope.launch {
-                                    colorMenuItemText = availableThemes[nextIndex]
-                                    isFadingOut = false
-                                    delay(2500)
-                                    isFadingOut = true
-                                    delay(500)
-                                    colorMenuItemText = "Color"
-                                    isFadingOut = false
+                                showLabelDialog = true
+                                showMenu = false
+                            }, dismissOnClick = true, icon = {
+                                if (isLabeled) {
+                                    Icon(
+                                        Icons.Rounded.Bookmark,
+                                        contentDescription = "Label",
+                                        tint = labelColor
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Rounded.BookmarkBorder,
+                                        contentDescription = "Label"
+                                    )
                                 }
-                            }, dismissOnClick = false, icon = {
-                                Icon(
-                                    Icons.Rounded.ColorLens,
-                                    contentDescription = "Color",
-                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                )
-                            }, textColor = animatedTextColor
-                        ),  MenuItem(
+                            }), MenuItem(
+                                text = colorMenuItemText, onClick = {
+                                    val currentIndex = availableThemes.indexOf(selectedTheme)
+                                    val nextIndex = (currentIndex + 1) % availableThemes.size
+                                    selectedTheme = availableThemes[nextIndex]
+                                    onThemeChange(selectedTheme) // Call the callback here
+                                    colorChangeJob?.cancel()
+                                    colorChangeJob = scope.launch {
+                                        colorMenuItemText = availableThemes[nextIndex]
+                                        isFadingOut = false
+                                        delay(2500)
+                                        isFadingOut = true
+                                        delay(500)
+                                        colorMenuItemText = "Color"
+                                        isFadingOut = false
+                                    }
+                                }, dismissOnClick = false, icon = {
+                                    Icon(
+                                        Icons.Rounded.ColorLens,
+                                        contentDescription = "Color",
+                                        tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                    )
+                                }, textColor = animatedTextColor
+                            ), MenuItem(
                                 text = if (isOffline) "Offline note" else "Online note",
                                 onClick = {
                                     isOffline = !isOffline
@@ -448,7 +451,11 @@ fun NoteListSheet(
                                 textColor = if (isOffline) colorScheme.error else null,
                                 icon = {
                                     if (isOffline) {
-                                        Icon(Icons.Rounded.CloudOff, "Local only", tint = colorScheme.error)
+                                        Icon(
+                                            Icons.Rounded.CloudOff,
+                                            "Local only",
+                                            tint = colorScheme.error
+                                        )
                                     } else {
                                         Icon(Icons.Rounded.Cloud, "Synced")
                                     }

@@ -1,4 +1,4 @@
-package com.xenonware.notes.ui.res
+package com.xenonware.notes.ui.res.cards
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -17,7 +17,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -26,8 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumCornerRadius
+import com.xenon.mylibrary.values.MediumSpacing
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.noteBlueDark
@@ -60,12 +63,13 @@ import com.xenonware.notes.ui.theme.noteTurquoiseDark
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
+import com.xenonware.notes.util.fromRichTextJson
 import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.classes.NotesItems
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun NoteSketchCard(
+fun NoteTextCard(
     item: NotesItems,
     isSelected: Boolean,
     isSelectionModeActive: Boolean,
@@ -73,26 +77,23 @@ fun NoteSketchCard(
     onEditItem: (NotesItems) -> Unit,
     notesViewModel: NotesViewModel,
     modifier: Modifier = Modifier,
+    maxLines: Int = Int.MAX_VALUE,
+    isNoteSheetOpen: Boolean,
 ) {
     val isDarkTheme = LocalIsDarkTheme.current
+
     val colorToThemeName = remember {
         mapOf(
-            noteRedLight.value to "Red",
-            noteRedDark.value to "Red",
-            noteOrangeLight.value to "Orange",
-            noteOrangeDark.value to "Orange",
-            noteYellowLight.value to "Yellow",
-            noteYellowDark.value to "Yellow",
-            noteGreenLight.value to "Green",
-            noteGreenDark.value to "Green",
-            noteTurquoiseLight.value to "Turquoise",
-            noteTurquoiseDark.value to "Turquoise",
-            noteBlueLight.value to "Blue",
-            noteBlueDark.value to "Blue",
-            notePurpleLight.value to "Purple",
-            notePurpleDark.value to "Purple"
+            noteRedLight.value to "Red", noteRedDark.value to "Red",
+            noteOrangeLight.value to "Orange", noteOrangeDark.value to "Orange",
+            noteYellowLight.value to "Yellow", noteYellowDark.value to "Yellow",
+            noteGreenLight.value to "Green", noteGreenDark.value to "Green",
+            noteTurquoiseLight.value to "Turquoise", noteTurquoiseDark.value to "Turquoise",
+            noteBlueLight.value to "Blue", noteBlueDark.value to "Blue",
+            notePurpleLight.value to "Purple", notePurpleDark.value to "Purple"
         )
     }
+
     val selectedTheme = item.color?.let { colorToThemeName[it.toULong()] } ?: "Default"
 
     XenonTheme(
@@ -109,41 +110,28 @@ fun NoteSketchCard(
     ) {
         val borderColor by animateColorAsState(
             targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-            label = "Border Color Animation"
+            label = "border"
         )
 
-        val backgroundColor =
-            if (selectedTheme == "Default") MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.inversePrimary
-
+        val backgroundColor = if (selectedTheme == "Default")
+            MaterialTheme.colorScheme.surfaceBright
+        else
+            MaterialTheme.colorScheme.inversePrimary
 
         Box(
             modifier = modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(MediumCornerRadius))
                 .background(backgroundColor)
-                .border(
-                    width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
-                )
-                .then(
-                    Modifier.border(
-                        width = 0.5.dp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f),
-                        shape = RoundedCornerShape(MediumCornerRadius)
-                    )
-                )
+                .border(2.dp, borderColor, RoundedCornerShape(MediumCornerRadius))
+                .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f), RoundedCornerShape(MediumCornerRadius))
                 .combinedClickable(
-                    onClick = {
-                        if (isSelectionModeActive) {
-                            onSelectItem()
-                        } else {
-                            onEditItem(item)
-                        }
-                    }, onLongClick = onSelectItem
+                    enabled = !isNoteSheetOpen,
+                    onClick = { if (isSelectionModeActive) onSelectItem() else onEditItem(item) },
+                    onLongClick = onSelectItem
                 )
         ) {
-            Column(
-                modifier = Modifier.padding(LargestPadding)
-            ) {
+            Column(modifier = Modifier.padding(LargestPadding)) {
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleLarge,
@@ -152,8 +140,20 @@ fun NoteSketchCard(
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+
+                if (!item.description.isNullOrBlank()) {
+                    Spacer(Modifier.height(MediumSpacing))
+                    Text(
+                        text = item.description.fromRichTextJson(),
+                        style = MaterialTheme.typography.bodyLarge,
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = maxLines,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
             }
 
+            // Selection checkbox
             AnimatedVisibility(
                 visible = isSelectionModeActive,
                 modifier = Modifier.align(Alignment.TopStart),
@@ -161,10 +161,7 @@ fun NoteSketchCard(
                 exit = fadeOut()
             ) {
                 Box(
-                    modifier = Modifier
-                        .padding(6.dp)
-                        .size(24.dp)
-                        .background(backgroundColor, CircleShape),
+                    modifier = Modifier.padding(6.dp).size(24.dp).background(backgroundColor, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Crossfade(isSelected) { selected ->
@@ -186,60 +183,55 @@ fun NoteSketchCard(
                     .align(Alignment.TopEnd)
                     .padding(8.dp)
                     .size(20.dp)
-            ) {
-                val isLocalOnly = item.isOffline
-                val isSyncing = notesViewModel.isNoteBeingSynced(item.id)
+                ) {
+                    val isLocalOnly = item.isOffline
+                    val isSyncing = notesViewModel.isNoteBeingSynced(item.id)
 
-                when {
-                    isSyncing -> {
-                        val infiniteTransition = rememberInfiniteTransition(label = "spin")
+                    when {
+                        isSyncing -> {
+                            val infiniteTransition = rememberInfiniteTransition(label = "spin")
 
-                        val angle by infiniteTransition.animateFloat(
-                            initialValue = 0f,
-                            targetValue = 360f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(1000, easing = LinearEasing),
-                                repeatMode = RepeatMode.Restart
-                            ),
-                            label = "spinAngle"
-                        )
+                            val angle by infiniteTransition.animateFloat(
+                                initialValue = 0f,
+                                targetValue = 360f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(1000, easing = LinearEasing),
+                                    repeatMode = RepeatMode.Restart
+                                ),
+                                label = "spinAngle"
+                            )
 
-                        Icon(
-                            imageVector = Icons.Rounded.Refresh,
-                            contentDescription = "Syncing",
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                            modifier = Modifier
-                                .size(20.dp)
-                                .rotate(angle)
-                        )
-                    }
-                    isLocalOnly -> {
-                        Icon(Icons.Rounded.CloudOff, "Local only", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-                    }
-                    else -> {
-                        Icon(Icons.Rounded.CloudDone, "Synced", tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                imageVector = Icons.Rounded.Refresh,
+                                contentDescription = "Syncing",
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .rotate(angle)
+                            )
+                        }
+                        isLocalOnly -> {
+                            Icon(Icons.Rounded.CloudOff, "Local only", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                        }
+                        else -> {
+                            Icon(Icons.Rounded.CloudDone, "Synced", tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
                 }
-            }
 
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(bottom = 6.dp, end = 6.dp)
-                    .size(26.dp), contentAlignment = Alignment.Center
+                    .padding(6.dp)
+                    .size(26.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .background(MaterialTheme.colorScheme.onSurface, CircleShape)
-                ) {
+                Box(Modifier.size(22.dp).background(MaterialTheme.colorScheme.onSurface, CircleShape)) {
                     Icon(
-                        imageVector = Icons.Rounded.Edit,
-                        contentDescription = "Sketch",
+                        Icons.Rounded.TextFields,
+                        contentDescription = "Text note",
                         tint = backgroundColor,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(18.dp)
+                        modifier = Modifier.size(18.dp).align(Alignment.Center)
                     )
                 }
             }

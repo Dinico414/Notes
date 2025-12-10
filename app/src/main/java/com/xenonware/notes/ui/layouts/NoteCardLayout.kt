@@ -1,6 +1,10 @@
-package com.xenonware.notes.ui.res
+package com.xenonware.notes.ui.layouts
 
 import androidx.compose.runtime.Composable
+import com.xenonware.notes.ui.res.cards.NoteAudioCard
+import com.xenonware.notes.ui.res.cards.NoteListCard
+import com.xenonware.notes.ui.res.cards.NoteSketchCard
+import com.xenonware.notes.ui.res.cards.NoteTextCard
 import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.classes.NoteType
 import com.xenonware.notes.viewmodel.classes.NotesItems

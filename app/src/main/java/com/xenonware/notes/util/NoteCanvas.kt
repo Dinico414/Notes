@@ -1,4 +1,4 @@
-package com.xenonware.notes
+package com.xenonware.notes.util
 
 import android.os.Build
 import android.view.HapticFeedbackConstants
@@ -35,7 +35,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
-import com.xenonware.notes.util.ShapeRecognizer
 import com.xenonware.notes.viewmodel.CurrentPathState
 import com.xenonware.notes.viewmodel.DrawingAction
 import com.xenonware.notes.viewmodel.DrawingAction.Draw

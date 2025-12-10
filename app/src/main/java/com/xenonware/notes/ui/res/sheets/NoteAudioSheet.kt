@@ -1,6 +1,6 @@
 @file:Suppress("AssignedValueIsNeverRead", "unused")
 
-package com.xenonware.notes.ui.res
+package com.xenonware.notes.ui.res.sheets
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -81,6 +81,13 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenonware.notes.ui.res.DropdownNoteMenu
+import com.xenonware.notes.ui.res.LabelSelectionDialog
+import com.xenonware.notes.ui.res.MenuItem
+import com.xenonware.notes.ui.res.TranscriptDisplay
+import com.xenonware.notes.ui.res.WaveformDisplay
+import com.xenonware.notes.ui.res.loadAmplitudes
+import com.xenonware.notes.ui.res.saveAmplitudes
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
@@ -617,37 +624,37 @@ fun NoteAudioSheet(
                         onDismissRequest = { showMenu = false },
                         items = listOfNotNull(
                             MenuItem(
-                            text = "Label",
-                            onClick = { showLabelDialog = true; showMenu = false },
-                            dismissOnClick = true,
-                            icon = {
-                                if (isLabeled) Icon(
-                                    Icons.Rounded.Bookmark, "Label", tint = labelColor
-                                )
-                                else Icon(Icons.Rounded.BookmarkBorder, "Label")
-                            }),
+                                text = "Label",
+                                onClick = { showLabelDialog = true; showMenu = false },
+                                dismissOnClick = true,
+                                icon = {
+                                    if (isLabeled) Icon(
+                                        Icons.Rounded.Bookmark, "Label", tint = labelColor
+                                    )
+                                    else Icon(Icons.Rounded.BookmarkBorder, "Label")
+                                }),
                             MenuItem(text = colorMenuItemText, onClick = {
-                            val nextIndex =
-                                (availableThemes.indexOf(selectedTheme) + 1) % availableThemes.size
-                            selectedTheme = availableThemes[nextIndex]
-                            onThemeChange(selectedTheme)
-                            colorChangeJob?.cancel()
-                            colorChangeJob = scope.launch {
-                                colorMenuItemText = availableThemes[nextIndex]
-                                isFadingOut = false
-                                delay(2500)
-                                isFadingOut = true
-                                delay(500)
-                                colorMenuItemText = "Color"
-                                isFadingOut = false
-                            }
-                        }, dismissOnClick = false, icon = {
-                            Icon(
-                                Icons.Rounded.ColorLens,
-                                "Color",
-                                tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                            )
-                        }, textColor = animatedTextColor),
+                                val nextIndex =
+                                    (availableThemes.indexOf(selectedTheme) + 1) % availableThemes.size
+                                selectedTheme = availableThemes[nextIndex]
+                                onThemeChange(selectedTheme)
+                                colorChangeJob?.cancel()
+                                colorChangeJob = scope.launch {
+                                    colorMenuItemText = availableThemes[nextIndex]
+                                    isFadingOut = false
+                                    delay(2500)
+                                    isFadingOut = true
+                                    delay(500)
+                                    colorMenuItemText = "Color"
+                                    isFadingOut = false
+                                }
+                            }, dismissOnClick = false, icon = {
+                                Icon(
+                                    Icons.Rounded.ColorLens,
+                                    "Color",
+                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                )
+                            }, textColor = animatedTextColor),
                             MenuItem(
                                 text = if (isOffline) "Offline note" else "Online note",
                                 onClick = {
@@ -657,7 +664,11 @@ fun NoteAudioSheet(
                                 textColor = if (isOffline) colorScheme.error else null,
                                 icon = {
                                     if (isOffline) {
-                                        Icon(Icons.Rounded.CloudOff, "Local only", tint = colorScheme.error)
+                                        Icon(
+                                            Icons.Rounded.CloudOff,
+                                            "Local only",
+                                            tint = colorScheme.error
+                                        )
                                     } else {
                                         Icon(Icons.Rounded.Cloud, "Synced")
                                     }

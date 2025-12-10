@@ -1,4 +1,4 @@
-package com.xenonware.notes.ui.res
+package com.xenonware.notes.ui.res.cards
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
