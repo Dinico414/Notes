@@ -134,11 +134,11 @@ import com.xenonware.notes.R
 import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
-import com.xenonware.notes.ui.res.sheets.AudioViewType
+import com.xenonware.notes.ui.layouts.NoteCard
 import com.xenonware.notes.ui.res.ListContent
+import com.xenonware.notes.ui.res.sheets.AudioViewType
 import com.xenonware.notes.ui.res.sheets.ListItem
 import com.xenonware.notes.ui.res.sheets.NoteAudioSheet
-import com.xenonware.notes.ui.layouts.NoteCard
 import com.xenonware.notes.ui.res.sheets.NoteListSheet
 import com.xenonware.notes.ui.res.sheets.NoteSketchSheet
 import com.xenonware.notes.ui.res.sheets.NoteTextSheet
@@ -359,7 +359,14 @@ fun CoverNotes(
 
     val isDarkTheme = LocalIsDarkTheme.current
     val selectedTextNoteTheme = colorThemeMap[editingNoteColor] ?: "Default"
-    val context = LocalContext.current.applicationContext
+    val context = LocalContext.current
+    val googleAuthUiClient = remember {
+        GoogleAuthUiClient(
+            context = context.applicationContext,
+            oneTapClient = Identity.getSignInClient(context.applicationContext)
+        )
+    }
+    val signInViewModel: SignInViewModel = viewModel()
     val sharedPreferenceManager = remember { SharedPreferenceManager(context) }
     val isBlackedOut by produceState(
         initialValue = sharedPreferenceManager.blackedOutModeEnabled && isDarkTheme
@@ -395,9 +402,10 @@ fun CoverNotes(
             ListContent(
                 notesViewModel = notesViewModel,
                 signInViewModel = signInViewModel,
+                googleAuthUiClient = googleAuthUiClient,   // ← THIS IS REQUIRED NOW
                 onFilterSelected = { filterType ->
                     notesViewModel.setNoteFilterType(filterType)
-                },
+                }
             )
         }, drawerState = drawerState, gesturesEnabled = !isAnyNoteSheetOpen
     ) {
@@ -1078,8 +1086,9 @@ fun CoverNotes(
                             )
 
                             GoogleProfilePicture(
+                                noAccIcon = painterResource(id = R.mipmap.default_icon),
                                 profilePictureUrl = userData?.profilePictureUrl,
-                                iconContentDescription = stringResource(R.string.profile_picture),
+                                contentDescription = stringResource(R.string.profile_picture),
                                 modifier = Modifier.size(26.dp)
                             )
                         }

@@ -300,6 +300,7 @@ fun CompactNotes(
 
     val screenWidthDp = with(density) { appSize.width.toDp() }.value.toInt()
 
+
     fun onResizeClick() {
         when (notesLayoutType) {
             NotesLayoutType.LIST -> notesViewModel.cycleListItemLineCount()
@@ -354,7 +355,14 @@ fun CompactNotes(
 
     val isDarkTheme = LocalIsDarkTheme.current
     val selectedTextNoteTheme = colorThemeMap[editingNoteColor] ?: "Default"
-    val context = LocalContext.current.applicationContext
+    val context = LocalContext.current
+    val googleAuthUiClient = remember {
+        GoogleAuthUiClient(
+            context = context.applicationContext,
+            oneTapClient = Identity.getSignInClient(context.applicationContext)
+        )
+    }
+    val signInViewModel: SignInViewModel = viewModel()
     val sharedPreferenceManager = remember { SharedPreferenceManager(context) }
     val isBlackedOut by produceState(
         initialValue = sharedPreferenceManager.blackedOutModeEnabled && isDarkTheme
@@ -390,9 +398,10 @@ fun CompactNotes(
             ListContent(
                 notesViewModel = notesViewModel,
                 signInViewModel = signInViewModel,
+                googleAuthUiClient = googleAuthUiClient,   // ← THIS IS REQUIRED NOW
                 onFilterSelected = { filterType ->
                     notesViewModel.setNoteFilterType(filterType)
-                },
+                }
             )
         }, drawerState = drawerState, gesturesEnabled = !isAnyNoteSheetOpen
     ) {
@@ -1072,8 +1081,9 @@ fun CompactNotes(
                             )
 
                             GoogleProfilePicture(
+                                noAccIcon = painterResource(id = R.mipmap.default_icon),
                                 profilePictureUrl = userData?.profilePictureUrl,
-                                iconContentDescription = stringResource(R.string.profile_picture),
+                                contentDescription = stringResource(R.string.profile_picture),
                                 modifier = Modifier.size(26.dp)
                             )
                         }
