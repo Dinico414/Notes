@@ -42,7 +42,7 @@ android {
             )
             signingConfig = signingConfigs.getByName("debug")
             buildConfigField("String", "XENON_COMMONS_VERSION", "\"${libs.versions.xenonCommons.get()}\"")
-
+            buildConfigField("String", "XENON_UI_VERSION", "\"${libs.versions.xenonUi.get()}\"")
         }
     }
     compileOptions {

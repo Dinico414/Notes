@@ -398,7 +398,7 @@ fun CompactNotes(
             ListContent(
                 notesViewModel = notesViewModel,
                 signInViewModel = signInViewModel,
-                googleAuthUiClient = googleAuthUiClient,   // ← THIS IS REQUIRED NOW
+                googleAuthUiClient = googleAuthUiClient,
                 onFilterSelected = { filterType ->
                     notesViewModel.setNoteFilterType(filterType)
                 }

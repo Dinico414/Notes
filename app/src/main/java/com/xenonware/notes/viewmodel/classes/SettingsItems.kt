@@ -22,7 +22,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.xenon.mylibrary.res.SettingsGoogleTile
 import com.xenon.mylibrary.res.SettingsSwitchMenuTile
 import com.xenon.mylibrary.res.SettingsSwitchTile
@@ -36,14 +35,12 @@ import com.xenon.mylibrary.values.SmallestCornerRadius
 import com.xenonware.notes.R
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInState
-import com.xenonware.notes.viewmodel.DevSettingsViewModel
 import com.xenonware.notes.viewmodel.SettingsViewModel
 
 
 @Composable
 fun SettingsItems(
     viewModel: SettingsViewModel,
-    devSettingsViewModel: DevSettingsViewModel = viewModel(),
     currentThemeTitle: String,
     applyCoverTheme: Boolean,
     coverThemeEnabled: Boolean,
