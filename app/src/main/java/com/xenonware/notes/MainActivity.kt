@@ -22,7 +22,7 @@ import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInEvent
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
-import com.xenonware.notes.ui.layouts.NotesListLayout
+import com.xenonware.notes.ui.layouts.MainLayout
 import com.xenonware.notes.ui.theme.ScreenEnvironment
 import com.xenonware.notes.util.GlobalAudioPlayer
 import com.xenonware.notes.viewmodel.LayoutType
@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
-    private val notesViewModel: NotesViewModel by viewModels()
+    private val viewModel: NotesViewModel by viewModels()
     private val signInViewModel: SignInViewModel by viewModels {
         SignInViewModel.SignInViewModelFactory(application)
     }
@@ -74,7 +74,7 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 signInViewModel.signInEvent.collect { event ->
                     if (event is SignInEvent.SignedInSuccessfully) {
-                        notesViewModel.onSignedIn()
+                        viewModel.onSignedIn()
                     }
                 }
             }
@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
                 blackedOutModeEnabled = lastAppliedBlackedOutMode
             ) { layoutType, isLandscape ->
                 XenonApp(
-                    notesViewModel = notesViewModel,
+                    viewModel = viewModel,
                     signInViewModel = signInViewModel,
                     layoutType = layoutType,
                     isLandscape = isLandscape,
@@ -113,7 +113,7 @@ class MainActivity : ComponentActivity() {
             // Start real-time sync when app resumes (if already signed in)
             // DELETE THIS LINE — IT WIPES LOCAL DATA!
             if (isSignedIn) {
-                notesViewModel.onSignedIn() // ← This is correct
+                viewModel.onSignedIn() // ← This is correct
             }
         }
 
@@ -154,7 +154,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun XenonApp(
-    notesViewModel: NotesViewModel,
+    viewModel: NotesViewModel,
     signInViewModel: SignInViewModel,
     layoutType: LayoutType,
     isLandscape: Boolean,
@@ -162,13 +162,12 @@ fun XenonApp(
     appSize: IntSize,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        NotesListLayout(
-            notesViewModel = notesViewModel,
+        MainLayout(
+            viewModel = viewModel,
             signInViewModel = signInViewModel,
             isLandscape = isLandscape,
             layoutType = layoutType,
             onOpenSettings = onOpenSettings,
-            modifier = Modifier.weight(1f),
             appSize = appSize
         )
     }

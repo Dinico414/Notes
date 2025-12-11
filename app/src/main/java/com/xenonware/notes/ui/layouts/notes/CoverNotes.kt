@@ -182,7 +182,7 @@ import java.io.File
 )
 @Composable
 fun CoverNotes(
-    notesViewModel: NotesViewModel = viewModel(),
+    viewModel: NotesViewModel = viewModel(),
     signInViewModel: SignInViewModel = viewModel(),
     layoutType: LayoutType,
     isLandscape: Boolean,
@@ -238,7 +238,7 @@ fun CoverNotes(
     var currentSketchColor by remember { mutableStateOf(initialSketchColor) }
 
 
-    val noteItemsWithHeaders = notesViewModel.noteItems
+    val noteItemsWithHeaders = viewModel.noteItems
 
     val density = LocalDensity.current
     val appWidthDp = with(density) { appSize.width.toDp() }
@@ -270,8 +270,8 @@ fun CoverNotes(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val currentSearchQuery by notesViewModel.searchQuery.collectAsState()
-    val notesLayoutType by notesViewModel.notesLayoutType.collectAsState()
+    val currentSearchQuery by viewModel.searchQuery.collectAsState()
+    val notesLayoutType by viewModel.notesLayoutType.collectAsState()
 
     val lazyListState = rememberLazyListState()
 
@@ -299,7 +299,7 @@ fun CoverNotes(
     val currentListMaxLines = listLineLimits[listNoteLineLimitIndex]
     val currentGridColumns = gridColumnCountOptions[gridNoteColumnCountIndex]
     val gridMaxLines = 20
-    val allLabels by notesViewModel.labels.collectAsState()
+    val allLabels by viewModel.labels.collectAsState()
     var selectedLabelId by rememberSaveable { mutableStateOf<String?>(null) }
 
     var hasAudioContent by rememberSaveable { mutableStateOf(false) }
@@ -400,11 +400,11 @@ fun CoverNotes(
     ModalNavigationDrawer(
         drawerContent = {
             ListContent(
-                notesViewModel = notesViewModel,
+                notesViewModel = viewModel,
                 signInViewModel = signInViewModel,
                 googleAuthUiClient = googleAuthUiClient,   // ← THIS IS REQUIRED NOW
                 onFilterSelected = { filterType ->
-                    notesViewModel.setNoteFilterType(filterType)
+                    viewModel.setNoteFilterType(filterType)
                 }
             )
         }, drawerState = drawerState, gesturesEnabled = !isAnyNoteSheetOpen
@@ -748,7 +748,7 @@ fun CoverNotes(
                         hazeState = hazeState,
                         currentSearchQuery = currentSearchQuery,
                         onSearchQueryChanged = { newQuery ->
-                            notesViewModel.setSearchQuery(newQuery)
+                            viewModel.setSearchQuery(newQuery)
                         },
                         lazyListState = lazyListState,
                         allowToolbarScrollBehavior = !isAppBarCollapsible && !isAnyNoteSheetOpen,
@@ -771,7 +771,7 @@ fun CoverNotes(
                                     onClick = {
                                         val newLayout =
                                             if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
-                                        notesViewModel.setNotesLayoutType(newLayout)
+                                        viewModel.setNotesLayoutType(newLayout)
                                     },
                                     modifier = Modifier.alpha(listIconAlpha),
                                     enabled = !isSearchActive && showActionIconsExceptSearch
@@ -855,7 +855,7 @@ fun CoverNotes(
                             ) {
                                 TextButton(
                                     onClick = {
-                                        notesViewModel.deleteItems(selectedNoteIds.toList())
+                                        viewModel.deleteItems(selectedNoteIds.toList())
                                         selectedNoteIds = emptySet()
                                     },
                                     modifier = Modifier.width(192.dp),
@@ -887,7 +887,7 @@ fun CoverNotes(
                                     } else {
                                         resetNoteState()
                                         isSearchActive = false
-                                        notesViewModel.setSearchQuery("")
+                                        viewModel.setSearchQuery("")
                                         showAudioNoteCard = true
                                     }
                                     onAddModeToggle()
@@ -902,7 +902,7 @@ fun CoverNotes(
                                     resetNoteState()
                                     isSearchActive =
                                         false // Disable search when opening a new list note
-                                    notesViewModel.setSearchQuery("") // Clear search query
+                                    viewModel.setSearchQuery("") // Clear search query
                                     showListNoteCard = true
                                     onAddModeToggle()
                                 }) {
@@ -916,7 +916,7 @@ fun CoverNotes(
                                     resetNoteState() // Reset state when opening audio note
                                     isSearchActive =
                                         false // Disable search when opening a new audio note
-                                    notesViewModel.setSearchQuery("") // Clear search query
+                                    viewModel.setSearchQuery("") // Clear search query
                                     showAudioNoteCard = true
                                     onAddModeToggle()
                                 }) {
@@ -929,7 +929,7 @@ fun CoverNotes(
                                 IconButton(onClick = {
                                     isSearchActive =
                                         false // Disable search when opening a new sketch note
-                                    notesViewModel.setSearchQuery("") // Clear search query
+                                    viewModel.setSearchQuery("") // Clear search query
                                     showSketchNoteCard = true
                                     onAddModeToggle()
                                 }) {
@@ -1169,7 +1169,7 @@ fun CoverNotes(
                                                     is NotesItems -> {
                                                         NoteCard(
                                                             item = item,
-                                                            notesViewModel = notesViewModel,
+                                                            notesViewModel = viewModel,
                                                             isSelected = selectedNoteIds.contains(
                                                                 item.id
                                                             ),
@@ -1226,7 +1226,7 @@ fun CoverNotes(
                                                                     NoteType.TEXT -> {
                                                                         isSearchActive =
                                                                             false // Disable search
-                                                                        notesViewModel.setSearchQuery(
+                                                                        viewModel.setSearchQuery(
                                                                             ""
                                                                         ) // Clear search query
                                                                         showTextNoteCard = true
@@ -1234,7 +1234,7 @@ fun CoverNotes(
 
                                                                     NoteType.AUDIO -> {
                                                                         isSearchActive = false
-                                                                        notesViewModel.setSearchQuery(
+                                                                        viewModel.setSearchQuery(
                                                                             ""
                                                                         )
                                                                         showAudioNoteCard = true
@@ -1247,7 +1247,7 @@ fun CoverNotes(
                                                                     NoteType.LIST -> {
                                                                         isSearchActive =
                                                                             false // Disable search
-                                                                        notesViewModel.setSearchQuery(
+                                                                        viewModel.setSearchQuery(
                                                                             ""
                                                                         ) // Clear search query
                                                                         showListNoteCard = true
@@ -1256,7 +1256,7 @@ fun CoverNotes(
                                                                     NoteType.SKETCH -> {
                                                                         isSearchActive =
                                                                             false // Disable search
-                                                                        notesViewModel.setSearchQuery(
+                                                                        viewModel.setSearchQuery(
                                                                             ""
                                                                         ) // Clear search query
                                                                         showSketchNoteCard = true
@@ -1298,7 +1298,7 @@ fun CoverNotes(
                                             items(noteItemsWithHeaders.filterIsInstance<NotesItems>()) { item ->
                                                 NoteCard(
                                                     item = item,
-                                                    notesViewModel = notesViewModel, // ← THIS WAS MISSING!
+                                                    notesViewModel = viewModel, // ← THIS WAS MISSING!
                                                     isSelected = selectedNoteIds.contains(item.id),
                                                     isSelectionModeActive = isSelectionModeActive,
                                                     onSelectItem = {
@@ -1334,7 +1334,7 @@ fun CoverNotes(
                                                         }
 
                                                         isSearchActive = false
-                                                        notesViewModel.setSearchQuery("")
+                                                        viewModel.setSearchQuery("")
 
                                                         when (itemToEdit.noteType) {
                                                             NoteType.TEXT -> showTextNoteCard = true
@@ -1375,7 +1375,7 @@ fun CoverNotes(
                 BackHandler {
                     showTextNoteCard = false
                     isSearchActive = false // Disable search on dismiss
-                    notesViewModel.setSearchQuery("") // Clear search query
+                    viewModel.setSearchQuery("") // Clear search query
                     resetNoteState()
                 }
 
@@ -1386,7 +1386,7 @@ fun CoverNotes(
                     onDismiss = {
                         showTextNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1400,7 +1400,7 @@ fun CoverNotes(
                         val colorLong = themeColorMap[theme]?.toLong()
 
                         if (editingNoteId != null) {
-                            val existingNote = notesViewModel.noteItems
+                            val existingNote = viewModel.noteItems
                                 .filterIsInstance<NotesItems>()
                                 .find { it.id == editingNoteId }
 
@@ -1412,9 +1412,9 @@ fun CoverNotes(
                                     labels = labelId?.let { listOf(it) } ?: emptyList(),
                                     isOffline = isOffline
                                 )
-                                notesViewModel.updateItem(updatedNote, forceLocal = isOffline)
+                                viewModel.updateItem(updatedNote, forceLocal = isOffline)
                             } else {
-                                notesViewModel.addItem(
+                                viewModel.addItem(
                                     title = title.trim(),
                                     description = description.takeIf { it.isNotBlank() },
                                     noteType = NoteType.TEXT,
@@ -1424,7 +1424,7 @@ fun CoverNotes(
                                 )
                             }
                         } else {
-                            notesViewModel.addItem(
+                            viewModel.addItem(
                                 title = title.trim(),
                                 description = description.takeIf { it.isNotBlank() },
                                 noteType = NoteType.TEXT,
@@ -1436,7 +1436,7 @@ fun CoverNotes(
 
                         showTextNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     saveTrigger = saveTrigger,
@@ -1455,11 +1455,11 @@ fun CoverNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    onAddNewLabel = { viewModel.addLabel(it) },
                     isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = true,
                     editingNoteId = editingNoteId,
-                    notesViewModel = notesViewModel,
+                    notesViewModel = viewModel,
                 )
             }
 
@@ -1471,7 +1471,7 @@ fun CoverNotes(
                 BackHandler {
                     showSketchNoteCard = false
                     isSearchActive = false // Disable search on dismiss
-                    notesViewModel.setSearchQuery("") // Clear search query
+                    viewModel.setSearchQuery("") // Clear search query
                     resetNoteState()
                 }
                 NoteSketchSheet(
@@ -1480,7 +1480,7 @@ fun CoverNotes(
                     onDismiss = {
                         showSketchNoteCard = false
                         isSearchActive = false // Disable search on dismiss
-                        notesViewModel.setSearchQuery("") // Clear search query
+                        viewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1497,7 +1497,7 @@ fun CoverNotes(
                         val colorLong = themeColorMap[theme]?.toLong()
 
                         if (editingNoteId != null) {
-                            val existingNote = notesViewModel.noteItems
+                            val existingNote = viewModel.noteItems
                                 .filterIsInstance<NotesItems>()
                                 .find { it.id == editingNoteId }
 
@@ -1508,10 +1508,10 @@ fun CoverNotes(
                                     labels = labelId?.let { listOf(it) } ?: emptyList(),
                                     isOffline = isOffline
                                 )
-                                notesViewModel.updateItem(updatedNote, forceLocal = isOffline)
+                                viewModel.updateItem(updatedNote, forceLocal = isOffline)
                             }
                         } else {
-                            notesViewModel.addItem(
+                            viewModel.addItem(
                                 title = title.trim(),
                                 description = null,
                                 noteType = NoteType.SKETCH,
@@ -1523,7 +1523,7 @@ fun CoverNotes(
 
                         showSketchNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     saveTrigger = saveTrigger,
@@ -1548,11 +1548,11 @@ fun CoverNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    onAddNewLabel = { viewModel.addLabel(it) },
                     isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = true,
                     editingNoteId = editingNoteId,
-                    notesViewModel = notesViewModel,
+                    notesViewModel = viewModel,
                 )
             }
 
@@ -1570,7 +1570,7 @@ fun CoverNotes(
                 BackHandler {
                     showAudioNoteCard = false
                     isSearchActive = false // Disable search on dismiss
-                    notesViewModel.setSearchQuery("") // Clear search query
+                    viewModel.setSearchQuery("") // Clear search query
                     resetNoteState()
                 }
                 NoteAudioSheet(
@@ -1579,7 +1579,7 @@ fun CoverNotes(
                     onDismiss = {
                         showAudioNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1593,7 +1593,7 @@ fun CoverNotes(
                         val colorLong = themeColorMap[theme]?.toLong()
 
                         if (editingNoteId != null) {
-                            val existingNote = notesViewModel.noteItems
+                            val existingNote = viewModel.noteItems
                                 .filterIsInstance<NotesItems>()
                                 .find { it.id == editingNoteId }
 
@@ -1605,10 +1605,10 @@ fun CoverNotes(
                                     labels = labelId?.let { listOf(it) } ?: emptyList(),
                                     isOffline = isOffline
                                 )
-                                notesViewModel.updateItem(updatedNote, forceLocal = isOffline)
+                                viewModel.updateItem(updatedNote, forceLocal = isOffline)
                             }
                         } else {
-                            notesViewModel.addItem(
+                            viewModel.addItem(
                                 title = title.trim(),
                                 description = uniqueAudioId.takeIf { it.isNotBlank() },
                                 noteType = NoteType.AUDIO,
@@ -1620,7 +1620,7 @@ fun CoverNotes(
 
                         showAudioNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     toolbarHeight = 72.dp,
@@ -1636,12 +1636,12 @@ fun CoverNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    onAddNewLabel = { viewModel.addLabel(it) },
                     onHasUnsavedAudioChange = { hasAudioContent = it },
                     isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = true,
                     editingNoteId = editingNoteId,
-                    notesViewModel = notesViewModel,
+                    notesViewModel = viewModel,
                 )
 
             }
@@ -1654,7 +1654,7 @@ fun CoverNotes(
                 BackHandler {
                     showListNoteCard = false
                     isSearchActive = false
-                    notesViewModel.setSearchQuery("")
+                    viewModel.setSearchQuery("")
                     resetNoteState()
                 }
 
@@ -1665,7 +1665,7 @@ fun CoverNotes(
                     onDismiss = {
                         showListNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1684,7 +1684,7 @@ fun CoverNotes(
                         val colorLong = themeColorMap[theme]?.toLong()
 
                         if (editingNoteId != null) {
-                            val existingNote = notesViewModel.noteItems
+                            val existingNote = viewModel.noteItems
                                 .filterIsInstance<NotesItems>()
                                 .find { it.id == editingNoteId }
 
@@ -1696,10 +1696,10 @@ fun CoverNotes(
                                     labels = labelId?.let { listOf(it) } ?: emptyList(),
                                     isOffline = isOffline
                                 )
-                                notesViewModel.updateItem(updatedNote, forceLocal = isOffline)
+                                viewModel.updateItem(updatedNote, forceLocal = isOffline)
                             }
                         } else {
-                            notesViewModel.addItem(
+                            viewModel.addItem(
                                 title = title.trim(),
                                 description = description.takeIf { it.isNotBlank() },
                                 noteType = NoteType.LIST,
@@ -1711,7 +1711,7 @@ fun CoverNotes(
 
                         showListNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     toolbarHeight = 72.dp,
@@ -1726,11 +1726,11 @@ fun CoverNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    onAddNewLabel = { viewModel.addLabel(it) },
                     isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = true,
                     editingNoteId = editingNoteId,
-                    notesViewModel = notesViewModel,
+                    notesViewModel = viewModel,
                 )
             }
         }

@@ -181,7 +181,7 @@ import java.io.File
 )
 @Composable
 fun CompactNotes(
-    notesViewModel: NotesViewModel = viewModel(),
+    viewModel: NotesViewModel = viewModel(),
     signInViewModel: SignInViewModel = viewModel(),
     layoutType: LayoutType,
     isLandscape: Boolean,
@@ -237,7 +237,7 @@ fun CompactNotes(
     var currentSketchColor by remember { mutableStateOf(initialSketchColor) }
 
 
-    val noteItemsWithHeaders = notesViewModel.noteItems
+    val noteItemsWithHeaders = viewModel.noteItems
 
     val density = LocalDensity.current
     val appWidthDp = with(density) { appSize.width.toDp() }
@@ -269,8 +269,8 @@ fun CompactNotes(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val currentSearchQuery by notesViewModel.searchQuery.collectAsState()
-    val notesLayoutType by notesViewModel.notesLayoutType.collectAsState()
+    val currentSearchQuery by viewModel.searchQuery.collectAsState()
+    val notesLayoutType by viewModel.notesLayoutType.collectAsState()
 
     val lazyListState = rememberLazyListState()
 
@@ -282,8 +282,8 @@ fun CompactNotes(
     var showResizeValue by remember { mutableStateOf(false) }
     var resizeTimerKey by remember { mutableIntStateOf(0) }
 
-    val listItemLineCount by notesViewModel.listItemLineCount.collectAsState()
-    val gridColumnCount by notesViewModel.gridColumnCount.collectAsState()
+    val listItemLineCount by viewModel.listItemLineCount.collectAsState()
+    val gridColumnCount by viewModel.gridColumnCount.collectAsState()
 
     val currentListMaxLines = when (listItemLineCount) {
         3 -> 3
@@ -293,7 +293,7 @@ fun CompactNotes(
     val currentGridColumns = gridColumnCount
 
     val gridMaxLines = 20
-    val allLabels by notesViewModel.labels.collectAsState()
+    val allLabels by viewModel.labels.collectAsState()
     var selectedLabelId by rememberSaveable { mutableStateOf<String?>(null) }
 
     var hasAudioContent by rememberSaveable { mutableStateOf(false) }
@@ -303,8 +303,8 @@ fun CompactNotes(
 
     fun onResizeClick() {
         when (notesLayoutType) {
-            NotesLayoutType.LIST -> notesViewModel.cycleListItemLineCount()
-            NotesLayoutType.GRID -> notesViewModel.cycleGridColumnCount(screenWidthDp)
+            NotesLayoutType.LIST -> viewModel.cycleListItemLineCount()
+            NotesLayoutType.GRID -> viewModel.cycleGridColumnCount(screenWidthDp)
         }
         showResizeValue = true
         resizeTimerKey++
@@ -396,11 +396,11 @@ fun CompactNotes(
     ModalNavigationDrawer(
         drawerContent = {
             ListContent(
-                notesViewModel = notesViewModel,
+                notesViewModel = viewModel,
                 signInViewModel = signInViewModel,
                 googleAuthUiClient = googleAuthUiClient,
                 onFilterSelected = { filterType ->
-                    notesViewModel.setNoteFilterType(filterType)
+                    viewModel.setNoteFilterType(filterType)
                 }
             )
         }, drawerState = drawerState, gesturesEnabled = !isAnyNoteSheetOpen
@@ -744,7 +744,7 @@ fun CompactNotes(
                         hazeState = hazeState,
                         currentSearchQuery = currentSearchQuery,
                         onSearchQueryChanged = { newQuery ->
-                            notesViewModel.setSearchQuery(newQuery)
+                            viewModel.setSearchQuery(newQuery)
                         },
                         lazyListState = lazyListState,
                         allowToolbarScrollBehavior = !isAppBarCollapsible && !isAnyNoteSheetOpen,
@@ -767,7 +767,7 @@ fun CompactNotes(
                                     onClick = {
                                         val newLayout =
                                             if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
-                                        notesViewModel.setNotesLayoutType(newLayout)
+                                        viewModel.setNotesLayoutType(newLayout)
                                     },
                                     modifier = Modifier.alpha(listIconAlpha),
                                     enabled = !isSearchActive && showActionIconsExceptSearch
@@ -851,7 +851,7 @@ fun CompactNotes(
                             ) {
                                 TextButton(
                                     onClick = {
-                                        notesViewModel.deleteItems(selectedNoteIds.toList())
+                                        viewModel.deleteItems(selectedNoteIds.toList())
                                         selectedNoteIds = emptySet()
                                     },
                                     modifier = Modifier.width(192.dp),
@@ -878,7 +878,7 @@ fun CompactNotes(
                                     resetNoteState()
                                     isSearchActive =
                                         false // Disable search when opening a new text note
-                                    notesViewModel.setSearchQuery("") // Clear search query
+                                    viewModel.setSearchQuery("") // Clear search query
                                     showTextNoteCard = true
                                     onAddModeToggle()
                                 }) {
@@ -892,7 +892,7 @@ fun CompactNotes(
                                     resetNoteState()
                                     isSearchActive =
                                         false // Disable search when opening a new list note
-                                    notesViewModel.setSearchQuery("") // Clear search query
+                                    viewModel.setSearchQuery("") // Clear search query
                                     showListNoteCard = true
                                     onAddModeToggle()
                                 }) {
@@ -911,7 +911,7 @@ fun CompactNotes(
                                     } else {
                                         resetNoteState()
                                         isSearchActive = false
-                                        notesViewModel.setSearchQuery("")
+                                        viewModel.setSearchQuery("")
                                         showAudioNoteCard = true
                                     }
                                     onAddModeToggle()
@@ -925,7 +925,7 @@ fun CompactNotes(
                                 IconButton(onClick = {
                                     isSearchActive =
                                         false // Disable search when opening a new sketch note
-                                    notesViewModel.setSearchQuery("") // Clear search query
+                                    viewModel.setSearchQuery("") // Clear search query
                                     showSketchNoteCard = true
                                     onAddModeToggle()
                                 }) {
@@ -1161,7 +1161,7 @@ fun CompactNotes(
                                                     is NotesItems -> {
                                                         NoteCard(
                                                             item = item,
-                                                            notesViewModel = notesViewModel,
+                                                            notesViewModel = viewModel,
                                                             isSelected = selectedNoteIds.contains(
                                                                 item.id
                                                             ),
@@ -1218,7 +1218,7 @@ fun CompactNotes(
                                                                     NoteType.TEXT -> {
                                                                         isSearchActive =
                                                                             false // Disable search
-                                                                        notesViewModel.setSearchQuery(
+                                                                        viewModel.setSearchQuery(
                                                                             ""
                                                                         ) // Clear search query
                                                                         showTextNoteCard = true
@@ -1226,7 +1226,7 @@ fun CompactNotes(
 
                                                                     NoteType.AUDIO -> {
                                                                         isSearchActive = false
-                                                                        notesViewModel.setSearchQuery(
+                                                                        viewModel.setSearchQuery(
                                                                             ""
                                                                         )
                                                                         showAudioNoteCard = true
@@ -1239,7 +1239,7 @@ fun CompactNotes(
                                                                     NoteType.LIST -> {
                                                                         isSearchActive =
                                                                             false // Disable search
-                                                                        notesViewModel.setSearchQuery(
+                                                                        viewModel.setSearchQuery(
                                                                             ""
                                                                         ) // Clear search query
                                                                         showListNoteCard = true
@@ -1248,7 +1248,7 @@ fun CompactNotes(
                                                                     NoteType.SKETCH -> {
                                                                         isSearchActive =
                                                                             false // Disable search
-                                                                        notesViewModel.setSearchQuery(
+                                                                        viewModel.setSearchQuery(
                                                                             ""
                                                                         ) // Clear search query
                                                                         showSketchNoteCard = true
@@ -1290,7 +1290,7 @@ fun CompactNotes(
                                             items(noteItemsWithHeaders.filterIsInstance<NotesItems>()) { item ->
                                                 NoteCard(
                                                     item = item,
-                                                    notesViewModel = notesViewModel, // ← THIS WAS MISSING!
+                                                    notesViewModel = viewModel, // ← THIS WAS MISSING!
                                                     isSelected = selectedNoteIds.contains(item.id),
                                                     isSelectionModeActive = isSelectionModeActive,
                                                     onSelectItem = {
@@ -1326,7 +1326,7 @@ fun CompactNotes(
                                                         }
 
                                                         isSearchActive = false
-                                                        notesViewModel.setSearchQuery("")
+                                                        viewModel.setSearchQuery("")
 
                                                         when (itemToEdit.noteType) {
                                                             NoteType.TEXT -> showTextNoteCard = true
@@ -1368,7 +1368,7 @@ fun CompactNotes(
                 BackHandler {
                     showTextNoteCard = false
                     isSearchActive = false // Disable search on dismiss
-                    notesViewModel.setSearchQuery("") // Clear search query
+                    viewModel.setSearchQuery("") // Clear search query
                     resetNoteState()
                 }
 
@@ -1379,7 +1379,7 @@ fun CompactNotes(
                     onDismiss = {
                         showTextNoteCard = false
                         isSearchActive = false // Disable search on dismiss
-                        notesViewModel.setSearchQuery("") // Clear search query
+                        viewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1394,7 +1394,7 @@ fun CompactNotes(
                         val colorLong = themeColorMap[theme]?.toLong()
 
                         if (editingNoteId != null) {
-                            val existingNote = notesViewModel.noteItems
+                            val existingNote = viewModel.noteItems
                                 .filterIsInstance<NotesItems>()
                                 .find { it.id == editingNoteId }
 
@@ -1406,9 +1406,9 @@ fun CompactNotes(
                                     labels = labelId?.let { listOf(it) } ?: emptyList(),
                                     isOffline = isOffline
                                 )
-                                notesViewModel.updateItem(updatedNote, forceLocal = isOffline)
+                                viewModel.updateItem(updatedNote, forceLocal = isOffline)
                             } else {
-                                notesViewModel.addItem(
+                                viewModel.addItem(
                                     title = title.trim(),
                                     description = description.takeIf { it.isNotBlank() },
                                     noteType = NoteType.TEXT,
@@ -1418,7 +1418,7 @@ fun CompactNotes(
                                 )
                             }
                         } else {
-                            notesViewModel.addItem(
+                            viewModel.addItem(
                                 title = title.trim(),
                                 description = description.takeIf { it.isNotBlank() },
                                 noteType = NoteType.TEXT,
@@ -1430,7 +1430,7 @@ fun CompactNotes(
 
                         showTextNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     saveTrigger = saveTrigger,
@@ -1449,11 +1449,11 @@ fun CompactNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    onAddNewLabel = { viewModel.addLabel(it) },
                     isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = false,
                     editingNoteId = editingNoteId,
-                    notesViewModel = notesViewModel,
+                    notesViewModel = viewModel,
                 )
             }
 
@@ -1465,7 +1465,7 @@ fun CompactNotes(
                 BackHandler {
                     showSketchNoteCard = false
                     isSearchActive = false // Disable search on dismiss
-                    notesViewModel.setSearchQuery("") // Clear search query
+                    viewModel.setSearchQuery("") // Clear search query
                     resetNoteState()
                 }
                 NoteSketchSheet(
@@ -1474,7 +1474,7 @@ fun CompactNotes(
                     onDismiss = {
                         showSketchNoteCard = false
                         isSearchActive = false // Disable search on dismiss
-                        notesViewModel.setSearchQuery("") // Clear search query
+                        viewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1491,7 +1491,7 @@ fun CompactNotes(
                         val colorLong = themeColorMap[theme]?.toLong()
 
                         if (editingNoteId != null) {
-                            val existingNote = notesViewModel.noteItems
+                            val existingNote = viewModel.noteItems
                                 .filterIsInstance<NotesItems>()
                                 .find { it.id == editingNoteId }
 
@@ -1502,10 +1502,10 @@ fun CompactNotes(
                                     labels = labelId?.let { listOf(it) } ?: emptyList(),
                                     isOffline = isOffline
                                 )
-                                notesViewModel.updateItem(updatedNote, forceLocal = isOffline)
+                                viewModel.updateItem(updatedNote, forceLocal = isOffline)
                             }
                         } else {
-                            notesViewModel.addItem(
+                            viewModel.addItem(
                                 title = title.trim(),
                                 description = null,
                                 noteType = NoteType.SKETCH,
@@ -1517,7 +1517,7 @@ fun CompactNotes(
 
                         showSketchNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     saveTrigger = saveTrigger,
@@ -1542,11 +1542,11 @@ fun CompactNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    onAddNewLabel = { viewModel.addLabel(it) },
                     isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = false,
                     editingNoteId = editingNoteId,
-                    notesViewModel = notesViewModel,
+                    notesViewModel = viewModel,
                 )
             }
 
@@ -1564,7 +1564,7 @@ fun CompactNotes(
                 BackHandler {
                     showAudioNoteCard = false
                     isSearchActive = false
-                    notesViewModel.setSearchQuery("")
+                    viewModel.setSearchQuery("")
                     resetNoteState()
                 }
                 val context = LocalContext.current
@@ -1574,7 +1574,7 @@ fun CompactNotes(
                     onDismiss = {
                         showAudioNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1588,7 +1588,7 @@ fun CompactNotes(
                         val colorLong = themeColorMap[theme]?.toLong()
 
                         if (editingNoteId != null) {
-                            val existingNote = notesViewModel.noteItems
+                            val existingNote = viewModel.noteItems
                                 .filterIsInstance<NotesItems>()
                                 .find { it.id == editingNoteId }
 
@@ -1600,10 +1600,10 @@ fun CompactNotes(
                                     labels = labelId?.let { listOf(it) } ?: emptyList(),
                                     isOffline = isOffline
                                 )
-                                notesViewModel.updateItem(updatedNote, forceLocal = isOffline)
+                                viewModel.updateItem(updatedNote, forceLocal = isOffline)
                             }
                         } else {
-                            notesViewModel.addItem(
+                            viewModel.addItem(
                                 title = title.trim(),
                                 description = uniqueAudioId.takeIf { it.isNotBlank() },
                                 noteType = NoteType.AUDIO,
@@ -1615,7 +1615,7 @@ fun CompactNotes(
 
                         showAudioNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     toolbarHeight = 72.dp,
@@ -1631,12 +1631,12 @@ fun CompactNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    onAddNewLabel = { viewModel.addLabel(it) },
                     onHasUnsavedAudioChange = { hasAudioContent = it },
                     isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = false,
                     editingNoteId = editingNoteId,
-                    notesViewModel = notesViewModel,
+                    notesViewModel = viewModel,
                 )
 
             }
@@ -1649,7 +1649,7 @@ fun CompactNotes(
                 BackHandler {
                     showListNoteCard = false
                     isSearchActive = false
-                    notesViewModel.setSearchQuery("")
+                    viewModel.setSearchQuery("")
                     resetNoteState()
                 }
 
@@ -1660,7 +1660,7 @@ fun CompactNotes(
                     onDismiss = {
                         showListNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1679,7 +1679,7 @@ fun CompactNotes(
                         val colorLong = themeColorMap[theme]?.toLong()
 
                         if (editingNoteId != null) {
-                            val existingNote = notesViewModel.noteItems
+                            val existingNote = viewModel.noteItems
                                 .filterIsInstance<NotesItems>()
                                 .find { it.id == editingNoteId }
 
@@ -1691,10 +1691,10 @@ fun CompactNotes(
                                     labels = labelId?.let { listOf(it) } ?: emptyList(),
                                     isOffline = isOffline
                                 )
-                                notesViewModel.updateItem(updatedNote, forceLocal = isOffline)
+                                viewModel.updateItem(updatedNote, forceLocal = isOffline)
                             }
                         } else {
-                            notesViewModel.addItem(
+                            viewModel.addItem(
                                 title = title.trim(),
                                 description = description.takeIf { it.isNotBlank() },
                                 noteType = NoteType.LIST,
@@ -1706,7 +1706,7 @@ fun CompactNotes(
 
                         showListNoteCard = false
                         isSearchActive = false
-                        notesViewModel.setSearchQuery("")
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     toolbarHeight = 72.dp,
@@ -1721,11 +1721,11 @@ fun CompactNotes(
                     allLabels = allLabels,
                     initialSelectedLabelId = selectedLabelId,
                     onLabelSelected = { selectedLabelId = it },
-                    onAddNewLabel = { notesViewModel.addLabel(it) },
+                    onAddNewLabel = { viewModel.addLabel(it) },
                     isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = false,
                     editingNoteId = editingNoteId,
-                    notesViewModel = notesViewModel,
+                    notesViewModel = viewModel,
                 )
             }
         }

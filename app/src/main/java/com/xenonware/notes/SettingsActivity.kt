@@ -171,8 +171,8 @@ class SettingsActivity : ComponentActivity() {
         lifecycleScope.launch {
             val user = googleAuthUiClient.getSignedInUser()
             val isSignedIn = user != null
-            sharedPreferenceManager.isUserLoggedIn = isSignedIn  // Sync pref if out of sync
-            signInViewModel.updateSignInState(isSignedIn)  // Assuming you add this function to SignInViewModel
+            sharedPreferenceManager.isUserLoggedIn = isSignedIn
+            signInViewModel.updateSignInState(isSignedIn)
         }
     }
 }
