@@ -5,6 +5,7 @@ package com.xenonware.notes.ui.layouts.notes
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
@@ -301,6 +302,37 @@ fun CompactNotes(
     val screenWidthDp = with(density) { appSize.width.toDp() }.value.toInt()
 
 
+    val sdreconoff = false
+    // === Surface Duo detection toast - shows on every configuration change ===
+    val context = LocalContext.current
+
+    val modelUpper = remember { Build.MODEL.uppercase() }
+
+    val duoGeneration = remember {
+        when {
+            modelUpper.contains("SURFACE DUO 2") -> "2"
+            modelUpper.contains("SURFACE DUO") && !modelUpper.contains("SURFACE DUO 2") -> "1"
+            else -> null
+        }
+    }
+
+    val isSurfaceDuo = duoGeneration != null
+
+    // Get real pixel dimensions - updates on every configuration change
+    val displayMetrics = context.resources.displayMetrics
+    val realHeight = displayMetrics.heightPixels
+    val realWidth = displayMetrics.widthPixels
+
+    // Key that changes whenever screen size or orientation changes
+    val configKey = remember { mutableStateOf(realHeight to realWidth) }
+
+    if (sdreconoff)LaunchedEffect(configKey.value) {
+        val sdPart = if (isSurfaceDuo) "true, $duoGeneration" else "false"
+        val message = "sd: $sdPart; res: $realHeight-$realWidth"
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+    }
+
+
     fun onResizeClick() {
         when (notesLayoutType) {
             NotesLayoutType.LIST -> viewModel.cycleListItemLineCount()
@@ -355,7 +387,7 @@ fun CompactNotes(
 
     val isDarkTheme = LocalIsDarkTheme.current
     val selectedTextNoteTheme = colorThemeMap[editingNoteColor] ?: "Default"
-    val context = LocalContext.current
+
     val googleAuthUiClient = remember {
         GoogleAuthUiClient(
             context = context.applicationContext,
