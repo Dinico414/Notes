@@ -106,6 +106,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -302,8 +303,6 @@ fun CompactNotes(
     val screenWidthDp = with(density) { appSize.width.toDp() }.value.toInt()
 
 
-    val sdreconoff = false
-    // === Surface Duo detection toast - shows on every configuration change ===
     val context = LocalContext.current
 
     val modelUpper = remember { Build.MODEL.uppercase() }
@@ -318,20 +317,17 @@ fun CompactNotes(
 
     val isSurfaceDuo = duoGeneration != null
 
-    // Get real pixel dimensions - updates on every configuration change
     val displayMetrics = context.resources.displayMetrics
     val realHeight = displayMetrics.heightPixels
     val realWidth = displayMetrics.widthPixels
 
-    // Key that changes whenever screen size or orientation changes
     val configKey = remember { mutableStateOf(realHeight to realWidth) }
 
-    if (sdreconoff)LaunchedEffect(configKey.value) {
+    LaunchedEffect(configKey.value) {
         val sdPart = if (isSurfaceDuo) "true, $duoGeneration" else "false"
         val message = "sd: $sdPart; res: $realHeight-$realWidth"
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
     }
-
 
     fun onResizeClick() {
         when (notesLayoutType) {
@@ -365,6 +361,8 @@ fun CompactNotes(
         selectedAudioViewType = AudioViewType.Waveform
         selectedLabelId = null
     }
+
+
 
     val colorThemeMap = remember {
         mapOf(
@@ -447,6 +445,36 @@ fun CompactNotes(
                 }
             },
             bottomBar = {
+
+                val context = LocalContext.current
+                val configuration = LocalConfiguration.current
+                val displayMetrics = context.resources.displayMetrics
+                val densityVal = displayMetrics.density
+
+                val modelUpper = Build.MODEL.uppercase()
+
+                val duoGeneration = when {
+                    modelUpper.contains("SURFACE DUO 2") -> 2
+                    modelUpper.contains("SURFACE DUO") -> 1
+                    else -> 0
+                }
+
+                val isSurfaceDuo = duoGeneration > 0
+
+                val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                val currentWidthPx = displayMetrics.widthPixels
+                val currentHeightPx = displayMetrics.heightPixels
+                val screenWidthPx = if (isLandscape) currentWidthPx else currentHeightPx
+
+                val expectedSpannedWidth = if (duoGeneration == 1) 2784 else if (duoGeneration == 2) 2754 else 0
+                val isSpannedMode = isSurfaceDuo && isLandscape && screenWidthPx >= expectedSpannedWidth - 100 // tolerance for system bars etc.
+
+                val hingeGapPx = if (duoGeneration == 1) 84 else if (duoGeneration == 2) 66 else 0
+                val hingeGapDp = (hingeGapPx / densityVal).dp
+
+                var fabOnLeft by rememberSaveable { mutableStateOf(true) }
+
+
                 val textEditorContent: @Composable (RowScope.() -> Unit)? = if (showTextNoteCard) {
                     @Composable {
                         XenonTheme(
@@ -772,281 +800,566 @@ fun CompactNotes(
                     usePurpleTheme = selectedTextNoteTheme == "Purple",
                     dynamicColor = selectedTextNoteTheme == "Default"
                 ) {
-                    FloatingToolbarContent(
-                        hazeState = hazeState,
-                        currentSearchQuery = currentSearchQuery,
-                        onSearchQueryChanged = { newQuery ->
-                            viewModel.setSearchQuery(newQuery)
-                        },
-                        lazyListState = lazyListState,
-                        allowToolbarScrollBehavior = !isAppBarCollapsible && !isAnyNoteSheetOpen,
-                        selectedNoteIds = selectedNoteIds.toList(),
-                        onClearSelection = { selectedNoteIds = emptySet() },
-                        isAddModeActive = isAddModeActive,
-                        isSearchActive = isSearchActive,
-                        onIsSearchActiveChange = { isSearchActive = it },
-                        defaultContent = { iconsAlphaDuration, showActionIconsExceptSearch ->
-                            Row {
-                                val iconAlphaTarget = if (isSearchActive) 0f else 1f
+                    if(isSpannedMode)
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                          //  FloatingActionButton() { }
+                            Spacer(modifier = Modifier.width(hingeGapDp))
+                            FloatingToolbarContent(
+                                hazeState = hazeState,
+                                currentSearchQuery = currentSearchQuery,
+                                onSearchQueryChanged = { newQuery ->
+                                    viewModel.setSearchQuery(newQuery)
+                                },
+                                lazyListState = lazyListState,
+                                allowToolbarScrollBehavior = !isAppBarCollapsible && !isAnyNoteSheetOpen,
+                                selectedNoteIds = selectedNoteIds.toList(),
+                                onClearSelection = { selectedNoteIds = emptySet() },
+                                isAddModeActive = isAddModeActive,
+                                isSearchActive = isSearchActive,
+                                onIsSearchActiveChange = { isSearchActive = it },
+                                defaultContent = { iconsAlphaDuration, showActionIconsExceptSearch ->
+                                    Row {
+                                        val iconAlphaTarget = if (isSearchActive) 0f else 1f
 
-                                val listIconAlpha by animateFloatAsState(
-                                    targetValue = iconAlphaTarget, animationSpec = tween(
-                                        durationMillis = iconsAlphaDuration,
-                                        delayMillis = if (isSearchActive) 0 else 0
-                                    ), label = "ListIconAlpha"
-                                )
-                                IconButton(
-                                    onClick = {
-                                        val newLayout =
-                                            if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
-                                        viewModel.setNotesLayoutType(newLayout)
-                                    },
-                                    modifier = Modifier.alpha(listIconAlpha),
-                                    enabled = !isSearchActive && showActionIconsExceptSearch
-                                ) {
-                                    Icon(
-                                        imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Rounded.ViewStream else Icons.Rounded.ViewModule,
-                                        contentDescription = stringResource(R.string.change_layout),
-                                        tint = colorScheme.onSurface
-                                    )
-                                }
-
-                                val resizeIconAlpha by animateFloatAsState(
-                                    targetValue = iconAlphaTarget, animationSpec = tween(
-                                        durationMillis = iconsAlphaDuration,
-                                        delayMillis = if (isSearchActive) 100 else 0
-                                    ), label = "ResizeIconAlpha"
-                                )
-                                IconButton(
-                                    onClick = ::onResizeClick,
-                                    modifier = Modifier.alpha(resizeIconAlpha),
-                                    enabled = !isSearchActive && showActionIconsExceptSearch
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        androidx.compose.animation.AnimatedVisibility(
-                                            visible = showResizeValue,
-                                            enter = fadeIn(animationSpec = tween(0)),
-                                            exit = fadeOut(animationSpec = tween(500))
-                                        ) {
-                                            val text = when (notesLayoutType) {
-                                                NotesLayoutType.LIST -> if (listItemLineCount == 3 || listItemLineCount == 9) listItemLineCount.toString() else "Max"
-                                                NotesLayoutType.GRID -> gridColumnCount.toString()
-                                            }
-                                            Text(
-                                                text = text,
-                                                style = typography.titleMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = colorScheme.onSurface
-                                            )
-                                        }
-                                        androidx.compose.animation.AnimatedVisibility(
-                                            visible = !showResizeValue,
-                                            enter = fadeIn(animationSpec = tween(500)),
-                                            exit = fadeOut(animationSpec = tween(0))
+                                        val listIconAlpha by animateFloatAsState(
+                                            targetValue = iconAlphaTarget, animationSpec = tween(
+                                                durationMillis = iconsAlphaDuration,
+                                                delayMillis = if (isSearchActive) 0 else 0
+                                            ), label = "ListIconAlpha"
+                                        )
+                                        IconButton(
+                                            onClick = {
+                                                val newLayout =
+                                                    if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
+                                                viewModel.setNotesLayoutType(newLayout)
+                                            },
+                                            modifier = Modifier.alpha(listIconAlpha),
+                                            enabled = !isSearchActive && showActionIconsExceptSearch
                                         ) {
                                             Icon(
-                                                Icons.Rounded.OpenWith,
-                                                contentDescription = stringResource(R.string.resize_notes),
+                                                imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Rounded.ViewStream else Icons.Rounded.ViewModule,
+                                                contentDescription = stringResource(R.string.change_layout),
+                                                tint = colorScheme.onSurface
+                                            )
+                                        }
+
+                                        val resizeIconAlpha by animateFloatAsState(
+                                            targetValue = iconAlphaTarget, animationSpec = tween(
+                                                durationMillis = iconsAlphaDuration,
+                                                delayMillis = if (isSearchActive) 100 else 0
+                                            ), label = "ResizeIconAlpha"
+                                        )
+                                        IconButton(
+                                            onClick = ::onResizeClick,
+                                            modifier = Modifier.alpha(resizeIconAlpha),
+                                            enabled = !isSearchActive && showActionIconsExceptSearch
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                androidx.compose.animation.AnimatedVisibility(
+                                                    visible = showResizeValue,
+                                                    enter = fadeIn(animationSpec = tween(0)),
+                                                    exit = fadeOut(animationSpec = tween(500))
+                                                ) {
+                                                    val text = when (notesLayoutType) {
+                                                        NotesLayoutType.LIST -> if (listItemLineCount == 3 || listItemLineCount == 9) listItemLineCount.toString() else "Max"
+                                                        NotesLayoutType.GRID -> gridColumnCount.toString()
+                                                    }
+                                                    Text(
+                                                        text = text,
+                                                        style = typography.titleMedium,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = colorScheme.onSurface
+                                                    )
+                                                }
+                                                androidx.compose.animation.AnimatedVisibility(
+                                                    visible = !showResizeValue,
+                                                    enter = fadeIn(animationSpec = tween(500)),
+                                                    exit = fadeOut(animationSpec = tween(0))
+                                                ) {
+                                                    Icon(
+                                                        Icons.Rounded.OpenWith,
+                                                        contentDescription = stringResource(R.string.resize_notes),
+                                                        tint = colorScheme.onSurface
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        val settingsIconAlpha by animateFloatAsState(
+                                            targetValue = iconAlphaTarget, animationSpec = tween(
+                                                durationMillis = iconsAlphaDuration,
+                                                delayMillis = if (isSearchActive) 200 else 0
+                                            ), label = "SettingsIconAlpha"
+                                        )
+                                        IconButton(
+                                            onClick = onOpenSettings,
+                                            modifier = Modifier.alpha(settingsIconAlpha),
+                                            enabled = !isSearchActive && showActionIconsExceptSearch
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.Settings,
+                                                contentDescription = stringResource(R.string.settings),
                                                 tint = colorScheme.onSurface
                                             )
                                         }
                                     }
-                                }
 
-                                val settingsIconAlpha by animateFloatAsState(
-                                    targetValue = iconAlphaTarget, animationSpec = tween(
-                                        durationMillis = iconsAlphaDuration,
-                                        delayMillis = if (isSearchActive) 200 else 0
-                                    ), label = "SettingsIconAlpha"
-                                )
-                                IconButton(
-                                    onClick = onOpenSettings,
-                                    modifier = Modifier.alpha(settingsIconAlpha),
-                                    enabled = !isSearchActive && showActionIconsExceptSearch
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Settings,
-                                        contentDescription = stringResource(R.string.settings),
-                                        tint = colorScheme.onSurface
-                                    )
-                                }
-                            }
+                                },
+                                onAddModeToggle = onAddModeToggle,
+                                isSelectedColor = extendedMaterialColorScheme.inverseErrorContainer,
+                                selectionContentOverride = {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        TextButton(
+                                            onClick = {
+                                                viewModel.deleteItems(selectedNoteIds.toList())
+                                                selectedNoteIds = emptySet()
+                                            },
+                                            modifier = Modifier.width(192.dp),
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.delete),
+                                                textAlign = TextAlign.Center,
+                                                style = typography.bodyLarge.copy(
+                                                    fontFamily = QuicksandTitleVariable,
+                                                    color = extendedMaterialColorScheme.inverseOnErrorContainer
 
-                        },
-                        onAddModeToggle = onAddModeToggle,
-                        isSelectedColor = extendedMaterialColorScheme.inverseErrorContainer,
-                        selectionContentOverride = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                TextButton(
-                                    onClick = {
-                                        viewModel.deleteItems(selectedNoteIds.toList())
-                                        selectedNoteIds = emptySet()
-                                    },
-                                    modifier = Modifier.width(192.dp),
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.delete),
-                                        textAlign = TextAlign.Center,
-                                        style = typography.bodyLarge.copy(
-                                            fontFamily = QuicksandTitleVariable,
-                                            color = extendedMaterialColorScheme.inverseOnErrorContainer
-
-                                        )
-                                    )
-                                }
-                            }
-                        },
-                        addModeContentOverride = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                IconButton(onClick = {
-                                    resetNoteState()
-                                    isSearchActive =
-                                        false // Disable search when opening a new text note
-                                    viewModel.setSearchQuery("") // Clear search query
-                                    showTextNoteCard = true
-                                    onAddModeToggle()
-                                }) {
-                                    Icon(
-                                        Icons.Rounded.TextFields,
-                                        contentDescription = stringResource(R.string.add_text_note),
-                                        tint = colorScheme.onSecondaryContainer
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    resetNoteState()
-                                    isSearchActive =
-                                        false // Disable search when opening a new list note
-                                    viewModel.setSearchQuery("") // Clear search query
-                                    showListNoteCard = true
-                                    onAddModeToggle()
-                                }) {
-                                    Icon(
-                                        Icons.Rounded.Checklist,
-                                        contentDescription = stringResource(R.string.add_list_note),
-                                        tint = colorScheme.onSecondaryContainer
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    GlobalAudioPlayer.getInstance().stopAudio()
-
-                                    if (showAudioNoteCard) {
-                                        showAudioNoteCard = false
-                                        resetNoteState()
-                                    } else {
-                                        resetNoteState()
-                                        isSearchActive = false
-                                        viewModel.setSearchQuery("")
-                                        showAudioNoteCard = true
-                                    }
-                                    onAddModeToggle()
-                                }) {
-                                    Icon(
-                                        Icons.Rounded.Mic,
-                                        contentDescription = stringResource(R.string.add_mic_note),
-                                        tint = colorScheme.onSecondaryContainer
-                                    )
-                                }
-                                IconButton(onClick = {
-                                    isSearchActive =
-                                        false // Disable search when opening a new sketch note
-                                    viewModel.setSearchQuery("") // Clear search query
-                                    showSketchNoteCard = true
-                                    onAddModeToggle()
-                                }) {
-                                    Icon(
-                                        Icons.Rounded.Create,
-                                        contentDescription = stringResource(R.string.add_pen_note),
-                                        tint = colorScheme.onSecondaryContainer
-                                    )
-                                }
-                            }
-                        },
-                        contentOverride = when {
-                            showTextNoteCard -> textEditorContent
-                            showListNoteCard -> listEditorContent
-                            showAudioNoteCard -> audioEditorContent
-                            showSketchNoteCard -> sketchEditorContent
-                            else -> null
-                        },
-                        fabOverride = if (showTextNoteCard) {
-                            {
-                                FloatingActionButton(
-                                    onClick = { if (titleState.isNotBlank()) saveTrigger = true },
-                                    containerColor = colorScheme.primary
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Save,
-                                        contentDescription = stringResource(R.string.save_note),
-                                        tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
-                                            alpha = 0.38f
-                                        )
-                                    )
-                                }
-                            }
-                        } else if (showListNoteCard) {
-                            {
-                                FloatingActionButton(
-                                    onClick = {
-                                        if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() }) {
-                                            saveTrigger = true
+                                                )
+                                            )
                                         }
-                                    },
-                                    containerColor = colorScheme.primary
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Save,
-                                        contentDescription = stringResource(R.string.save_list_note),
-                                        tint = if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() })
-                                            colorScheme.onPrimary else colorScheme.onPrimary.copy(
-                                            alpha = 0.38f
-                                        )
-                                    )
-                                }
-                            }
-                        } else if (showAudioNoteCard) {
-                            {
-                                val canSave = titleState.isNotBlank() && hasAudioContent
+                                    }
+                                },
+                                addModeContentOverride = {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceEvenly,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        IconButton(onClick = {
+                                            resetNoteState()
+                                            isSearchActive =
+                                                false // Disable search when opening a new text note
+                                            viewModel.setSearchQuery("") // Clear search query
+                                            showTextNoteCard = true
+                                            onAddModeToggle()
+                                        }) {
+                                            Icon(
+                                                Icons.Rounded.TextFields,
+                                                contentDescription = stringResource(R.string.add_text_note),
+                                                tint = colorScheme.onSecondaryContainer
+                                            )
+                                        }
+                                        IconButton(onClick = {
+                                            resetNoteState()
+                                            isSearchActive =
+                                                false // Disable search when opening a new list note
+                                            viewModel.setSearchQuery("") // Clear search query
+                                            showListNoteCard = true
+                                            onAddModeToggle()
+                                        }) {
+                                            Icon(
+                                                Icons.Rounded.Checklist,
+                                                contentDescription = stringResource(R.string.add_list_note),
+                                                tint = colorScheme.onSecondaryContainer
+                                            )
+                                        }
+                                        IconButton(onClick = {
+                                            GlobalAudioPlayer.getInstance().stopAudio()
 
-                                FloatingActionButton(
-                                    onClick = {
-                                        if (canSave) saveTrigger = true
-                                    },
-                                    containerColor = colorScheme.primary
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Save,
-                                        contentDescription = stringResource(R.string.save_audio_note),
-                                        tint = if (canSave) colorScheme.onPrimary
-                                        else colorScheme.onPrimary.copy(alpha = 0.38f)
-                                    )
-                                }
+                                            if (showAudioNoteCard) {
+                                                showAudioNoteCard = false
+                                                resetNoteState()
+                                            } else {
+                                                resetNoteState()
+                                                isSearchActive = false
+                                                viewModel.setSearchQuery("")
+                                                showAudioNoteCard = true
+                                            }
+                                            onAddModeToggle()
+                                        }) {
+                                            Icon(
+                                                Icons.Rounded.Mic,
+                                                contentDescription = stringResource(R.string.add_mic_note),
+                                                tint = colorScheme.onSecondaryContainer
+                                            )
+                                        }
+                                        IconButton(onClick = {
+                                            isSearchActive =
+                                                false // Disable search when opening a new sketch note
+                                            viewModel.setSearchQuery("") // Clear search query
+                                            showSketchNoteCard = true
+                                            onAddModeToggle()
+                                        }) {
+                                            Icon(
+                                                Icons.Rounded.Create,
+                                                contentDescription = stringResource(R.string.add_pen_note),
+                                                tint = colorScheme.onSecondaryContainer
+                                            )
+                                        }
+                                    }
+                                },
+                                contentOverride = when {
+                                    showTextNoteCard -> textEditorContent
+                                    showListNoteCard -> listEditorContent
+                                    showAudioNoteCard -> audioEditorContent
+                                    showSketchNoteCard -> sketchEditorContent
+                                    else -> null
+                                },
+                                fabOverride = if (showTextNoteCard) {
+                                    {
+                                        FloatingActionButton(
+                                            onClick = { if (titleState.isNotBlank()) saveTrigger = true },
+                                            containerColor = colorScheme.primary
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Save,
+                                                contentDescription = stringResource(R.string.save_note),
+                                                tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
+                                                    alpha = 0.38f
+                                                )
+                                            )
+                                        }
+                                    }
+                                } else if (showListNoteCard) {
+                                    {
+                                        FloatingActionButton(
+                                            onClick = {
+                                                if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() }) {
+                                                    saveTrigger = true
+                                                }
+                                            },
+                                            containerColor = colorScheme.primary
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Save,
+                                                contentDescription = stringResource(R.string.save_list_note),
+                                                tint = if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() })
+                                                    colorScheme.onPrimary else colorScheme.onPrimary.copy(
+                                                    alpha = 0.38f
+                                                )
+                                            )
+                                        }
+                                    }
+                                } else if (showAudioNoteCard) {
+                                    {
+                                        val canSave = titleState.isNotBlank() && hasAudioContent
 
-                            }
-                        } else if (showSketchNoteCard) {
-                            {
-                                FloatingActionButton(
-                                    onClick = { /* Implement save logic for sketch note */ },
-                                    containerColor = colorScheme.primary
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Save,
-                                        contentDescription = stringResource(R.string.save_sketch_note),
-                                        tint = colorScheme.onPrimary
-                                    )
-                                }
-                            }
+                                        FloatingActionButton(
+                                            onClick = {
+                                                if (canSave) saveTrigger = true
+                                            },
+                                            containerColor = colorScheme.primary
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Save,
+                                                contentDescription = stringResource(R.string.save_audio_note),
+                                                tint = if (canSave) colorScheme.onPrimary
+                                                else colorScheme.onPrimary.copy(alpha = 0.38f)
+                                            )
+                                        }
+
+                                    }
+                                } else if (showSketchNoteCard) {
+                                    {
+                                        FloatingActionButton(
+                                            onClick = { /* Implement save logic for sketch note */ },
+                                            containerColor = colorScheme.primary
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Save,
+                                                contentDescription = stringResource(R.string.save_sketch_note),
+                                                tint = colorScheme.onPrimary
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    null
+                                },
+                            )
+
                         } else {
-                            null
-                        },
-                    )
+                        FloatingToolbarContent(
+                            hazeState = hazeState,
+                            currentSearchQuery = currentSearchQuery,
+                            onSearchQueryChanged = { newQuery ->
+                                viewModel.setSearchQuery(newQuery)
+                            },
+                            lazyListState = lazyListState,
+                            allowToolbarScrollBehavior = !isAppBarCollapsible && !isAnyNoteSheetOpen,
+                            selectedNoteIds = selectedNoteIds.toList(),
+                            onClearSelection = { selectedNoteIds = emptySet() },
+                            isAddModeActive = isAddModeActive,
+                            isSearchActive = isSearchActive,
+                            onIsSearchActiveChange = { isSearchActive = it },
+                            defaultContent = { iconsAlphaDuration, showActionIconsExceptSearch ->
+                                Row {
+                                    val iconAlphaTarget = if (isSearchActive) 0f else 1f
+
+                                    val listIconAlpha by animateFloatAsState(
+                                        targetValue = iconAlphaTarget, animationSpec = tween(
+                                            durationMillis = iconsAlphaDuration,
+                                            delayMillis = if (isSearchActive) 0 else 0
+                                        ), label = "ListIconAlpha"
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            val newLayout =
+                                                if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
+                                            viewModel.setNotesLayoutType(newLayout)
+                                        },
+                                        modifier = Modifier.alpha(listIconAlpha),
+                                        enabled = !isSearchActive && showActionIconsExceptSearch
+                                    ) {
+                                        Icon(
+                                            imageVector = if (notesLayoutType == NotesLayoutType.LIST) Icons.Rounded.ViewStream else Icons.Rounded.ViewModule,
+                                            contentDescription = stringResource(R.string.change_layout),
+                                            tint = colorScheme.onSurface
+                                        )
+                                    }
+
+                                    val resizeIconAlpha by animateFloatAsState(
+                                        targetValue = iconAlphaTarget, animationSpec = tween(
+                                            durationMillis = iconsAlphaDuration,
+                                            delayMillis = if (isSearchActive) 100 else 0
+                                        ), label = "ResizeIconAlpha"
+                                    )
+                                    IconButton(
+                                        onClick = ::onResizeClick,
+                                        modifier = Modifier.alpha(resizeIconAlpha),
+                                        enabled = !isSearchActive && showActionIconsExceptSearch
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            androidx.compose.animation.AnimatedVisibility(
+                                                visible = showResizeValue,
+                                                enter = fadeIn(animationSpec = tween(0)),
+                                                exit = fadeOut(animationSpec = tween(500))
+                                            ) {
+                                                val text = when (notesLayoutType) {
+                                                    NotesLayoutType.LIST -> if (listItemLineCount == 3 || listItemLineCount == 9) listItemLineCount.toString() else "Max"
+                                                    NotesLayoutType.GRID -> gridColumnCount.toString()
+                                                }
+                                                Text(
+                                                    text = text,
+                                                    style = typography.titleMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = colorScheme.onSurface
+                                                )
+                                            }
+                                            androidx.compose.animation.AnimatedVisibility(
+                                                visible = !showResizeValue,
+                                                enter = fadeIn(animationSpec = tween(500)),
+                                                exit = fadeOut(animationSpec = tween(0))
+                                            ) {
+                                                Icon(
+                                                    Icons.Rounded.OpenWith,
+                                                    contentDescription = stringResource(R.string.resize_notes),
+                                                    tint = colorScheme.onSurface
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    val settingsIconAlpha by animateFloatAsState(
+                                        targetValue = iconAlphaTarget, animationSpec = tween(
+                                            durationMillis = iconsAlphaDuration,
+                                            delayMillis = if (isSearchActive) 200 else 0
+                                        ), label = "SettingsIconAlpha"
+                                    )
+                                    IconButton(
+                                        onClick = onOpenSettings,
+                                        modifier = Modifier.alpha(settingsIconAlpha),
+                                        enabled = !isSearchActive && showActionIconsExceptSearch
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.Settings,
+                                            contentDescription = stringResource(R.string.settings),
+                                            tint = colorScheme.onSurface
+                                        )
+                                    }
+                                }
+
+                            },
+                            onAddModeToggle = onAddModeToggle,
+                            isSelectedColor = extendedMaterialColorScheme.inverseErrorContainer,
+                            selectionContentOverride = {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    TextButton(
+                                        onClick = {
+                                            viewModel.deleteItems(selectedNoteIds.toList())
+                                            selectedNoteIds = emptySet()
+                                        },
+                                        modifier = Modifier.width(192.dp),
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.delete),
+                                            textAlign = TextAlign.Center,
+                                            style = typography.bodyLarge.copy(
+                                                fontFamily = QuicksandTitleVariable,
+                                                color = extendedMaterialColorScheme.inverseOnErrorContainer
+
+                                            )
+                                        )
+                                    }
+                                }
+                            },
+                            addModeContentOverride = {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(onClick = {
+                                        resetNoteState()
+                                        isSearchActive =
+                                            false // Disable search when opening a new text note
+                                        viewModel.setSearchQuery("") // Clear search query
+                                        showTextNoteCard = true
+                                        onAddModeToggle()
+                                    }) {
+                                        Icon(
+                                            Icons.Rounded.TextFields,
+                                            contentDescription = stringResource(R.string.add_text_note),
+                                            tint = colorScheme.onSecondaryContainer
+                                        )
+                                    }
+                                    IconButton(onClick = {
+                                        resetNoteState()
+                                        isSearchActive =
+                                            false // Disable search when opening a new list note
+                                        viewModel.setSearchQuery("") // Clear search query
+                                        showListNoteCard = true
+                                        onAddModeToggle()
+                                    }) {
+                                        Icon(
+                                            Icons.Rounded.Checklist,
+                                            contentDescription = stringResource(R.string.add_list_note),
+                                            tint = colorScheme.onSecondaryContainer
+                                        )
+                                    }
+                                    IconButton(onClick = {
+                                        GlobalAudioPlayer.getInstance().stopAudio()
+
+                                        if (showAudioNoteCard) {
+                                            showAudioNoteCard = false
+                                            resetNoteState()
+                                        } else {
+                                            resetNoteState()
+                                            isSearchActive = false
+                                            viewModel.setSearchQuery("")
+                                            showAudioNoteCard = true
+                                        }
+                                        onAddModeToggle()
+                                    }) {
+                                        Icon(
+                                            Icons.Rounded.Mic,
+                                            contentDescription = stringResource(R.string.add_mic_note),
+                                            tint = colorScheme.onSecondaryContainer
+                                        )
+                                    }
+                                    IconButton(onClick = {
+                                        isSearchActive =
+                                            false // Disable search when opening a new sketch note
+                                        viewModel.setSearchQuery("") // Clear search query
+                                        showSketchNoteCard = true
+                                        onAddModeToggle()
+                                    }) {
+                                        Icon(
+                                            Icons.Rounded.Create,
+                                            contentDescription = stringResource(R.string.add_pen_note),
+                                            tint = colorScheme.onSecondaryContainer
+                                        )
+                                    }
+                                }
+                            },
+                            contentOverride = when {
+                                showTextNoteCard -> textEditorContent
+                                showListNoteCard -> listEditorContent
+                                showAudioNoteCard -> audioEditorContent
+                                showSketchNoteCard -> sketchEditorContent
+                                else -> null
+                            },
+                            fabOverride = if (showTextNoteCard) {
+                                {
+                                    FloatingActionButton(
+                                        onClick = { if (titleState.isNotBlank()) saveTrigger = true },
+                                        containerColor = colorScheme.primary
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Save,
+                                            contentDescription = stringResource(R.string.save_note),
+                                            tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
+                                                alpha = 0.38f
+                                            )
+                                        )
+                                    }
+                                }
+                            } else if (showListNoteCard) {
+                                {
+                                    FloatingActionButton(
+                                        onClick = {
+                                            if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() }) {
+                                                saveTrigger = true
+                                            }
+                                        },
+                                        containerColor = colorScheme.primary
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Save,
+                                            contentDescription = stringResource(R.string.save_list_note),
+                                            tint = if (listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() })
+                                                colorScheme.onPrimary else colorScheme.onPrimary.copy(
+                                                alpha = 0.38f
+                                            )
+                                        )
+                                    }
+                                }
+                            } else if (showAudioNoteCard) {
+                                {
+                                    val canSave = titleState.isNotBlank() && hasAudioContent
+
+                                    FloatingActionButton(
+                                        onClick = {
+                                            if (canSave) saveTrigger = true
+                                        },
+                                        containerColor = colorScheme.primary
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Save,
+                                            contentDescription = stringResource(R.string.save_audio_note),
+                                            tint = if (canSave) colorScheme.onPrimary
+                                            else colorScheme.onPrimary.copy(alpha = 0.38f)
+                                        )
+                                    }
+
+                                }
+                            } else if (showSketchNoteCard) {
+                                {
+                                    FloatingActionButton(
+                                        onClick = { /* Implement save logic for sketch note */ },
+                                        containerColor = colorScheme.primary
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Save,
+                                            contentDescription = stringResource(R.string.save_sketch_note),
+                                            tint = colorScheme.onPrimary
+                                        )
+                                    }
+                                }
+                            } else {
+                                null
+                            },
+                        )
+                    }
                 }
             },
         ) { scaffoldPadding ->
