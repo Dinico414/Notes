@@ -39,19 +39,10 @@ fun DevCoverSettings(
     val hazeState = rememberHazeState()
     val context = LocalContext.current
 
-
-    val isAppBarCollapsible = when (layoutType) {
-        LayoutType.COVER -> false
-        LayoutType.SMALL -> false
-        LayoutType.COMPACT -> !isLandscape
-        LayoutType.MEDIUM -> true
-        LayoutType.EXPANDED -> true
-    }
-
     ActivityScreen(
         titleText = stringResource(id = R.string.developer_options_title),
 
-        expandable = isAppBarCollapsible,
+        expandable = false,
 
         navigationIconStartPadding = MediumPadding,
         navigationIconPadding = MediumPadding,

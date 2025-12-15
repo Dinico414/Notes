@@ -111,6 +111,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -253,25 +254,13 @@ fun CompactNotes(
         val noteItemsWithHeaders = viewModel.noteItems
 
         val density = LocalDensity.current
-        val appWidthDp = with(density) { appSize.width.toDp() }
-        val appHeightDp = with(density) { appSize.height.toDp() }
 
-        val currentAspectRatio = if (isLandscape) {
-            appWidthDp / appHeightDp
-        } else {
-            appHeightDp / appWidthDp
-        }
-
-        val aspectRatioConditionMet = if (isLandscape) {
-            currentAspectRatio > 0.5625f
-        } else {
-            currentAspectRatio < 1.77f
-        }
-
-        val isAppBarCollapsible = when (layoutType) {
+        val configuration = LocalConfiguration.current
+        val appHeight = configuration.screenHeightDp.dp
+        val isAppBarExpandable = when (layoutType) {
             LayoutType.COVER -> false
             LayoutType.SMALL -> false
-            LayoutType.COMPACT -> !isLandscape || !aspectRatioConditionMet
+            LayoutType.COMPACT -> !isLandscape && appHeight >= 460.dp
             LayoutType.MEDIUM -> true
             LayoutType.EXPANDED -> true
         }
@@ -907,7 +896,7 @@ fun CompactNotes(
                         currentSearchQuery = currentSearchQuery,
                         onSearchQueryChanged = { viewModel.setSearchQuery(it) },
                         lazyListState = lazyListState,
-                        allowToolbarScrollBehavior = !isAppBarCollapsible && !isAnyNoteSheetOpen,
+                        allowToolbarScrollBehavior = !isAppBarExpandable && !isAnyNoteSheetOpen,
                         selectedNoteIds = selectedNoteIds.toList(),
                         onClearSelection = { selectedNoteIds = emptySet() },
                         isAddModeActive = isAddModeActive,
@@ -1055,7 +1044,7 @@ fun CompactNotes(
                         .hazeSource(hazeState)
                         .onSizeChanged {},
                     titleText = stringResource(id = R.string.app_name),
-                    expandable = isAppBarCollapsible,
+                    expandable = isAppBarExpandable,
                     navigationIconStartPadding = MediumPadding,
                     navigationIconPadding = if (state.isSignInSuccessful) SmallPadding else MediumPadding,
                     navigationIconSpacing = MediumSpacing,

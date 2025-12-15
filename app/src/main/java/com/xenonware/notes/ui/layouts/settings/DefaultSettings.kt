@@ -20,6 +20,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
@@ -99,11 +100,12 @@ fun DefaultSettings(
         viewModel.applyCoverTheme(containerSize)
     }
 
-
-    val isAppBarCollapsible = when (layoutType) {
+    val configuration = LocalConfiguration.current
+    val appHeight = configuration.screenHeightDp.dp
+    val isAppBarExpandable = when (layoutType) {
         LayoutType.COVER -> false
         LayoutType.SMALL -> false
-        LayoutType.COMPACT -> !isLandscape
+        LayoutType.COMPACT -> !isLandscape && appHeight >= 460.dp
         LayoutType.MEDIUM -> true
         LayoutType.EXPANDED -> true
     }
@@ -113,7 +115,7 @@ fun DefaultSettings(
     ActivityScreen(
         titleText = stringResource(id = R.string.settings),
 
-        expandable = isAppBarCollapsible,
+        expandable = isAppBarExpandable,
 
         navigationIconStartPadding = MediumPadding,
         navigationIconPadding = MediumPadding,

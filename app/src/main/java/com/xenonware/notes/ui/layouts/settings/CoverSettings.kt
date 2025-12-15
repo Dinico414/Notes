@@ -116,12 +116,10 @@ fun CoverSettings(
                 modifier = Modifier.size(24.dp)
             )
         },
-        expandable = !coverThemeEnabled,
-
+        expandable = false,
         onNavigationIconClick = onNavigateBack,
         hasNavigationIconExtraContent = false,
         actions = {},
-        // isAppBarCollapsible = false,
         screenBackgroundColor = coverScreenBackgroundColor,
         contentBackgroundColor = coverScreenBackgroundColor,
         appBarNavigationIconContentColor = coverScreenContentColor,
