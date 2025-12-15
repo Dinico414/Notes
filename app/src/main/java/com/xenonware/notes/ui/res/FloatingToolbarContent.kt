@@ -109,21 +109,12 @@ data class ScrollState(
     val canScrollForward: Boolean,
 )
 
-/**
- * Public placeholder FAB for spanned mode.
- * Uses EXACTLY the same styling as the real integrated FAB:
- * - Transparent container + background(primary)
- * - Same haze effect
- * - Same shadow
- * - Same icon tint
- * - Always enabled (not affected by isFabEnabled)
- */
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
-public fun SpannedModeFAB(
+fun SpannedModeFAB(
     hazeState: HazeState,
     onClick: () -> Unit,
-    isSheetOpen: Boolean = false, // true when any note sheet is open
+    isSheetOpen: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -136,7 +127,6 @@ public fun SpannedModeFAB(
         val isPressed by interactionSource.collectIsPressedAsState()
         val isHovered by interactionSource.collectIsHoveredAsState()
 
-        // Icon tint: onPrimary when sheet open (like fabOverride), otherwise onPrimaryContainer/onPrimary
         val fabIconTint = if (isSheetOpen) {
             colorScheme.onPrimary
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -247,7 +237,7 @@ fun FloatingToolbarContent(
     isSpannedMode: Boolean = false,
     fabOnLeftInSpannedMode: Boolean = true,
     spannedModeHingeGap: Dp = 0.dp,
-    spannedModePlaceholderFab: @Composable ((onClick: () -> Unit) -> Unit)? = null,
+    spannedModeFab: @Composable ((onClick: () -> Unit) -> Unit)? = null,
 ) {
     if (isSpannedMode) {
         Row(
@@ -279,7 +269,7 @@ fun FloatingToolbarContent(
                         isSelectedColor = isSelectedColor
                     )
                 } else {
-                    spannedModePlaceholderFab?.invoke { }
+                    spannedModeFab?.invoke { }
                         ?: SpannedModeFAB(
                             hazeState = hazeState,
                             onClick = { }
@@ -313,7 +303,7 @@ fun FloatingToolbarContent(
                         isSelectedColor = isSelectedColor
                     )
                 } else {
-                    spannedModePlaceholderFab?.invoke { }
+                    spannedModeFab?.invoke { }
                         ?: SpannedModeFAB(
                             hazeState = hazeState,
                             onClick = { }
@@ -346,7 +336,9 @@ fun FloatingToolbarContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, FlowPreview::class,
+    ExperimentalHazeMaterialsApi::class
+)
 @Composable
 private fun SingleToolbarInstance(
     hazeState: HazeState,

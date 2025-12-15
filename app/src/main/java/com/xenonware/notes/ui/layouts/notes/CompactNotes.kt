@@ -310,10 +310,9 @@ fun CompactNotes(
 
     val screenWidthDp = with(density) { appSize.width.toDp() }.value.toInt()
 
+    // === Surface Duo Detection ===
     val context = LocalContext.current
-
     val modelUpper = remember { Build.MODEL.uppercase() }
-
     val duoGeneration = remember {
         when {
             modelUpper.contains("SURFACE DUO 2") -> "2"
@@ -321,14 +320,12 @@ fun CompactNotes(
             else -> null
         }
     }
-
     val isSdRecModeOnOff = false
     val isSurfaceDuo = duoGeneration != null
 
     val displayMetrics = context.resources.displayMetrics
     val realHeight = displayMetrics.heightPixels
     val realWidth = displayMetrics.widthPixels
-
     val configKey = remember { mutableStateOf(realHeight to realWidth) }
 
     if (isSdRecModeOnOff)
@@ -337,6 +334,23 @@ fun CompactNotes(
         val message = "sd: $sdPart; res: $realHeight-$realWidth"
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
     }
+    // === Spanned Mode Detection ===
+    val configuration = LocalConfiguration.current
+    val isLandscapeConfig =
+        configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val currentWidthPx = displayMetrics.widthPixels
+    val currentHeightPx = displayMetrics.heightPixels
+    val screenWidthPx = if (isLandscapeConfig) currentWidthPx else currentHeightPx
+
+    val expectedSpannedWidth =
+        if (duoGeneration == "1") 2784 else if (duoGeneration == "2") 2754 else 0
+    val isSpannedMode =
+        isSurfaceDuo && isLandscapeConfig && screenWidthPx >= expectedSpannedWidth - 100
+
+    val hingeGapPx = if (duoGeneration == "1") 84 else if (duoGeneration == "2") 66 else 0
+    val hingeGapDp = (hingeGapPx / displayMetrics.density).dp
+
+    var fabOnLeft by rememberSaveable { mutableStateOf(true) }
 
     fun onResizeClick() {
         when (notesLayoutType) {
@@ -431,24 +445,6 @@ fun CompactNotes(
 
     val isAnyNoteSheetOpen =
         showTextNoteCard || showSketchNoteCard || showAudioNoteCard || showListNoteCard
-
-    // === Spanned Mode Detection (inside bottomBar) ===
-    val configuration = LocalConfiguration.current
-    val isLandscapeConfig =
-        configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val currentWidthPx = displayMetrics.widthPixels
-    val currentHeightPx = displayMetrics.heightPixels
-    val screenWidthPx = if (isLandscapeConfig) currentWidthPx else currentHeightPx
-
-    val expectedSpannedWidth =
-        if (duoGeneration == "1") 2784 else if (duoGeneration == "2") 2754 else 0
-    val isSpannedMode =
-        isSurfaceDuo && isLandscapeConfig && screenWidthPx >= expectedSpannedWidth - 100
-
-    val hingeGapPx = if (duoGeneration == "1") 84 else if (duoGeneration == "2") 66 else 0
-    val hingeGapDp = (hingeGapPx / displayMetrics.density).dp
-
-    var fabOnLeft by rememberSaveable { mutableStateOf(true) }
 
     val textEditorContent: @Composable (RowScope.() -> Unit)? = if (showTextNoteCard) {
         @Composable {
@@ -1021,14 +1017,11 @@ fun CompactNotes(
                         else -> null
                     },
                     fabOverride = fabOverride,
-
                     // === SPANNED MODE CONTROL ===
                     isSpannedMode = isSpannedMode,
                     fabOnLeftInSpannedMode = fabOnLeft,
                     spannedModeHingeGap = hingeGapDp,
-
-                    // Built-in placeholder FAB with toggle functionality
-                    spannedModePlaceholderFab = {
+                    spannedModeFab = {
                         SpannedModeFAB(
                             hazeState = hazeState,
                             onClick = { fabOnLeft = !fabOnLeft },
