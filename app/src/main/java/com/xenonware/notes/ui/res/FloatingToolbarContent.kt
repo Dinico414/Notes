@@ -123,10 +123,11 @@ data class ScrollState(
 public fun SpannedModeFAB(
     hazeState: HazeState,
     onClick: () -> Unit,
+    isSheetOpen: Boolean = false, // true when any note sheet is open
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier.size(64.dp), // Matches toolbar height – perfect alignment
+        modifier = modifier.size(64.dp),
         contentAlignment = Alignment.Center
     ) {
         val density = LocalDensity.current
@@ -135,7 +136,10 @@ public fun SpannedModeFAB(
         val isPressed by interactionSource.collectIsPressedAsState()
         val isHovered by interactionSource.collectIsHoveredAsState()
 
-        val fabIconTint = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        // Icon tint: onPrimary when sheet open (like fabOverride), otherwise onPrimaryContainer/onPrimary
+        val fabIconTint = if (isSheetOpen) {
+            colorScheme.onPrimary
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             colorScheme.onPrimaryContainer
         } else {
             colorScheme.onPrimary
@@ -189,17 +193,17 @@ public fun SpannedModeFAB(
             }
         }
 
-        // Exact same styling as the real integrated FAB
         FloatingActionButton(
             onClick = onClick,
-            containerColor = Color.Transparent,
+            containerColor = if (isSheetOpen) colorScheme.primary else Color.Transparent,
+            contentColor = fabIconTint,
             shape = fabShape,
             elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
             interactionSource = interactionSource,
             modifier = Modifier
                 .size(fabSize)
                 .clip(fabShape)
-                .background(colorScheme.primary)
+                .then(if (!isSheetOpen) Modifier.background(colorScheme.primary) else Modifier)
                 .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor))
         ) {
             Icon(

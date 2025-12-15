@@ -1032,7 +1032,8 @@ fun CompactNotes(
                         SpannedModeFAB(
                             hazeState = hazeState,
                             onClick = { fabOnLeft = !fabOnLeft },
-                            modifier = Modifier.padding(bottom = animatedBottomPadding)
+                            modifier = Modifier.padding(bottom = animatedBottomPadding),
+                            isSheetOpen = isAnyNoteSheetOpen
                         )
                     }
                 )
@@ -1734,97 +1735,3 @@ fun CompactNotes(
         }
     }
 }
-//
-//@OptIn(ExperimentalHazeMaterialsApi::class)
-//@Composable
-//private fun SpannedModePlaceholderFab(
-//    modifier: Modifier = Modifier,
-//    onClick: () -> Unit,
-//    hazeState: HazeState,
-//) {
-//    Box(
-//        modifier = modifier, contentAlignment = Alignment.Center
-//    ) {
-//        val density = LocalDensity.current
-//        val fabShape = FloatingActionButtonDefaults.shape
-//        val interactionSource = remember { MutableInteractionSource() }
-//        val isPressed by interactionSource.collectIsPressedAsState()
-//        val isHovered by interactionSource.collectIsHoveredAsState()
-//
-//        val fabIconTint = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-//            colorScheme.onPrimaryContainer
-//        } else {
-//            colorScheme.onPrimary
-//        }
-//
-//        val hazeThinColor = colorScheme.primary
-//        val smallElevationPx = with(density) { SmallElevation.toPx() }
-//        val baseShadowAlpha = 0.7f
-//        val interactiveShadowAlpha = 0.9f
-//
-//        val currentShadowRadius =
-//            if (isPressed || isHovered) smallElevationPx * 1.5f else smallElevationPx
-//        val currentShadowAlpha =
-//            if (isPressed || isHovered) interactiveShadowAlpha else baseShadowAlpha
-//        val currentShadowColor = colorScheme.scrim.copy(alpha = currentShadowAlpha)
-//        val currentYOffsetPx = with(density) { 1.dp.toPx() }
-//
-//        // Calculate the exact size of the FAB (without extra padding)
-//        val fabSize = FloatingActionButtonDefaults.LargeIconSize + 24.dp
-//        val extraSize = if (isPressed || isHovered) 5.dp else 5.dp
-//        val canvasSize = fabSize + extraSize
-//
-//        // Shadow Canvas — same size as original, but we draw the outline centered
-//        Canvas(modifier = Modifier.size(canvasSize)) {
-//            // Create outline for the *actual* FAB size (not the larger canvas)
-//            val fabOutline = fabShape.createOutline(
-//                size = Size(fabSize.toPx(), fabSize.toPx()),
-//                layoutDirection = layoutDirection,
-//                density = density
-//            )
-//
-//            // Center the FAB outline inside the larger canvas
-//            val offsetX = (size.width - fabSize.toPx()) / 2f
-//            val offsetY = (size.height - fabSize.toPx()) / 2f
-//
-//            val centeredPath = Path().apply {
-//                addOutline(fabOutline)
-//                translate(Offset(offsetX, offsetY))
-//            }
-//
-//            drawIntoCanvas { canvas ->
-//                val paint = android.graphics.Paint().apply {
-//                    isAntiAlias = true
-//                    style = android.graphics.Paint.Style.STROKE
-//                    strokeWidth = with(density) { 0.5.dp.toPx() }
-//                    color = Color.Transparent.toArgb()
-//                    setShadowLayer(
-//                        currentShadowRadius, 0f, currentYOffsetPx, currentShadowColor.toArgb()
-//                    )
-//                }
-//                canvas.nativeCanvas.drawPath(centeredPath.asAndroidPath(), paint)
-//            }
-//        }
-//
-//        FloatingActionButton(
-//            onClick = onClick,
-//            containerColor = Color.Transparent,
-//            shape = fabShape,
-//            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-//            interactionSource = interactionSource,
-//            modifier = Modifier
-//                .size(fabSize)
-//                .clip(fabShape)
-//                .background(colorScheme.primary)
-//                .hazeEffect(
-//                    state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)
-//                )
-//        ) {
-//            Icon(
-//                imageVector = Icons.Rounded.SwapHoriz,
-//                contentDescription = "Swap toolbar position",
-//                tint = fabIconTint
-//            )
-//        }
-//    }
-//}
