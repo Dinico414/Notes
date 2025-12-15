@@ -120,7 +120,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.ActivityScreen
 import com.xenon.mylibrary.QuicksandTitleVariable
-import com.xenon.mylibrary.res.FloatingToolbarContent
 import com.xenon.mylibrary.res.GoogleProfilBorder
 import com.xenon.mylibrary.res.GoogleProfilePicture
 import com.xenon.mylibrary.res.XenonSnackbar
@@ -135,6 +134,7 @@ import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.layouts.NoteCard
+import com.xenonware.notes.ui.res.FloatingToolbarContent
 import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.sheets.AudioViewType
 import com.xenonware.notes.ui.res.sheets.ListItem
