@@ -120,6 +120,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.ActivityScreen
 import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenon.mylibrary.res.FloatingToolbarContent
 import com.xenon.mylibrary.res.GoogleProfilBorder
 import com.xenon.mylibrary.res.GoogleProfilePicture
 import com.xenon.mylibrary.res.XenonSnackbar
@@ -134,7 +135,6 @@ import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.layouts.NoteCard
-import com.xenonware.notes.ui.res.FloatingToolbarContent
 import com.xenonware.notes.ui.res.ListContent
 import com.xenonware.notes.ui.res.sheets.AudioViewType
 import com.xenonware.notes.ui.res.sheets.ListItem
@@ -173,6 +173,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 
+@Suppress("unused")
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(
@@ -795,7 +796,7 @@ fun CoverNotes(
                                     enabled = !isSearchActive && showActionIconsExceptSearch
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        androidx.compose.animation.AnimatedVisibility(
+                                        this@Row.AnimatedVisibility(
                                             visible = showResizeValue,
                                             enter = fadeIn(animationSpec = tween(0)),
                                             exit = fadeOut(animationSpec = tween(500))
@@ -811,7 +812,7 @@ fun CoverNotes(
                                                 color = colorScheme.onSurface
                                             )
                                         }
-                                        androidx.compose.animation.AnimatedVisibility(
+                                        this@Row.AnimatedVisibility(
                                             visible = !showResizeValue,
                                             enter = fadeIn(animationSpec = tween(500)),
                                             exit = fadeOut(animationSpec = tween(0))
@@ -1079,6 +1080,7 @@ fun CoverNotes(
                 navigationIconExtraContent = {
                     if (state.isSignInSuccessful) {
                         Box(contentAlignment = Alignment.Center) {
+                            @Suppress("KotlinConstantConditions")
                             GoogleProfilBorder(
                                 isSignedIn = state.isSignInSuccessful,
                                 modifier = Modifier.size(32.dp),
@@ -1346,7 +1348,7 @@ fun CoverNotes(
                                                             NoteType.SKETCH -> showSketchNoteCard = true
                                                         }
                                                     },
-                                                    maxLines = if (notesLayoutType == NotesLayoutType.LIST) currentListMaxLines else gridMaxLines,
+                                                    maxLines = gridMaxLines,
                                                     isNoteSheetOpen = isAnyNoteSheetOpen
                                                 )
                                             }
@@ -1501,7 +1503,7 @@ fun CoverNotes(
                                 .filterIsInstance<NotesItems>()
                                 .find { it.id == editingNoteId }
 
-                            existingNote?.let {
+                            existingNote?.let { it ->
                                 val updatedNote = it.copy(
                                     title = title.trim(),
                                     color = colorLong,
@@ -1597,7 +1599,7 @@ fun CoverNotes(
                                 .filterIsInstance<NotesItems>()
                                 .find { it.id == editingNoteId }
 
-                            existingNote?.let {
+                            existingNote?.let { it ->
                                 val updatedNote = it.copy(
                                     title = title.trim(),
                                     description = uniqueAudioId.takeIf { it.isNotBlank() },
@@ -1688,7 +1690,7 @@ fun CoverNotes(
                                 .filterIsInstance<NotesItems>()
                                 .find { it.id == editingNoteId }
 
-                            existingNote?.let {
+                            existingNote?.let { it ->
                                 val updatedNote = it.copy(
                                     title = title.trim(),
                                     description = description.takeIf { it.isNotBlank() },
