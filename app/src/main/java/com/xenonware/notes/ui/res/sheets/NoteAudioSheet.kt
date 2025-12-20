@@ -81,7 +81,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.QuicksandTitleVariable
-import com.xenonware.notes.ui.res.DropdownNoteMenu
+import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.res.LabelSelectionDialog
 import com.xenonware.notes.ui.res.MenuItem
 import com.xenonware.notes.ui.res.TranscriptDisplay
@@ -619,7 +619,7 @@ fun NoteAudioSheet(
                     ) {
                         Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
                     }
-                    DropdownNoteMenu(
+                    XenonDropDown(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
                         items = listOfNotNull(
