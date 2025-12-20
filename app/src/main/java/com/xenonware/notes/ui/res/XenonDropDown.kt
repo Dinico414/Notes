@@ -11,18 +11,21 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -46,6 +49,12 @@ fun XenonDropDown(
     onDismissRequest: () -> Unit,
     items: List<MenuItem>,
     hazeState: HazeState,
+    paddingValues: PaddingValues = PaddingValues(end = 4.dp, top = 64.dp),
+    radius: Dp = 24.dp,
+    width: Dp = 150.dp,
+    shadowElevation: Dp = 4.dp,
+    bgcSDK12a: Color = colorScheme.surfaceContainerHigh,
+    bgcSDK11b: Color = colorScheme.surfaceDim,
 ) {
     val transitionState = remember {
         MutableTransitionState(initialState = false)
@@ -80,15 +89,16 @@ fun XenonDropDown(
                 )
             ) {
                 val hazeThinColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    MaterialTheme.colorScheme.surfaceContainerHigh
+                    bgcSDK12a
                 } else {
-                    MaterialTheme.colorScheme.surfaceDim
+                    bgcSDK11b
                 }
                 Column(
                     modifier = Modifier
-                        .padding(end = 4.dp, top = 64.dp)
-                        .width(150.dp)
-                        .clip(RoundedCornerShape(24.dp))
+                        .padding(paddingValues)
+                        .width(width)
+                        .shadow(shadowElevation, RoundedCornerShape(radius))
+                        .clip(RoundedCornerShape(radius))
                         .hazeEffect(
                             state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)
                         )
