@@ -173,6 +173,7 @@ import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
 import com.xenonware.notes.util.GlobalAudioPlayer
 import com.xenonware.notes.viewmodel.LayoutType
+import com.xenonware.notes.viewmodel.NoteEditingViewModel
 import com.xenonware.notes.viewmodel.NotesLayoutType
 import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.classes.NoteType
@@ -195,6 +196,7 @@ import java.io.File
 @Composable
 fun CompactNotes(
     viewModel: NotesViewModel = viewModel(),
+    noteEditingViewModel: NoteEditingViewModel = viewModel(),
     signInViewModel: SignInViewModel = viewModel(),
     layoutType: LayoutType,
     isLandscape: Boolean,
@@ -219,8 +221,10 @@ fun CompactNotes(
         var isItalic by remember { mutableStateOf(false) }
         var isUnderlined by remember { mutableStateOf(false) }
         val textSizes = listOf(16.sp, 20.sp, 24.sp, 28.sp)
-        var currentSizeIndex by remember { mutableIntStateOf(1) }
+        val vmFontSizeIndex by noteEditingViewModel.textFontSizeIndex.collectAsState()
+        var currentSizeIndex by remember { mutableIntStateOf(vmFontSizeIndex) }
         val editorFontSize = textSizes[currentSizeIndex]
+
 
         val listTextSizes = remember { listOf(16.sp, 20.sp, 24.sp, 28.sp) }
         var currentListSizeIndex by rememberSaveable { mutableIntStateOf(1) }
@@ -319,6 +323,12 @@ fun CompactNotes(
                 showResizeValue = false
             }
         }
+        LaunchedEffect(currentSizeIndex) {
+            if (currentSizeIndex != vmFontSizeIndex) {
+                noteEditingViewModel.setTextFontSizeIndex(currentSizeIndex)
+            }
+        }
+
 
         fun onListTextResizeClick() {
             currentListSizeIndex = (currentListSizeIndex + 1) % listTextSizes.size
@@ -335,6 +345,7 @@ fun CompactNotes(
             currentListSizeIndex = 1
             selectedAudioViewType = AudioViewType.Waveform
             selectedLabelId = null
+            noteEditingViewModel.clearAllStates()
         }
 
         val colorThemeMap = remember {
@@ -413,41 +424,53 @@ fun CompactNotes(
                     useBlueTheme = selectedTextNoteTheme == "Blue",
                     usePurpleTheme = selectedTextNoteTheme == "Purple",
                     dynamicColor = selectedTextNoteTheme == "Default"
+
                 ) {
+                    val vmIsBold by noteEditingViewModel.textIsBold.collectAsState()
+                    val vmIsItalic by noteEditingViewModel.textIsItalic.collectAsState()
+                    val vmIsUnderlined by noteEditingViewModel.textIsUnderlined.collectAsState()
+                    val vmFontSizeIndex by noteEditingViewModel.textFontSizeIndex.collectAsState()
+
                     Row {
                         val toggledColor = colorScheme.primary
                         val defaultColor = Color.Transparent
                         val toggledIconColor = colorScheme.onPrimary
                         val defaultIconColor = colorScheme.onSurface
                         FilledIconButton(
-                            onClick = { isBold = !isBold },
+                            onClick = {
+                                val newValue = !vmIsBold
+                                isBold = newValue
+                                noteEditingViewModel.setTextIsBold(newValue)
+                            },
                             colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = if (isBold) toggledColor else defaultColor,
-                                contentColor = if (isBold) toggledIconColor else defaultIconColor
+                                containerColor = if (vmIsBold) toggledColor else defaultColor,
+                                contentColor = if (vmIsBold) toggledIconColor else defaultIconColor
                             )
                         ) {
-                            Icon(
-                                Icons.Rounded.FormatBold,
-                                contentDescription = stringResource(R.string.bold_text)
-                            )
+                            Icon(Icons.Rounded.FormatBold, contentDescription = stringResource(R.string.bold_text))
                         }
                         FilledIconButton(
-                            onClick = { isItalic = !isItalic },
+                            onClick = {
+                                val newValue = !vmIsItalic
+                                isItalic = newValue
+                                noteEditingViewModel.setTextIsItalic(newValue)
+                            },
                             colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = if (isItalic) toggledColor else defaultColor,
-                                contentColor = if (isItalic) toggledIconColor else defaultIconColor
+                                containerColor = if (vmIsItalic) toggledColor else defaultColor,
+                                contentColor = if (vmIsItalic) toggledIconColor else defaultIconColor
                             )
                         ) {
-                            Icon(
-                                Icons.Rounded.FormatItalic,
-                                contentDescription = stringResource(R.string.italic_text)
-                            )
+                            Icon(Icons.Rounded.FormatItalic, contentDescription = stringResource(R.string.italic_text))
                         }
                         FilledIconButton(
-                            onClick = { isUnderlined = !isUnderlined },
+                            onClick = {
+                                val newValue = !vmIsUnderlined
+                                isUnderlined = newValue
+                                noteEditingViewModel.setTextIsUnderlined(newValue)
+                            },
                             colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = if (isUnderlined) toggledColor else defaultColor,
-                                contentColor = if (isUnderlined) toggledIconColor else defaultIconColor
+                                containerColor = if (vmIsUnderlined) toggledColor else defaultColor,
+                                contentColor = if (vmIsUnderlined) toggledIconColor else defaultIconColor
                             )
                         ) {
                             Icon(
@@ -456,7 +479,9 @@ fun CompactNotes(
                             )
                         }
                         IconButton(onClick = {
-                            currentSizeIndex = (currentSizeIndex + 1) % textSizes.size
+                            val newIndex = (vmFontSizeIndex + 1) % textSizes.size
+                            currentSizeIndex = newIndex
+                            noteEditingViewModel.setTextFontSizeIndex(newIndex)
                         }) {
                             Icon(
                                 Icons.Rounded.FormatSize,
@@ -1001,7 +1026,6 @@ fun CompactNotes(
                             else -> null
                         },
                         fabOverride = fabOverride,
-                        // === SPANNED MODE CONTROL ===
                         isSpannedMode = deviceConfig.isSpannedMode,
                         fabOnLeftInSpannedMode = deviceConfig.fabOnLeft,
                         spannedModeHingeGap = deviceConfig.hingeGapDp,
@@ -1334,7 +1358,28 @@ fun CompactNotes(
                                                             viewModel.setSearchQuery("")
 
                                                             when (itemToEdit.noteType) {
-                                                                NoteType.TEXT -> viewModel.showTextCard()
+                                                                NoteType.TEXT -> {
+                                                                    noteEditingViewModel.setTextTitle(
+                                                                        itemToEdit.title
+                                                                    )
+                                                                    noteEditingViewModel.setTextContent(
+                                                                        descriptionState
+                                                                    )
+                                                                    noteEditingViewModel.setTextTheme(
+                                                                        colorThemeMap[editingNoteColor]
+                                                                            ?: "Default"
+                                                                    )
+                                                                    noteEditingViewModel.setTextLabelId(
+                                                                        selectedLabelId
+                                                                    )
+                                                                    noteEditingViewModel.setTextIsOffline(
+                                                                        itemToEdit.isOffline
+                                                                    )
+
+                                                                    isSearchActive = false
+                                                                    viewModel.setSearchQuery("")
+                                                                    viewModel.showTextCard()
+                                                                }
 
                                                                 NoteType.AUDIO -> {
                                                                     viewModel.showAudioCard()
@@ -1376,19 +1421,22 @@ fun CompactNotes(
                 ) {
                     BackHandler {
                         viewModel.hideTextCard()
-                        isSearchActive = false // Disable search on dismiss
-                        viewModel.setSearchQuery("") // Clear search query
+                        isSearchActive = false
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     }
 
                     NoteTextSheet(
                         textTitle = titleState,
-                        onTextTitleChange = { titleState = it },
+                        onTextTitleChange = { newTitle ->
+                            titleState = newTitle
+                            noteEditingViewModel.setTextTitle(newTitle)
+                        },
                         initialContent = descriptionState,
                         onDismiss = {
                             viewModel.hideTextCard()
-                            isSearchActive = false // Disable search on dismiss
-                            viewModel.setSearchQuery("") // Clear search query
+                            isSearchActive = false
+                            viewModel.setSearchQuery("")
                             resetNoteState()
                         },
                         initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1458,8 +1506,7 @@ fun CompactNotes(
                         onAddNewLabel = { viewModel.addLabel(it) },
                         isBlackThemeActive = isBlackedOut,
                         isCoverModeActive = false,
-                        editingNoteId = editingNoteId,
-                        notesViewModel = viewModel,
+                        noteEditingViewModel = noteEditingViewModel
                     )
                 }
 

@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,9 +80,8 @@ import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
-import com.xenonware.notes.viewmodel.NotesViewModel
+import com.xenonware.notes.viewmodel.NoteEditingViewModel
 import com.xenonware.notes.viewmodel.classes.Label
-import com.xenonware.notes.viewmodel.classes.NotesItems
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -162,45 +162,92 @@ fun NoteTextSheet(
     initialSelectedLabelId: String?,
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
-    editingNoteId: Int?,
-    notesViewModel: NotesViewModel,
+    noteEditingViewModel: NoteEditingViewModel, // ← NEU
     isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false,
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
 
-    var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) }
+    // === ALLE STATES AUS DEDIZIERTEM VIEWMODEL ===
+    val vmContent by noteEditingViewModel.textContent.collectAsState()
+    val vmTitle by noteEditingViewModel.textTitle.collectAsState()
+    val vmTheme by noteEditingViewModel.textTheme.collectAsState()
+    val vmLabelId by noteEditingViewModel.textLabelId.collectAsState()
+    val vmIsOffline by noteEditingViewModel.textIsOffline.collectAsState()
+
+    // Initialisierung beim ersten Öffnen
+    LaunchedEffect(Unit) {
+        if (vmContent.isEmpty() && initialContent.isNotEmpty()) {
+            noteEditingViewModel.setTextContent(initialContent)
+        }
+        if (vmTitle.isEmpty() && textTitle.isNotEmpty()) {
+            noteEditingViewModel.setTextTitle(textTitle)
+        }
+        if (vmTheme == "Default" && initialTheme != "Default") {
+            noteEditingViewModel.setTextTheme(initialTheme)
+        }
+        if (vmLabelId == null && initialSelectedLabelId != null) {
+            noteEditingViewModel.setTextLabelId(initialSelectedLabelId)
+        }
+    }
+
+    // Lokale States
+    var selectedTheme by rememberSaveable { mutableStateOf(vmTheme.takeIf { it.isNotEmpty() } ?: initialTheme) }
+    var selectedLabelId by rememberSaveable { mutableStateOf(vmLabelId ?: initialSelectedLabelId) }
+    var isOffline by rememberSaveable { mutableStateOf(vmIsOffline) }
+
+    // TextField State
+    var textFieldValue by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(
+            TextFieldValue(
+                (if (vmContent.isNotEmpty()) vmContent else initialContent).fromSerialized()
+            )
+        )
+    }
+
+    // Synchronisation
+    LaunchedEffect(textFieldValue.annotatedString) {
+        val serialized = textFieldValue.annotatedString.toSerialized()
+        if (serialized != vmContent) {
+            noteEditingViewModel.setTextContent(serialized)
+        }
+    }
+
+    LaunchedEffect(textTitle) {
+        if (textTitle != vmTitle) {
+            noteEditingViewModel.setTextTitle(textTitle)
+        }
+    }
+
+    LaunchedEffect(selectedTheme) {
+        if (selectedTheme != vmTheme) {
+            noteEditingViewModel.setTextTheme(selectedTheme)
+        }
+    }
+
+    LaunchedEffect(selectedLabelId) {
+        if (selectedLabelId != vmLabelId) {
+            noteEditingViewModel.setTextLabelId(selectedLabelId)
+        }
+    }
+
+    LaunchedEffect(isOffline) {
+        if (isOffline != vmIsOffline) {
+            noteEditingViewModel.setTextIsOffline(isOffline)
+        }
+    }
+
+    var showMenu by remember { mutableStateOf(false) }
     var colorMenuItemText by remember { mutableStateOf("Color") }
     val scope = rememberCoroutineScope()
     var isFadingOut by remember { mutableStateOf(false) }
     var colorChangeJob by remember { mutableStateOf<Job?>(null) }
-
+    var showLabelDialog by remember { mutableStateOf(false) }
+    val isLabeled = selectedLabelId != null
     val availableThemes = remember {
         listOf("Default", "Red", "Orange", "Yellow", "Green", "Turquoise", "Blue", "Purple")
     }
-
-    var textFieldValue by remember { mutableStateOf(TextFieldValue(initialContent.fromSerialized())) }
-    var showMenu by remember { mutableStateOf(false) }
-
-    // OFFLINE STATE — NOW WORKS 100% PERFECTLY
-    var isOffline by rememberSaveable(
-        inputs = arrayOf(editingNoteId)
-    ) {
-        mutableStateOf(
-            editingNoteId?.let { id ->
-                notesViewModel.noteItems
-                    .filterIsInstance<NotesItems>()
-                    .find { it.id == id }
-                    ?.isOffline == true
-            } ?: false
-        )
-    }
-
-    var showLabelDialog by remember { mutableStateOf(false) }
-    var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
-    val isLabeled = selectedLabelId != null
-
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -445,7 +492,7 @@ fun NoteTextSheet(
                 Spacer(modifier = Modifier.height(bottomPadding))
             }
 
-            // Toolbar
+            // Toolbar (unchanged)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -468,7 +515,9 @@ fun NoteTextSheet(
 
                 BasicTextField(
                     value = textTitle,
-                    onValueChange = onTextTitleChange,
+                    onValueChange = { newTitle ->
+                        onTextTitleChange(newTitle)
+                    },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     textStyle = titleTextStyle,

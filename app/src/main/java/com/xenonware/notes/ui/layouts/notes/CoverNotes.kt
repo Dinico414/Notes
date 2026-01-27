@@ -160,6 +160,7 @@ import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
 import com.xenonware.notes.util.GlobalAudioPlayer
 import com.xenonware.notes.viewmodel.LayoutType
+import com.xenonware.notes.viewmodel.NoteEditingViewModel
 import com.xenonware.notes.viewmodel.NotesLayoutType
 import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.classes.NoteType
@@ -183,6 +184,7 @@ import java.io.File
 @Composable
 fun CoverNotes(
     viewModel: NotesViewModel = viewModel(),
+    noteEditingViewModel: NoteEditingViewModel = viewModel(),
     signInViewModel: SignInViewModel = viewModel(),
     layoutType: LayoutType,
     isLandscape: Boolean,
@@ -1354,7 +1356,7 @@ fun CoverNotes(
 
                 NoteTextSheet(
                     textTitle = titleState,
-                    onTextTitleChange = { titleState = it },
+                    onTextTitleChange = { noteEditingViewModel.setTextTitle(it) },
                     initialContent = descriptionState,
                     onDismiss = {
                         viewModel.hideTextCard()
@@ -1431,8 +1433,7 @@ fun CoverNotes(
                     onAddNewLabel = { viewModel.addLabel(it) },
                     isBlackThemeActive = isBlackedOut,
                     isCoverModeActive = true,
-                    editingNoteId = editingNoteId,
-                    notesViewModel = viewModel,
+                    noteEditingViewModel = noteEditingViewModel,
                 )
             }
 
@@ -1443,8 +1444,8 @@ fun CoverNotes(
             ) {
                 BackHandler {
                     viewModel.hideSketchCard()
-                    isSearchActive = false // Disable search on dismiss
-                    viewModel.setSearchQuery("") // Clear search query
+                    isSearchActive = false
+                    viewModel.setSearchQuery("")
                     resetNoteState()
                 }
                 NoteSketchSheet(
@@ -1452,8 +1453,8 @@ fun CoverNotes(
                     onSketchTitleChange = { titleState = it },
                     onDismiss = {
                         viewModel.hideSketchCard()
-                        isSearchActive = false // Disable search on dismiss
-                        viewModel.setSearchQuery("") // Clear search query
+                        isSearchActive = false
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     },
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
