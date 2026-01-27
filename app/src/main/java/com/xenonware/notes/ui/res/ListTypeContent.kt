@@ -50,7 +50,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenon.mylibrary.res.XenonDrawer
 import com.xenon.mylibrary.res.XenonTextField
 import com.xenon.mylibrary.values.LargestPadding

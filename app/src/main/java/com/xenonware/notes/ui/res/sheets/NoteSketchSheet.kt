@@ -92,7 +92,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import com.xenon.mylibrary.QuicksandTitleVariable
+import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.notes.util.NoteCanvas
 import com.xenonware.notes.R
 import com.xenonware.notes.ui.res.XenonDropDown
