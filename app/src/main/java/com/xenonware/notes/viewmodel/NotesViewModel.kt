@@ -90,6 +90,19 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedLabel = MutableStateFlow<String?>(null)
     val selectedLabel: StateFlow<String?> = _selectedLabel.asStateFlow()
 
+    private val _showTextCard = MutableStateFlow(false)
+    val showTextCard: StateFlow<Boolean> = _showTextCard.asStateFlow()
+
+    private val _showAudioCard = MutableStateFlow(false)
+    val showAudioCard: StateFlow<Boolean> = _showAudioCard.asStateFlow()
+
+    private val _showListCard = MutableStateFlow(false)
+    val showListCard: StateFlow<Boolean> = _showListCard.asStateFlow()
+
+    private val _showSketchCard = MutableStateFlow(false)
+    val showSketchCard: StateFlow<Boolean> = _showSketchCard.asStateFlow()
+
+
     init {
         loadAllNotes()
         loadLabels()
@@ -157,6 +170,32 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     saveLabels()
                 }
             }
+    }
+
+    fun showTextCard() {
+        _showTextCard.value = true
+    }
+    fun showAudioCard() {
+        _showAudioCard.value = true
+    }
+    fun showListCard() {
+        _showListCard.value = true
+    }
+    fun showSketchCard() {
+        _showSketchCard.value = true
+    }
+
+    fun hideTextCard() {
+        _showTextCard.value = false
+    }
+    fun hideAudioCard() {
+        _showAudioCard.value = false
+    }
+    fun hideSketchCard() {
+        _showSketchCard.value = false
+    }
+    fun hideListCard() {
+        _showListCard.value = false
     }
 
     fun syncLabelsToCloud() {

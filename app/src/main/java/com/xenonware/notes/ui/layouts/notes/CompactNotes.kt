@@ -212,7 +212,6 @@ fun CompactNotes(
         var titleState by rememberSaveable { mutableStateOf("") }
         var descriptionState by rememberSaveable { mutableStateOf("") }
         var editingNoteColor by rememberSaveable(stateSaver = uLongSaver) { mutableStateOf(null) }
-        var showTextNoteCard by rememberSaveable { mutableStateOf(false) }
         var saveTrigger by remember { mutableStateOf(false) }
         var addListItemTrigger by remember { mutableStateOf(false) }
 
@@ -229,9 +228,10 @@ fun CompactNotes(
 
         var selectedAudioViewType by rememberSaveable { mutableStateOf(AudioViewType.Waveform) }
 
-        var showSketchNoteCard by rememberSaveable { mutableStateOf(false) }
-        var showAudioNoteCard by rememberSaveable { mutableStateOf(false) }
-        var showListNoteCard by rememberSaveable { mutableStateOf(false) }
+        val showTextNoteCard by viewModel.showTextCard.collectAsStateWithLifecycle()
+        val showSketchNoteCard by viewModel.showSketchCard.collectAsStateWithLifecycle()
+        val showAudioNoteCard by viewModel.showAudioCard.collectAsStateWithLifecycle()
+        val showListNoteCard by viewModel.showListCard.collectAsStateWithLifecycle()
         var listTitleState by rememberSaveable { mutableStateOf("") }
         val listItemsState = rememberSaveable(saver = listSaver(save = { list: List<ListItem> ->
             list.map { it.id.toString() + "," + it.text + "," + it.isChecked.toString() }
@@ -938,7 +938,7 @@ fun CompactNotes(
                                     resetNoteState()
                                     isSearchActive = false
                                     viewModel.setSearchQuery("")
-                                    showTextNoteCard = true
+                                    viewModel.showTextCard()
                                     onAddModeToggle()
                                 }) {
                                     Icon(
@@ -951,7 +951,7 @@ fun CompactNotes(
                                     resetNoteState()
                                     isSearchActive = false
                                     viewModel.setSearchQuery("")
-                                    showListNoteCard = true
+                                    viewModel.showListCard()
                                     onAddModeToggle()
                                 }) {
                                     Icon(
@@ -963,13 +963,13 @@ fun CompactNotes(
                                 IconButton(onClick = {
                                     GlobalAudioPlayer.getInstance().stopAudio()
                                     if (showAudioNoteCard) {
-                                        showAudioNoteCard = false
+                                        viewModel.hideAudioCard()
                                         resetNoteState()
                                     } else {
                                         resetNoteState()
                                         isSearchActive = false
                                         viewModel.setSearchQuery("")
-                                        showAudioNoteCard = true
+                                        viewModel.showAudioCard()
                                     }
                                     onAddModeToggle()
                                 }) {
@@ -982,7 +982,7 @@ fun CompactNotes(
                                 IconButton(onClick = {
                                     isSearchActive = false
                                     viewModel.setSearchQuery("")
-                                    showSketchNoteCard = true
+                                    viewModel.showSketchCard()
                                     onAddModeToggle()
                                 }) {
                                     Icon(
@@ -1214,7 +1214,7 @@ fun CompactNotes(
                                                                             viewModel.setSearchQuery(
                                                                                 ""
                                                                             )
-                                                                            showTextNoteCard = true
+                                                                            viewModel.showTextCard()
                                                                         }
 
                                                                         NoteType.AUDIO -> {
@@ -1222,7 +1222,7 @@ fun CompactNotes(
                                                                             viewModel.setSearchQuery(
                                                                                 ""
                                                                             )
-                                                                            showAudioNoteCard = true
+                                                                            viewModel.showAudioCard()
                                                                             selectedAudioViewType =
                                                                                 AudioViewType.Waveform
                                                                             editingNoteColor =
@@ -1234,7 +1234,7 @@ fun CompactNotes(
                                                                             viewModel.setSearchQuery(
                                                                                 ""
                                                                             )
-                                                                            showListNoteCard = true
+                                                                            viewModel.showListCard()
                                                                         }
 
                                                                         NoteType.SKETCH -> {
@@ -1242,8 +1242,7 @@ fun CompactNotes(
                                                                             viewModel.setSearchQuery(
                                                                                 ""
                                                                             )
-                                                                            showSketchNoteCard =
-                                                                                true
+                                                                           viewModel.showSketchCard()
                                                                         }
                                                                     }
                                                                 },
@@ -1335,20 +1334,17 @@ fun CompactNotes(
                                                             viewModel.setSearchQuery("")
 
                                                             when (itemToEdit.noteType) {
-                                                                NoteType.TEXT -> showTextNoteCard =
-                                                                    true
+                                                                NoteType.TEXT -> viewModel.showTextCard()
 
                                                                 NoteType.AUDIO -> {
-                                                                    showAudioNoteCard = true
+                                                                    viewModel.showAudioCard()
                                                                     selectedAudioViewType =
                                                                         AudioViewType.Waveform
                                                                 }
 
-                                                                NoteType.LIST -> showListNoteCard =
-                                                                    true
+                                                                NoteType.LIST -> viewModel.showListCard()
 
-                                                                NoteType.SKETCH -> showSketchNoteCard =
-                                                                    true
+                                                                NoteType.SKETCH -> viewModel.showSketchCard()
                                                             }
                                                         },
                                                         maxLines = gridMaxLines,
@@ -1379,7 +1375,7 @@ fun CompactNotes(
                     exit = slideOutVertically(targetOffsetY = { it })
                 ) {
                     BackHandler {
-                        showTextNoteCard = false
+                        viewModel.hideTextCard()
                         isSearchActive = false // Disable search on dismiss
                         viewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
@@ -1390,7 +1386,7 @@ fun CompactNotes(
                         onTextTitleChange = { titleState = it },
                         initialContent = descriptionState,
                         onDismiss = {
-                            showTextNoteCard = false
+                            viewModel.hideTextCard()
                             isSearchActive = false // Disable search on dismiss
                             viewModel.setSearchQuery("") // Clear search query
                             resetNoteState()
@@ -1399,7 +1395,7 @@ fun CompactNotes(
 
                         onSave = { title, description, theme, labelId, isOffline ->
                             if (title.isBlank() && description.isBlank()) {
-                                showTextNoteCard = false
+                                viewModel.hideTextCard()
                                 resetNoteState()
                                 return@NoteTextSheet
                             }
@@ -1438,7 +1434,7 @@ fun CompactNotes(
                                     forceLocal = isOffline)
                             }
 
-                            showTextNoteCard = false
+                            viewModel.hideTextCard()
                             isSearchActive = false
                             viewModel.setSearchQuery("")
                             resetNoteState()
@@ -1473,7 +1469,7 @@ fun CompactNotes(
                     exit = slideOutVertically(targetOffsetY = { it })
                 ) {
                     BackHandler {
-                        showSketchNoteCard = false
+                        viewModel.hideSketchCard()
                         isSearchActive = false // Disable search on dismiss
                         viewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
@@ -1482,7 +1478,7 @@ fun CompactNotes(
                         sketchTitle = titleState,
                         onSketchTitleChange = { titleState = it },
                         onDismiss = {
-                            showSketchNoteCard = false
+                            viewModel.hideSketchCard()
                             isSearchActive = false // Disable search on dismiss
                             viewModel.setSearchQuery("") // Clear search query
                             resetNoteState()
@@ -1493,7 +1489,7 @@ fun CompactNotes(
                         },
                         onSave = { title, theme, labelId, isOffline ->
                             if (title.isBlank()) {
-                                showSketchNoteCard = false
+                                viewModel.hideSketchCard()
                                 resetNoteState()
                                 return@NoteSketchSheet
                             }
@@ -1523,7 +1519,7 @@ fun CompactNotes(
                                     forceLocal = isOffline)
                             }
 
-                            showSketchNoteCard = false
+                            viewModel.hideSketchCard()
                             isSearchActive = false
                             viewModel.setSearchQuery("")
                             resetNoteState()
@@ -1570,7 +1566,7 @@ fun CompactNotes(
                         }
                     }
                     BackHandler {
-                        showAudioNoteCard = false
+                        viewModel.hideAudioCard()
                         isSearchActive = false
                         viewModel.setSearchQuery("")
                         resetNoteState()
@@ -1580,7 +1576,7 @@ fun CompactNotes(
                         audioTitle = titleState,
                         onAudioTitleChange = { titleState = it },
                         onDismiss = {
-                            showAudioNoteCard = false
+                            viewModel.hideAudioCard()
                             isSearchActive = false
                             viewModel.setSearchQuery("")
                             resetNoteState()
@@ -1588,7 +1584,7 @@ fun CompactNotes(
                         initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                         onSave = { title, uniqueAudioId, theme, labelId, isOffline ->
                             if (title.isBlank() && uniqueAudioId.isBlank()) {
-                                showAudioNoteCard = false
+                                viewModel.hideAudioCard()
                                 resetNoteState()
                                 return@NoteAudioSheet
                             }
@@ -1619,7 +1615,7 @@ fun CompactNotes(
                                     forceLocal = isOffline)
                             }
 
-                            showAudioNoteCard = false
+                            viewModel.hideAudioCard()
                             isSearchActive = false
                             viewModel.setSearchQuery("")
                             resetNoteState()
@@ -1655,7 +1651,7 @@ fun CompactNotes(
                     exit = slideOutVertically(targetOffsetY = { it })
                 ) {
                     BackHandler {
-                        showListNoteCard = false
+                        viewModel.hideListCard()
                         isSearchActive = false
                         viewModel.setSearchQuery("")
                         resetNoteState()
@@ -1666,7 +1662,7 @@ fun CompactNotes(
                         onListTitleChange = { listTitleState = it },
                         listItems = listItemsState,
                         onDismiss = {
-                            showListNoteCard = false
+                            viewModel.hideListCard()
                             isSearchActive = false
                             viewModel.setSearchQuery("")
                             resetNoteState()
@@ -1679,7 +1675,7 @@ fun CompactNotes(
                             }
 
                             if (title.isBlank() && description.isBlank()) {
-                                showListNoteCard = false
+                                viewModel.hideListCard()
                                 resetNoteState()
                                 return@NoteListSheet
                             }
@@ -1710,7 +1706,7 @@ fun CompactNotes(
                                     forceLocal = isOffline)
                             }
 
-                            showListNoteCard = false
+                            viewModel.hideListCard()
                             isSearchActive = false
                             viewModel.setSearchQuery("")
                             resetNoteState()

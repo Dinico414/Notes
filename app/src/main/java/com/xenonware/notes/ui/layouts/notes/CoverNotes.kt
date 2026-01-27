@@ -118,11 +118,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.ActivityScreen
-import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenon.mylibrary.res.FloatingToolbarContent
 import com.xenon.mylibrary.res.GoogleProfilBorder
 import com.xenon.mylibrary.res.GoogleProfilePicture
 import com.xenon.mylibrary.res.XenonSnackbar
+import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.MediumSpacing
@@ -198,7 +198,6 @@ fun CoverNotes(
     var titleState by rememberSaveable { mutableStateOf("") }
     var descriptionState by rememberSaveable { mutableStateOf("") }
     var editingNoteColor by rememberSaveable(stateSaver = uLongSaver) { mutableStateOf(null) }
-    var showTextNoteCard by rememberSaveable { mutableStateOf(false) }
     var saveTrigger by remember { mutableStateOf(false) }
     var addListItemTrigger by remember { mutableStateOf(false) }
 
@@ -215,9 +214,10 @@ fun CoverNotes(
 
     var selectedAudioViewType by rememberSaveable { mutableStateOf(AudioViewType.Waveform) } // State for audio view
 
-    var showSketchNoteCard by rememberSaveable { mutableStateOf(false) }
-    var showAudioNoteCard by rememberSaveable { mutableStateOf(false) }
-    var showListNoteCard by rememberSaveable { mutableStateOf(false) }
+    val showTextNoteCard by viewModel.showTextCard.collectAsStateWithLifecycle()
+    val showSketchNoteCard by viewModel.showSketchCard.collectAsStateWithLifecycle()
+    val showAudioNoteCard by viewModel.showAudioCard.collectAsStateWithLifecycle()
+    val showListNoteCard by viewModel.showListCard.collectAsStateWithLifecycle()
     var listTitleState by rememberSaveable { mutableStateOf("") }
     val listItemsState = rememberSaveable(saver = listSaver(save = { list: List<ListItem> ->
         list.map { it.id.toString() + "," + it.text + "," + it.isChecked.toString() }
@@ -855,17 +855,10 @@ fun CoverNotes(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 IconButton(onClick = {
-                                    GlobalAudioPlayer.getInstance().stopAudio()
-
-                                    if (showAudioNoteCard) {
-                                        showAudioNoteCard = false
-                                        resetNoteState()
-                                    } else {
-                                        resetNoteState()
-                                        isSearchActive = false
-                                        viewModel.setSearchQuery("")
-                                        showAudioNoteCard = true
-                                    }
+                                    resetNoteState()
+                                    isSearchActive = false
+                                    viewModel.setSearchQuery("")
+                                    viewModel.showTextCard()
                                     onAddModeToggle()
                                 }) {
                                     Icon(
@@ -876,10 +869,9 @@ fun CoverNotes(
                                 }
                                 IconButton(onClick = {
                                     resetNoteState()
-                                    isSearchActive =
-                                        false // Disable search when opening a new list note
-                                    viewModel.setSearchQuery("") // Clear search query
-                                    showListNoteCard = true
+                                    isSearchActive = false
+                                    viewModel.setSearchQuery("")
+                                    viewModel.showListCard()
                                     onAddModeToggle()
                                 }) {
                                     Icon(
@@ -889,11 +881,16 @@ fun CoverNotes(
                                     )
                                 }
                                 IconButton(onClick = {
-                                    resetNoteState() // Reset state when opening audio note
-                                    isSearchActive =
-                                        false // Disable search when opening a new audio note
-                                    viewModel.setSearchQuery("") // Clear search query
-                                    showAudioNoteCard = true
+                                    GlobalAudioPlayer.getInstance().stopAudio()
+                                    if (showAudioNoteCard) {
+                                        viewModel.hideAudioCard()
+                                        resetNoteState()
+                                    } else {
+                                        resetNoteState()
+                                        isSearchActive = false
+                                        viewModel.setSearchQuery("")
+                                        viewModel.showAudioCard()
+                                    }
                                     onAddModeToggle()
                                 }) {
                                     Icon(
@@ -903,10 +900,9 @@ fun CoverNotes(
                                     )
                                 }
                                 IconButton(onClick = {
-                                    isSearchActive =
-                                        false // Disable search when opening a new sketch note
-                                    viewModel.setSearchQuery("") // Clear search query
-                                    showSketchNoteCard = true
+                                    isSearchActive = false
+                                    viewModel.setSearchQuery("")
+                                    viewModel.showSketchCard()
                                     onAddModeToggle()
                                 }) {
                                     Icon(
@@ -1206,7 +1202,7 @@ fun CoverNotes(
                                                                         viewModel.setSearchQuery(
                                                                             ""
                                                                         ) // Clear search query
-                                                                        showTextNoteCard = true
+                                                                        viewModel.showTextCard()
                                                                     }
 
                                                                     NoteType.AUDIO -> {
@@ -1214,7 +1210,7 @@ fun CoverNotes(
                                                                         viewModel.setSearchQuery(
                                                                             ""
                                                                         )
-                                                                        showAudioNoteCard = true
+                                                                        viewModel.showAudioCard()
                                                                         selectedAudioViewType =
                                                                             AudioViewType.Waveform
                                                                         editingNoteColor =
@@ -1227,7 +1223,7 @@ fun CoverNotes(
                                                                         viewModel.setSearchQuery(
                                                                             ""
                                                                         ) // Clear search query
-                                                                        showListNoteCard = true
+                                                                        viewModel.showListCard()
                                                                     }
 
                                                                     NoteType.SKETCH -> {
@@ -1236,7 +1232,7 @@ fun CoverNotes(
                                                                         viewModel.setSearchQuery(
                                                                             ""
                                                                         ) // Clear search query
-                                                                        showSketchNoteCard = true
+                                                                        viewModel.showSketchCard()
                                                                     }
                                                                 }
                                                             },
@@ -1314,13 +1310,13 @@ fun CoverNotes(
                                                         viewModel.setSearchQuery("")
 
                                                         when (itemToEdit.noteType) {
-                                                            NoteType.TEXT -> showTextNoteCard = true
+                                                            NoteType.TEXT -> viewModel.showTextCard()
                                                             NoteType.AUDIO -> {
-                                                                showAudioNoteCard = true
+                                                                viewModel.showAudioCard()
                                                                 selectedAudioViewType = AudioViewType.Waveform
                                                             }
-                                                            NoteType.LIST -> showListNoteCard = true
-                                                            NoteType.SKETCH -> showSketchNoteCard = true
+                                                            NoteType.LIST ->  viewModel.showListCard()
+                                                            NoteType.SKETCH ->  viewModel.showSketchCard()
                                                         }
                                                     },
                                                     maxLines = gridMaxLines,
@@ -1350,7 +1346,7 @@ fun CoverNotes(
                 exit = slideOutVertically( targetOffsetY = { it })
             ) {
                 BackHandler {
-                    showTextNoteCard = false
+                    viewModel.hideTextCard()
                     isSearchActive = false // Disable search on dismiss
                     viewModel.setSearchQuery("") // Clear search query
                     resetNoteState()
@@ -1361,7 +1357,7 @@ fun CoverNotes(
                     onTextTitleChange = { titleState = it },
                     initialContent = descriptionState,
                     onDismiss = {
-                        showTextNoteCard = false
+                        viewModel.hideTextCard()
                         isSearchActive = false
                         viewModel.setSearchQuery("")
                         resetNoteState()
@@ -1369,7 +1365,7 @@ fun CoverNotes(
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onSave = { title, description, theme, labelId, isOffline ->
                         if (title.isBlank() && description.isBlank()) {
-                            showTextNoteCard = false
+                            viewModel.hideTextCard()
                             resetNoteState()
                             return@NoteTextSheet
                         }
@@ -1411,7 +1407,7 @@ fun CoverNotes(
                             )
                         }
 
-                        showTextNoteCard = false
+                        viewModel.hideTextCard()
                         isSearchActive = false
                         viewModel.setSearchQuery("")
                         resetNoteState()
@@ -1446,7 +1442,7 @@ fun CoverNotes(
                 exit = slideOutVertically( targetOffsetY = { it })
             ) {
                 BackHandler {
-                    showSketchNoteCard = false
+                    viewModel.hideSketchCard()
                     isSearchActive = false // Disable search on dismiss
                     viewModel.setSearchQuery("") // Clear search query
                     resetNoteState()
@@ -1455,7 +1451,7 @@ fun CoverNotes(
                     sketchTitle = titleState,
                     onSketchTitleChange = { titleState = it },
                     onDismiss = {
-                        showSketchNoteCard = false
+                        viewModel.hideSketchCard()
                         isSearchActive = false // Disable search on dismiss
                         viewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
@@ -1466,7 +1462,7 @@ fun CoverNotes(
                     },
                     onSave = { title, theme, labelId, isOffline ->
                         if (title.isBlank()) {
-                            showSketchNoteCard = false
+                            viewModel.hideSketchCard()
                             resetNoteState()
                             return@NoteSketchSheet
                         }
@@ -1498,7 +1494,7 @@ fun CoverNotes(
                             )
                         }
 
-                        showSketchNoteCard = false
+                        viewModel.hideSketchCard()
                         isSearchActive = false
                         viewModel.setSearchQuery("")
                         resetNoteState()
@@ -1545,7 +1541,7 @@ fun CoverNotes(
                     }
                 }
                 BackHandler {
-                    showAudioNoteCard = false
+                    viewModel.hideAudioCard()
                     isSearchActive = false // Disable search on dismiss
                     viewModel.setSearchQuery("") // Clear search query
                     resetNoteState()
@@ -1554,7 +1550,7 @@ fun CoverNotes(
                     audioTitle = titleState,
                     onAudioTitleChange = { titleState = it },
                     onDismiss = {
-                        showAudioNoteCard = false
+                        viewModel.hideAudioCard()
                         isSearchActive = false
                         viewModel.setSearchQuery("")
                         resetNoteState()
@@ -1562,7 +1558,7 @@ fun CoverNotes(
                     initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onSave = { title, uniqueAudioId, theme, labelId, isOffline ->
                         if (title.isBlank() && uniqueAudioId.isBlank()) {
-                            showAudioNoteCard = false
+                            viewModel.hideAudioCard()
                             resetNoteState()
                             return@NoteAudioSheet
                         }
@@ -1595,7 +1591,7 @@ fun CoverNotes(
                             )
                         }
 
-                        showAudioNoteCard = false
+                        viewModel.hideAudioCard()
                         isSearchActive = false
                         viewModel.setSearchQuery("")
                         resetNoteState()
@@ -1629,7 +1625,7 @@ fun CoverNotes(
                 exit = slideOutVertically( targetOffsetY = { it })
             ) {
                 BackHandler {
-                    showListNoteCard = false
+                    viewModel.hideListCard()
                     isSearchActive = false
                     viewModel.setSearchQuery("")
                     resetNoteState()
@@ -1640,7 +1636,7 @@ fun CoverNotes(
                     onListTitleChange = { listTitleState = it },
                     listItems = listItemsState,
                     onDismiss = {
-                        showListNoteCard = false
+                        viewModel.hideListCard()
                         isSearchActive = false
                         viewModel.setSearchQuery("")
                         resetNoteState()
@@ -1653,7 +1649,7 @@ fun CoverNotes(
                         }
 
                         if (title.isBlank() && description.isBlank()) {
-                            showListNoteCard = false
+                            viewModel.hideListCard()
                             resetNoteState()
                             return@NoteListSheet
                         }
@@ -1686,7 +1682,7 @@ fun CoverNotes(
                             )
                         }
 
-                        showListNoteCard = false
+                        viewModel.hideListCard()
                         isSearchActive = false
                         viewModel.setSearchQuery("")
                         resetNoteState()
