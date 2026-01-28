@@ -345,6 +345,7 @@ fun CompactNotes(
             currentListSizeIndex = 1
             selectedAudioViewType = AudioViewType.Waveform
             selectedLabelId = null
+            // Clear ViewModel state immediately when closing
             noteEditingViewModel.clearAllStates()
         }
 
@@ -368,7 +369,10 @@ fun CompactNotes(
         }
 
         val isDarkTheme = LocalIsDarkTheme.current
-        val selectedTextNoteTheme = colorThemeMap[editingNoteColor] ?: "Default"
+
+        // Get theme from ViewModel for text notes
+        val vmTextTheme by noteEditingViewModel.textTheme.collectAsState()
+        val selectedTextNoteTheme = if (showTextNoteCard) vmTextTheme else colorThemeMap[editingNoteColor] ?: "Default"
 
         val googleAuthUiClient = remember {
             GoogleAuthUiClient(
@@ -961,6 +965,7 @@ fun CompactNotes(
                             ) {
                                 IconButton(onClick = {
                                     resetNoteState()
+                                    noteEditingViewModel.clearTextState()
                                     isSearchActive = false
                                     viewModel.setSearchQuery("")
                                     viewModel.showTextCard()
@@ -1234,10 +1239,20 @@ fun CompactNotes(
                                                                     }
                                                                     when (itemToEdit.noteType) {
                                                                         NoteType.TEXT -> {
-                                                                            isSearchActive = false
-                                                                            viewModel.setSearchQuery(
-                                                                                ""
+                                                                            noteEditingViewModel.setTextTitle(itemToEdit.title)
+                                                                            noteEditingViewModel.setTextContent(descriptionState)
+                                                                            noteEditingViewModel.setTextTheme(
+                                                                                colorThemeMap[editingNoteColor] ?: "Default"
                                                                             )
+                                                                            noteEditingViewModel.setTextLabelId(selectedLabelId)
+                                                                            noteEditingViewModel.setTextIsOffline(itemToEdit.isOffline)
+                                                                            noteEditingViewModel.setTextIsBold(false)
+                                                                            noteEditingViewModel.setTextIsItalic(false)
+                                                                            noteEditingViewModel.setTextIsUnderlined(false)
+                                                                            noteEditingViewModel.setTextFontSizeIndex(1)
+
+                                                                            isSearchActive = false
+                                                                            viewModel.setSearchQuery("")
                                                                             viewModel.showTextCard()
                                                                         }
 
@@ -1266,7 +1281,7 @@ fun CompactNotes(
                                                                             viewModel.setSearchQuery(
                                                                                 ""
                                                                             )
-                                                                           viewModel.showSketchCard()
+                                                                            viewModel.showSketchCard()
                                                                         }
                                                                     }
                                                                 },
@@ -1359,22 +1374,17 @@ fun CompactNotes(
 
                                                             when (itemToEdit.noteType) {
                                                                 NoteType.TEXT -> {
-                                                                    noteEditingViewModel.setTextTitle(
-                                                                        itemToEdit.title
-                                                                    )
-                                                                    noteEditingViewModel.setTextContent(
-                                                                        descriptionState
-                                                                    )
+                                                                    noteEditingViewModel.setTextTitle(itemToEdit.title)
+                                                                    noteEditingViewModel.setTextContent(descriptionState)
                                                                     noteEditingViewModel.setTextTheme(
-                                                                        colorThemeMap[editingNoteColor]
-                                                                            ?: "Default"
+                                                                        colorThemeMap[editingNoteColor] ?: "Default"
                                                                     )
-                                                                    noteEditingViewModel.setTextLabelId(
-                                                                        selectedLabelId
-                                                                    )
-                                                                    noteEditingViewModel.setTextIsOffline(
-                                                                        itemToEdit.isOffline
-                                                                    )
+                                                                    noteEditingViewModel.setTextLabelId(selectedLabelId)
+                                                                    noteEditingViewModel.setTextIsOffline(itemToEdit.isOffline)
+                                                                    noteEditingViewModel.setTextIsBold(false)
+                                                                    noteEditingViewModel.setTextIsItalic(false)
+                                                                    noteEditingViewModel.setTextIsUnderlined(false)
+                                                                    noteEditingViewModel.setTextFontSizeIndex(1)
 
                                                                     isSearchActive = false
                                                                     viewModel.setSearchQuery("")
@@ -1426,20 +1436,23 @@ fun CompactNotes(
                         resetNoteState()
                     }
 
+                    val vmTitle by noteEditingViewModel.textTitle.collectAsState()
+                    val vmContent by noteEditingViewModel.textContent.collectAsState()
+
                     NoteTextSheet(
-                        textTitle = titleState,
+                        textTitle = vmTitle,
                         onTextTitleChange = { newTitle ->
                             titleState = newTitle
                             noteEditingViewModel.setTextTitle(newTitle)
                         },
-                        initialContent = descriptionState,
+                        initialContent = vmContent,
                         onDismiss = {
                             viewModel.hideTextCard()
                             isSearchActive = false
                             viewModel.setSearchQuery("")
                             resetNoteState()
                         },
-                        initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
+                        initialTheme = vmTextTheme,
 
                         onSave = { title, description, theme, labelId, isOffline ->
                             if (title.isBlank() && description.isBlank()) {
@@ -1499,10 +1512,14 @@ fun CompactNotes(
                         toolbarHeight = 72.dp,
                         onThemeChange = { newThemeName ->
                             editingNoteColor = themeColorMap[newThemeName]
+                            noteEditingViewModel.setTextTheme(newThemeName)
                         },
                         allLabels = allLabels,
                         initialSelectedLabelId = selectedLabelId,
-                        onLabelSelected = { selectedLabelId = it },
+                        onLabelSelected = {
+                            selectedLabelId = it
+                            noteEditingViewModel.setTextLabelId(it)
+                        },
                         onAddNewLabel = { viewModel.addLabel(it) },
                         isBlackThemeActive = isBlackedOut,
                         isCoverModeActive = false,
@@ -1517,8 +1534,8 @@ fun CompactNotes(
                 ) {
                     BackHandler {
                         viewModel.hideSketchCard()
-                        isSearchActive = false // Disable search on dismiss
-                        viewModel.setSearchQuery("") // Clear search query
+                        isSearchActive = false
+                        viewModel.setSearchQuery("")
                         resetNoteState()
                     }
                     NoteSketchSheet(
@@ -1526,8 +1543,8 @@ fun CompactNotes(
                         onSketchTitleChange = { titleState = it },
                         onDismiss = {
                             viewModel.hideSketchCard()
-                            isSearchActive = false // Disable search on dismiss
-                            viewModel.setSearchQuery("") // Clear search query
+                            isSearchActive = false
+                            viewModel.setSearchQuery("")
                             resetNoteState()
                         },
                         initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1578,8 +1595,8 @@ fun CompactNotes(
                         strokeWidth = currentSketchSize,
                         strokeColor = currentSketchColor,
                         showColorPicker = showColorPicker,
-                        onColorPickerDismiss = { showColorPicker = false }, // Callback to dismiss
-                        onColorSelected = { color -> // Callback for selected color
+                        onColorPickerDismiss = { showColorPicker = false },
+                        onColorSelected = { color ->
                             currentSketchColor = color
                             showColorPicker = false
                         },
@@ -1589,7 +1606,7 @@ fun CompactNotes(
                             currentSketchSize = size
                             showSketchSizePopup = false
                         },
-                        snackbarHostState = snackbarHostState, // Pass the snackbarHostState here
+                        snackbarHostState = snackbarHostState,
                         allLabels = allLabels,
                         initialSelectedLabelId = selectedLabelId,
                         onLabelSelected = { selectedLabelId = it },
@@ -1779,7 +1796,5 @@ fun CompactNotes(
                 }
             }
         }
-
-
     }
 }

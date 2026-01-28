@@ -133,7 +133,7 @@ fun String.fromSerialized(): AnnotatedString {
                 addStyle(style, start, end)
             }
         }
-    } catch (e: JSONException) {
+    } catch (_: JSONException) {
         AnnotatedString(this)
     }
 }
@@ -162,21 +162,19 @@ fun NoteTextSheet(
     initialSelectedLabelId: String?,
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
-    noteEditingViewModel: NoteEditingViewModel, // ← NEU
+    noteEditingViewModel: NoteEditingViewModel,
     isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false,
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
 
-    // === ALLE STATES AUS DEDIZIERTEM VIEWMODEL ===
     val vmContent by noteEditingViewModel.textContent.collectAsState()
     val vmTitle by noteEditingViewModel.textTitle.collectAsState()
     val vmTheme by noteEditingViewModel.textTheme.collectAsState()
     val vmLabelId by noteEditingViewModel.textLabelId.collectAsState()
     val vmIsOffline by noteEditingViewModel.textIsOffline.collectAsState()
 
-    // Initialisierung beim ersten Öffnen
     LaunchedEffect(Unit) {
         if (vmContent.isEmpty() && initialContent.isNotEmpty()) {
             noteEditingViewModel.setTextContent(initialContent)
@@ -192,21 +190,18 @@ fun NoteTextSheet(
         }
     }
 
-    // Lokale States
     var selectedTheme by rememberSaveable { mutableStateOf(vmTheme.takeIf { it.isNotEmpty() } ?: initialTheme) }
     var selectedLabelId by rememberSaveable { mutableStateOf(vmLabelId ?: initialSelectedLabelId) }
     var isOffline by rememberSaveable { mutableStateOf(vmIsOffline) }
 
-    // TextField State
     var textFieldValue by rememberSaveable(stateSaver = TextFieldValue.Saver) {
         mutableStateOf(
             TextFieldValue(
-                (if (vmContent.isNotEmpty()) vmContent else initialContent).fromSerialized()
+                (vmContent.ifEmpty { initialContent }).fromSerialized()
             )
         )
     }
 
-    // Synchronisation
     LaunchedEffect(textFieldValue.annotatedString) {
         val serialized = textFieldValue.annotatedString.toSerialized()
         if (serialized != vmContent) {
