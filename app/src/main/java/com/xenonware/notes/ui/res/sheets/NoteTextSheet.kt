@@ -238,6 +238,67 @@ fun NoteTextSheet(
         }
     }
 
+    LaunchedEffect(textFieldValue.selection) {
+        if (textFieldValue.selection.collapsed && textFieldValue.text.isNotEmpty()) {
+            val cursorPos = textFieldValue.selection.start
+
+            if (cursorPos > 0) {
+                val checkPos = cursorPos - 1
+                val spansAtPos = textFieldValue.annotatedString.spanStyles.filter {
+                    it.start <= checkPos && it.end > checkPos
+                }
+
+                var effectiveStyle = SpanStyle()
+                spansAtPos.forEach { range ->
+                    effectiveStyle = effectiveStyle.merge(range.item)
+                }
+
+                val shouldBeBold = effectiveStyle.fontWeight == FontWeight.Bold
+                val shouldBeItalic = effectiveStyle.fontStyle == FontStyle.Italic
+                val shouldBeUnderlined = effectiveStyle.textDecoration?.contains(TextDecoration.Underline) ?: false
+
+                if (vmIsBold != shouldBeBold) {
+                    noteEditingViewModel.setTextIsBold(shouldBeBold)
+                    onIsBoldChange(shouldBeBold)
+                }
+                if (vmIsItalic != shouldBeItalic) {
+                    noteEditingViewModel.setTextIsItalic(shouldBeItalic)
+                    onIsItalicChange(shouldBeItalic)
+                }
+                if (vmIsUnderlined != shouldBeUnderlined) {
+                    noteEditingViewModel.setTextIsUnderlined(shouldBeUnderlined)
+                    onIsUnderlinedChange(shouldBeUnderlined)
+                }
+            } else if (cursorPos == 0 && textFieldValue.text.isNotEmpty()) {
+                val spansAtPos = textFieldValue.annotatedString.spanStyles.filter {
+                    it.start == 0 && it.end > 0
+                }
+
+                var effectiveStyle = SpanStyle()
+                spansAtPos.forEach { range ->
+                    effectiveStyle = effectiveStyle.merge(range.item)
+                }
+
+                val shouldBeBold = effectiveStyle.fontWeight == FontWeight.Bold
+                val shouldBeItalic = effectiveStyle.fontStyle == FontStyle.Italic
+                val shouldBeUnderlined = effectiveStyle.textDecoration?.contains(TextDecoration.Underline) ?: false
+
+                if (vmIsBold != shouldBeBold) {
+                    noteEditingViewModel.setTextIsBold(shouldBeBold)
+                    onIsBoldChange(shouldBeBold)
+                }
+                if (vmIsItalic != shouldBeItalic) {
+                    noteEditingViewModel.setTextIsItalic(shouldBeItalic)
+                    onIsItalicChange(shouldBeItalic)
+                }
+                if (vmIsUnderlined != shouldBeUnderlined) {
+                    noteEditingViewModel.setTextIsUnderlined(shouldBeUnderlined)
+                    onIsUnderlinedChange(shouldBeUnderlined)
+                }
+            }
+        }
+    }
+
     XenonTheme(
         darkTheme = isDarkTheme,
         useDefaultTheme = selectedTheme == "Default",
