@@ -217,9 +217,7 @@ fun CompactNotes(
         var saveTrigger by remember { mutableStateOf(false) }
         var addListItemTrigger by remember { mutableStateOf(false) }
 
-        var isBold by remember { mutableStateOf(false) }
-        var isItalic by remember { mutableStateOf(false) }
-        var isUnderlined by remember { mutableStateOf(false) }
+        // Formatting states come from ViewModel, not local state
         val textSizes = listOf(16.sp, 20.sp, 24.sp, 28.sp)
         val vmFontSizeIndex by noteEditingViewModel.textFontSizeIndex.collectAsState()
         var currentSizeIndex by remember { mutableIntStateOf(vmFontSizeIndex) }
@@ -442,9 +440,7 @@ fun CompactNotes(
                         val defaultIconColor = colorScheme.onSurface
                         FilledIconButton(
                             onClick = {
-                                val newValue = !vmIsBold
-                                isBold = newValue
-                                noteEditingViewModel.setTextIsBold(newValue)
+                                noteEditingViewModel.setTextIsBold(!vmIsBold)
                             },
                             colors = IconButtonDefaults.iconButtonColors(
                                 containerColor = if (vmIsBold) toggledColor else defaultColor,
@@ -455,9 +451,7 @@ fun CompactNotes(
                         }
                         FilledIconButton(
                             onClick = {
-                                val newValue = !vmIsItalic
-                                isItalic = newValue
-                                noteEditingViewModel.setTextIsItalic(newValue)
+                                noteEditingViewModel.setTextIsItalic(!vmIsItalic)
                             },
                             colors = IconButtonDefaults.iconButtonColors(
                                 containerColor = if (vmIsItalic) toggledColor else defaultColor,
@@ -468,9 +462,7 @@ fun CompactNotes(
                         }
                         FilledIconButton(
                             onClick = {
-                                val newValue = !vmIsUnderlined
-                                isUnderlined = newValue
-                                noteEditingViewModel.setTextIsUnderlined(newValue)
+                                noteEditingViewModel.setTextIsUnderlined(!vmIsUnderlined)
                             },
                             colors = IconButtonDefaults.iconButtonColors(
                                 containerColor = if (vmIsUnderlined) toggledColor else defaultColor,
@@ -965,6 +957,7 @@ fun CompactNotes(
                             ) {
                                 IconButton(onClick = {
                                     resetNoteState()
+                                    // Ensure ViewModel is cleared for new note
                                     noteEditingViewModel.clearTextState()
                                     isSearchActive = false
                                     viewModel.setSearchQuery("")
@@ -1239,6 +1232,7 @@ fun CompactNotes(
                                                                     }
                                                                     when (itemToEdit.noteType) {
                                                                         NoteType.TEXT -> {
+                                                                            // Initialize ALL ViewModel states with new note data
                                                                             noteEditingViewModel.setTextTitle(itemToEdit.title)
                                                                             noteEditingViewModel.setTextContent(descriptionState)
                                                                             noteEditingViewModel.setTextTheme(
@@ -1246,6 +1240,7 @@ fun CompactNotes(
                                                                             )
                                                                             noteEditingViewModel.setTextLabelId(selectedLabelId)
                                                                             noteEditingViewModel.setTextIsOffline(itemToEdit.isOffline)
+                                                                            // Reset formatting states to default
                                                                             noteEditingViewModel.setTextIsBold(false)
                                                                             noteEditingViewModel.setTextIsItalic(false)
                                                                             noteEditingViewModel.setTextIsUnderlined(false)
@@ -1374,6 +1369,7 @@ fun CompactNotes(
 
                                                             when (itemToEdit.noteType) {
                                                                 NoteType.TEXT -> {
+                                                                    // Initialize ALL ViewModel states with new note data
                                                                     noteEditingViewModel.setTextTitle(itemToEdit.title)
                                                                     noteEditingViewModel.setTextContent(descriptionState)
                                                                     noteEditingViewModel.setTextTheme(
@@ -1381,6 +1377,7 @@ fun CompactNotes(
                                                                     )
                                                                     noteEditingViewModel.setTextLabelId(selectedLabelId)
                                                                     noteEditingViewModel.setTextIsOffline(itemToEdit.isOffline)
+                                                                    // Reset formatting states to default
                                                                     noteEditingViewModel.setTextIsBold(false)
                                                                     noteEditingViewModel.setTextIsItalic(false)
                                                                     noteEditingViewModel.setTextIsUnderlined(false)
@@ -1437,7 +1434,6 @@ fun CompactNotes(
                     }
 
                     val vmTitle by noteEditingViewModel.textTitle.collectAsState()
-                    val vmContent by noteEditingViewModel.textContent.collectAsState()
 
                     NoteTextSheet(
                         textTitle = vmTitle,
@@ -1445,14 +1441,12 @@ fun CompactNotes(
                             titleState = newTitle
                             noteEditingViewModel.setTextTitle(newTitle)
                         },
-                        initialContent = vmContent,
                         onDismiss = {
                             viewModel.hideTextCard()
                             isSearchActive = false
                             viewModel.setSearchQuery("")
                             resetNoteState()
                         },
-                        initialTheme = vmTextTheme,
 
                         onSave = { title, description, theme, labelId, isOffline ->
                             if (title.isBlank() && description.isBlank()) {
@@ -1502,12 +1496,9 @@ fun CompactNotes(
                         },
                         saveTrigger = saveTrigger,
                         onSaveTriggerConsumed = { saveTrigger = false },
-                        isBold = isBold,
-                        isItalic = isItalic,
-                        isUnderlined = isUnderlined,
-                        onIsBoldChange = { isBold = it },
-                        onIsItalicChange = { isItalic = it },
-                        onIsUnderlinedChange = { isUnderlined = it },
+                        onIsBoldChange = { },
+                        onIsItalicChange = { },
+                        onIsUnderlinedChange = { },
                         editorFontSize = editorFontSize,
                         toolbarHeight = 72.dp,
                         onThemeChange = { newThemeName ->
@@ -1515,7 +1506,6 @@ fun CompactNotes(
                             noteEditingViewModel.setTextTheme(newThemeName)
                         },
                         allLabels = allLabels,
-                        initialSelectedLabelId = selectedLabelId,
                         onLabelSelected = {
                             selectedLabelId = it
                             noteEditingViewModel.setTextLabelId(it)
@@ -1534,8 +1524,8 @@ fun CompactNotes(
                 ) {
                     BackHandler {
                         viewModel.hideSketchCard()
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
+                        isSearchActive = false // Disable search on dismiss
+                        viewModel.setSearchQuery("") // Clear search query
                         resetNoteState()
                     }
                     NoteSketchSheet(
@@ -1543,8 +1533,8 @@ fun CompactNotes(
                         onSketchTitleChange = { titleState = it },
                         onDismiss = {
                             viewModel.hideSketchCard()
-                            isSearchActive = false
-                            viewModel.setSearchQuery("")
+                            isSearchActive = false // Disable search on dismiss
+                            viewModel.setSearchQuery("") // Clear search query
                             resetNoteState()
                         },
                         initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
@@ -1595,8 +1585,8 @@ fun CompactNotes(
                         strokeWidth = currentSketchSize,
                         strokeColor = currentSketchColor,
                         showColorPicker = showColorPicker,
-                        onColorPickerDismiss = { showColorPicker = false },
-                        onColorSelected = { color ->
+                        onColorPickerDismiss = { showColorPicker = false }, // Callback to dismiss
+                        onColorSelected = { color -> // Callback for selected color
                             currentSketchColor = color
                             showColorPicker = false
                         },
@@ -1606,7 +1596,7 @@ fun CompactNotes(
                             currentSketchSize = size
                             showSketchSizePopup = false
                         },
-                        snackbarHostState = snackbarHostState,
+                        snackbarHostState = snackbarHostState, // Pass the snackbarHostState here
                         allLabels = allLabels,
                         initialSelectedLabelId = selectedLabelId,
                         onLabelSelected = { selectedLabelId = it },

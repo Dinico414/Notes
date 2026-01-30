@@ -1354,17 +1354,21 @@ fun CoverNotes(
                     resetNoteState()
                 }
 
+                val vmTitle by noteEditingViewModel.textTitle.collectAsState()
+
                 NoteTextSheet(
-                    textTitle = titleState,
-                    onTextTitleChange = { noteEditingViewModel.setTextTitle(it) },
-                    initialContent = descriptionState,
+                    textTitle = vmTitle,
+                    onTextTitleChange = { newTitle ->
+                        titleState = newTitle
+                        noteEditingViewModel.setTextTitle(newTitle)
+                    },
                     onDismiss = {
                         viewModel.hideTextCard()
                         isSearchActive = false
                         viewModel.setSearchQuery("")
                         resetNoteState()
                     },
-                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
+
                     onSave = { title, description, theme, labelId, isOffline ->
                         if (title.isBlank() && description.isBlank()) {
                             viewModel.hideTextCard()
@@ -1375,9 +1379,9 @@ fun CoverNotes(
                         val colorLong = themeColorMap[theme]?.toLong()
 
                         if (editingNoteId != null) {
-                            val existingNote = viewModel.noteItems
-                                .filterIsInstance<NotesItems>()
-                                .find { it.id == editingNoteId }
+                            val existingNote =
+                                viewModel.noteItems.filterIsInstance<NotesItems>()
+                                    .find { it.id == editingNoteId }
 
                             if (existingNote != null) {
                                 val updatedNote = existingNote.copy(
@@ -1385,8 +1389,7 @@ fun CoverNotes(
                                     description = description.takeIf { it.isNotBlank() },
                                     color = colorLong,
                                     labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                    isOffline = isOffline
-                                )
+                                    isOffline = isOffline)
                                 viewModel.updateItem(updatedNote, forceLocal = isOffline)
                             } else {
                                 viewModel.addItem(
@@ -1395,8 +1398,7 @@ fun CoverNotes(
                                     noteType = NoteType.TEXT,
                                     color = colorLong,
                                     labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                    forceLocal = isOffline
-                                )
+                                    forceLocal = isOffline)
                             }
                         } else {
                             viewModel.addItem(
@@ -1405,8 +1407,7 @@ fun CoverNotes(
                                 noteType = NoteType.TEXT,
                                 color = colorLong,
                                 labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                forceLocal = isOffline
-                            )
+                                forceLocal = isOffline)
                         }
 
                         viewModel.hideTextCard()
@@ -1416,24 +1417,24 @@ fun CoverNotes(
                     },
                     saveTrigger = saveTrigger,
                     onSaveTriggerConsumed = { saveTrigger = false },
-                    isBold = isBold,
-                    isItalic = isItalic,
-                    isUnderlined = isUnderlined,
-                    onIsBoldChange = { isBold = it },
-                    onIsItalicChange = { isItalic = it },
-                    onIsUnderlinedChange = { isUnderlined = it },
+                    onIsBoldChange = { },
+                    onIsItalicChange = { },
+                    onIsUnderlinedChange = { },
                     editorFontSize = editorFontSize,
                     toolbarHeight = 72.dp,
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
+                        noteEditingViewModel.setTextTheme(newThemeName)
                     },
                     allLabels = allLabels,
-                    initialSelectedLabelId = selectedLabelId,
-                    onLabelSelected = { selectedLabelId = it },
+                    onLabelSelected = {
+                        selectedLabelId = it
+                        noteEditingViewModel.setTextLabelId(it)
+                    },
                     onAddNewLabel = { viewModel.addLabel(it) },
                     isBlackThemeActive = isBlackedOut,
-                    isCoverModeActive = true,
-                    noteEditingViewModel = noteEditingViewModel,
+                    isCoverModeActive = false,
+                    noteEditingViewModel = noteEditingViewModel
                 )
             }
 

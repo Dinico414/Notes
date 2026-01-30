@@ -142,12 +142,8 @@ fun String.fromSerialized(): AnnotatedString {
 fun NoteTextSheet(
     textTitle: String,
     onTextTitleChange: (String) -> Unit,
-    initialContent: String = "",
     onDismiss: () -> Unit,
     onSave: (String, String, String, String?, Boolean) -> Unit,
-    isBold: Boolean,
-    isItalic: Boolean,
-    isUnderlined: Boolean,
     onIsBoldChange: (Boolean) -> Unit,
     onIsItalicChange: (Boolean) -> Unit,
     onIsUnderlinedChange: (Boolean) -> Unit,
@@ -155,10 +151,8 @@ fun NoteTextSheet(
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
-    initialTheme: String = "Default",
     onThemeChange: (String) -> Unit,
     allLabels: List<Label>,
-    initialSelectedLabelId: String?,
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
     noteEditingViewModel: NoteEditingViewModel,
@@ -168,23 +162,23 @@ fun NoteTextSheet(
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
 
-    // Read ALL states directly from ViewModel - NO rememberSaveable!
     val vmContent by noteEditingViewModel.textContent.collectAsState()
     val vmTheme by noteEditingViewModel.textTheme.collectAsState()
     val vmLabelId by noteEditingViewModel.textLabelId.collectAsState()
     val vmIsOffline by noteEditingViewModel.textIsOffline.collectAsState()
 
-    // Use ViewModel values directly - no local caching
+    val vmIsBold by noteEditingViewModel.textIsBold.collectAsState()
+    val vmIsItalic by noteEditingViewModel.textIsItalic.collectAsState()
+    val vmIsUnderlined by noteEditingViewModel.textIsUnderlined.collectAsState()
+
     val selectedTheme = vmTheme.ifEmpty { "Default" }
     val selectedLabelId = vmLabelId
     val isOffline = vmIsOffline
 
-    // TextField state - controlled by ViewModel content
     var textFieldValue by remember {
         mutableStateOf(TextFieldValue(AnnotatedString("")))
     }
 
-    // Initialize and update textField when ViewModel content changes
     LaunchedEffect(vmContent) {
         val newAnnotated = if (vmContent.isNotEmpty()) {
             vmContent.fromSerialized()
@@ -192,7 +186,6 @@ fun NoteTextSheet(
             AnnotatedString("")
         }
 
-        // Only update if content actually changed to avoid cursor jumping
         if (textFieldValue.annotatedString.text != newAnnotated.text) {
             textFieldValue = TextFieldValue(
                 annotatedString = newAnnotated,
@@ -201,7 +194,6 @@ fun NoteTextSheet(
         }
     }
 
-    // Sync TextField changes back to ViewModel
     LaunchedEffect(textFieldValue.annotatedString) {
         val serialized = textFieldValue.annotatedString.toSerialized()
         if (serialized != vmContent && textFieldValue.annotatedString.text.isNotEmpty()) {
@@ -222,11 +214,11 @@ fun NoteTextSheet(
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val currentSpanStyle = remember(isBold, isItalic, isUnderlined) {
+    val currentSpanStyle = remember(vmIsBold, vmIsItalic, vmIsUnderlined) {
         SpanStyle(
-            fontWeight = if (isBold) FontWeight.Bold else null,
-            fontStyle = if (isItalic) FontStyle.Italic else null,
-            textDecoration = if (isUnderlined) TextDecoration.Underline else null
+            fontWeight = if (vmIsBold) FontWeight.Bold else null,
+            fontStyle = if (vmIsItalic) FontStyle.Italic else null,
+            textDecoration = if (vmIsUnderlined) TextDecoration.Underline else null
         )
     }
 
@@ -254,29 +246,47 @@ fun NoteTextSheet(
         }
     }
 
-    LaunchedEffect(isBold, isItalic, isUnderlined) {
+    LaunchedEffect(vmIsBold, vmIsItalic, vmIsUnderlined) {
         if (!textFieldValue.selection.collapsed) {
-            val builder = AnnotatedString.Builder(textFieldValue.annotatedString)
-            builder.addStyle(
-                SpanStyle(fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal),
-                textFieldValue.selection.min,
-                textFieldValue.selection.max
-            )
-            builder.addStyle(
-                SpanStyle(fontStyle = if (isItalic) FontStyle.Italic else FontStyle.Normal),
-                textFieldValue.selection.min,
-                textFieldValue.selection.max
-            )
-            builder.addStyle(
-                SpanStyle(textDecoration = if (isUnderlined) TextDecoration.Underline else TextDecoration.None),
-                textFieldValue.selection.min,
-                textFieldValue.selection.max
-            )
+            val selectionStart = textFieldValue.selection.min
+            val selectionEnd = textFieldValue.selection.max
+
+            val builder = AnnotatedString.Builder()
+
+            if (selectionStart > 0) {
+                builder.append(textFieldValue.annotatedString.subSequence(0, selectionStart))
+            }
+
+            val selectedText = textFieldValue.text.substring(selectionStart, selectionEnd)
+            val selectionIndex = builder.length
+            builder.append(selectedText)
+
+            if (vmIsBold) {
+                builder.addStyle(SpanStyle(fontWeight = FontWeight.Bold), selectionIndex, selectionIndex + selectedText.length)
+            }
+            if (vmIsItalic) {
+                builder.addStyle(SpanStyle(fontStyle = FontStyle.Italic), selectionIndex, selectionIndex + selectedText.length)
+            }
+            if (vmIsUnderlined) {
+                builder.addStyle(SpanStyle(textDecoration = TextDecoration.Underline), selectionIndex, selectionIndex + selectedText.length)
+            }
+
+            if (selectionEnd < textFieldValue.text.length) {
+                builder.append(textFieldValue.annotatedString.subSequence(selectionEnd, textFieldValue.text.length))
+            }
+
             textFieldValue = textFieldValue.copy(annotatedString = builder.toAnnotatedString())
         }
     }
 
+    var hasInitialized by remember { mutableStateOf(false) }
+
     LaunchedEffect(textFieldValue.selection) {
+        if (!hasInitialized) {
+            hasInitialized = true
+            return@LaunchedEffect
+        }
+
         if (textFieldValue.selection.collapsed) {
             val pos = textFieldValue.selection.start - 1
             if (pos >= 0) {
@@ -287,13 +297,17 @@ fun NoteTextSheet(
                 spansAtPos.forEach { range ->
                     effectiveStyle = effectiveStyle.merge(range.item)
                 }
-                onIsBoldChange(effectiveStyle.fontWeight == FontWeight.Bold)
-                onIsItalicChange(effectiveStyle.fontStyle == FontStyle.Italic)
-                onIsUnderlinedChange(effectiveStyle.textDecoration?.contains(TextDecoration.Underline) ?: false)
-            } else {
-                onIsBoldChange(false)
-                onIsItalicChange(false)
-                onIsUnderlinedChange(false)
+                val shouldBeBold = effectiveStyle.fontWeight == FontWeight.Bold
+                val shouldBeItalic = effectiveStyle.fontStyle == FontStyle.Italic
+                val shouldBeUnderlined = effectiveStyle.textDecoration?.contains(TextDecoration.Underline) ?: false
+
+                if (vmIsBold != shouldBeBold) noteEditingViewModel.setTextIsBold(shouldBeBold)
+                if (vmIsItalic != shouldBeItalic) noteEditingViewModel.setTextIsItalic(shouldBeItalic)
+                if (vmIsUnderlined != shouldBeUnderlined) noteEditingViewModel.setTextIsUnderlined(shouldBeUnderlined)
+
+                onIsBoldChange(shouldBeBold)
+                onIsItalicChange(shouldBeItalic)
+                onIsUnderlinedChange(shouldBeUnderlined)
             }
         }
     }
@@ -328,7 +342,6 @@ fun NoteTextSheet(
                 allLabels = allLabels,
                 selectedLabelId = selectedLabelId,
                 onLabelSelected = {
-                    // Update ViewModel directly
                     noteEditingViewModel.setTextLabelId(it)
                     onLabelSelected(it)
                 },
@@ -535,7 +548,6 @@ fun NoteTextSheet(
                                 val currentIndex = availableThemes.indexOf(selectedTheme)
                                 val nextIndex = (currentIndex + 1) % availableThemes.size
                                 val newTheme = availableThemes[nextIndex]
-                                // Update ViewModel directly
                                 noteEditingViewModel.setTextTheme(newTheme)
                                 onThemeChange(newTheme)
                                 colorChangeJob?.cancel()
@@ -558,7 +570,6 @@ fun NoteTextSheet(
                             MenuItem(
                                 text = if (isOffline) "Offline note" else "Online note",
                                 onClick = {
-                                    // Update ViewModel directly
                                     noteEditingViewModel.setTextIsOffline(!isOffline)
                                 },
                                 dismissOnClick = false,
