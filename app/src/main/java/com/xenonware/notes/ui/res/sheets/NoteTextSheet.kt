@@ -48,7 +48,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -169,67 +168,44 @@ fun NoteTextSheet(
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
 
+    // Read ALL states directly from ViewModel - NO rememberSaveable!
     val vmContent by noteEditingViewModel.textContent.collectAsState()
-    val vmTitle by noteEditingViewModel.textTitle.collectAsState()
     val vmTheme by noteEditingViewModel.textTheme.collectAsState()
     val vmLabelId by noteEditingViewModel.textLabelId.collectAsState()
     val vmIsOffline by noteEditingViewModel.textIsOffline.collectAsState()
 
-    LaunchedEffect(Unit) {
-        if (vmContent.isEmpty() && initialContent.isNotEmpty()) {
-            noteEditingViewModel.setTextContent(initialContent)
-        }
-        if (vmTitle.isEmpty() && textTitle.isNotEmpty()) {
-            noteEditingViewModel.setTextTitle(textTitle)
-        }
-        if (vmTheme == "Default" && initialTheme != "Default") {
-            noteEditingViewModel.setTextTheme(initialTheme)
-        }
-        if (vmLabelId == null && initialSelectedLabelId != null) {
-            noteEditingViewModel.setTextLabelId(initialSelectedLabelId)
-        }
+    // Use ViewModel values directly - no local caching
+    val selectedTheme = vmTheme.ifEmpty { "Default" }
+    val selectedLabelId = vmLabelId
+    val isOffline = vmIsOffline
+
+    // TextField state - controlled by ViewModel content
+    var textFieldValue by remember {
+        mutableStateOf(TextFieldValue(AnnotatedString("")))
     }
 
-    var selectedTheme by rememberSaveable { mutableStateOf(vmTheme.takeIf { it.isNotEmpty() } ?: initialTheme) }
-    var selectedLabelId by rememberSaveable { mutableStateOf(vmLabelId ?: initialSelectedLabelId) }
-    var isOffline by rememberSaveable { mutableStateOf(vmIsOffline) }
+    // Initialize and update textField when ViewModel content changes
+    LaunchedEffect(vmContent) {
+        val newAnnotated = if (vmContent.isNotEmpty()) {
+            vmContent.fromSerialized()
+        } else {
+            AnnotatedString("")
+        }
 
-    var textFieldValue by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(
-            TextFieldValue(
-                (vmContent.ifEmpty { initialContent }).fromSerialized()
+        // Only update if content actually changed to avoid cursor jumping
+        if (textFieldValue.annotatedString.text != newAnnotated.text) {
+            textFieldValue = TextFieldValue(
+                annotatedString = newAnnotated,
+                selection = TextRange(newAnnotated.length)
             )
-        )
+        }
     }
 
+    // Sync TextField changes back to ViewModel
     LaunchedEffect(textFieldValue.annotatedString) {
         val serialized = textFieldValue.annotatedString.toSerialized()
-        if (serialized != vmContent) {
+        if (serialized != vmContent && textFieldValue.annotatedString.text.isNotEmpty()) {
             noteEditingViewModel.setTextContent(serialized)
-        }
-    }
-
-    LaunchedEffect(textTitle) {
-        if (textTitle != vmTitle) {
-            noteEditingViewModel.setTextTitle(textTitle)
-        }
-    }
-
-    LaunchedEffect(selectedTheme) {
-        if (selectedTheme != vmTheme) {
-            noteEditingViewModel.setTextTheme(selectedTheme)
-        }
-    }
-
-    LaunchedEffect(selectedLabelId) {
-        if (selectedLabelId != vmLabelId) {
-            noteEditingViewModel.setTextLabelId(selectedLabelId)
-        }
-    }
-
-    LaunchedEffect(isOffline) {
-        if (isOffline != vmIsOffline) {
-            noteEditingViewModel.setTextIsOffline(isOffline)
         }
     }
 
@@ -352,7 +328,8 @@ fun NoteTextSheet(
                 allLabels = allLabels,
                 selectedLabelId = selectedLabelId,
                 onLabelSelected = {
-                    selectedLabelId = it
+                    // Update ViewModel directly
+                    noteEditingViewModel.setTextLabelId(it)
                     onLabelSelected(it)
                 },
                 onAddNewLabel = onAddNewLabel,
@@ -487,7 +464,7 @@ fun NoteTextSheet(
                 Spacer(modifier = Modifier.height(bottomPadding))
             }
 
-            // Toolbar (unchanged)
+            // Toolbar
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -557,11 +534,13 @@ fun NoteTextSheet(
                             MenuItem(text = colorMenuItemText, onClick = {
                                 val currentIndex = availableThemes.indexOf(selectedTheme)
                                 val nextIndex = (currentIndex + 1) % availableThemes.size
-                                selectedTheme = availableThemes[nextIndex]
-                                onThemeChange(selectedTheme)
+                                val newTheme = availableThemes[nextIndex]
+                                // Update ViewModel directly
+                                noteEditingViewModel.setTextTheme(newTheme)
+                                onThemeChange(newTheme)
                                 colorChangeJob?.cancel()
                                 colorChangeJob = scope.launch {
-                                    colorMenuItemText = availableThemes[nextIndex]
+                                    colorMenuItemText = newTheme
                                     isFadingOut = false
                                     delay(2500)
                                     isFadingOut = true
@@ -579,7 +558,8 @@ fun NoteTextSheet(
                             MenuItem(
                                 text = if (isOffline) "Offline note" else "Online note",
                                 onClick = {
-                                    isOffline = !isOffline
+                                    // Update ViewModel directly
+                                    noteEditingViewModel.setTextIsOffline(!isOffline)
                                 },
                                 dismissOnClick = false,
                                 textColor = if (isOffline) colorScheme.error else null,
