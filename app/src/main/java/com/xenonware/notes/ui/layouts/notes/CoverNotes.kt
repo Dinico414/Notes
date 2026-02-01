@@ -1623,8 +1623,8 @@ fun CoverNotes(
 
             AnimatedVisibility(
                 visible = showListNoteCard,
-                enter = slideInVertically( initialOffsetY = { it }),
-                exit = slideOutVertically( targetOffsetY = { it })
+                enter = slideInVertically(initialOffsetY = { it }),
+                exit = slideOutVertically(targetOffsetY = { it })
             ) {
                 BackHandler {
                     viewModel.hideListCard()
@@ -1633,9 +1633,15 @@ fun CoverNotes(
                     resetNoteState()
                 }
 
+                // READ THEME FROM VIEWMODEL (like TextSheet)
+                val vmListTheme by noteEditingViewModel.listTheme.collectAsState()
+
                 NoteListSheet(
                     listTitle = listTitleState,
-                    onListTitleChange = { listTitleState = it },
+                    onListTitleChange = { newTitle ->
+                        listTitleState = newTitle
+                        noteEditingViewModel.setListTitle(newTitle)
+                    },
                     listItems = listItemsState,
                     onDismiss = {
                         viewModel.hideListCard()
@@ -1643,7 +1649,6 @@ fun CoverNotes(
                         viewModel.setSearchQuery("")
                         resetNoteState()
                     },
-                    initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                     onSave = { title, items, theme, labelId, isOffline ->
                         val nonEmptyItems = items.filter { it.text.isNotBlank() }
                         val description = nonEmptyItems.joinToString("\n") {
@@ -1659,18 +1664,17 @@ fun CoverNotes(
                         val colorLong = themeColorMap[theme]?.toLong()
 
                         if (editingNoteId != null) {
-                            val existingNote = viewModel.noteItems
-                                .filterIsInstance<NotesItems>()
-                                .find { it.id == editingNoteId }
+                            val existingNote =
+                                viewModel.noteItems.filterIsInstance<NotesItems>()
+                                    .find { it.id == editingNoteId }
 
-                            existingNote?.let { it ->
+                            existingNote?.let {
                                 val updatedNote = it.copy(
                                     title = title.trim(),
-                                    description = description.takeIf { it.isNotBlank() },
+                                    description = description.takeIf { it -> it.isNotBlank() },
                                     color = colorLong,
-                                    labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                    isOffline = isOffline
-                                )
+                                    labels = labelId?.let { it -> listOf(it) } ?: emptyList(),
+                                    isOffline = isOffline)
                                 viewModel.updateItem(updatedNote, forceLocal = isOffline)
                             }
                         } else {
@@ -1680,8 +1684,7 @@ fun CoverNotes(
                                 noteType = NoteType.LIST,
                                 color = colorLong,
                                 labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                forceLocal = isOffline
-                            )
+                                forceLocal = isOffline)
                         }
 
                         viewModel.hideListCard()
@@ -1697,15 +1700,17 @@ fun CoverNotes(
                     editorFontSize = listEditorFontSize,
                     onThemeChange = { newThemeName ->
                         editingNoteColor = themeColorMap[newThemeName]
+                        noteEditingViewModel.setListTheme(newThemeName)
                     },
                     allLabels = allLabels,
-                    initialSelectedLabelId = selectedLabelId,
-                    onLabelSelected = { selectedLabelId = it },
+                    onLabelSelected = {
+                        selectedLabelId = it
+                        noteEditingViewModel.setListLabelId(it)
+                    },
                     onAddNewLabel = { viewModel.addLabel(it) },
                     isBlackThemeActive = isBlackedOut,
-                    isCoverModeActive = true,
-                    editingNoteId = editingNoteId,
-                    notesViewModel = viewModel,
+                    isCoverModeActive = false,
+                    noteEditingViewModel = noteEditingViewModel
                 )
             }
         }

@@ -1,3 +1,5 @@
+@file:Suppress("AssignedValueIsNeverRead")
+
 package com.xenonware.notes.ui.res.sheets
 
 import androidx.compose.animation.animateColorAsState
@@ -40,11 +42,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -62,15 +64,14 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
-import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.res.LabelSelectionDialog
 import com.xenonware.notes.ui.res.MenuItem
+import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
-import com.xenonware.notes.viewmodel.NotesViewModel
+import com.xenonware.notes.viewmodel.NoteEditingViewModel
 import com.xenonware.notes.viewmodel.classes.Label
-import com.xenonware.notes.viewmodel.classes.NotesItems
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -100,21 +101,29 @@ fun NoteListSheet(
     addItemTrigger: Boolean,
     onAddItemTriggerConsumed: () -> Unit,
     editorFontSize: TextUnit,
-    initialTheme: String = "Default",
     onThemeChange: (String) -> Unit,
     allLabels: List<Label>,
-    initialSelectedLabelId: String?,
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
-    editingNoteId: Int?,
-    notesViewModel: NotesViewModel,
+    noteEditingViewModel: NoteEditingViewModel,
     isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
 
-    var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) }
+    // ========== COLLECT ALL STATES FROM VIEWMODEL (like TextSheet) ==========
+    val vmTitle by noteEditingViewModel.listTitle.collectAsState()
+    val vmTheme by noteEditingViewModel.listTheme.collectAsState()
+    val vmLabelId by noteEditingViewModel.listLabelId.collectAsState()
+    val vmIsOffline by noteEditingViewModel.listIsOffline.collectAsState()
+    val vmItems by noteEditingViewModel.listItems.collectAsState()
+
+    // ========== USE VIEWMODEL VALUES DIRECTLY (like TextSheet) ==========
+    val selectedTheme = vmTheme.ifEmpty { "Default" }
+    val selectedLabelId = vmLabelId
+    val isOffline = vmIsOffline
+
     var colorMenuItemText by remember { mutableStateOf("Color") }
     val scope = rememberCoroutineScope()
     var isFadingOut by remember { mutableStateOf(false) }
@@ -125,39 +134,47 @@ fun NoteListSheet(
     }
 
     var showMenu by remember { mutableStateOf(false) }
-    var isOffline by rememberSaveable(
-        inputs = arrayOf(editingNoteId)
-    ) {
-        mutableStateOf(
-            editingNoteId?.let { id ->
-                notesViewModel.noteItems
-                    .filterIsInstance<NotesItems>()
-                    .find { it.id == id }
-                    ?.isOffline == true
-            } ?: false
-        )
-    }
-
     var showLabelDialog by remember { mutableStateOf(false) }
-    var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
     val isLabeled = selectedLabelId != null
 
     val listTitleFocusRequester = remember { FocusRequester() }
     var focusOnNewItemId by remember { mutableStateOf<Long?>(null) }
+
+    // ========== SYNC LOCAL ITEMS TO VIEWMODEL ==========
+    LaunchedEffect(listItems.size, listItems.map { it.text to it.isChecked }) {
+        val currentList = listItems.toList()
+        if (currentList != vmItems) {
+            noteEditingViewModel.setListItems(currentList)
+        }
+    }
+
+    // ========== RESTORE ITEMS FROM VIEWMODEL AFTER ROTATION ==========
+    LaunchedEffect(vmItems) {
+        if (vmItems.isNotEmpty() && listItems.isEmpty()) {
+            listItems.clear()
+            listItems.addAll(vmItems)
+        }
+    }
 
     LaunchedEffect(Unit) {
         if (listItems.isEmpty()) {
             val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
             listItems.add(newItem)
             focusOnNewItemId = newItem.id
-        } else if (listTitle.isEmpty()) {
+        } else if (listTitle.isEmpty() && vmTitle.isEmpty()) {
             listTitleFocusRequester.requestFocus()
         }
     }
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(listTitle, listItems.toList(), selectedTheme, selectedLabelId, isOffline)
+            onSave(
+                vmTitle,
+                listItems.toList(),
+                selectedTheme,
+                selectedLabelId,
+                isOffline
+            )
             onSaveTriggerConsumed()
         }
     }
@@ -177,6 +194,7 @@ fun NoteListSheet(
     }
 
     val systemUiController = rememberSystemUiController()
+    val originalStatusBarColor = Color.Transparent
 
     XenonTheme(
         darkTheme = isDarkTheme,
@@ -201,7 +219,7 @@ fun NoteListSheet(
                 color = Color.Transparent, darkIcons = !isDarkTheme
             )
             onDispose {
-                systemUiController.setStatusBarColor(color = Color.Transparent)
+                systemUiController.setStatusBarColor(color = originalStatusBarColor)
             }
         }
 
@@ -210,27 +228,31 @@ fun NoteListSheet(
                 allLabels = allLabels,
                 selectedLabelId = selectedLabelId,
                 onLabelSelected = {
-                    selectedLabelId = it
+                    noteEditingViewModel.setListLabelId(it)
                     onLabelSelected(it)
                 },
                 onAddNewLabel = onAddNewLabel,
-                onDismiss = { showLabelDialog = false })
+                onDismiss = { showLabelDialog = false }
+            )
         }
 
         val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
 
         val safeDrawingPadding = if (WindowInsets.ime.asPaddingValues()
-                .calculateBottomPadding() > WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues()
+                .calculateBottomPadding() > WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+                .asPaddingValues()
                 .calculateBottomPadding()
-        )   {
+        ) {
             WindowInsets.ime.asPaddingValues().calculateBottomPadding()
         } else {
-            WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues()
+                .calculateBottomPadding()
         }
 
         val bottomPadding = safeDrawingPadding + toolbarHeight + 16.dp
-        val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
+        val backgroundColor =
+            if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
 
         Box(
             modifier = Modifier
@@ -374,15 +396,18 @@ fun NoteListSheet(
                 )
 
                 BasicTextField(
-                    value = listTitle,
-                    onValueChange = onListTitleChange,
+                    value = vmTitle,
+                    onValueChange = { newTitle ->
+                        noteEditingViewModel.setListTitle(newTitle)
+                        onListTitleChange(newTitle)
+                    },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     textStyle = titleTextStyle,
                     cursorBrush = SolidColor(colorScheme.primary),
                     decorationBox = { innerTextField ->
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (listTitle.isEmpty()) {
+                            if (vmTitle.isEmpty()) {
                                 Text(
                                     text = "Title",
                                     style = titleTextStyle,
@@ -423,11 +448,12 @@ fun NoteListSheet(
                                 text = colorMenuItemText, onClick = {
                                     val currentIndex = availableThemes.indexOf(selectedTheme)
                                     val nextIndex = (currentIndex + 1) % availableThemes.size
-                                    selectedTheme = availableThemes[nextIndex]
-                                    onThemeChange(selectedTheme) // Call the callback here
+                                    val newTheme = availableThemes[nextIndex]
+                                    noteEditingViewModel.setListTheme(newTheme)
+                                    onThemeChange(newTheme)
                                     colorChangeJob?.cancel()
                                     colorChangeJob = scope.launch {
-                                        colorMenuItemText = availableThemes[nextIndex]
+                                        colorMenuItemText = newTheme
                                         isFadingOut = false
                                         delay(2500)
                                         isFadingOut = true
@@ -445,7 +471,7 @@ fun NoteListSheet(
                             ), MenuItem(
                                 text = if (isOffline) "Offline note" else "Online note",
                                 onClick = {
-                                    isOffline = !isOffline
+                                    noteEditingViewModel.setListIsOffline(!isOffline)
                                 },
                                 dismissOnClick = false,
                                 textColor = if (isOffline) colorScheme.error else null,

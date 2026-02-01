@@ -1264,10 +1264,17 @@ fun CompactNotes(
                                                                         }
 
                                                                         NoteType.LIST -> {
-                                                                            isSearchActive = false
-                                                                            viewModel.setSearchQuery(
-                                                                                ""
+                                                                            // Initialize ViewModel BEFORE showListCard
+                                                                            noteEditingViewModel.setListTitle(itemToEdit.title)
+                                                                            noteEditingViewModel.setListTheme(
+                                                                                colorThemeMap[editingNoteColor] ?: "Default"
                                                                             )
+                                                                            noteEditingViewModel.setListLabelId(selectedLabelId)
+                                                                            noteEditingViewModel.setListIsOffline(itemToEdit.isOffline)
+                                                                            noteEditingViewModel.setListItems(listItemsState.toList())
+
+                                                                            isSearchActive = false
+                                                                            viewModel.setSearchQuery("")
                                                                             viewModel.showListCard()
                                                                         }
 
@@ -1394,8 +1401,20 @@ fun CompactNotes(
                                                                         AudioViewType.Waveform
                                                                 }
 
-                                                                NoteType.LIST -> viewModel.showListCard()
+                                                                NoteType.LIST -> {
+                                                                    // Initialize ViewModel BEFORE showListCard
+                                                                    noteEditingViewModel.setListTitle(itemToEdit.title)
+                                                                    noteEditingViewModel.setListTheme(
+                                                                        colorThemeMap[editingNoteColor] ?: "Default"
+                                                                    )
+                                                                    noteEditingViewModel.setListLabelId(selectedLabelId)
+                                                                    noteEditingViewModel.setListIsOffline(itemToEdit.isOffline)
+                                                                    noteEditingViewModel.setListItems(listItemsState.toList())
 
+                                                                    isSearchActive = false
+                                                                    viewModel.setSearchQuery("")
+                                                                    viewModel.showListCard()
+                                                                }
                                                                 NoteType.SKETCH -> viewModel.showSketchCard()
                                                             }
                                                         },
@@ -1711,9 +1730,15 @@ fun CompactNotes(
                         resetNoteState()
                     }
 
+                    // READ THEME FROM VIEWMODEL (like TextSheet)
+                    val vmListTheme by noteEditingViewModel.listTheme.collectAsState()
+
                     NoteListSheet(
                         listTitle = listTitleState,
-                        onListTitleChange = { listTitleState = it },
+                        onListTitleChange = { newTitle ->
+                            listTitleState = newTitle
+                            noteEditingViewModel.setListTitle(newTitle)
+                        },
                         listItems = listItemsState,
                         onDismiss = {
                             viewModel.hideListCard()
@@ -1721,7 +1746,6 @@ fun CompactNotes(
                             viewModel.setSearchQuery("")
                             resetNoteState()
                         },
-                        initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                         onSave = { title, items, theme, labelId, isOffline ->
                             val nonEmptyItems = items.filter { it.text.isNotBlank() }
                             val description = nonEmptyItems.joinToString("\n") {
@@ -1773,15 +1797,17 @@ fun CompactNotes(
                         editorFontSize = listEditorFontSize,
                         onThemeChange = { newThemeName ->
                             editingNoteColor = themeColorMap[newThemeName]
+                            noteEditingViewModel.setListTheme(newThemeName)
                         },
                         allLabels = allLabels,
-                        initialSelectedLabelId = selectedLabelId,
-                        onLabelSelected = { selectedLabelId = it },
+                        onLabelSelected = {
+                            selectedLabelId = it
+                            noteEditingViewModel.setListLabelId(it)
+                        },
                         onAddNewLabel = { viewModel.addLabel(it) },
                         isBlackThemeActive = isBlackedOut,
                         isCoverModeActive = false,
-                        editingNoteId = editingNoteId,
-                        notesViewModel = viewModel,
+                        noteEditingViewModel = noteEditingViewModel
                     )
                 }
             }
