@@ -805,10 +805,12 @@ fun CompactNotes(
                     }
                 }
             }
+
         val fabOverride = if (showTextNoteCard) {
             @Composable {
                 //Text Note
-                val canSave = titleState.isNotBlank()
+                val vmTitle by noteEditingViewModel.textTitle.collectAsState()
+                val canSave = vmTitle.isNotBlank()
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -825,7 +827,9 @@ fun CompactNotes(
         } else if (showListNoteCard) {
             {
                 //List Note
-                val canSave = listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() }
+                val vmListTitle by noteEditingViewModel.listTitle.collectAsState()
+                val vmListItems by noteEditingViewModel.listItems.collectAsState()
+                val canSave = vmListTitle.isNotBlank() && vmListItems.any { it.text.isNotBlank() }
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -842,6 +846,8 @@ fun CompactNotes(
         } else if (showAudioNoteCard) {
             {
                 //Audio Note
+//                val vmAudioTitle by noteEditingViewModel.audioTitle.collectAsState()
+//                val canSave = vmAudioTitle.isNotBlank() && hasAudioContent
                 val canSave = titleState.isNotBlank() && hasAudioContent
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
@@ -859,9 +865,12 @@ fun CompactNotes(
         } else if (showSketchNoteCard) {
             {
                 //Sketch Note
+//                val vmSketchTitle by noteEditingViewModel.sketchTitle.collectAsState()
+//                val canSave = vmSketchTitle.isNotBlank() /*&& hasSketchContent*/
                 val canSave = titleState.isNotBlank() /*&& hasSketchContent*/
                 FloatingActionButton(
-                    onClick = { if (canSave) saveTrigger = true }, containerColor = colorScheme.primary
+                    onClick = { if (canSave) saveTrigger = true },
+                    containerColor = colorScheme.primary
                 ) {
                     Icon(
                         Icons.Rounded.Save,
