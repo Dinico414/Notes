@@ -368,9 +368,19 @@ fun CompactNotes(
 
         val isDarkTheme = LocalIsDarkTheme.current
 
-        // Get theme from ViewModel for text notes
+
         val vmTextTheme by noteEditingViewModel.textTheme.collectAsState()
-        val selectedTextNoteTheme = if (showTextNoteCard) vmTextTheme else colorThemeMap[editingNoteColor] ?: "Default"
+        val vmListTheme by noteEditingViewModel.listTheme.collectAsState()
+        val vmAudioTheme by noteEditingViewModel.audioTheme.collectAsState()
+        val vmSketchTheme by noteEditingViewModel.sketchTheme.collectAsState()
+
+        val selectedNoteTheme = when {
+            showTextNoteCard -> vmTextTheme
+            showListNoteCard -> vmListTheme
+            showAudioNoteCard -> vmAudioTheme
+            showSketchNoteCard -> vmSketchTheme
+            else -> colorThemeMap[editingNoteColor] ?: "Default"
+        }
 
         val googleAuthUiClient = remember {
             GoogleAuthUiClient(
@@ -417,15 +427,15 @@ fun CompactNotes(
             @Composable {
                 XenonTheme(
                     darkTheme = isDarkTheme,
-                    useDefaultTheme = selectedTextNoteTheme == "Default",
-                    useRedTheme = selectedTextNoteTheme == "Red",
-                    useOrangeTheme = selectedTextNoteTheme == "Orange",
-                    useYellowTheme = selectedTextNoteTheme == "Yellow",
-                    useGreenTheme = selectedTextNoteTheme == "Green",
-                    useTurquoiseTheme = selectedTextNoteTheme == "Turquoise",
-                    useBlueTheme = selectedTextNoteTheme == "Blue",
-                    usePurpleTheme = selectedTextNoteTheme == "Purple",
-                    dynamicColor = selectedTextNoteTheme == "Default"
+                    useDefaultTheme = selectedNoteTheme == "Default",
+                    useRedTheme = selectedNoteTheme == "Red",
+                    useOrangeTheme = selectedNoteTheme == "Orange",
+                    useYellowTheme = selectedNoteTheme == "Yellow",
+                    useGreenTheme = selectedNoteTheme == "Green",
+                    useTurquoiseTheme = selectedNoteTheme == "Turquoise",
+                    useBlueTheme = selectedNoteTheme == "Blue",
+                    usePurpleTheme = selectedNoteTheme == "Purple",
+                    dynamicColor = selectedNoteTheme == "Default"
 
                 ) {
                     val vmIsBold by noteEditingViewModel.textIsBold.collectAsState()
@@ -877,15 +887,15 @@ fun CompactNotes(
             }, bottomBar = {
                 XenonTheme(
                     darkTheme = isDarkTheme,
-                    useDefaultTheme = selectedTextNoteTheme == "Default",
-                    useRedTheme = selectedTextNoteTheme == "Red",
-                    useOrangeTheme = selectedTextNoteTheme == "Orange",
-                    useYellowTheme = selectedTextNoteTheme == "Yellow",
-                    useGreenTheme = selectedTextNoteTheme == "Green",
-                    useTurquoiseTheme = selectedTextNoteTheme == "Turquoise",
-                    useBlueTheme = selectedTextNoteTheme == "Blue",
-                    usePurpleTheme = selectedTextNoteTheme == "Purple",
-                    dynamicColor = selectedTextNoteTheme == "Default"
+                    useDefaultTheme = selectedNoteTheme == "Default",
+                    useRedTheme = selectedNoteTheme == "Red",
+                    useOrangeTheme = selectedNoteTheme == "Orange",
+                    useYellowTheme = selectedNoteTheme == "Yellow",
+                    useGreenTheme = selectedNoteTheme == "Green",
+                    useTurquoiseTheme = selectedNoteTheme == "Turquoise",
+                    useBlueTheme = selectedNoteTheme == "Blue",
+                    usePurpleTheme = selectedNoteTheme == "Purple",
+                    dynamicColor = selectedNoteTheme == "Default"
                 ) {
                     val bottomPaddingNavigationBar =
                         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
