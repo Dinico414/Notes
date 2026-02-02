@@ -112,14 +112,14 @@ fun NoteListSheet(
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
 
-    // ========== COLLECT ALL STATES FROM VIEWMODEL (like TextSheet) ==========
+    // ========== COLLECT ALL STATES FROM VIEWMODEL ==========
     val vmTitle by noteEditingViewModel.listTitle.collectAsState()
     val vmTheme by noteEditingViewModel.listTheme.collectAsState()
     val vmLabelId by noteEditingViewModel.listLabelId.collectAsState()
     val vmIsOffline by noteEditingViewModel.listIsOffline.collectAsState()
     val vmItems by noteEditingViewModel.listItems.collectAsState()
 
-    // ========== USE VIEWMODEL VALUES DIRECTLY (like TextSheet) ==========
+    // ========== USE VIEWMODEL VALUES DIRECTLY ==========
     val selectedTheme = vmTheme.ifEmpty { "Default" }
     val selectedLabelId = vmLabelId
     val isOffline = vmIsOffline
@@ -140,27 +140,29 @@ fun NoteListSheet(
     val listTitleFocusRequester = remember { FocusRequester() }
     var focusOnNewItemId by remember { mutableStateOf<Long?>(null) }
 
-    // ========== SYNC LOCAL ITEMS TO VIEWMODEL ==========
-    LaunchedEffect(listItems.size, listItems.map { it.text to it.isChecked }) {
-        val currentList = listItems.toList()
-        if (currentList != vmItems) {
-            noteEditingViewModel.setListItems(currentList)
+    // ========== RESTORE ITEMS FROM VIEWMODEL AFTER ROTATION ==========
+    var hasRestoredItems by remember { mutableStateOf(false) }
+
+    LaunchedEffect(vmItems) {
+        if (!hasRestoredItems && vmItems.isNotEmpty() && listItems.isEmpty()) {
+            listItems.clear()
+            listItems.addAll(vmItems)
+            hasRestoredItems = true
         }
     }
 
-    // ========== RESTORE ITEMS FROM VIEWMODEL AFTER ROTATION ==========
-    LaunchedEffect(vmItems) {
-        if (vmItems.isNotEmpty() && listItems.isEmpty()) {
-            listItems.clear()
-            listItems.addAll(vmItems)
-        }
+    // ========== SYNC LOCAL ITEMS TO VIEWMODEL ==========
+    LaunchedEffect(listItems.toList()) {
+        val currentList = listItems.toList()
+        noteEditingViewModel.setListItems(currentList)
     }
 
     LaunchedEffect(Unit) {
-        if (listItems.isEmpty()) {
+        if (listItems.isEmpty() && vmItems.isEmpty()) {
             val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
             listItems.add(newItem)
             focusOnNewItemId = newItem.id
+            hasRestoredItems = true
         } else if (listTitle.isEmpty() && vmTitle.isEmpty()) {
             listTitleFocusRequester.requestFocus()
         }
@@ -289,12 +291,14 @@ fun NoteListSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
-                            checked = listItem.isChecked, onCheckedChange = { isChecked ->
+                            checked = listItem.isChecked,
+                            onCheckedChange = { isChecked ->
                                 val idx = listItems.indexOfFirst { it.id == listItem.id }
                                 if (idx != -1) {
                                     listItems[idx] = listItems[idx].copy(isChecked = isChecked)
                                 }
-                            })
+                            }
+                        )
 
                         val itemTextStyle = MaterialTheme.typography.bodyLarge.merge(
                             TextStyle(
