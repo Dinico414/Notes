@@ -44,7 +44,7 @@ fun WaveformDisplay(
 
     val color = MaterialTheme.colorScheme.primary
     val inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-    val maxAmplitudeValue = 32767f // Max amplitude from MediaRecorder
+    val maxAmplitudeValue = 32767f
 
     Canvas(modifier = modifier) {
         val canvasWidth = size.width

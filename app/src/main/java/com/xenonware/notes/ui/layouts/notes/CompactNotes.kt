@@ -266,13 +266,13 @@ fun CompactNotes(
 
         val listItemsState = rememberSaveable(
             saver = listSaver(
-            save = { list: List<ListItem> -> list.map { it.id.toString() + "," + it.text + "," + it.isChecked.toString() } },
-            restore = { list ->
-                list.map { str ->
-                    val parts = str.split(",")
-                    ListItem(parts[0].toLong(), parts[1], parts[2].toBoolean())
-                }.toMutableStateList()
-            })) { mutableStateListOf() }
+                save = { list: List<ListItem> -> list.map { it.id.toString() + "," + it.text + "," + it.isChecked.toString() } },
+                restore = { list ->
+                    list.map { str ->
+                        val parts = str.split(",")
+                        ListItem(parts[0].toLong(), parts[1], parts[2].toBoolean())
+                    }.toMutableStateList()
+                })) { mutableStateListOf() }
 
         var nextListItemId by rememberSaveable { mutableLongStateOf(0L) }
 

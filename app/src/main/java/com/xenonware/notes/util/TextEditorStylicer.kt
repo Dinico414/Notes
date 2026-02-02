@@ -27,6 +27,6 @@ fun String.fromRichTextJson(): AnnotatedString = try {
             addStyle(style, start, end)
         }
     }
-} catch (e: Exception) {
+} catch (_: Exception) {
     androidx.compose.ui.text.AnnotatedString(this)
 }
