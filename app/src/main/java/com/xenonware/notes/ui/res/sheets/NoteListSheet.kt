@@ -1,4 +1,4 @@
-@file:Suppress("AssignedValueIsNeverRead")
+@file:Suppress("AssignedValueIsNeverRead", "DEPRECATION")
 
 package com.xenonware.notes.ui.res.sheets
 
@@ -42,13 +42,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,6 +60,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.notes.ui.res.LabelSelectionDialog
@@ -90,9 +89,6 @@ data class ListItem(
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun NoteListSheet(
-    listTitle: String,
-    onListTitleChange: (String) -> Unit,
-    listItems: SnapshotStateList<ListItem>,
     onDismiss: () -> Unit,
     onSave: (String, List<ListItem>, String, String?, Boolean) -> Unit,
     toolbarHeight: Dp,
@@ -101,9 +97,7 @@ fun NoteListSheet(
     addItemTrigger: Boolean,
     onAddItemTriggerConsumed: () -> Unit,
     editorFontSize: TextUnit,
-    onThemeChange: (String) -> Unit,
     allLabels: List<Label>,
-    onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
     noteEditingViewModel: NoteEditingViewModel,
     isBlackThemeActive: Boolean = false,
@@ -112,18 +106,19 @@ fun NoteListSheet(
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
 
-    // ========== COLLECT ALL STATES FROM VIEWMODEL ==========
-    val vmTitle by noteEditingViewModel.listTitle.collectAsState()
-    val vmTheme by noteEditingViewModel.listTheme.collectAsState()
-    val vmLabelId by noteEditingViewModel.listLabelId.collectAsState()
-    val vmIsOffline by noteEditingViewModel.listIsOffline.collectAsState()
-    val vmItems by noteEditingViewModel.listItems.collectAsState()
+    // ========== SINGLE SOURCE OF TRUTH - ALL STATE FROM VIEWMODEL ==========
+    val vmTitle by noteEditingViewModel.listTitle.collectAsStateWithLifecycle()
+    val vmTheme by noteEditingViewModel.listTheme.collectAsStateWithLifecycle()
+    val vmLabelId by noteEditingViewModel.listLabelId.collectAsStateWithLifecycle()
+    val vmIsOffline by noteEditingViewModel.listIsOffline.collectAsStateWithLifecycle()
+    val vmItems by noteEditingViewModel.listItems.collectAsStateWithLifecycle()
 
-    // ========== USE VIEWMODEL VALUES DIRECTLY ==========
+    // ========== DERIVED VALUES ==========
     val selectedTheme = vmTheme.ifEmpty { "Default" }
     val selectedLabelId = vmLabelId
     val isOffline = vmIsOffline
 
+    // ========== UI STATE ONLY (not business logic state) ==========
     var colorMenuItemText by remember { mutableStateOf("Color") }
     val scope = rememberCoroutineScope()
     var isFadingOut by remember { mutableStateOf(false) }
@@ -140,39 +135,23 @@ fun NoteListSheet(
     val listTitleFocusRequester = remember { FocusRequester() }
     var focusOnNewItemId by remember { mutableStateOf<Long?>(null) }
 
-    // ========== RESTORE ITEMS FROM VIEWMODEL AFTER ROTATION ==========
-    var hasRestoredItems by remember { mutableStateOf(false) }
-
-    LaunchedEffect(vmItems) {
-        if (!hasRestoredItems && vmItems.isNotEmpty() && listItems.isEmpty()) {
-            listItems.clear()
-            listItems.addAll(vmItems)
-            hasRestoredItems = true
-        }
-    }
-
-    // ========== SYNC LOCAL ITEMS TO VIEWMODEL ==========
-    LaunchedEffect(listItems.toList()) {
-        val currentList = listItems.toList()
-        noteEditingViewModel.setListItems(currentList)
-    }
-
+    // ========== INITIALIZE IF EMPTY ==========
     LaunchedEffect(Unit) {
-        if (listItems.isEmpty() && vmItems.isEmpty()) {
+        if (vmItems.isEmpty()) {
             val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
-            listItems.add(newItem)
+            noteEditingViewModel.addListItem(newItem)
             focusOnNewItemId = newItem.id
-            hasRestoredItems = true
-        } else if (listTitle.isEmpty() && vmTitle.isEmpty()) {
+        } else if (vmTitle.isEmpty()) {
             listTitleFocusRequester.requestFocus()
         }
     }
 
+    // ========== HANDLE SAVE TRIGGER ==========
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
             onSave(
                 vmTitle,
-                listItems.toList(),
+                vmItems,
                 selectedTheme,
                 selectedLabelId,
                 isOffline
@@ -181,12 +160,13 @@ fun NoteListSheet(
         }
     }
 
+    // ========== HANDLE ADD ITEM TRIGGER ==========
     LaunchedEffect(addItemTrigger) {
         if (addItemTrigger) {
-            val lastItem = listItems.lastOrNull()
+            val lastItem = vmItems.lastOrNull()
             if (lastItem == null || lastItem.text.isNotEmpty()) {
                 val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
-                listItems.add(newItem)
+                noteEditingViewModel.addListItem(newItem)
                 focusOnNewItemId = newItem.id
             } else {
                 focusOnNewItemId = lastItem.id
@@ -229,9 +209,8 @@ fun NoteListSheet(
             LabelSelectionDialog(
                 allLabels = allLabels,
                 selectedLabelId = selectedLabelId,
-                onLabelSelected = {
-                    noteEditingViewModel.setListLabelId(it)
-                    onLabelSelected(it)
+                onLabelSelected = { labelId ->
+                    noteEditingViewModel.setListLabelId(labelId)
                 },
                 onAddNewLabel = onAddNewLabel,
                 onDismiss = { showLabelDialog = false }
@@ -281,7 +260,7 @@ fun NoteListSheet(
             ) {
                 Spacer(modifier = Modifier.height(topPadding))
 
-                listItems.forEachIndexed { index, listItem ->
+                vmItems.forEachIndexed { _, listItem ->
                     val itemFocusRequester = remember(listItem.id) { FocusRequester() }
 
                     Row(
@@ -293,10 +272,10 @@ fun NoteListSheet(
                         Checkbox(
                             checked = listItem.isChecked,
                             onCheckedChange = { isChecked ->
-                                val idx = listItems.indexOfFirst { it.id == listItem.id }
-                                if (idx != -1) {
-                                    listItems[idx] = listItems[idx].copy(isChecked = isChecked)
-                                }
+                                noteEditingViewModel.updateListItem(
+                                    listItem.id,
+                                    listItem.copy(isChecked = isChecked)
+                                )
                             }
                         )
 
@@ -312,10 +291,10 @@ fun NoteListSheet(
                             value = listItem.text,
                             singleLine = true,
                             onValueChange = { newText ->
-                                val idx = listItems.indexOfFirst { it.id == listItem.id }
-                                if (idx != -1) {
-                                    listItems[idx] = listItems[idx].copy(text = newText)
-                                }
+                                noteEditingViewModel.updateListItem(
+                                    listItem.id,
+                                    listItem.copy(text = newText)
+                                )
                             },
                             modifier = Modifier
                                 .weight(1f)
@@ -339,16 +318,16 @@ fun NoteListSheet(
 
                         IconButton(
                             onClick = {
-                                val idx = listItems.indexOfFirst { it.id == listItem.id }
-                                if (idx != -1) {
-                                    listItems.removeAt(idx)
-                                    if (listItems.isEmpty()) {
-                                        val newItem = ListItem(
-                                            id = System.nanoTime(), text = "", isChecked = false
-                                        )
-                                        listItems.add(newItem)
-                                        focusOnNewItemId = newItem.id
-                                    }
+                                noteEditingViewModel.removeListItem(listItem.id)
+                                if (vmItems.size == 1) {
+                                    // If removing the last item, add a new empty one
+                                    val newItem = ListItem(
+                                        id = System.nanoTime(),
+                                        text = "",
+                                        isChecked = false
+                                    )
+                                    noteEditingViewModel.addListItem(newItem)
+                                    focusOnNewItemId = newItem.id
                                 }
                             }) {
                             Icon(Icons.Rounded.Delete, contentDescription = "Delete item")
@@ -403,7 +382,6 @@ fun NoteListSheet(
                     value = vmTitle,
                     onValueChange = { newTitle ->
                         noteEditingViewModel.setListTitle(newTitle)
-                        onListTitleChange(newTitle)
                     },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
@@ -454,7 +432,6 @@ fun NoteListSheet(
                                     val nextIndex = (currentIndex + 1) % availableThemes.size
                                     val newTheme = availableThemes[nextIndex]
                                     noteEditingViewModel.setListTheme(newTheme)
-                                    onThemeChange(newTheme)
                                     colorChangeJob?.cancel()
                                     colorChangeJob = scope.launch {
                                         colorMenuItemText = newTheme

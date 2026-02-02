@@ -165,6 +165,21 @@ class NoteEditingViewModel : ViewModel() {
         _listFontSizeIndex.value = index
     }
 
+    // ========== LIST ITEM MANAGEMENT ==========
+    fun addListItem(item: ListItem) {
+        _listItems.value += item
+    }
+
+    fun updateListItem(itemId: Long, updatedItem: ListItem) {
+        _listItems.value = _listItems.value.map { item ->
+            if (item.id == itemId) updatedItem else item
+        }
+    }
+
+    fun removeListItem(itemId: Long) {
+        _listItems.value = _listItems.value.filter { it.id != itemId }
+    }
+
     fun clearListState() {
         _listTitle.value = ""
         _listItems.value = emptyList()

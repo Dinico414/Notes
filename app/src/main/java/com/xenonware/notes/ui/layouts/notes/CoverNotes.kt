@@ -1632,17 +1632,9 @@ fun CoverNotes(
                     viewModel.setSearchQuery("")
                     resetNoteState()
                 }
-
-                // READ THEME FROM VIEWMODEL (like TextSheet)
-                val vmListTheme by noteEditingViewModel.listTheme.collectAsState()
+                
 
                 NoteListSheet(
-                    listTitle = listTitleState,
-                    onListTitleChange = { newTitle ->
-                        listTitleState = newTitle
-                        noteEditingViewModel.setListTitle(newTitle)
-                    },
-                    listItems = listItemsState,
                     onDismiss = {
                         viewModel.hideListCard()
                         isSearchActive = false
@@ -1664,17 +1656,17 @@ fun CoverNotes(
                         val colorLong = themeColorMap[theme]?.toLong()
 
                         if (editingNoteId != null) {
-                            val existingNote =
-                                viewModel.noteItems.filterIsInstance<NotesItems>()
-                                    .find { it.id == editingNoteId }
+                            val existingNote = viewModel.noteItems.filterIsInstance<NotesItems>()
+                                .find { it.id == editingNoteId }
 
-                            existingNote?.let {
+                            existingNote?.let { it ->
                                 val updatedNote = it.copy(
                                     title = title.trim(),
-                                    description = description.takeIf { it -> it.isNotBlank() },
+                                    description = description.takeIf { it.isNotBlank() },
                                     color = colorLong,
-                                    labels = labelId?.let { it -> listOf(it) } ?: emptyList(),
-                                    isOffline = isOffline)
+                                    labels = labelId?.let { listOf(it) } ?: emptyList(),
+                                    isOffline = isOffline
+                                )
                                 viewModel.updateItem(updatedNote, forceLocal = isOffline)
                             }
                         } else {
@@ -1684,7 +1676,8 @@ fun CoverNotes(
                                 noteType = NoteType.LIST,
                                 color = colorLong,
                                 labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                forceLocal = isOffline)
+                                forceLocal = isOffline
+                            )
                         }
 
                         viewModel.hideListCard()
@@ -1698,19 +1691,11 @@ fun CoverNotes(
                     addItemTrigger = addListItemTrigger,
                     onAddItemTriggerConsumed = { addListItemTrigger = false },
                     editorFontSize = listEditorFontSize,
-                    onThemeChange = { newThemeName ->
-                        editingNoteColor = themeColorMap[newThemeName]
-                        noteEditingViewModel.setListTheme(newThemeName)
-                    },
                     allLabels = allLabels,
-                    onLabelSelected = {
-                        selectedLabelId = it
-                        noteEditingViewModel.setListLabelId(it)
-                    },
                     onAddNewLabel = { viewModel.addLabel(it) },
+                    noteEditingViewModel = noteEditingViewModel,
                     isBlackThemeActive = isBlackedOut,
-                    isCoverModeActive = false,
-                    noteEditingViewModel = noteEditingViewModel
+                    isCoverModeActive = false
                 )
             }
         }

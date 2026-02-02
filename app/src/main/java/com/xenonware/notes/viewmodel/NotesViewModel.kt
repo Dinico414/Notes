@@ -102,9 +102,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _showSketchCard = MutableStateFlow(false)
     val showSketchCard: StateFlow<Boolean> = _showSketchCard.asStateFlow()
 
-    private val _editingTextContent = MutableStateFlow("")
-    val editingTextContent: StateFlow<String> = _editingTextContent.asStateFlow()
-
     init {
         loadAllNotes()
         loadLabels()
@@ -198,14 +195,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun hideListCard() {
         _showListCard.value = false
-    }
-
-    fun setEditingTextContent(content: String) {
-        _editingTextContent.value = content
-    }
-
-    fun clearEditingTextContent() {
-        _editingTextContent.value = ""
     }
 
     fun syncLabelsToCloud() {
