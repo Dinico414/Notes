@@ -1,5 +1,3 @@
-@file:Suppress("AssignedValueIsNeverRead")
-
 package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
@@ -185,9 +183,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
-@Suppress("unused")
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @SuppressLint("ConfigurationScreenWidthHeight")
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(
     ExperimentalMaterial3Api::class,
     ExperimentalHazeMaterialsApi::class,
@@ -197,7 +194,6 @@ import java.io.File
 fun CompactNotes(
     viewModel: NotesViewModel = viewModel(),
     noteEditingViewModel: NoteEditingViewModel = viewModel(),
-    signInViewModel: SignInViewModel = viewModel(),
     layoutType: LayoutType,
     isLandscape: Boolean,
     onOpenSettings: () -> Unit,
@@ -429,7 +425,6 @@ fun CompactNotes(
         }
 
         fun onListTextResizeClick() {
-            currentListSizeIndex = (currentListSizeIndex + 1) % listTextSizes.size
         }
 
         fun resetNoteState() {
@@ -439,7 +434,6 @@ fun CompactNotes(
             editingNoteColor = null
             listItemsState.clear()
             nextListItemId = 0L
-            currentListSizeIndex = 1
             selectedAudioViewType = AudioViewType.Waveform
             selectedLabelId = null
             noteEditingViewModel.clearAllStates()
@@ -985,7 +979,7 @@ fun CompactNotes(
                         lazyListState = lazyListState,
                         allowToolbarScrollBehavior = !isAppBarExpandable && !isAnyNoteSheetOpen,
                         selectedNoteIds = selectedNoteIds.toList(),
-                        onClearSelection = { selectedNoteIds = emptySet() },
+                        onClearSelection = { },
                         isAddModeActive = isAddModeActive,
                         isSearchActive = isSearchActive,
                         onIsSearchActiveChange = { isSearchActive = it },
@@ -1154,8 +1148,8 @@ fun CompactNotes(
                     navigationIconExtraContent = {
                         if (state.isSignInSuccessful) {
                             Box(contentAlignment = Alignment.Center) {
-                                @Suppress("KotlinConstantConditions") GoogleProfilBorder(
-                                    isSignedIn = state.isSignInSuccessful,
+                                GoogleProfilBorder(
+                                    isSignedIn = true,
                                     modifier = Modifier.size(32.dp),
                                     strokeWidth = 2.5.dp
                                 )
@@ -1266,7 +1260,6 @@ fun CompactNotes(
                                                                         itemToEdit.labels.firstOrNull()
                                                                     listItemsState.clear()
                                                                     nextListItemId = 0L
-                                                                    currentListSizeIndex = 1
                                                                     itemToEdit.description?.let { desc ->
                                                                         val parsedItems =
                                                                             desc.split("\n")
@@ -1439,7 +1432,6 @@ fun CompactNotes(
                                                                 itemToEdit.labels.firstOrNull()
                                                             listItemsState.clear()
                                                             nextListItemId = 0L
-                                                            currentListSizeIndex = 1
 
                                                             itemToEdit.description?.let { desc ->
                                                                 val parsedItems = desc.split("\n")
@@ -1701,7 +1693,7 @@ fun CompactNotes(
                         saveTrigger = saveTrigger,
                         onSaveTriggerConsumed = { saveTrigger = false },
                         addItemTrigger = addListItemTrigger,
-                        onAddItemTriggerConsumed = { addListItemTrigger = false },
+                        onAddItemTriggerConsumed = { },
                         editorFontSize = listEditorFontSize,
                         allLabels = allLabels,
                         onAddNewLabel = { viewModel.addLabel(it) },
