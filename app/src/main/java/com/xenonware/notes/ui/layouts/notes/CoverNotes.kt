@@ -1504,7 +1504,7 @@ fun CoverNotes(
                         viewModel.setSearchQuery("")
                         resetNoteState()
                     }
-
+                    val context = LocalContext.current
                     NoteAudioSheet(
                         onDismiss = {
                             viewModel.hideAudioCard()
@@ -1561,10 +1561,10 @@ fun CoverNotes(
                         },
                         allLabels = allLabels,
                         onAddNewLabel = { viewModel.addLabel(it) },
+                        noteEditingViewModel = noteEditingViewModel,
                         onHasUnsavedAudioChange = { hasAudioContent = it },
                         isBlackThemeActive = isBlackedOut,
-                        isCoverModeActive = false,
-                        noteEditingViewModel = noteEditingViewModel
+                        isCoverModeActive = false
                     )
                 }
 

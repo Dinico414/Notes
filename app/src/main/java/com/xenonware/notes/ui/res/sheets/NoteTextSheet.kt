@@ -215,6 +215,7 @@ fun NoteTextSheet(
 
     val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
+
     DisposableEffect(systemUiController, isDarkTheme) {
         systemUiController.setStatusBarColor(Color.Transparent, darkIcons = !isDarkTheme)
         onDispose { systemUiController.setStatusBarColor(originalStatusBarColor) }

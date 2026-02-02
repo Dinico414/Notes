@@ -844,8 +844,8 @@ fun CompactNotes(
         val fabOverride = if (showTextNoteCard) {
             @Composable {
                 //Text Note
-                val vmTitle by noteEditingViewModel.textTitle.collectAsState()
-                val canSave = vmTitle.isNotBlank()
+                val vmTextTitle by noteEditingViewModel.textTitle.collectAsState()
+                val canSave = vmTextTitle.isNotBlank()
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -881,9 +881,10 @@ fun CompactNotes(
         } else if (showAudioNoteCard) {
             {
                 //Audio Note
-//                val vmAudioTitle by noteEditingViewModel.audioTitle.collectAsState()
-//                val canSave = vmAudioTitle.isNotBlank() && hasAudioContent
-                val canSave = titleState.isNotBlank() && hasAudioContent
+                val vmAudioTitle by noteEditingViewModel.audioTitle.collectAsState()
+                val vmAudioUniqueId by noteEditingViewModel.audioUniqueId.collectAsState()
+                val hasAudio = vmAudioUniqueId != null
+                val canSave = vmAudioTitle.isNotBlank() && hasAudio
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -1776,12 +1777,11 @@ fun CompactNotes(
                         },
                         allLabels = allLabels,
                         onAddNewLabel = { viewModel.addLabel(it) },
+                        noteEditingViewModel = noteEditingViewModel,
                         onHasUnsavedAudioChange = { hasAudioContent = it },
                         isBlackThemeActive = isBlackedOut,
-                        isCoverModeActive = false,
-                        noteEditingViewModel = noteEditingViewModel
+                        isCoverModeActive = false
                     )
-
                 }
 
                 AnimatedVisibility(

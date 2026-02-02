@@ -10,11 +10,11 @@ import kotlinx.coroutines.flow.asStateFlow
 class NoteEditingViewModel : ViewModel() {
 
     // ========== TEXT NOTE STATES ==========
-    private val _textContent = MutableStateFlow("")
-    val textContent: StateFlow<String> = _textContent.asStateFlow()
-
     private val _textTitle = MutableStateFlow("")
     val textTitle: StateFlow<String> = _textTitle.asStateFlow()
+
+    private val _textContent = MutableStateFlow("")
+    val textContent: StateFlow<String> = _textContent.asStateFlow()
 
     private val _textTheme = MutableStateFlow("Default")
     val textTheme: StateFlow<String> = _textTheme.asStateFlow()
@@ -78,7 +78,6 @@ class NoteEditingViewModel : ViewModel() {
     private val _audioViewType = MutableStateFlow("Waveform")
     val audioViewType: StateFlow<String> = _audioViewType.asStateFlow()
 
-    // Cache for unsaved audio recordings (survives rotation)
     private val _audioUniqueId = MutableStateFlow<String?>(null)
     val audioUniqueId: StateFlow<String?> = _audioUniqueId.asStateFlow()
 
@@ -102,12 +101,12 @@ class NoteEditingViewModel : ViewModel() {
     val sketchIsOffline: StateFlow<Boolean> = _sketchIsOffline.asStateFlow()
 
     // ========== TEXT NOTE SETTERS ==========
-    fun setTextContent(content: String) {
-        _textContent.value = content
-    }
-
     fun setTextTitle(title: String) {
         _textTitle.value = title
+    }
+
+    fun setTextContent(content: String) {
+        _textContent.value = content
     }
 
     fun setTextTheme(theme: String) {
