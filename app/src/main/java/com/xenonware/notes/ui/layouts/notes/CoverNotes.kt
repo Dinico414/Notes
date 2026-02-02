@@ -1506,15 +1506,12 @@ fun CoverNotes(
                     }
 
                     NoteAudioSheet(
-                        audioTitle = titleState,
-                        onAudioTitleChange = { titleState = it },
                         onDismiss = {
                             viewModel.hideAudioCard()
                             isSearchActive = false
                             viewModel.setSearchQuery("")
                             resetNoteState()
                         },
-                        initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                         onSave = { title, uniqueAudioId, theme, labelId, isOffline ->
                             if (title.isBlank() && uniqueAudioId.isBlank()) {
                                 viewModel.hideAudioCard()
@@ -1525,15 +1522,17 @@ fun CoverNotes(
                             val colorLong = themeColorMap[theme]?.toLong()
 
                             if (editingNoteId != null) {
-                                val existingNote = viewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }
-                                existingNote?.let { it ->
+                                val existingNote =
+                                    viewModel.noteItems.filterIsInstance<NotesItems>()
+                                        .find { it.id == editingNoteId }
+
+                                existingNote?.let {
                                     val updatedNote = it.copy(
                                         title = title.trim(),
                                         description = uniqueAudioId.takeIf { it -> it.isNotBlank() },
                                         color = colorLong,
-                                        labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                        isOffline = isOffline
-                                    )
+                                        labels = labelId?.let { it -> listOf(it) } ?: emptyList(),
+                                        isOffline = isOffline)
                                     viewModel.updateItem(updatedNote, forceLocal = isOffline)
                                 }
                             } else {
@@ -1543,8 +1542,7 @@ fun CoverNotes(
                                     noteType = NoteType.AUDIO,
                                     color = colorLong,
                                     labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                    forceLocal = isOffline
-                                )
+                                    forceLocal = isOffline)
                             }
 
                             viewModel.hideAudioCard()
@@ -1557,18 +1555,16 @@ fun CoverNotes(
                         onSaveTriggerConsumed = { saveTrigger = false },
                         selectedAudioViewType = selectedAudioViewType,
                         initialAudioFilePath = descriptionState.let { uniqueId ->
-                            File(context.filesDir, "$uniqueId.mp3").takeIf { it.exists() }?.absolutePath
+                            File(
+                                context.filesDir, "$uniqueId.mp3"
+                            ).takeIf { it.exists() }?.absolutePath
                         },
-                        onThemeChange = { newThemeName -> editingNoteColor = themeColorMap[newThemeName] },
                         allLabels = allLabels,
-                        initialSelectedLabelId = selectedLabelId,
-                        onLabelSelected = { selectedLabelId = it },
                         onAddNewLabel = { viewModel.addLabel(it) },
                         onHasUnsavedAudioChange = { hasAudioContent = it },
                         isBlackThemeActive = isBlackedOut,
-                        isCoverModeActive = true,
-                        editingNoteId = editingNoteId,
-                        notesViewModel = viewModel,
+                        isCoverModeActive = false,
+                        noteEditingViewModel = noteEditingViewModel
                     )
                 }
 

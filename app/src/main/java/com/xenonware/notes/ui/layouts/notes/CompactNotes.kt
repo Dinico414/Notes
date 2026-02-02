@@ -1721,15 +1721,12 @@ fun CompactNotes(
                     }
                     val context = LocalContext.current
                     NoteAudioSheet(
-                        audioTitle = titleState,
-                        onAudioTitleChange = { titleState = it },
                         onDismiss = {
                             viewModel.hideAudioCard()
                             isSearchActive = false
                             viewModel.setSearchQuery("")
                             resetNoteState()
                         },
-                        initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                         onSave = { title, uniqueAudioId, theme, labelId, isOffline ->
                             if (title.isBlank() && uniqueAudioId.isBlank()) {
                                 viewModel.hideAudioCard()
@@ -1777,18 +1774,12 @@ fun CompactNotes(
                                 context.filesDir, "$uniqueId.mp3"
                             ).takeIf { it.exists() }?.absolutePath
                         },
-                        onThemeChange = { newThemeName ->
-                            editingNoteColor = themeColorMap[newThemeName]
-                        },
                         allLabels = allLabels,
-                        initialSelectedLabelId = selectedLabelId,
-                        onLabelSelected = { selectedLabelId = it },
                         onAddNewLabel = { viewModel.addLabel(it) },
                         onHasUnsavedAudioChange = { hasAudioContent = it },
                         isBlackThemeActive = isBlackedOut,
                         isCoverModeActive = false,
-                        editingNoteId = editingNoteId,
-                        notesViewModel = viewModel,
+                        noteEditingViewModel = noteEditingViewModel
                     )
 
                 }

@@ -78,6 +78,16 @@ class NoteEditingViewModel : ViewModel() {
     private val _audioViewType = MutableStateFlow("Waveform")
     val audioViewType: StateFlow<String> = _audioViewType.asStateFlow()
 
+    // Cache for unsaved audio recordings (survives rotation)
+    private val _audioUniqueId = MutableStateFlow<String?>(null)
+    val audioUniqueId: StateFlow<String?> = _audioUniqueId.asStateFlow()
+
+    private val _audioRecordingDuration = MutableStateFlow(0L)
+    val audioRecordingDuration: StateFlow<Long> = _audioRecordingDuration.asStateFlow()
+
+    private val _audioIsPersistent = MutableStateFlow(false)
+    val audioIsPersistent: StateFlow<Boolean> = _audioIsPersistent.asStateFlow()
+
     // ========== SKETCH NOTE STATES ==========
     private val _sketchTitle = MutableStateFlow("")
     val sketchTitle: StateFlow<String> = _sketchTitle.asStateFlow()
@@ -218,6 +228,18 @@ class NoteEditingViewModel : ViewModel() {
         _audioViewType.value = viewType
     }
 
+    fun setAudioUniqueId(uniqueId: String?) {
+        _audioUniqueId.value = uniqueId
+    }
+
+    fun setAudioRecordingDuration(duration: Long) {
+        _audioRecordingDuration.value = duration
+    }
+
+    fun setAudioIsPersistent(isPersistent: Boolean) {
+        _audioIsPersistent.value = isPersistent
+    }
+
     fun clearAudioState() {
         _audioTitle.value = ""
         _audioFilePath.value = null
@@ -226,6 +248,9 @@ class NoteEditingViewModel : ViewModel() {
         _audioLabelId.value = null
         _audioIsOffline.value = false
         _audioViewType.value = "Waveform"
+        _audioUniqueId.value = null
+        _audioRecordingDuration.value = 0L
+        _audioIsPersistent.value = false
     }
 
     // ========== SKETCH NOTE SETTERS ==========

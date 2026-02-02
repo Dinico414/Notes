@@ -63,7 +63,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,13 +78,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
-import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.res.LabelSelectionDialog
 import com.xenonware.notes.ui.res.MenuItem
 import com.xenonware.notes.ui.res.TranscriptDisplay
 import com.xenonware.notes.ui.res.WaveformDisplay
+import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.res.loadAmplitudes
 import com.xenonware.notes.ui.res.saveAmplitudes
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
@@ -94,9 +94,8 @@ import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.util.AudioRecorderManager
 import com.xenonware.notes.util.GlobalAudioPlayer
 import com.xenonware.notes.util.RecordingState
-import com.xenonware.notes.viewmodel.NotesViewModel
+import com.xenonware.notes.viewmodel.NoteEditingViewModel
 import com.xenonware.notes.viewmodel.classes.Label
-import com.xenonware.notes.viewmodel.classes.NotesItems
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -118,8 +117,6 @@ import java.util.concurrent.TimeUnit
 )
 @Composable
 fun NoteAudioSheet(
-    audioTitle: String,
-    onAudioTitleChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onSave: (String, String, String, String?, Boolean) -> Unit,
     toolbarHeight: Dp,
@@ -127,14 +124,9 @@ fun NoteAudioSheet(
     onSaveTriggerConsumed: () -> Unit,
     selectedAudioViewType: AudioViewType,
     initialAudioFilePath: String? = null,
-    initialTheme: String = "Default",
-    onThemeChange: (String) -> Unit,
     allLabels: List<Label>,
-    initialSelectedLabelId: String?,
-    onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
-    editingNoteId: Int?,
-    notesViewModel: NotesViewModel,
+    noteEditingViewModel: NoteEditingViewModel,
     onHasUnsavedAudioChange: (Boolean) -> Unit = {},
     isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false,
@@ -146,6 +138,13 @@ fun NoteAudioSheet(
     val context = LocalContext.current
     val player = GlobalAudioPlayer.getInstance()
     val amplitudes = remember { mutableStateListOf<Float>() }
+
+    // Collect cached audio state from ViewModel
+    val cachedAudioUniqueId by noteEditingViewModel.audioUniqueId.collectAsStateWithLifecycle()
+    val cachedAmplitudes by noteEditingViewModel.audioAmplitudes.collectAsStateWithLifecycle()
+    val cachedRecordingDuration by noteEditingViewModel.audioRecordingDuration.collectAsStateWithLifecycle()
+    val cachedIsPersistent by noteEditingViewModel.audioIsPersistent.collectAsStateWithLifecycle()
+
     val recorder = remember {
         AudioRecorderManager(context) {
             player.totalAudioDurationMillis = 0L
@@ -155,13 +154,21 @@ fun NoteAudioSheet(
         }
     }
 
+    // Collect ViewModel states
+    val title by noteEditingViewModel.audioTitle.collectAsStateWithLifecycle()
+    val theme by noteEditingViewModel.audioTheme.collectAsStateWithLifecycle()
+    val labelId by noteEditingViewModel.audioLabelId.collectAsStateWithLifecycle()
+    val isOffline by noteEditingViewModel.audioIsOffline.collectAsStateWithLifecycle()
+
     val currentSheetAudioPath = recorder.audioFilePath ?: initialAudioFilePath
     val isSheetAudioActive = player.currentFilePath == currentSheetAudioPath
     val isSheetAudioPlaying = player.isPlaying && isSheetAudioActive
     val isSheetAudioPaused =
         !player.isPlaying && isSheetAudioActive && player.currentPlaybackPositionMillis > 0
 
-    var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) }
+    val selectedTheme = theme.ifEmpty { "Default" }
+    val isLabeled = labelId != null
+
     var colorMenuItemText by remember { mutableStateOf("Color") }
     val scope = rememberCoroutineScope()
     var isFadingOut by remember { mutableStateOf(false) }
@@ -173,25 +180,9 @@ fun NoteAudioSheet(
     }
 
     var showMenu by remember { mutableStateOf(false) }
-    var isOffline by rememberSaveable(
-        inputs = arrayOf(editingNoteId)
-    ) {
-        mutableStateOf(
-            editingNoteId?.let { id ->
-                notesViewModel.noteItems
-                    .filterIsInstance<NotesItems>()
-                    .find { it.id == id }
-                    ?.isOffline == true
-            } ?: false
-        )
-    }
-
     var showLabelDialog by remember { mutableStateOf(false) }
-    var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
-    val isLabeled = selectedLabelId != null
 
     var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
-
 
     val hasAudioContent = initialAudioFilePath != null || recorder.audioFilePath != null
 
@@ -219,6 +210,20 @@ fun NoteAudioSheet(
             if (loadedAmplitudes.isNotEmpty()) {
                 amplitudes.addAll(loadedAmplitudes)
             }
+        }
+    }
+
+    // Cache current recording state to ViewModel
+    LaunchedEffect(recorder.uniqueAudioId, recorder.recordingDurationMillis, recorder.isPersistentAudio) {
+        noteEditingViewModel.setAudioUniqueId(recorder.uniqueAudioId)
+        noteEditingViewModel.setAudioRecordingDuration(recorder.recordingDurationMillis)
+        noteEditingViewModel.setAudioIsPersistent(recorder.isPersistentAudio)
+    }
+
+    // Cache amplitudes to ViewModel
+    LaunchedEffect(amplitudes.toList()) {
+        if (amplitudes.isNotEmpty()) {
+            noteEditingViewModel.setAudioAmplitudes(amplitudes.toList())
         }
     }
 
@@ -257,7 +262,7 @@ fun NoteAudioSheet(
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
             val hasAudio = recorder.audioFilePath != null || initialAudioFilePath != null
-            if (audioTitle.isNotBlank() && hasAudio) {
+            if (title.isNotBlank() && hasAudio) {
                 recorder.stopRecording() // safely stops if recording
                 player.stopAudio()
                 recorder.markAudioAsPersistent()
@@ -268,7 +273,7 @@ fun NoteAudioSheet(
                     saveAmplitudes(context, audioId, amplitudes)
                 }
 
-                onSave(audioTitle, audioId, selectedTheme, selectedLabelId, isOffline)
+                onSave(title, audioId, selectedTheme, labelId, isOffline)
             }
             onSaveTriggerConsumed()
         }
@@ -326,8 +331,8 @@ fun NoteAudioSheet(
         if (showLabelDialog) {
             LabelSelectionDialog(
                 allLabels = allLabels,
-                selectedLabelId = selectedLabelId,
-                onLabelSelected = { selectedLabelId = it; onLabelSelected(it) },
+                selectedLabelId = labelId,
+                onLabelSelected = noteEditingViewModel::setAudioLabelId,
                 onAddNewLabel = onAddNewLabel,
                 onDismiss = { showLabelDialog = false })
         }
@@ -594,15 +599,15 @@ fun NoteAudioSheet(
                 )
 
                 BasicTextField(
-                    value = audioTitle,
-                    onValueChange = onAudioTitleChange,
+                    value = title,
+                    onValueChange = noteEditingViewModel::setAudioTitle,
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     textStyle = titleTextStyle,
                     cursorBrush = SolidColor(colorScheme.primary),
                     decorationBox = { innerTextField ->
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (audioTitle.isEmpty()) {
+                            if (title.isEmpty()) {
                                 Text(
                                     "Title",
                                     style = titleTextStyle,
@@ -634,13 +639,13 @@ fun NoteAudioSheet(
                                     else Icon(Icons.Rounded.BookmarkBorder, "Label")
                                 }),
                             MenuItem(text = colorMenuItemText, onClick = {
-                                val nextIndex =
-                                    (availableThemes.indexOf(selectedTheme) + 1) % availableThemes.size
-                                selectedTheme = availableThemes[nextIndex]
-                                onThemeChange(selectedTheme)
+                                val currentIndex = availableThemes.indexOf(selectedTheme)
+                                val nextIndex = (currentIndex + 1) % availableThemes.size
+                                val newTheme = availableThemes[nextIndex]
+                                noteEditingViewModel.setAudioTheme(newTheme)
                                 colorChangeJob?.cancel()
                                 colorChangeJob = scope.launch {
-                                    colorMenuItemText = availableThemes[nextIndex]
+                                    colorMenuItemText = newTheme
                                     isFadingOut = false
                                     delay(2500)
                                     isFadingOut = true
@@ -658,7 +663,7 @@ fun NoteAudioSheet(
                             MenuItem(
                                 text = if (isOffline) "Offline note" else "Online note",
                                 onClick = {
-                                    isOffline = !isOffline
+                                    noteEditingViewModel.setAudioIsOffline(!isOffline)
                                 },
                                 dismissOnClick = false,
                                 textColor = if (isOffline) colorScheme.error else null,
