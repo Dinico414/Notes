@@ -217,10 +217,10 @@ fun CompactNotes(
         val screenWidthDp = with(density) { appSize.width.toDp() }.value.toInt()
 
         val isAppBarExpandable = when (layoutType) {
-            LayoutType.COVER    -> false
-            LayoutType.SMALL    -> false
-            LayoutType.COMPACT  -> !isLandscape && appHeight >= 460.dp
-            LayoutType.MEDIUM   -> true
+            LayoutType.COVER -> false
+            LayoutType.SMALL -> false
+            LayoutType.COMPACT -> !isLandscape && appHeight >= 460.dp
+            LayoutType.MEDIUM -> true
             LayoutType.EXPANDED -> true
         }
 
@@ -229,8 +229,7 @@ fun CompactNotes(
         // ============================================================================
         val uLongSaver = Saver<ULong?, String>(
             save = { it?.toString() ?: "null" },
-            restore = { if (it == "null") null else it.toULong() }
-        )
+            restore = { if (it == "null") null else it.toULong() })
         // ============================================================================
         // 3. Currently Editing Note (shared across all note types)
         // ============================================================================
@@ -271,15 +270,13 @@ fun CompactNotes(
 
         val listItemsState = rememberSaveable(
             saver = listSaver(
-                save = { list: List<ListItem> -> list.map { it.id.toString() + "," + it.text + "," + it.isChecked.toString() } },
-                restore = { list ->
-                    list.map { str ->
-                        val parts = str.split(",")
-                        ListItem(parts[0].toLong(), parts[1], parts[2].toBoolean())
-                    }.toMutableStateList()
-                }
-            )
-        ) { mutableStateListOf() }
+            save = { list: List<ListItem> -> list.map { it.id.toString() + "," + it.text + "," + it.isChecked.toString() } },
+            restore = { list ->
+                list.map { str ->
+                    val parts = str.split(",")
+                    ListItem(parts[0].toLong(), parts[1], parts[2].toBoolean())
+                }.toMutableStateList()
+            })) { mutableStateListOf() }
 
         var nextListItemId by rememberSaveable { mutableLongStateOf(0L) }
 
@@ -1573,11 +1570,11 @@ fun CompactNotes(
 
                     NoteTextSheet(
                         onDismiss = {
-                        viewModel.hideTextCard()
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
-                        resetNoteState()
-                    },
+                            viewModel.hideTextCard()
+                            isSearchActive = false
+                            viewModel.setSearchQuery("")
+                            resetNoteState()
+                        },
 
                         onSave = { title, description, theme, labelId, isOffline ->
                             if (title.isBlank() && description.isBlank()) {
@@ -1652,11 +1649,11 @@ fun CompactNotes(
 
                     NoteListSheet(
                         onDismiss = {
-                        viewModel.hideListCard()
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
-                        resetNoteState()
-                    },
+                            viewModel.hideListCard()
+                            isSearchActive = false
+                            viewModel.setSearchQuery("")
+                            resetNoteState()
+                        },
                         onSave = { title, items, theme, labelId, isOffline ->
                             val nonEmptyItems = items.filter { it.text.isNotBlank() }
                             val description = nonEmptyItems.joinToString("\n") {
