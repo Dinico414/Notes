@@ -1,4 +1,4 @@
-@file:Suppress("AssignedValueIsNeverRead", "DEPRECATION")
+@file:Suppress("DEPRECATION", "AssignedValueIsNeverRead")
 
 package com.xenonware.notes.ui.res.sheets
 
@@ -36,8 +36,8 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -106,65 +106,39 @@ fun NoteListSheet(
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
 
-    // ========== SINGLE SOURCE OF TRUTH - ALL STATE FROM VIEWMODEL ==========
-    val vmTitle by noteEditingViewModel.listTitle.collectAsStateWithLifecycle()
-    val vmTheme by noteEditingViewModel.listTheme.collectAsStateWithLifecycle()
-    val vmLabelId by noteEditingViewModel.listLabelId.collectAsStateWithLifecycle()
-    val vmIsOffline by noteEditingViewModel.listIsOffline.collectAsStateWithLifecycle()
-    val vmItems by noteEditingViewModel.listItems.collectAsStateWithLifecycle()
+    val title by noteEditingViewModel.listTitle.collectAsStateWithLifecycle()
+    val items by noteEditingViewModel.listItems.collectAsStateWithLifecycle()
+    val theme by noteEditingViewModel.listTheme.collectAsStateWithLifecycle()
+    val labelId by noteEditingViewModel.listLabelId.collectAsStateWithLifecycle()
+    val isOffline by noteEditingViewModel.listIsOffline.collectAsStateWithLifecycle()
 
-    // ========== DERIVED VALUES ==========
-    val selectedTheme = vmTheme.ifEmpty { "Default" }
-    val selectedLabelId = vmLabelId
-    val isOffline = vmIsOffline
+    val selectedTheme = theme.ifEmpty { "Default" }
+    val isLabeled = labelId != null
 
-    // ========== UI STATE ONLY (not business logic state) ==========
+    var showMenu by remember { mutableStateOf(false) }
+    var showLabelDialog by remember { mutableStateOf(false) }
     var colorMenuItemText by remember { mutableStateOf("Color") }
-    val scope = rememberCoroutineScope()
     var isFadingOut by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     var colorChangeJob by remember { mutableStateOf<Job?>(null) }
 
     val availableThemes = remember {
         listOf("Default", "Red", "Orange", "Yellow", "Green", "Turquoise", "Blue", "Purple")
     }
 
-    var showMenu by remember { mutableStateOf(false) }
-    var showLabelDialog by remember { mutableStateOf(false) }
-    val isLabeled = selectedLabelId != null
-
-    val listTitleFocusRequester = remember { FocusRequester() }
     var focusOnNewItemId by remember { mutableStateOf<Long?>(null) }
 
-    // ========== INITIALIZE IF EMPTY ==========
-    LaunchedEffect(Unit) {
-        if (vmItems.isEmpty()) {
-            val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
-            noteEditingViewModel.addListItem(newItem)
-            focusOnNewItemId = newItem.id
-        } else if (vmTitle.isEmpty()) {
-            listTitleFocusRequester.requestFocus()
-        }
-    }
-
-    // ========== HANDLE SAVE TRIGGER ==========
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(
-                vmTitle,
-                vmItems,
-                selectedTheme,
-                selectedLabelId,
-                isOffline
-            )
+            onSave(title, items, selectedTheme, labelId, isOffline)
             onSaveTriggerConsumed()
         }
     }
 
-    // ========== HANDLE ADD ITEM TRIGGER ==========
     LaunchedEffect(addItemTrigger) {
         if (addItemTrigger) {
-            val lastItem = vmItems.lastOrNull()
-            if (lastItem == null || lastItem.text.isNotEmpty()) {
+            val lastItem = items.lastOrNull()
+            if (lastItem == null || lastItem.text.isNotBlank()) {
                 val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
                 noteEditingViewModel.addListItem(newItem)
                 focusOnNewItemId = newItem.id
@@ -175,8 +149,21 @@ fun NoteListSheet(
         }
     }
 
+    // Auto-create first item if empty
+    LaunchedEffect(items) {
+        if (items.isEmpty()) {
+            val newItem = ListItem(id = System.nanoTime(), text = "", isChecked = false)
+            noteEditingViewModel.addListItem(newItem)
+            focusOnNewItemId = newItem.id
+        }
+    }
+
     val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
+    DisposableEffect(systemUiController, isDarkTheme) {
+        systemUiController.setStatusBarColor(Color.Transparent, darkIcons = !isDarkTheme)
+        onDispose { systemUiController.setStatusBarColor(originalStatusBarColor) }
+    }
 
     XenonTheme(
         darkTheme = isDarkTheme,
@@ -196,22 +183,11 @@ fun NoteListSheet(
             label = "animatedTextColor"
         )
 
-        DisposableEffect(systemUiController, isDarkTheme) {
-            systemUiController.setStatusBarColor(
-                color = Color.Transparent, darkIcons = !isDarkTheme
-            )
-            onDispose {
-                systemUiController.setStatusBarColor(color = originalStatusBarColor)
-            }
-        }
-
         if (showLabelDialog) {
             LabelSelectionDialog(
                 allLabels = allLabels,
-                selectedLabelId = selectedLabelId,
-                onLabelSelected = { labelId ->
-                    noteEditingViewModel.setListLabelId(labelId)
-                },
+                selectedLabelId = labelId,
+                onLabelSelected = noteEditingViewModel::setListLabelId,
                 onAddNewLabel = onAddNewLabel,
                 onDismiss = { showLabelDialog = false }
             )
@@ -220,20 +196,14 @@ fun NoteListSheet(
         val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
 
-        val safeDrawingPadding = if (WindowInsets.ime.asPaddingValues()
-                .calculateBottomPadding() > WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
-                .asPaddingValues()
-                .calculateBottomPadding()
-        ) {
+        val safeDrawingPadding = if (WindowInsets.ime.asPaddingValues().calculateBottomPadding() > WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()) {
             WindowInsets.ime.asPaddingValues().calculateBottomPadding()
         } else {
-            WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues()
-                .calculateBottomPadding()
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
         }
 
         val bottomPadding = safeDrawingPadding + toolbarHeight + 16.dp
-        val backgroundColor =
-            if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
+        val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
 
         Box(
             modifier = Modifier
@@ -246,21 +216,17 @@ fun NoteListSheet(
 
             Column(
                 modifier = Modifier
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            WindowInsetsSides.Top
-                        )
-                    )
-                    .padding(horizontal = 20.dp)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                     .padding(top = 4.dp)
+                    .padding(horizontal = 20.dp)
                     .fillMaxSize()
                     .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
                     .verticalScroll(scrollState)
-                    .hazeSource(state = hazeState)
+                    .hazeSource(hazeState)
             ) {
                 Spacer(modifier = Modifier.height(topPadding))
 
-                vmItems.forEachIndexed { _, listItem ->
+                items.forEach { listItem ->
                     val itemFocusRequester = remember(listItem.id) { FocusRequester() }
 
                     Row(
@@ -279,7 +245,7 @@ fun NoteListSheet(
                             }
                         )
 
-                        val itemTextStyle = MaterialTheme.typography.bodyLarge.merge(
+                        val itemTextStyle = typography.bodyLarge.merge(
                             TextStyle(
                                 color = colorScheme.onSurface,
                                 textDecoration = if (listItem.isChecked) TextDecoration.LineThrough else TextDecoration.None,
@@ -289,7 +255,6 @@ fun NoteListSheet(
 
                         BasicTextField(
                             value = listItem.text,
-                            singleLine = true,
                             onValueChange = { newText ->
                                 noteEditingViewModel.updateListItem(
                                     listItem.id,
@@ -301,26 +266,25 @@ fun NoteListSheet(
                                 .focusRequester(itemFocusRequester),
                             textStyle = itemTextStyle,
                             cursorBrush = SolidColor(colorScheme.primary),
+                            singleLine = true,
                             decorationBox = { innerTextField ->
                                 Box {
                                     if (listItem.text.isEmpty()) {
                                         Text(
                                             text = "New item",
                                             style = itemTextStyle,
-                                            color = colorScheme.onSurfaceVariant.copy(
-                                                alpha = 0.6f
-                                            )
+                                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                         )
                                     }
                                     innerTextField()
                                 }
-                            })
+                            }
+                        )
 
                         IconButton(
                             onClick = {
                                 noteEditingViewModel.removeListItem(listItem.id)
-                                if (vmItems.size == 1) {
-                                    // If removing the last item, add a new empty one
+                                if (items.size == 1) {
                                     val newItem = ListItem(
                                         id = System.nanoTime(),
                                         text = "",
@@ -329,12 +293,13 @@ fun NoteListSheet(
                                     noteEditingViewModel.addListItem(newItem)
                                     focusOnNewItemId = newItem.id
                                 }
-                            }) {
+                            }
+                        ) {
                             Icon(Icons.Rounded.Delete, contentDescription = "Delete item")
                         }
                     }
 
-                    LaunchedEffect(focusOnNewItemId, listItem.id) {
+                    LaunchedEffect(focusOnNewItemId) {
                         if (focusOnNewItemId == listItem.id) {
                             itemFocusRequester.requestFocus()
                             focusOnNewItemId = null
@@ -350,60 +315,46 @@ fun NoteListSheet(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            WindowInsetsSides.Top
-                        )
-                    )
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                     .padding(horizontal = 16.dp)
                     .padding(top = 4.dp)
                     .clip(RoundedCornerShape(100f))
                     .background(colorScheme.surfaceDim)
-                    .hazeEffect(
-                        state = hazeState,
-                        style = HazeMaterials.ultraThin(hazeThinColor),
-                    ), verticalAlignment = Alignment.CenterVertically
+                    .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onDismiss, Modifier.padding(4.dp)
-                ) {
+                IconButton(onClick = onDismiss, Modifier.padding(4.dp)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
 
-                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
-                    TextStyle(
-                        fontFamily = QuicksandTitleVariable,
-                        textAlign = TextAlign.Center,
-                        color = colorScheme.onSurface
-                    )
+                val titleTextStyle = typography.titleLarge.merge(
+                    TextStyle(fontFamily = QuicksandTitleVariable, textAlign = TextAlign.Center, color = colorScheme.onSurface)
                 )
 
                 BasicTextField(
-                    value = vmTitle,
-                    onValueChange = { newTitle ->
-                        noteEditingViewModel.setListTitle(newTitle)
-                    },
+                    value = title,
+                    onValueChange = noteEditingViewModel::setListTitle,
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     textStyle = titleTextStyle,
                     cursorBrush = SolidColor(colorScheme.primary),
                     decorationBox = { innerTextField ->
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (vmTitle.isEmpty()) {
+                            if (title.isEmpty()) {
                                 Text(
                                     text = "Title",
                                     style = titleTextStyle,
                                     color = colorScheme.onSurface.copy(alpha = 0.6f),
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
                             innerTextField()
                         }
-                    })
+                    }
+                )
+
                 Box {
-                    IconButton(
-                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
-                    ) {
+                    IconButton(onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)) {
                         Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
                     }
                     XenonDropDown(
@@ -421,35 +372,32 @@ fun NoteListSheet(
                                         tint = labelColor
                                     )
                                 } else {
-                                    Icon(
-                                        Icons.Rounded.BookmarkBorder,
-                                        contentDescription = "Label"
-                                    )
+                                    Icon(Icons.Rounded.BookmarkBorder, contentDescription = "Label")
                                 }
-                            }), MenuItem(
-                                text = colorMenuItemText, onClick = {
-                                    val currentIndex = availableThemes.indexOf(selectedTheme)
-                                    val nextIndex = (currentIndex + 1) % availableThemes.size
-                                    val newTheme = availableThemes[nextIndex]
-                                    noteEditingViewModel.setListTheme(newTheme)
-                                    colorChangeJob?.cancel()
-                                    colorChangeJob = scope.launch {
-                                        colorMenuItemText = newTheme
-                                        isFadingOut = false
-                                        delay(2500)
-                                        isFadingOut = true
-                                        delay(500)
-                                        colorMenuItemText = "Color"
-                                        isFadingOut = false
-                                    }
-                                }, dismissOnClick = false, icon = {
-                                    Icon(
-                                        Icons.Rounded.ColorLens,
-                                        contentDescription = "Color",
-                                        tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                    )
-                                }, textColor = animatedTextColor
-                            ), MenuItem(
+                            }),
+                            MenuItem(text = colorMenuItemText, onClick = {
+                                val currentIndex = availableThemes.indexOf(selectedTheme)
+                                val nextIndex = (currentIndex + 1) % availableThemes.size
+                                val newTheme = availableThemes[nextIndex]
+                                noteEditingViewModel.setListTheme(newTheme)
+                                colorChangeJob?.cancel()
+                                colorChangeJob = scope.launch {
+                                    colorMenuItemText = newTheme
+                                    isFadingOut = false
+                                    delay(2500)
+                                    isFadingOut = true
+                                    delay(500)
+                                    colorMenuItemText = "Color"
+                                    isFadingOut = false
+                                }
+                            }, dismissOnClick = false, icon = {
+                                Icon(
+                                    Icons.Rounded.ColorLens,
+                                    contentDescription = "Color",
+                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                )
+                            }, textColor = animatedTextColor),
+                            MenuItem(
                                 text = if (isOffline) "Offline note" else "Online note",
                                 onClick = {
                                     noteEditingViewModel.setListIsOffline(!isOffline)

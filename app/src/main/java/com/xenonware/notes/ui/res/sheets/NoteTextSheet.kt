@@ -37,13 +37,12 @@ import androidx.compose.material.icons.rounded.ColorLens
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,6 +70,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.notes.ui.res.LabelSelectionDialog
@@ -140,52 +140,54 @@ fun String.fromSerialized(): AnnotatedString {
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun NoteTextSheet(
-    textTitle: String,
-    onTextTitleChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onSave: (String, String, String, String?, Boolean) -> Unit,
-    onIsBoldChange: (Boolean) -> Unit,
-    onIsItalicChange: (Boolean) -> Unit,
-    onIsUnderlinedChange: (Boolean) -> Unit,
-    editorFontSize: TextUnit,
     toolbarHeight: Dp,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
-    onThemeChange: (String) -> Unit,
+    editorFontSize: TextUnit,
     allLabels: List<Label>,
-    onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
     noteEditingViewModel: NoteEditingViewModel,
     isBlackThemeActive: Boolean = false,
-    isCoverModeActive: Boolean = false,
+    isCoverModeActive: Boolean = false
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
 
-    val vmContent by noteEditingViewModel.textContent.collectAsState()
-    val vmTheme by noteEditingViewModel.textTheme.collectAsState()
-    val vmLabelId by noteEditingViewModel.textLabelId.collectAsState()
-    val vmIsOffline by noteEditingViewModel.textIsOffline.collectAsState()
+    val title by noteEditingViewModel.textTitle.collectAsStateWithLifecycle()
+    val content by noteEditingViewModel.textContent.collectAsStateWithLifecycle()
+    val theme by noteEditingViewModel.textTheme.collectAsStateWithLifecycle()
+    val labelId by noteEditingViewModel.textLabelId.collectAsStateWithLifecycle()
+    val isOffline by noteEditingViewModel.textIsOffline.collectAsStateWithLifecycle()
+    val isBold by noteEditingViewModel.textIsBold.collectAsStateWithLifecycle()
+    val isItalic by noteEditingViewModel.textIsItalic.collectAsStateWithLifecycle()
+    val isUnderlined by noteEditingViewModel.textIsUnderlined.collectAsStateWithLifecycle()
 
-    val vmIsBold by noteEditingViewModel.textIsBold.collectAsState()
-    val vmIsItalic by noteEditingViewModel.textIsItalic.collectAsState()
-    val vmIsUnderlined by noteEditingViewModel.textIsUnderlined.collectAsState()
+    val selectedTheme = theme.ifEmpty { "Default" }
+    val isLabeled = labelId != null
 
-    val selectedTheme = vmTheme.ifEmpty { "Default" }
-    val selectedLabelId = vmLabelId
-    val isOffline = vmIsOffline
+    var showMenu by remember { mutableStateOf(false) }
+    var showLabelDialog by remember { mutableStateOf(false) }
+    var colorMenuItemText by remember { mutableStateOf("Color") }
+    var isFadingOut by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var colorChangeJob by remember { mutableStateOf<Job?>(null) }
+
+    val availableThemes = remember {
+        listOf("Default", "Red", "Orange", "Yellow", "Green", "Turquoise", "Blue", "Purple")
+    }
 
     var textFieldValue by remember {
         mutableStateOf(TextFieldValue(AnnotatedString("")))
     }
 
-    LaunchedEffect(vmContent) {
-        val newAnnotated = if (vmContent.isNotEmpty()) {
-            vmContent.fromSerialized()
+    LaunchedEffect(content) {
+        val newAnnotated = if (content.isNotEmpty()) {
+            content.fromSerialized()
         } else {
             AnnotatedString("")
         }
-
         if (textFieldValue.annotatedString.text != newAnnotated.text) {
             textFieldValue = TextFieldValue(
                 annotatedString = newAnnotated,
@@ -196,27 +198,27 @@ fun NoteTextSheet(
 
     LaunchedEffect(textFieldValue.annotatedString) {
         val serialized = textFieldValue.annotatedString.toSerialized()
-        if (serialized != vmContent && textFieldValue.annotatedString.text.isNotEmpty()) {
+        if (serialized != content && textFieldValue.annotatedString.text.isNotEmpty()) {
             noteEditingViewModel.setTextContent(serialized)
         }
     }
 
-    var showMenu by remember { mutableStateOf(false) }
-    var colorMenuItemText by remember { mutableStateOf("Color") }
-    val scope = rememberCoroutineScope()
-    var isFadingOut by remember { mutableStateOf(false) }
-    var colorChangeJob by remember { mutableStateOf<Job?>(null) }
-    var showLabelDialog by remember { mutableStateOf(false) }
-    val isLabeled = selectedLabelId != null
-    val availableThemes = remember {
-        listOf("Default", "Red", "Orange", "Yellow", "Green", "Turquoise", "Blue", "Purple")
+    LaunchedEffect(saveTrigger) {
+        if (saveTrigger) {
+            onSave(title, content, selectedTheme, labelId, isOffline)
+            onSaveTriggerConsumed()
+        }
     }
+
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
-    val lineHeightFactor = 1.25
+    DisposableEffect(systemUiController, isDarkTheme) {
+        systemUiController.setStatusBarColor(Color.Transparent, darkIcons = !isDarkTheme)
+        onDispose { systemUiController.setStatusBarColor(originalStatusBarColor) }
+    }
 
     LaunchedEffect(Unit) {
         if (textFieldValue.text.isEmpty()) {
@@ -225,76 +227,38 @@ fun NoteTextSheet(
         }
     }
 
-    LaunchedEffect(saveTrigger) {
-        if (saveTrigger) {
-            onSave(
-                textTitle,
-                textFieldValue.annotatedString.toSerialized(),
-                selectedTheme,
-                selectedLabelId,
-                isOffline
-            )
-            onSaveTriggerConsumed()
-        }
-    }
-
     LaunchedEffect(textFieldValue.selection) {
         if (textFieldValue.selection.collapsed && textFieldValue.text.isNotEmpty()) {
             val cursorPos = textFieldValue.selection.start
-
             if (cursorPos > 0) {
                 val checkPos = cursorPos - 1
                 val spansAtPos = textFieldValue.annotatedString.spanStyles.filter {
                     it.start <= checkPos && it.end > checkPos
                 }
-
                 var effectiveStyle = SpanStyle()
                 spansAtPos.forEach { range ->
                     effectiveStyle = effectiveStyle.merge(range.item)
                 }
-
                 val shouldBeBold = effectiveStyle.fontWeight == FontWeight.Bold
                 val shouldBeItalic = effectiveStyle.fontStyle == FontStyle.Italic
                 val shouldBeUnderlined = effectiveStyle.textDecoration?.contains(TextDecoration.Underline) ?: false
-
-                if (vmIsBold != shouldBeBold) {
-                    noteEditingViewModel.setTextIsBold(shouldBeBold)
-                    onIsBoldChange(shouldBeBold)
-                }
-                if (vmIsItalic != shouldBeItalic) {
-                    noteEditingViewModel.setTextIsItalic(shouldBeItalic)
-                    onIsItalicChange(shouldBeItalic)
-                }
-                if (vmIsUnderlined != shouldBeUnderlined) {
-                    noteEditingViewModel.setTextIsUnderlined(shouldBeUnderlined)
-                    onIsUnderlinedChange(shouldBeUnderlined)
-                }
+                if (isBold != shouldBeBold) noteEditingViewModel.setTextIsBold(shouldBeBold)
+                if (isItalic != shouldBeItalic) noteEditingViewModel.setTextIsItalic(shouldBeItalic)
+                if (isUnderlined != shouldBeUnderlined) noteEditingViewModel.setTextIsUnderlined(shouldBeUnderlined)
             } else if (cursorPos == 0 && textFieldValue.text.isNotEmpty()) {
                 val spansAtPos = textFieldValue.annotatedString.spanStyles.filter {
                     it.start == 0 && it.end > 0
                 }
-
                 var effectiveStyle = SpanStyle()
                 spansAtPos.forEach { range ->
                     effectiveStyle = effectiveStyle.merge(range.item)
                 }
-
                 val shouldBeBold = effectiveStyle.fontWeight == FontWeight.Bold
                 val shouldBeItalic = effectiveStyle.fontStyle == FontStyle.Italic
                 val shouldBeUnderlined = effectiveStyle.textDecoration?.contains(TextDecoration.Underline) ?: false
-
-                if (vmIsBold != shouldBeBold) {
-                    noteEditingViewModel.setTextIsBold(shouldBeBold)
-                    onIsBoldChange(shouldBeBold)
-                }
-                if (vmIsItalic != shouldBeItalic) {
-                    noteEditingViewModel.setTextIsItalic(shouldBeItalic)
-                    onIsItalicChange(shouldBeItalic)
-                }
-                if (vmIsUnderlined != shouldBeUnderlined) {
-                    noteEditingViewModel.setTextIsUnderlined(shouldBeUnderlined)
-                    onIsUnderlinedChange(shouldBeUnderlined)
-                }
+                if (isBold != shouldBeBold) noteEditingViewModel.setTextIsBold(shouldBeBold)
+                if (isItalic != shouldBeItalic) noteEditingViewModel.setTextIsItalic(shouldBeItalic)
+                if (isUnderlined != shouldBeUnderlined) noteEditingViewModel.setTextIsUnderlined(shouldBeUnderlined)
             }
         }
     }
@@ -317,21 +281,11 @@ fun NoteTextSheet(
             label = "animatedTextColor"
         )
 
-        DisposableEffect(systemUiController, isDarkTheme) {
-            systemUiController.setStatusBarColor(color = Color.Transparent, darkIcons = !isDarkTheme)
-            onDispose {
-                systemUiController.setStatusBarColor(color = originalStatusBarColor)
-            }
-        }
-
         if (showLabelDialog) {
             LabelSelectionDialog(
                 allLabels = allLabels,
-                selectedLabelId = selectedLabelId,
-                onLabelSelected = {
-                    noteEditingViewModel.setTextLabelId(it)
-                    onLabelSelected(it)
-                },
+                selectedLabelId = labelId,
+                onLabelSelected = noteEditingViewModel::setTextLabelId,
                 onAddNewLabel = onAddNewLabel,
                 onDismiss = { showLabelDialog = false }
             )
@@ -340,9 +294,7 @@ fun NoteTextSheet(
         val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
 
-        val safeDrawingPadding = if (WindowInsets.ime.asPaddingValues().calculateBottomPadding() >
-            WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
-        ) {
+        val safeDrawingPadding = if (WindowInsets.ime.asPaddingValues().calculateBottomPadding() > WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()) {
             WindowInsets.ime.asPaddingValues().calculateBottomPadding()
         } else {
             WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
@@ -368,7 +320,7 @@ fun NoteTextSheet(
                     .fillMaxSize()
                     .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
                     .verticalScroll(scrollState)
-                    .hazeSource(state = hazeState)
+                    .hazeSource(hazeState)
                     .clickable(
                         indication = null,
                         interactionSource = remember { MutableInteractionSource() }
@@ -387,14 +339,15 @@ fun NoteTextSheet(
                     }
             ) {
                 Spacer(modifier = Modifier.height(topPadding))
-                val noteTextStyle = MaterialTheme.typography.bodyLarge.merge(
+                val lineHeightFactor = 1.25
+                val noteTextStyle = typography.bodyLarge.merge(
                     TextStyle(
                         color = colorScheme.onSurface,
                         fontSize = editorFontSize,
-                        lineHeight = editorFontSize * lineHeightFactor,
-                        platformStyle = null
+                        lineHeight = editorFontSize * lineHeightFactor
                     )
                 )
+
                 BasicTextField(
                     value = textFieldValue,
                     onValueChange = { newValue ->
@@ -443,11 +396,11 @@ fun NoteTextSheet(
                             val insertStartIndex = builder.length
                             builder.append(insertedText)
 
-                            if (vmIsBold || vmIsItalic || vmIsUnderlined) {
+                            if (isBold || isItalic || isUnderlined) {
                                 val currentStyle = SpanStyle(
-                                    fontWeight = if (vmIsBold) FontWeight.Bold else null,
-                                    fontStyle = if (vmIsItalic) FontStyle.Italic else null,
-                                    textDecoration = if (vmIsUnderlined) TextDecoration.Underline else null
+                                    fontWeight = if (isBold) FontWeight.Bold else null,
+                                    fontStyle = if (isItalic) FontStyle.Italic else null,
+                                    textDecoration = if (isUnderlined) TextDecoration.Underline else null
                                 )
                                 builder.addStyle(currentStyle, insertStartIndex, insertStartIndex + insertedText.length)
                             }
@@ -509,22 +462,20 @@ fun NoteTextSheet(
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                 }
 
-                val titleTextStyle = MaterialTheme.typography.titleLarge.merge(
+                val titleTextStyle = typography.titleLarge.merge(
                     TextStyle(fontFamily = QuicksandTitleVariable, textAlign = TextAlign.Center, color = colorScheme.onSurface)
                 )
 
                 BasicTextField(
-                    value = textTitle,
-                    onValueChange = { newTitle ->
-                        onTextTitleChange(newTitle)
-                    },
+                    value = title,
+                    onValueChange = noteEditingViewModel::setTextTitle,
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     textStyle = titleTextStyle,
                     cursorBrush = SolidColor(colorScheme.primary),
                     decorationBox = { innerTextField ->
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (textTitle.isEmpty()) {
+                            if (title.isEmpty()) {
                                 Text(
                                     text = "Title",
                                     style = titleTextStyle,
@@ -564,7 +515,6 @@ fun NoteTextSheet(
                                 val nextIndex = (currentIndex + 1) % availableThemes.size
                                 val newTheme = availableThemes[nextIndex]
                                 noteEditingViewModel.setTextTheme(newTheme)
-                                onThemeChange(newTheme)
                                 colorChangeJob?.cancel()
                                 colorChangeJob = scope.launch {
                                     colorMenuItemText = newTheme
