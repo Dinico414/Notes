@@ -805,17 +805,18 @@ fun CompactNotes(
                     }
                 }
             }
-
         val fabOverride = if (showTextNoteCard) {
             @Composable {
+                //Text Note
+                val canSave = titleState.isNotBlank()
                 FloatingActionButton(
-                    onClick = { if (titleState.isNotBlank()) saveTrigger = true },
+                    onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
                 ) {
                     Icon(
                         Icons.Rounded.Save,
                         contentDescription = stringResource(R.string.save_note),
-                        tint = if (titleState.isNotBlank()) colorScheme.onPrimary else colorScheme.onPrimary.copy(
+                        tint = if (canSave) colorScheme.onPrimary else colorScheme.onPrimary.copy(
                             alpha = 0.38f
                         )
                     )
@@ -823,8 +824,8 @@ fun CompactNotes(
             }
         } else if (showListNoteCard) {
             {
-                val canSave =
-                    listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() }
+                //List Note
+                val canSave = listTitleState.isNotBlank() && listItemsState.any { it.text.isNotBlank() }
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -840,6 +841,7 @@ fun CompactNotes(
             }
         } else if (showAudioNoteCard) {
             {
+                //Audio Note
                 val canSave = titleState.isNotBlank() && hasAudioContent
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
@@ -856,13 +858,17 @@ fun CompactNotes(
             }
         } else if (showSketchNoteCard) {
             {
+                //Sketch Note
+                val canSave = titleState.isNotBlank() /*&& hasSketchContent*/
                 FloatingActionButton(
-                    onClick = { /* Save sketch */ }, containerColor = colorScheme.primary
+                    onClick = { if (canSave) saveTrigger = true }, containerColor = colorScheme.primary
                 ) {
                     Icon(
                         Icons.Rounded.Save,
                         contentDescription = stringResource(R.string.save_sketch_note),
-                        tint = colorScheme.onPrimary
+                        tint = if (canSave) colorScheme.onPrimary else colorScheme.onPrimary.copy(
+                            alpha = 0.38f
+                        )
                     )
                 }
             }
