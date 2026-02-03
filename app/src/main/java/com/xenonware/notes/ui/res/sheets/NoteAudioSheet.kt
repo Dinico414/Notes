@@ -51,7 +51,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
@@ -618,7 +617,7 @@ fun NoteAudioSheet(
 
                 BasicTextField(
                     value = title,
-                    onValueChange = noteEditingViewModel::setTextTitle,
+                    onValueChange = noteEditingViewModel::setAudioTitle,
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     textStyle = titleTextStyle,
@@ -664,7 +663,7 @@ fun NoteAudioSheet(
                                 val currentIndex = availableThemes.indexOf(selectedTheme)
                                 val nextIndex = (currentIndex + 1) % availableThemes.size
                                 val newTheme = availableThemes[nextIndex]
-                                noteEditingViewModel.setTextTheme(newTheme)
+                                noteEditingViewModel.setAudioTheme(newTheme)
                                 colorChangeJob?.cancel()
                                 colorChangeJob = scope.launch {
                                     colorMenuItemText = newTheme
@@ -685,7 +684,7 @@ fun NoteAudioSheet(
                             MenuItem(
                                 text = if (isOffline) "Offline note" else "Online note",
                                 onClick = {
-                                    noteEditingViewModel.setTextIsOffline(!isOffline)
+                                    noteEditingViewModel.setAudioIsOffline(!isOffline)
                                 },
                                 dismissOnClick = false,
                                 textColor = if (isOffline) colorScheme.error else null,
@@ -965,7 +964,7 @@ fun AudioTimerDisplay(
     Text(
         text = formatDuration(time) + if (showTotal) " / ${formatDuration(totalAudioDurationMillis)}" else "",
         fontFamily = QuicksandTitleVariable,
-        style = MaterialTheme.typography.headlineSmall,
+        style = typography.headlineSmall,
         color = colorScheme.onSurface,
         modifier = modifier
     )

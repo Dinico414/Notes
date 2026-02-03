@@ -1195,12 +1195,20 @@ fun CoverNotes(
                                                                             viewModel.showListCard()
                                                                         }
                                                                         NoteType.AUDIO -> {
+                                                                            noteEditingViewModel.setAudioTitle(itemToEdit.title)
+                                                                            noteEditingViewModel.setAudioTheme(
+                                                                                colorThemeMap[editingNoteColor] ?: "Default"
+                                                                            )
+                                                                            noteEditingViewModel.setAudioLabelId(selectedLabelId)
+                                                                            noteEditingViewModel.setAudioIsOffline(itemToEdit.isOffline)
+
                                                                             isSearchActive = false
                                                                             viewModel.setSearchQuery("")
                                                                             viewModel.showAudioCard()
                                                                             selectedAudioViewType = AudioViewType.Waveform
                                                                             editingNoteColor = itemToEdit.color?.toULong()
                                                                         }
+
                                                                         NoteType.SKETCH -> {
                                                                             isSearchActive = false
                                                                             viewModel.setSearchQuery("")
@@ -1299,9 +1307,20 @@ fun CoverNotes(
                                                                     viewModel.showListCard()
                                                                 }
                                                                 NoteType.AUDIO -> {
+                                                                    noteEditingViewModel.setAudioTitle(itemToEdit.title)
+                                                                    noteEditingViewModel.setAudioTheme(
+                                                                        colorThemeMap[editingNoteColor] ?: "Default"
+                                                                    )
+                                                                    noteEditingViewModel.setAudioLabelId(selectedLabelId)
+                                                                    noteEditingViewModel.setAudioIsOffline(itemToEdit.isOffline)
+
+                                                                    isSearchActive = false
+                                                                    viewModel.setSearchQuery("")
                                                                     viewModel.showAudioCard()
                                                                     selectedAudioViewType = AudioViewType.Waveform
+                                                                    editingNoteColor = itemToEdit.color?.toULong()
                                                                 }
+
                                                                 NoteType.SKETCH -> viewModel.showSketchCard()
                                                             }
                                                         },

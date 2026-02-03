@@ -1353,17 +1353,19 @@ fun CompactNotes(
                                                                         }
 
                                                                         NoteType.AUDIO -> {
-                                                                            isSearchActive = false
-                                                                            viewModel.setSearchQuery(
-                                                                                ""
+                                                                            noteEditingViewModel.setAudioTitle(itemToEdit.title)
+                                                                            noteEditingViewModel.setAudioTheme(
+                                                                                colorThemeMap[editingNoteColor] ?: "Default"
                                                                             )
-                                                                            viewModel.showAudioCard()
-                                                                            selectedAudioViewType =
-                                                                                AudioViewType.Waveform
-                                                                            editingNoteColor =
-                                                                                itemToEdit.color?.toULong()
-                                                                        }
+                                                                            noteEditingViewModel.setAudioLabelId(selectedLabelId)
+                                                                            noteEditingViewModel.setAudioIsOffline(itemToEdit.isOffline)
 
+                                                                            isSearchActive = false
+                                                                            viewModel.setSearchQuery("")
+                                                                            viewModel.showAudioCard()
+                                                                            selectedAudioViewType = AudioViewType.Waveform
+                                                                            editingNoteColor = itemToEdit.color?.toULong()
+                                                                        }
 
                                                                         NoteType.SKETCH -> {
                                                                             isSearchActive = false
@@ -1519,9 +1521,18 @@ fun CompactNotes(
                                                                 }
 
                                                                 NoteType.AUDIO -> {
+                                                                    noteEditingViewModel.setAudioTitle(itemToEdit.title)
+                                                                    noteEditingViewModel.setAudioTheme(
+                                                                        colorThemeMap[editingNoteColor] ?: "Default"
+                                                                    )
+                                                                    noteEditingViewModel.setAudioLabelId(selectedLabelId)
+                                                                    noteEditingViewModel.setAudioIsOffline(itemToEdit.isOffline)
+
+                                                                    isSearchActive = false
+                                                                    viewModel.setSearchQuery("")
                                                                     viewModel.showAudioCard()
-                                                                    selectedAudioViewType =
-                                                                        AudioViewType.Waveform
+                                                                    selectedAudioViewType = AudioViewType.Waveform
+                                                                    editingNoteColor = itemToEdit.color?.toULong()
                                                                 }
 
                                                                 NoteType.SKETCH -> viewModel.showSketchCard()
