@@ -88,13 +88,17 @@ import com.xenonware.notes.ui.res.TranscriptDisplay
 import com.xenonware.notes.ui.res.WaveformDisplay
 import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.res.loadAmplitudes
+import com.xenonware.notes.ui.res.loadTranscript
 import com.xenonware.notes.ui.res.saveAmplitudes
+import com.xenonware.notes.ui.res.saveTranscript
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.util.AudioRecorderManager
 import com.xenonware.notes.util.GlobalAudioPlayer
 import com.xenonware.notes.util.RecordingState
+import com.xenonware.notes.util.SpeechRecognitionManager
+import com.xenonware.notes.util.TranscriptSegment
 import com.xenonware.notes.viewmodel.NoteEditingViewModel
 import com.xenonware.notes.viewmodel.classes.Label
 import dev.chrisbanes.haze.HazeState
@@ -144,11 +148,13 @@ fun NoteAudioSheet(
     val context = LocalContext.current
     val player = GlobalAudioPlayer.getInstance()
     val amplitudes = remember { mutableStateListOf<Float>() }
+    val scope = rememberCoroutineScope()
 
     val cachedAudioUniqueId by noteEditingViewModel.audioUniqueId.collectAsStateWithLifecycle()
     val cachedAmplitudes by noteEditingViewModel.audioAmplitudes.collectAsStateWithLifecycle()
     val cachedRecordingDuration by noteEditingViewModel.audioRecordingDuration.collectAsStateWithLifecycle()
     val cachedIsPersistent by noteEditingViewModel.audioIsPersistent.collectAsStateWithLifecycle()
+    val transcriptSegments by noteEditingViewModel.audioTranscriptSegments.collectAsStateWithLifecycle()
 
     val recorder = remember {
         AudioRecorderManager(context) {
@@ -156,6 +162,21 @@ fun NoteAudioSheet(
             player.currentPlaybackPositionMillis = 0L
             player.stopAudio()
             amplitudes.clear()
+        }
+    }
+
+    // Speech recognition manager
+    val speechRecognitionManager = remember {
+        SpeechRecognitionManager(context).apply {
+            onTranscriptUpdate = { segments ->
+                noteEditingViewModel.setAudioTranscriptSegments(segments)
+            }
+            onError = { error ->
+                // Optionally show error feedback
+                scope.launch {
+                    // Could show snackbar here if needed
+                }
+            }
         }
     }
 
@@ -171,7 +192,6 @@ fun NoteAudioSheet(
     var showLabelDialog by remember { mutableStateOf(false) }
     var colorMenuItemText by remember { mutableStateOf("Color") }
     var isFadingOut by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
     var colorChangeJob by remember { mutableStateOf<Job?>(null) }
 
     val availableThemes = remember {
@@ -218,14 +238,22 @@ fun NoteAudioSheet(
 
     // ========== RESTORE STATE ON ROTATION OR INITIAL LOAD ==========
     LaunchedEffect(Unit) {
-
         if (initialAudioFilePath != null && File(initialAudioFilePath).exists()) {
             recorder.setInitialAudioFilePath(initialAudioFilePath)
             val audioId = File(initialAudioFilePath).nameWithoutExtension
+
+            // Load amplitudes
             val loadedAmplitudes = loadAmplitudes(context, audioId)
             if (loadedAmplitudes.isNotEmpty()) {
                 amplitudes.clear()
                 amplitudes.addAll(loadedAmplitudes)
+            }
+
+            // Load transcript
+            val loadedTranscript = loadTranscript(context, audioId)
+            if (loadedTranscript.isNotEmpty()) {
+                speechRecognitionManager.loadTranscript(loadedTranscript)
+                noteEditingViewModel.setAudioTranscriptSegments(loadedTranscript)
             }
         }
         else if (cachedAudioUniqueId != null) {
@@ -234,9 +262,17 @@ fun NoteAudioSheet(
                 cachedDuration = cachedRecordingDuration,
                 cachedIsPersistent = cachedIsPersistent
             )
+
             if (cachedAmplitudes.isNotEmpty()) {
                 amplitudes.clear()
                 amplitudes.addAll(cachedAmplitudes)
+            }
+
+            // Load cached transcript
+            val loadedTranscript = loadTranscript(context, cachedAudioUniqueId)
+            if (loadedTranscript.isNotEmpty()) {
+                speechRecognitionManager.loadTranscript(loadedTranscript)
+                noteEditingViewModel.setAudioTranscriptSegments(loadedTranscript)
             }
         }
     }
@@ -269,7 +305,6 @@ fun NoteAudioSheet(
     }
 
     LaunchedEffect(recorder.uniqueAudioId, recorder.recordingDurationMillis, recorder.isPersistentAudio) {
-
         noteEditingViewModel.setAudioUniqueId(recorder.uniqueAudioId)
         noteEditingViewModel.setAudioRecordingDuration(recorder.recordingDurationMillis)
         noteEditingViewModel.setAudioIsPersistent(recorder.isPersistentAudio)
@@ -293,12 +328,20 @@ fun NoteAudioSheet(
                 if (recorder.currentRecordingState == RecordingState.RECORDING ||
                     recorder.currentRecordingState == RecordingState.PAUSED) {
                     recorder.stopRecording()
+                    speechRecognitionManager.stopListening()
                 }
                 player.stopAudio()
 
                 recorder.markAudioAsPersistent()
+
+                // Save amplitudes
                 if (amplitudes.isNotEmpty()) {
                     saveAmplitudes(context, audioId, amplitudes)
+                }
+
+                // Save transcript
+                if (transcriptSegments.isNotEmpty()) {
+                    saveTranscript(context, audioId, transcriptSegments)
                 }
 
                 onSave(title, audioId, selectedTheme, labelId, isOffline)
@@ -308,12 +351,18 @@ fun NoteAudioSheet(
     }
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) recorder.startRecording()
+        if (granted) {
+            recorder.startRecording()
+            if (speechRecognitionManager.isAvailable()) {
+                speechRecognitionManager.startListening(System.currentTimeMillis())
+            }
+        }
     }
 
     DisposableEffect(Unit) {
         onDispose {
             recorder.dispose()
+            speechRecognitionManager.dispose()
         }
     }
 
@@ -390,7 +439,7 @@ fun NoteAudioSheet(
                     val totalHeight = 52.dp
 
                     if (isLandscape) {
-                        // ────── LANDSCAPE: 2×2 grid exactly as you asked ──────
+                        // ────── LANDSCAPE: 2×2 grid ──────
                         Column(modifier = Modifier.fillMaxSize()) {
                             // Top row – 30% of height
                             Row(
@@ -424,9 +473,7 @@ fun NoteAudioSheet(
                                 ) {
                                     if (hasAudioFile && !isInRecordingMode && sheetAudioDuration > 0L) {
                                         AudioProgressBar(
-                                            modifier = Modifier
-                                                .fillMaxWidth(),
-
+                                            modifier = Modifier.fillMaxWidth(),
                                             currentPositionMillis = player.currentPlaybackPositionMillis,
                                             totalDurationMillis = sheetAudioDuration,
                                             isActive = isSheetAudioActive,
@@ -462,6 +509,10 @@ fun NoteAudioSheet(
                                         isRecordingMode = isInRecordingMode,
                                         recordingState = recordingState,
                                         progress = progress,
+                                        transcriptSegments = transcriptSegments,
+                                        isTranscribing = speechRecognitionManager.isTranscribing,
+                                        currentPartialText = speechRecognitionManager.currentPartialText,
+                                        errorMessage = speechRecognitionManager.errorMessage,
                                         modifier = Modifier.fillMaxSize()
                                     )
                                 }
@@ -486,13 +537,27 @@ fun NoteAudioSheet(
                                                 ) == PackageManager.PERMISSION_GRANTED
                                             ) {
                                                 recorder.startRecording()
+                                                if (speechRecognitionManager.isAvailable()) {
+                                                    speechRecognitionManager.startListening(System.currentTimeMillis())
+                                                }
                                             } else {
                                                 requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                             }
                                         },
-                                        onPauseRecordingClick = { recorder.pauseRecording() },
-                                        onResumeRecordingClick = { recorder.startRecording() },
-                                        onStopRecordingClick = { recorder.stopRecording() },
+                                        onPauseRecordingClick = {
+                                            recorder.pauseRecording()
+                                            speechRecognitionManager.stopListening()
+                                        },
+                                        onResumeRecordingClick = {
+                                            recorder.startRecording()
+                                            if (speechRecognitionManager.isAvailable()) {
+                                                speechRecognitionManager.restartListening()
+                                            }
+                                        },
+                                        onStopRecordingClick = {
+                                            recorder.stopRecording()
+                                            speechRecognitionManager.stopListening()
+                                        },
                                         onPlayPauseClick = {
                                             currentSheetAudioPath?.let { path ->
                                                 when {
@@ -507,6 +572,9 @@ fun NoteAudioSheet(
                                             recorder.resetState()
                                             recorder.deleteRecording()
                                             player.stopAudio()
+                                            speechRecognitionManager.clearTranscript()
+                                            speechRecognitionManager.cancel()
+                                            noteEditingViewModel.setAudioTranscriptSegments(emptyList())
                                         })
                                 }
                             }
@@ -537,6 +605,10 @@ fun NoteAudioSheet(
                                 isRecordingMode = isInRecordingMode,
                                 recordingState = recordingState,
                                 progress = progress,
+                                transcriptSegments = transcriptSegments,
+                                isTranscribing = speechRecognitionManager.isTranscribing,
+                                currentPartialText = speechRecognitionManager.currentPartialText,
+                                errorMessage = speechRecognitionManager.errorMessage,
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxWidth()
@@ -571,13 +643,27 @@ fun NoteAudioSheet(
                                     ) == PackageManager.PERMISSION_GRANTED
                                 ) {
                                     recorder.startRecording()
+                                    if (speechRecognitionManager.isAvailable()) {
+                                        speechRecognitionManager.startListening(System.currentTimeMillis())
+                                    }
                                 } else {
                                     requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                 }
                             },
-                            onPauseRecordingClick = { recorder.pauseRecording() },
-                            onResumeRecordingClick = { recorder.startRecording() }, // resumes
-                            onStopRecordingClick = { recorder.stopRecording() },
+                            onPauseRecordingClick = {
+                                recorder.pauseRecording()
+                                speechRecognitionManager.stopListening()
+                            },
+                            onResumeRecordingClick = {
+                                recorder.startRecording()
+                                if (speechRecognitionManager.isAvailable()) {
+                                    speechRecognitionManager.restartListening()
+                                }
+                            },
+                            onStopRecordingClick = {
+                                recorder.stopRecording()
+                                speechRecognitionManager.stopListening()
+                            },
                             onPlayPauseClick = {
                                 currentSheetAudioPath?.let { path ->
                                     when {
@@ -588,7 +674,14 @@ fun NoteAudioSheet(
                                 }
                             },
                             onStopPlaybackClick = { player.stopAudio() },
-                            onDiscardClick = { recorder.resetState(); recorder.deleteRecording(); player.stopAudio() })
+                            onDiscardClick = {
+                                recorder.resetState()
+                                recorder.deleteRecording()
+                                player.stopAudio()
+                                speechRecognitionManager.clearTranscript()
+                                speechRecognitionManager.cancel()
+                                noteEditingViewModel.setAudioTranscriptSegments(emptyList())
+                            })
                     }
                 }
             }
@@ -736,8 +829,9 @@ fun AudioControlButtons(
     )
 
     Row(
-        modifier = modifier.fillMaxWidth()
-        , horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         when (recordingState) {
             RecordingState.IDLE -> {
@@ -880,17 +974,22 @@ fun AudioControlButtons(
         }
     }
 }
+
 enum class AudioViewType {
     Waveform, Transcript
 }
-// Alternative version (sometimes nicer)
+
 @Composable
 fun AudioContentDisplay(
     selectedAudioViewType: AudioViewType,
     amplitudes: List<Float>,
     isRecordingMode: Boolean,
     recordingState: RecordingState,
-    progress: Float,  // pre-calculated
+    progress: Float,
+    transcriptSegments: List<TranscriptSegment> = emptyList(),
+    isTranscribing: Boolean = false,
+    currentPartialText: String = "",
+    errorMessage: String? = null,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
@@ -903,7 +1002,17 @@ fun AudioContentDisplay(
                 recordingState = recordingState
             )
 
-            AudioViewType.Transcript -> TranscriptDisplay(Modifier.fillMaxSize())
+            AudioViewType.Transcript -> TranscriptDisplay(
+                modifier = Modifier.fillMaxSize(),
+                transcriptSegments = transcriptSegments,
+                isRecording = isRecordingMode,
+                isTranscribing = isTranscribing,
+                currentPartialText = currentPartialText,
+                errorMessage = errorMessage,
+                onCopyTranscript = {
+                    // Transcript copied - could show a toast here
+                }
+            )
         }
     }
 }
@@ -922,7 +1031,7 @@ fun AudioProgressBar(
         (currentPositionMillis.toFloat() / totalDurationMillis.coerceAtLeast(1L)).coerceIn(0f, 1f)
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .pointerInput(isActive, totalDurationMillis) {

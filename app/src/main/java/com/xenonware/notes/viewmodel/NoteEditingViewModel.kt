@@ -2,6 +2,7 @@ package com.xenonware.notes.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.xenonware.notes.ui.res.sheets.ListItem
+import com.xenonware.notes.util.TranscriptSegment
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -86,6 +87,9 @@ class NoteEditingViewModel : ViewModel() {
 
     private val _audioIsPersistent = MutableStateFlow(false)
     val audioIsPersistent: StateFlow<Boolean> = _audioIsPersistent.asStateFlow()
+
+    private val _audioTranscriptSegments = MutableStateFlow<List<TranscriptSegment>>(emptyList())
+    val audioTranscriptSegments: StateFlow<List<TranscriptSegment>> = _audioTranscriptSegments.asStateFlow()
 
     // ========== SKETCH NOTE STATES ==========
     private val _sketchTitle = MutableStateFlow("")
@@ -239,6 +243,10 @@ class NoteEditingViewModel : ViewModel() {
         _audioIsPersistent.value = isPersistent
     }
 
+    fun setAudioTranscriptSegments(segments: List<TranscriptSegment>) {
+        _audioTranscriptSegments.value = segments
+    }
+
     fun clearAudioState() {
         _audioTitle.value = ""
         _audioFilePath.value = null
@@ -250,6 +258,7 @@ class NoteEditingViewModel : ViewModel() {
         _audioUniqueId.value = null
         _audioRecordingDuration.value = 0L
         _audioIsPersistent.value = false
+        _audioTranscriptSegments.value = emptyList()
     }
 
     // ========== SKETCH NOTE SETTERS ==========
