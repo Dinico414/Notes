@@ -50,9 +50,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,7 +83,6 @@ import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
 import com.xenonware.notes.util.AudioPlayerManager
 import com.xenonware.notes.util.GlobalAudioPlayer
-import com.xenonware.notes.util.RecordingState
 import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.coroutines.delay
@@ -95,7 +92,6 @@ import java.io.File
 private fun togglePlayback(
     playerManager: AudioPlayerManager,
     audioFilePath: String?,
-    recordingState: RecordingState
 ) {
     if (audioFilePath == null) return
 
@@ -103,14 +99,17 @@ private fun togglePlayback(
         playerManager.isPlaying && playerManager.currentFilePath == audioFilePath -> {
             playerManager.pauseAudio()
         }
-        playerManager.currentFilePath == audioFilePath -> {
-            playerManager.playAudio(audioFilePath)
+        playerManager.currentFilePath == audioFilePath && !playerManager.isPlaying -> {
+            if (playerManager.currentPlaybackPositionMillis > 0) {
+                playerManager.resumeAudio()
+            } else {
+                playerManager.playAudio(audioFilePath)
+            }
         }
         else -> {
             playerManager.playAudio(audioFilePath)
         }
-    }
-}
+    }}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -157,7 +156,6 @@ fun NoteAudioCard(
     // Determine if THIS card is the one currently active
     val isThisAudioActive = player.currentFilePath == audioFilePath
     val isPlayingThis = player.isPlaying && isThisAudioActive
-    val isPausedThis = !player.isPlaying && isThisAudioActive && player.currentPlaybackPositionMillis > 0
 
     // Live playback position updater
     LaunchedEffect(player.isPlaying) {
@@ -167,12 +165,6 @@ fun NoteAudioCard(
                 delay(100L)
             }
         }
-    }
-
-    // Sync recording state if needed (you can remove if not used here)
-    var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
-    LaunchedEffect(player.currentRecordingState) {
-        recordingState = player.currentRecordingState
     }
 
     // Clean up on dispose (optional — singleton handles it)
@@ -278,7 +270,7 @@ fun NoteAudioCard(
                                     ) {
                                         // Play/Pause Button — only shows Pause if THIS file is playing
                                         FilledIconButton(
-                                            onClick = { togglePlayback(player, audioFilePath, recordingState) },
+                                            onClick = { togglePlayback(player, audioFilePath) },
                                             colors = IconButtonDefaults.filledIconButtonColors(
                                                 containerColor = MaterialTheme.colorScheme.primary,
                                                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -346,7 +338,7 @@ fun NoteAudioCard(
                                         Spacer(modifier = Modifier.height(8.dp))
 
                                         FilledIconButton(
-                                            onClick = { togglePlayback(player, audioFilePath, recordingState) },
+                                            onClick = { togglePlayback(player, audioFilePath) },
                                             colors = IconButtonDefaults.filledIconButtonColors(
                                                 containerColor = MaterialTheme.colorScheme.primary,
                                                 contentColor = MaterialTheme.colorScheme.onPrimary
