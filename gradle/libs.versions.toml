@@ -35,6 +35,7 @@ googleid = "1.2.0"
 firebaseDatabase = "22.0.1"
 firebaseFirestore = "26.1.0"
 
+voskAndroid = "0.3.75"
 xenonCommons = "2.3.6"
 #noinspection UnusedVersionCatalogEntry
 xenonUi = "3.2"
@@ -79,6 +80,7 @@ reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reo
 ui = { module = "androidx.compose.ui:ui" }
 ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
 ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+vosk-android = { module = "com.alphacephei:vosk-android", version.ref = "voskAndroid" }
 xenon-commons = { module = "com.github.Dinico414:Xenon-Commons", version.ref = "xenonCommons" }
 androidx-material3-window-size-class1-android = { group = "androidx.compose.material3", name = "material3-window-size-class-android", version.ref = "material3WindowSizeClassAndroid" }
 androidx-material3-adaptive = { group = "androidx.compose.material3", name = "material3-adaptive", version.ref = "material3Adaptive" }
