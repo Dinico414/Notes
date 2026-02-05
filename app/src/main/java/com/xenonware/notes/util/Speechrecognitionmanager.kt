@@ -29,10 +29,12 @@ class SpeechRecognitionManager(private val context: Context) {
 
     companion object {
         private const val TAG = "SpeechRecognition"
+        private const val RESTART_DELAY_MS = 300L
     }
 
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
+    private var restartHandler: android.os.Handler? = null
 
     // State
     var transcriptSegments = mutableListOf<TranscriptSegment>()
@@ -51,7 +53,8 @@ class SpeechRecognitionManager(private val context: Context) {
     var onError: ((String) -> Unit)? = null
 
     private var currentRecordingStartTime: Long = 0L
-    private var shouldRestart = false
+    private var shouldContinue = false
+    private var consecutiveErrors = 0
 
     /**
      * Check if speech recognition is available on this device
@@ -76,18 +79,20 @@ class SpeechRecognitionManager(private val context: Context) {
             return
         }
 
-        if (isListening) {
-            Log.d(TAG, "Already listening, stopping first")
-            stopListening()
-        }
-
         currentRecordingStartTime = recordingStartTime
-        shouldRestart = true
+        shouldContinue = true
+        consecutiveErrors = 0
 
+        startRecognizer()
+    }
+
+    private fun startRecognizer() {
         try {
-            // Destroy old instance if exists
+            // Clean up existing instance
             speechRecognizer?.destroy()
+            speechRecognizer = null
 
+            Log.d(TAG, "Creating new speech recognizer")
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
                 setRecognitionListener(createRecognitionListener())
             }
@@ -95,14 +100,24 @@ class SpeechRecognitionManager(private val context: Context) {
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+
+                // Enable partial results
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 10000L)
+
+                // Request multiple results for better accuracy
+                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+
+                // Timing parameters - MORE AGGRESSIVE for better detection
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 15000L)
+
+                // Prefer offline if available
+                putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
             }
 
-            Log.d(TAG, "Starting speech recognizer")
+            Log.d(TAG, "Starting speech recognizer with language: ${Locale.getDefault()}")
             speechRecognizer?.startListening(intent)
             isListening = true
             isTranscribing = true
@@ -110,11 +125,43 @@ class SpeechRecognitionManager(private val context: Context) {
 
         } catch (e: Exception) {
             Log.e(TAG, "Error starting speech recognition", e)
-            errorMessage = "Failed to start speech recognition: ${e.message}"
+            errorMessage = "Failed to start: ${e.message}"
             onError?.invoke(errorMessage ?: "Unknown error")
             isListening = false
             isTranscribing = false
+            scheduleRestart()
         }
+    }
+
+    private fun scheduleRestart() {
+        if (!shouldContinue) {
+            Log.d(TAG, "Not restarting - shouldContinue is false")
+            return
+        }
+
+        consecutiveErrors++
+
+        // Stop after 3 consecutive errors to avoid infinite loop
+        if (consecutiveErrors >= 3) {
+            Log.e(TAG, "Too many consecutive errors ($consecutiveErrors), stopping auto-restart")
+            errorMessage = "Speech recognition failed multiple times. Please check microphone."
+            onError?.invoke(errorMessage ?: "")
+            shouldContinue = false
+            return
+        }
+
+        Log.d(TAG, "Scheduling restart (attempt ${consecutiveErrors}/3)")
+
+        if (restartHandler == null) {
+            restartHandler = android.os.Handler(android.os.Looper.getMainLooper())
+        }
+
+        restartHandler?.postDelayed({
+            if (shouldContinue) {
+                Log.d(TAG, "Executing scheduled restart")
+                startRecognizer()
+            }
+        }, RESTART_DELAY_MS)
     }
 
     /**
@@ -122,12 +169,16 @@ class SpeechRecognitionManager(private val context: Context) {
      */
     fun stopListening() {
         Log.d(TAG, "stopListening called")
-        shouldRestart = false
+        shouldContinue = false
+        consecutiveErrors = 0
+
         try {
+            restartHandler?.removeCallbacksAndMessages(null)
             speechRecognizer?.stopListening()
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping listener", e)
         }
+
         isListening = false
         isTranscribing = false
         currentPartialText = ""
@@ -138,13 +189,17 @@ class SpeechRecognitionManager(private val context: Context) {
      */
     fun cancel() {
         Log.d(TAG, "cancel called")
-        shouldRestart = false
+        shouldContinue = false
+        consecutiveErrors = 0
+
         try {
+            restartHandler?.removeCallbacksAndMessages(null)
             speechRecognizer?.cancel()
             speechRecognizer?.destroy()
         } catch (e: Exception) {
             Log.e(TAG, "Error canceling", e)
         }
+
         speechRecognizer = null
         isListening = false
         isTranscribing = false
@@ -155,15 +210,11 @@ class SpeechRecognitionManager(private val context: Context) {
      * Restart listening (useful for continuous transcription)
      */
     fun restartListening() {
-        Log.d(TAG, "restartListening called - shouldRestart: $shouldRestart")
-        if (shouldRestart && isListening) {
+        Log.d(TAG, "restartListening called")
+        if (shouldContinue) {
             stopListening()
-            // Small delay to ensure proper cleanup
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                if (shouldRestart) {
-                    startListening(currentRecordingStartTime)
-                }
-            }, 500)
+            shouldContinue = true // Re-enable after stop
+            scheduleRestart()
         }
     }
 
@@ -200,8 +251,9 @@ class SpeechRecognitionManager(private val context: Context) {
      */
     fun dispose() {
         Log.d(TAG, "dispose called")
-        shouldRestart = false
+        shouldContinue = false
         cancel()
+        restartHandler = null
         speechRecognizer = null
         onTranscriptUpdate = null
         onError = null
@@ -209,22 +261,27 @@ class SpeechRecognitionManager(private val context: Context) {
 
     private fun createRecognitionListener() = object : RecognitionListener {
         override fun onReadyForSpeech(params: Bundle?) {
-            Log.d(TAG, "onReadyForSpeech")
+            Log.d(TAG, "✓ onReadyForSpeech - Listening for audio...")
             isTranscribing = true
             errorMessage = null
+            consecutiveErrors = 0 // Reset on success
         }
 
         override fun onBeginningOfSpeech() {
-            Log.d(TAG, "onBeginningOfSpeech")
+            Log.d(TAG, "✓ onBeginningOfSpeech - Audio detected!")
             isTranscribing = true
+            consecutiveErrors = 0 // Reset when speech detected
         }
 
         override fun onRmsChanged(rmsdB: Float) {
-            // Audio level - could be used for visualization
+            // Log audio levels to debug microphone issues
+            if (rmsdB > 0) {
+                Log.v(TAG, "Audio level: $rmsdB dB")
+            }
         }
 
         override fun onBufferReceived(buffer: ByteArray?) {
-            Log.d(TAG, "onBufferReceived")
+            Log.v(TAG, "onBufferReceived - ${buffer?.size ?: 0} bytes")
         }
 
         override fun onEndOfSpeech() {
@@ -234,23 +291,23 @@ class SpeechRecognitionManager(private val context: Context) {
 
         override fun onError(error: Int) {
             val errorMsg = when (error) {
-                SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
-                SpeechRecognizer.ERROR_CLIENT -> "Client side error"
-                SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Insufficient permissions"
-                SpeechRecognizer.ERROR_NETWORK -> "Network error"
+                SpeechRecognizer.ERROR_AUDIO -> "Audio recording error - check microphone"
+                SpeechRecognizer.ERROR_CLIENT -> "Client side error - recognizer issue"
+                SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Missing RECORD_AUDIO permission"
+                SpeechRecognizer.ERROR_NETWORK -> "Network error - check internet"
                 SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout"
-                SpeechRecognizer.ERROR_NO_MATCH -> "No speech match"
+                SpeechRecognizer.ERROR_NO_MATCH -> "No speech detected - speak louder or closer to mic"
                 SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognition service busy"
                 SpeechRecognizer.ERROR_SERVER -> "Server error"
-                SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech input"
+                SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech input detected"
                 else -> "Unknown error: $error"
             }
 
-            Log.e(TAG, "onError: $errorMsg (code: $error)")
+            Log.e(TAG, "✗ onError: $errorMsg (code: $error)")
 
-            // Only show errors that aren't normal (like no match or timeout)
-            if (error != SpeechRecognizer.ERROR_NO_MATCH &&
-                error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+            // Only show user-facing errors for serious issues
+            if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ||
+                error == SpeechRecognizer.ERROR_AUDIO) {
                 errorMessage = errorMsg
                 onError?.invoke(errorMsg)
             }
@@ -258,18 +315,30 @@ class SpeechRecognitionManager(private val context: Context) {
             isTranscribing = false
             currentPartialText = ""
 
-            // Auto-restart for continuous transcription (except for critical errors)
-            if (shouldRestart && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS &&
-                error != SpeechRecognizer.ERROR_CLIENT) {
-                Log.d(TAG, "Auto-restarting after error")
-                restartListening()
+            // Auto-restart for recoverable errors
+            if (shouldContinue &&
+                error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS &&
+                error != SpeechRecognizer.ERROR_AUDIO) {
+
+                Log.d(TAG, "Recoverable error, scheduling restart...")
+                scheduleRestart()
+            } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ||
+                error == SpeechRecognizer.ERROR_AUDIO) {
+                Log.e(TAG, "Fatal error, stopping recognition")
+                shouldContinue = false
             }
         }
 
         override fun onResults(results: Bundle?) {
-            Log.d(TAG, "onResults called")
+            Log.d(TAG, "✓ onResults called")
+            consecutiveErrors = 0 // Reset on successful result
+
             results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
-                Log.d(TAG, "Results: $matches")
+                Log.d(TAG, "Results received: ${matches.size} matches")
+                matches.forEachIndexed { index, match ->
+                    Log.d(TAG, "  [$index] $match")
+                }
+
                 if (matches.isNotEmpty()) {
                     val recognizedText = matches[0]
                     val timestamp = System.currentTimeMillis() - currentRecordingStartTime
@@ -278,7 +347,7 @@ class SpeechRecognitionManager(private val context: Context) {
                     val scores = results.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
                     val confidence = scores?.firstOrNull() ?: 1.0f
 
-                    Log.d(TAG, "Recognized text: '$recognizedText' at ${timestamp}ms with confidence $confidence")
+                    Log.d(TAG, "✓ Recognized: '$recognizedText' at ${timestamp}ms (confidence: $confidence)")
 
                     if (recognizedText.isNotBlank()) {
                         val segment = TranscriptSegment(
@@ -288,7 +357,7 @@ class SpeechRecognitionManager(private val context: Context) {
                         )
 
                         transcriptSegments.add(segment)
-                        Log.d(TAG, "Added segment, total segments: ${transcriptSegments.size}")
+                        Log.d(TAG, "✓ Segment added! Total: ${transcriptSegments.size}")
                         onTranscriptUpdate?.invoke(transcriptSegments)
                     }
                 }
@@ -296,10 +365,10 @@ class SpeechRecognitionManager(private val context: Context) {
 
             currentPartialText = ""
 
-            // Restart for continuous transcription
-            if (shouldRestart) {
-                Log.d(TAG, "Restarting for continuous transcription")
-                restartListening()
+            // Continue listening
+            if (shouldContinue) {
+                Log.d(TAG, "Continuing transcription...")
+                scheduleRestart()
             }
         }
 
@@ -307,14 +376,15 @@ class SpeechRecognitionManager(private val context: Context) {
             partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.let { matches ->
                 if (matches.isNotEmpty()) {
                     val partial = matches[0]
-                    Log.d(TAG, "Partial result: '$partial'")
+                    Log.d(TAG, "Partial: '$partial'")
                     currentPartialText = partial
+                    consecutiveErrors = 0 // Reset when we get partial results
                 }
             }
         }
 
         override fun onEvent(eventType: Int, params: Bundle?) {
-            Log.d(TAG, "onEvent: $eventType")
+            Log.v(TAG, "onEvent: $eventType")
         }
     }
 }

@@ -1,7 +1,6 @@
-package com.xenonware.notes.ui.res
+package com.xenonware.notes.util
 
 import android.content.Context
-import com.xenonware.notes.util.TranscriptSegment
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File

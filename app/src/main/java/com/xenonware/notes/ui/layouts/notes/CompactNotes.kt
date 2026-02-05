@@ -50,6 +50,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Create
 import androidx.compose.material.icons.rounded.FormatBold
 import androidx.compose.material.icons.rounded.FormatItalic
@@ -121,6 +122,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.auth.api.identity.Identity
@@ -170,6 +172,7 @@ import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
 import com.xenonware.notes.util.GlobalAudioPlayer
+import com.xenonware.notes.util.SpeechRecognitionTest
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.NoteEditingViewModel
 import com.xenonware.notes.viewmodel.NotesLayoutType
@@ -449,6 +452,30 @@ fun CompactNotes(
         LaunchedEffect(currentSizeIndex) {
             if (currentSizeIndex != vmFontSizeIndex) {
                 noteEditingViewModel.setTextFontSizeIndex(currentSizeIndex)
+            }
+        }
+
+
+        var showSpeechTest by remember { mutableStateOf(false) }
+
+// 2. Auto-open nach 2 Sekunden:
+        LaunchedEffect(Unit) {
+            delay(2000)
+            showSpeechTest = true
+        }
+
+// 3. Dialog ganz am Ende (nach allen AnimatedVisibility blocks):
+        if (showSpeechTest) {
+            Dialog(onDismissRequest = { showSpeechTest = false }) {
+                Box(Modifier.fillMaxSize().background(colorScheme.background)) {
+                    SpeechRecognitionTest()
+                    IconButton(
+                        onClick = { showSpeechTest = false },
+                        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                    ) {
+                        Icon(Icons.Rounded.Close, "Close")
+                    }
+                }
             }
         }
 

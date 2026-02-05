@@ -88,9 +88,7 @@ import com.xenonware.notes.ui.res.TranscriptDisplay
 import com.xenonware.notes.ui.res.WaveformDisplay
 import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.res.loadAmplitudes
-import com.xenonware.notes.ui.res.loadTranscript
 import com.xenonware.notes.ui.res.saveAmplitudes
-import com.xenonware.notes.ui.res.saveTranscript
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
@@ -99,6 +97,8 @@ import com.xenonware.notes.util.GlobalAudioPlayer
 import com.xenonware.notes.util.RecordingState
 import com.xenonware.notes.util.SpeechRecognitionManager
 import com.xenonware.notes.util.TranscriptSegment
+import com.xenonware.notes.util.loadTranscript
+import com.xenonware.notes.util.saveTranscript
 import com.xenonware.notes.viewmodel.NoteEditingViewModel
 import com.xenonware.notes.viewmodel.classes.Label
 import dev.chrisbanes.haze.HazeState
