@@ -334,8 +334,9 @@ fun NoteAudioSheet(
                 player.stopAudio()
                 recorder.markAudioAsPersistent()
 
-                if (amplitudes.isNotEmpty()) saveAmplitudes(context, audioId!!, amplitudes)
-                if (transcriptSegments.isNotEmpty()) saveTranscript(context, audioId!!, transcriptSegments)
+                if (amplitudes.isNotEmpty()) saveAmplitudes(context, audioId, amplitudes)
+                if (transcriptSegments.isNotEmpty()) saveTranscript(context,
+                    audioId, transcriptSegments)
 
                 val joinedTranscript = transcriptSegments
                     .joinToString(" ") { it.text.trim() }
