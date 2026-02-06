@@ -4,7 +4,6 @@ package com.xenonware.notes.ui.res.sheets
 
 import android.Manifest.permission.RECORD_AUDIO
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,11 +52,12 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -91,7 +91,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
@@ -183,13 +182,16 @@ fun NoteAudioSheet(
     val prefsManager = remember { SharedPreferenceManager(context) }
     var currentModelKey by remember { mutableStateOf(prefsManager.voskModelKey) }
 
-    val speechRecognitionManager = remember(currentModelKey) {
-        VoskSpeechRecognitionManager(context, language = currentModelKey.substringBefore('-')).apply {
+    var modelSwitchTrigger by remember { mutableStateOf(0) }
+
+    val speechRecognitionManager = remember(currentModelKey, modelSwitchTrigger) {
+        VoskSpeechRecognitionManager(
+            context, language = currentModelKey.substringBefore('-')
+        ).apply {
             switchModel(
                 modelKey = currentModelKey,
                 onSuccess = { android.util.Log.i("Vosk", "Model ready: $currentModelKey") },
-                onError = { msg: String -> android.util.Log.e("Vosk", "Model error: $msg") }
-            )
+                onError = { msg: String -> android.util.Log.e("Vosk", "Model error: $msg") })
             onTranscriptUpdate = { segments ->
                 noteEditingViewModel.setAudioTranscriptSegments(segments)
             }
@@ -203,7 +205,8 @@ fun NoteAudioSheet(
     val currentSheetAudioPath = recorder.audioFilePath ?: initialAudioFilePath
     val isSheetAudioActive = player.currentFilePath == currentSheetAudioPath
     val isSheetAudioPlaying = player.isPlaying && isSheetAudioActive
-    val isSheetAudioPaused = !player.isPlaying && isSheetAudioActive && player.currentPlaybackPositionMillis > 0
+    val isSheetAudioPaused =
+        !player.isPlaying && isSheetAudioActive && player.currentPlaybackPositionMillis > 0
 
     val selectedTheme = theme.ifEmpty { "Default" }
     val isLabeled = labelId != null
@@ -221,9 +224,10 @@ fun NoteAudioSheet(
 
     var recordingState by remember { mutableStateOf(RecordingState.IDLE) }
 
-    val hasAudioContent = remember(initialAudioFilePath, recorder.audioFilePath, cachedAudioUniqueId) {
-        derivedStateOf { initialAudioFilePath != null || recorder.audioFilePath != null || cachedAudioUniqueId != null }
-    }.value
+    val hasAudioContent =
+        remember(initialAudioFilePath, recorder.audioFilePath, cachedAudioUniqueId) {
+            derivedStateOf { initialAudioFilePath != null || recorder.audioFilePath != null || cachedAudioUniqueId != null }
+        }.value
 
     val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
@@ -261,7 +265,9 @@ fun NoteAudioSheet(
                 noteEditingViewModel.setAudioTranscriptSegments(loadedTranscript)
             }
         } else if (cachedAudioUniqueId != null) {
-            recorder.restoreCachedState(cachedAudioUniqueId, cachedRecordingDuration, cachedIsPersistent)
+            recorder.restoreCachedState(
+                cachedAudioUniqueId, cachedRecordingDuration, cachedIsPersistent
+            )
             if (cachedAmplitudes.isNotEmpty()) {
                 amplitudes.clear()
                 amplitudes.addAll(cachedAmplitudes)
@@ -295,13 +301,16 @@ fun NoteAudioSheet(
     LaunchedEffect(player.isPlaying) {
         if (player.isPlaying) {
             while (isActive) {
-                player.currentPlaybackPositionMillis = player.mediaPlayer?.currentPosition?.toLong() ?: 0L
+                player.currentPlaybackPositionMillis =
+                    player.mediaPlayer?.currentPosition?.toLong() ?: 0L
                 delay(50L)
             }
         }
     }
 
-    LaunchedEffect(recorder.uniqueAudioId, recorder.recordingDurationMillis, recorder.isPersistentAudio) {
+    LaunchedEffect(
+        recorder.uniqueAudioId, recorder.recordingDurationMillis, recorder.isPersistentAudio
+    ) {
         noteEditingViewModel.setAudioUniqueId(recorder.uniqueAudioId)
         noteEditingViewModel.setAudioRecordingDuration(recorder.recordingDurationMillis)
         noteEditingViewModel.setAudioIsPersistent(recorder.isPersistentAudio)
@@ -313,15 +322,13 @@ fun NoteAudioSheet(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            val audioId = recorder.uniqueAudioId
-                ?: cachedAudioUniqueId
-                ?: initialAudioFilePath?.let { File(it).nameWithoutExtension }
+            val audioId = recorder.uniqueAudioId ?: cachedAudioUniqueId
+            ?: initialAudioFilePath?.let { File(it).nameWithoutExtension }
 
             val hasAudio = audioId != null
 
             if (title.isNotBlank() && hasAudio) {
-                if (recorder.currentRecordingState == RecordingState.RECORDING ||
-                    recorder.currentRecordingState == RecordingState.PAUSED) {
+                if (recorder.currentRecordingState == RecordingState.RECORDING || recorder.currentRecordingState == RecordingState.PAUSED) {
                     recorder.stopRecording()
                     speechRecognitionManager.stopListening()
                 }
@@ -330,7 +337,9 @@ fun NoteAudioSheet(
                 recorder.markAudioAsPersistent()
 
                 if (amplitudes.isNotEmpty()) saveAmplitudes(context, audioId, amplitudes)
-                if (transcriptSegments.isNotEmpty()) saveTranscript(context, audioId, transcriptSegments)
+                if (transcriptSegments.isNotEmpty()) saveTranscript(
+                    context, audioId, transcriptSegments
+                )
 
                 onSave(title, audioId, selectedTheme, labelId, isOffline)
             }
@@ -338,14 +347,15 @@ fun NoteAudioSheet(
         }
     }
 
-    val requestPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) {
-            recorder.startRecording()
-            if (speechRecognitionManager.isAvailable()) {
-                speechRecognitionManager.startListening(System.currentTimeMillis())
+    val requestPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) {
+                recorder.startRecording()
+                if (speechRecognitionManager.isAvailable()) {
+                    speechRecognitionManager.startListening(System.currentTimeMillis())
+                }
             }
         }
-    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -355,31 +365,39 @@ fun NoteAudioSheet(
     }
 
     val hasAudioFile = currentSheetAudioPath != null
-    val isInRecordingMode = recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED
+    val isInRecordingMode =
+        recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED
 
-    @Suppress("SENSELESS_COMPARISON")
-    val sheetAudioDuration by remember(currentSheetAudioPath, recordingState) {
+    @Suppress("SENSELESS_COMPARISON") val sheetAudioDuration by remember(
+        currentSheetAudioPath, recordingState
+    ) {
         mutableLongStateOf(
-            if (hasAudioFile && !isInRecordingMode && currentSheetAudioPath != null)
-                player.getAudioDuration(currentSheetAudioPath)
+            if (hasAudioFile && !isInRecordingMode && currentSheetAudioPath != null) player.getAudioDuration(
+                currentSheetAudioPath
+            )
             else 0L
         )
     }
 
-    val currentModelInfo = remember(currentModelKey) {
-        AVAILABLE_MODELS.find { it.key == currentModelKey }
-    }
+    val currentModelInfo = AVAILABLE_MODELS.find { it.key == currentModelKey }
 
     val langName = when (currentModelInfo?.lang) {
         "en" -> "English"
         "de" -> "Deutsch"
         else -> "Voice"
     }
-    val sizeName = if ((currentModelInfo?.approxSizeMB ?: 0) > 100) "Large" else "Small"
-    val isLargeSelected = (currentModelInfo?.approxSizeMB ?: 0) > 100
-    val isInstalled = currentModelInfo != null &&
-            File(context.filesDir, currentModelInfo.folderName).exists() &&
-            File(context.filesDir, currentModelInfo.folderName).listFiles()?.isNotEmpty() == true
+    val sizeName = if ((currentModelInfo?.approxSizeMB ?: 0) > 100) "Accurate" else "Fast"
+
+    val isInstalled by remember(currentModelKey, modelSwitchTrigger) {
+        derivedStateOf {
+            currentModelInfo?.let { info ->
+                val dir = File(context.filesDir, info.folderName)
+                dir.exists() && dir.listFiles()?.isNotEmpty() == true
+            } ?: false
+        }
+    }
+
+    var isDownloading by remember { mutableStateOf(false) }
 
     XenonTheme(
         darkTheme = isDarkTheme,
@@ -404,13 +422,13 @@ fun NoteAudioSheet(
                 selectedLabelId = labelId,
                 onLabelSelected = noteEditingViewModel::setAudioLabelId,
                 onAddNewLabel = onAddNewLabel,
-                onDismiss = { showLabelDialog = false }
-            )
+                onDismiss = { showLabelDialog = false })
         }
 
         val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
-        val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
+        val backgroundColor =
+            if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
 
         Box(
             modifier = Modifier
@@ -434,75 +452,64 @@ fun NoteAudioSheet(
                 ) {
                     Spacer(Modifier.height(68.dp))
 
-                    Button(
-                        onClick = { showModelDialog = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colorScheme.surfaceVariant,
-                            contentColor = colorScheme.onSurfaceVariant
-                        ),
-                        shape = RoundedCornerShape(28.dp)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        FilledTonalButton(
+                            onClick = { showModelDialog = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colorScheme.primaryContainer,
+                                contentColor = colorScheme.onPrimaryContainer
+                            ),
+                            shape = RoundedCornerShape(28.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Mic,
-                                    contentDescription = null,
-                                    tint = colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                    text = "$langName ($sizeName)",
-                                    style = typography.labelLarge,
-                                    color = colorScheme.onSurface
-                                )
-                            }
+                            Text(
+                                text = "$langName ($sizeName)",
+                                style = typography.labelLarge,
+                                textAlign = TextAlign.Center,
+                                color = colorScheme.onSurface
+                            )
+                        }
 
-                            if (isLargeSelected && !isInstalled) {
+                        if (!isInstalled) {
+                            Box(contentAlignment = Alignment.Center) {
                                 FilledIconButton(
                                     onClick = {
-                                        speechRecognitionManager.switchModel(
-                                            modelKey = currentModelKey,
-                                            onSuccess = {
-                                                currentModelKey = currentModelInfo!!.key
-                                                prefsManager.voskModelKey = currentModelInfo.key
-                                                if (recordingState == RecordingState.RECORDING) {
-                                                    if (ActivityCompat.checkSelfPermission(
-                                                            this as Context,
-                                                            RECORD_AUDIO
-                                                        ) != PackageManager.PERMISSION_GRANTED
-                                                    )
-                                                    speechRecognitionManager.restartListening()
+                                        if (!isDownloading) {
+                                            isDownloading = true
+                                            speechRecognitionManager.downloadModel(
+                                                modelKey = currentModelKey,
+                                                onComplete = {
+                                                    isDownloading = false
+                                                    modelSwitchTrigger++ // Trigger UI update → button disappears
+                                                },
+                                                onError = { msg ->
+                                                    isDownloading = false
+                                                    android.util.Log.e("ModelDownload", msg)
                                                 }
-                                            },
-                                            onError = { msg: String ->
-                                                android.util.Log.e("ModelDownload", msg)
-                                            }
-                                        )
-                                        // Prevent dialog open when tapping download
+                                            )
+                                        }
                                     },
                                     shape = CircleShape,
                                     colors = IconButtonDefaults.filledIconButtonColors(
                                         containerColor = colorScheme.secondaryContainer,
                                         contentColor = colorScheme.onSecondaryContainer
                                     ),
-                                    modifier = Modifier.size(40.dp)
+                                    enabled = !isDownloading
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Download,
-                                        contentDescription = "Download large model",
+                                        contentDescription = "Download selected model",
                                         modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                if (isDownloading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(36.dp),
+                                        strokeWidth = 3.dp,
+                                        color = colorScheme.primary
                                     )
                                 }
                             }
@@ -529,8 +536,7 @@ fun NoteAudioSheet(
                                 LinearProgressIndicator(modifier = Modifier.width(240.dp))
                                 Spacer(Modifier.height(16.dp))
                                 Text(
-                                    text = "Loading voice model...",
-                                    style = typography.titleMedium
+                                    text = "Loading voice model...", style = typography.titleMedium
                                 )
                                 Spacer(Modifier.height(8.dp))
                                 Text(
@@ -540,9 +546,11 @@ fun NoteAudioSheet(
                                 )
                             }
                         } else {
-                            val progress = if (isSheetAudioActive && sheetAudioDuration > 0L)
-                                (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(1L)).coerceIn(0f, 1f)
-                            else 0f
+                            val progress =
+                                if (isSheetAudioActive && sheetAudioDuration > 0L) (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(
+                                    1L
+                                )).coerceIn(0f, 1f)
+                                else 0f
 
                             AudioContentDisplay(
                                 selectedAudioViewType = selectedAudioViewType,
@@ -579,7 +587,10 @@ fun NoteAudioSheet(
                         hasUnsavedRecording = !recorder.isPersistentAudio,
                         toolbarHeight = toolbarHeight,
                         onRecordClick = {
-                            if (ContextCompat.checkSelfPermission(context, RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                            if (ContextCompat.checkSelfPermission(
+                                    context, RECORD_AUDIO
+                                ) == PackageManager.PERMISSION_GRANTED
+                            ) {
                                 recorder.startRecording()
                                 if (speechRecognitionManager.isAvailable()) {
                                     speechRecognitionManager.startListening(System.currentTimeMillis())
@@ -608,8 +619,7 @@ fun NoteAudioSheet(
                             speechRecognitionManager.clearTranscript()
                             speechRecognitionManager.cancel()
                             noteEditingViewModel.setAudioTranscriptSegments(emptyList())
-                        }
-                    )
+                        })
                 }
             }
 
@@ -630,7 +640,11 @@ fun NoteAudioSheet(
                 }
 
                 val titleTextStyle = typography.titleLarge.merge(
-                    TextStyle(fontFamily = QuicksandTitleVariable, textAlign = TextAlign.Center, color = colorScheme.onSurface)
+                    TextStyle(
+                        fontFamily = QuicksandTitleVariable,
+                        textAlign = TextAlign.Center,
+                        color = colorScheme.onSurface
+                    )
                 )
 
                 BasicTextField(
@@ -643,7 +657,11 @@ fun NoteAudioSheet(
                     decorationBox = { innerTextField ->
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             if (title.isEmpty()) {
-                                Text("Title", style = titleTextStyle, color = colorScheme.onSurface.copy(alpha = 0.6f))
+                                Text(
+                                    "Title",
+                                    style = titleTextStyle,
+                                    color = colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
                             }
                             innerTextField()
                         }
@@ -658,34 +676,59 @@ fun NoteAudioSheet(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false },
                         items = listOfNotNull(
-                            MenuItem(text = "Label", onClick = { showLabelDialog = true; showMenu = false }, dismissOnClick = true, icon = {
-                                if (isLabeled) Icon(Icons.Rounded.Bookmark, null, tint = labelColor)
-                                else Icon(Icons.Rounded.BookmarkBorder, null)
-                            }),
-                            MenuItem(text = colorMenuItemText, onClick = {
-                                val currentIndex = availableThemes.indexOf(selectedTheme)
-                                val nextIndex = (currentIndex + 1) % availableThemes.size
-                                val newTheme = availableThemes[nextIndex]
-                                noteEditingViewModel.setAudioTheme(newTheme)
-                                colorChangeJob?.cancel()
-                                colorChangeJob = scope.launch {
-                                    colorMenuItemText = newTheme
-                                    isFadingOut = false
-                                    delay(2500)
-                                    isFadingOut = true
-                                    delay(500)
-                                    colorMenuItemText = "Color"
-                                    isFadingOut = false
+                            MenuItem(
+                                text = "Label",
+                                onClick = { showLabelDialog = true; showMenu = false },
+                                dismissOnClick = true,
+                                icon = {
+                                    if (isLabeled) Icon(
+                                        Icons.Rounded.Bookmark, null, tint = labelColor
+                                    )
+                                    else Icon(Icons.Rounded.BookmarkBorder, null)
                                 }
-                            }, dismissOnClick = false, icon = {
-                                Icon(Icons.Rounded.ColorLens, null, tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary)
-                            }, textColor = animatedTextColor),
-                            MenuItem(text = if (isOffline) "Offline note" else "Online note", onClick = {
-                                noteEditingViewModel.setAudioIsOffline(!isOffline)
-                            }, dismissOnClick = false, textColor = if (isOffline) colorScheme.error else null, icon = {
-                                if (isOffline) Icon(Icons.Rounded.CloudOff, null, tint = colorScheme.error)
-                                else Icon(Icons.Rounded.Cloud, null)
-                            })
+                            ),
+                            MenuItem(
+                                text = colorMenuItemText,
+                                onClick = {
+                                    val currentIndex = availableThemes.indexOf(selectedTheme)
+                                    val nextIndex = (currentIndex + 1) % availableThemes.size
+                                    val newTheme = availableThemes[nextIndex]
+                                    noteEditingViewModel.setAudioTheme(newTheme)
+                                    colorChangeJob?.cancel()
+                                    colorChangeJob = scope.launch {
+                                        colorMenuItemText = newTheme
+                                        isFadingOut = false
+                                        delay(2500)
+                                        isFadingOut = true
+                                        delay(500)
+                                        colorMenuItemText = "Color"
+                                        isFadingOut = false
+                                    }
+                                },
+                                dismissOnClick = false,
+                                icon = {
+                                    Icon(
+                                        Icons.Rounded.ColorLens,
+                                        null,
+                                        tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                    )
+                                },
+                                textColor = animatedTextColor
+                            ),
+                            MenuItem(
+                                text = if (isOffline) "Offline note" else "Online note",
+                                onClick = {
+                                    noteEditingViewModel.setAudioIsOffline(!isOffline)
+                                },
+                                dismissOnClick = false,
+                                textColor = if (isOffline) colorScheme.error else null,
+                                icon = {
+                                    if (isOffline) Icon(
+                                        Icons.Rounded.CloudOff, null, tint = colorScheme.error
+                                    )
+                                    else Icon(Icons.Rounded.Cloud, null)
+                                }
+                            )
                         ),
                         hazeState = hazeState
                     )
@@ -705,27 +748,32 @@ fun NoteAudioSheet(
                                 supportingContent = { Text("~${modelInfo.approxSizeMB} MB") },
                                 leadingContent = {
                                     if (modelInfo.key == currentModelKey) {
-                                        Icon(Icons.Rounded.CheckCircle, null, tint = colorScheme.primary)
+                                        Icon(
+                                            Icons.Rounded.CheckCircle,
+                                            null,
+                                            tint = colorScheme.primary
+                                        )
                                     } else {
                                         Icon(Icons.Rounded.RadioButtonUnchecked, null)
                                     }
                                 },
                                 modifier = Modifier.clickable {
+                                    currentModelKey = modelInfo.key
+                                    prefsManager.voskModelKey = modelInfo.key
+                                    modelSwitchTrigger++ // Trigger UI update
+
                                     speechRecognitionManager.switchModel(
                                         modelKey = modelInfo.key,
                                         onSuccess = {
-                                            currentModelKey = modelInfo.key
-                                            prefsManager.voskModelKey = modelInfo.key
                                             if (recordingState == RecordingState.RECORDING) {
                                                 speechRecognitionManager.restartListening()
                                             }
-                                            showModelDialog = false
                                         },
-                                        onError = { msg: String ->
+                                        onError = { msg ->
                                             android.util.Log.e("ModelSwitch", msg)
-                                            showModelDialog = false
                                         }
                                     )
+                                    showModelDialog = false
                                 }
                             )
                         }
@@ -739,7 +787,6 @@ fun NoteAudioSheet(
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -947,8 +994,7 @@ fun AudioContentDisplay(
                 isTranscribing = isTranscribing,
                 currentPartialText = currentPartialText,
                 errorMessage = errorMessage,
-                onCopyTranscript = {}
-            )
+                onCopyTranscript = {})
         }
     }
 }

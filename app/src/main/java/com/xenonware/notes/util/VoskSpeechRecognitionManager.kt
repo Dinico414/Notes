@@ -84,8 +84,7 @@ class VoskSpeechRecognitionManager(
     private var shouldContinue = false
 
     init {
-        // Auto-load default model on creation
-        val defaultKey = "en-small" // or prefsManager.voskModelKey
+        val defaultKey = "en-small"
         switchModel(defaultKey, {}, {})
     }
 
@@ -97,21 +96,129 @@ class VoskSpeechRecognitionManager(
         val info = AVAILABLE_MODELS.find { it.key == modelKey }
             ?: return onError("Unknown model key: $modelKey")
 
+        // Sofort alten Recognizer/Model freigeben
+        model?.close()
+        recognizer?.close()
+        model = null
+        recognizer = null
+
         isModelLoading = true
         errorMessage = null
-        android.util.Log.i(TAG, "Switching to model: ${info.name}")
+        android.util.Log.i(TAG, "Switching to model: ${info.name} (old freed)")
 
         scope.launch {
             val modelDir = File(context.filesDir, info.folderName)
 
-            // First try to extract from assets (for small models)
             if (tryExtractFromAssets(info, modelDir)) {
                 loadModelFromPath(modelDir.absolutePath, onSuccess, onError)
                 return@launch
             }
 
-            // If not in assets, download
-            downloadAndExtractModel(info, modelDir, onSuccess, onError)
+            if (modelDir.exists() && modelDir.listFiles()?.isNotEmpty() == true) {
+                loadModelFromPath(modelDir.absolutePath, onSuccess, onError)
+            } else {
+                isModelLoading = false
+                onError("Model not installed. Use download button.")
+            }
+        }
+    }
+
+    fun downloadModel(
+        modelKey: String,
+        onComplete: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val info = AVAILABLE_MODELS.find { it.key == modelKey }
+            ?: return onError("Unknown model key: $modelKey")
+
+        scope.launch {
+            val modelDir = File(context.filesDir, info.folderName)
+
+            if (modelDir.exists() && modelDir.listFiles()?.isNotEmpty() == true) {
+                loadModelFromPath(modelDir.absolutePath, onComplete, onError)
+                return@launch
+            }
+
+            try {
+                val url = "https://alphacephei.com/vosk/models/${info.zipName}"
+                android.util.Log.i(TAG, "Starting download: $url")
+
+                val request = DownloadManager.Request(Uri.parse(url)).apply {
+                    setTitle("Downloading ${info.name}")
+                    setDescription("~${info.approxSizeMB} MB")
+                    setDestinationInExternalFilesDir(context, null, "vosk_${info.zipName}")
+                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                    setAllowedOverMetered(true)
+                    setAllowedOverRoaming(false)
+                }
+
+                val dm = context.getSystemService<DownloadManager>()!!
+
+                // Download starten und ID holen
+                val downloadId = dm.enqueue(request)
+                android.util.Log.i(TAG, "Download enqueued with ID: $downloadId for $modelKey")
+
+                // Receiver registrieren (nach enqueue, damit ID bekannt ist)
+                val receiver = object : BroadcastReceiver() {
+                    override fun onReceive(ctx: Context?, intent: Intent?) {
+                        val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) ?: -1
+                        if (id == downloadId) {
+                            val query = DownloadManager.Query().setFilterById(id)
+                            dm.query(query)?.use { cursor ->
+                                if (cursor.moveToFirst()) {
+                                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                                    android.util.Log.i(TAG, "Download finished for $modelKey - status: $status")
+
+                                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                                        val uriCol = cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI)
+                                        val uriStr = cursor.getString(uriCol)
+                                        val path = uriStr.removePrefix("file://")
+                                        android.util.Log.i(TAG, "Download successful, extracting: $path")
+                                        extractZipAndLoad(path, modelDir, onComplete, onError)
+                                    } else {
+                                        onError("Download failed (status $status)")
+                                    }
+                                }
+                            }
+                            ctx?.unregisterReceiver(this)
+                        }
+                    }
+                }
+
+                ContextCompat.registerReceiver(
+                    context,
+                    receiver,
+                    IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+                    ContextCompat.RECEIVER_NOT_EXPORTED
+                )
+
+                // Progress-Logging
+                scope.launch {
+                    while (isActive) {
+                        val query = DownloadManager.Query().setFilterById(downloadId)
+                        dm.query(query)?.use { cursor ->
+                            if (cursor.moveToFirst()) {
+                                val bytesDownloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                                val bytesTotal = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                                val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                                val statusText = when (status) {
+                                    DownloadManager.STATUS_PENDING -> "Pending"
+                                    DownloadManager.STATUS_RUNNING -> "Running (${(bytesDownloaded * 100 / bytesTotal.coerceAtLeast(1))}% - ${bytesDownloaded / (1024 * 1024)}MB / ${bytesTotal / (1024 * 1024)}MB)"
+                                    DownloadManager.STATUS_PAUSED -> "Paused"
+                                    DownloadManager.STATUS_SUCCESSFUL -> "Successful"
+                                    DownloadManager.STATUS_FAILED -> "Failed"
+                                    else -> "Unknown ($status)"
+                                }
+                                android.util.Log.d(TAG, "Download progress for $modelKey: $statusText")
+                            }
+                        }
+                        delay(5000)
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Download setup failed for $modelKey", e)
+                onError("Download setup failed: ${e.message}")
+            }
         }
     }
 
@@ -142,66 +249,11 @@ class VoskSpeechRecognitionManager(
         }
     }
 
-    private suspend fun downloadAndExtractModel(
-        info: ModelInfo,
-        targetDir: File,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit,
-    ) = withContext(Dispatchers.IO) {
-        try {
-            val url = "https://alphacephei.com/vosk/models/${info.zipName}"
-            android.util.Log.i(TAG, "Downloading from: $url")
-
-            val request = DownloadManager.Request(Uri.parse(url)).apply {
-                setTitle("Downloading ${info.name}")
-                setDescription("~${info.approxSizeMB} MB")
-                setDestinationInExternalFilesDir(context, null, "vosk_${info.zipName}")
-                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                setAllowedOverMetered(true)
-                setAllowedOverRoaming(false)
-            }
-
-            val dm = context.getSystemService<DownloadManager>()!!
-            val downloadId = dm.enqueue(request)
-
-            val receiver = object : BroadcastReceiver() {
-                override fun onReceive(ctx: Context?, intent: Intent?) {
-                    val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) ?: -1
-                    if (id == downloadId) {
-                        val query = DownloadManager.Query().setFilterById(downloadId)
-                        dm.query(query)?.use { cursor ->
-                            if (cursor.moveToFirst()) {
-                                val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-                                if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                                    val uriCol = cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI)
-                                    val uriStr = cursor.getString(uriCol)
-                                    val path = uriStr.removePrefix("file://")
-                                    extractZipAndLoad(path, targetDir, onSuccess, onError)
-                                } else {
-                                    onError("Download failed (status $status)")
-                                }
-                            }
-                        }
-                        ctx?.unregisterReceiver(this)
-                    }
-                }
-            }
-            ContextCompat.registerReceiver(
-                context,
-                receiver,
-                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-                ContextCompat.RECEIVER_NOT_EXPORTED
-            )
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) { onError("Download setup failed: ${e.message}") }
-        }
-    }
-
     private fun extractZipAndLoad(
         zipPath: String,
         targetDir: File,
         onSuccess: () -> Unit,
-        onError: (String) -> Unit,
+        onError: (String) -> Unit
     ) {
         scope.launch(Dispatchers.IO) {
             try {
@@ -220,10 +272,14 @@ class VoskSpeechRecognitionManager(
                 }
                 File(zipPath).delete()
                 withContext(Dispatchers.Main) {
+                    android.util.Log.i(TAG, "Extraction complete - loading model from $targetDir")
                     loadModelFromPath(targetDir.absolutePath, onSuccess, onError)
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) { onError("Extraction failed: ${e.message}") }
+                withContext(Dispatchers.Main) {
+                    android.util.Log.e(TAG, "Extraction failed", e)
+                    onError("Extraction failed: ${e.message}")
+                }
             }
         }
     }
@@ -232,6 +288,9 @@ class VoskSpeechRecognitionManager(
         try {
             model?.close()
             recognizer?.close()
+            model = null
+            recognizer = null
+
             model = Model(path)
             recognizer = Recognizer(model, sampleRate.toFloat())
             isModelLoading = false
@@ -393,9 +452,17 @@ class VoskSpeechRecognitionManager(
     fun dispose() {
         shouldContinue = false
         cancel()
-        recognizer?.close()
+
         model?.close()
-        recognizer = null
+        recognizer?.close()
         model = null
+        recognizer = null
+
+        audioRecord?.stop()
+        audioRecord?.release()
+        audioRecord = null
+
+        job?.cancel()
+        job = null
     }
 }
