@@ -6,7 +6,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import com.xenonware.notes.data.SharedPreferenceManager
-import com.xenonware.notes.util.calculateBezierControlPoints
+import com.xenonware.notes.util.sketch.calculateBezierControlPoints
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update

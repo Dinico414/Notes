@@ -1,4 +1,4 @@
-package com.xenonware.notes.util
+package com.xenonware.notes.util.sketch
 
 import androidx.compose.ui.geometry.Offset
 import kotlin.math.abs

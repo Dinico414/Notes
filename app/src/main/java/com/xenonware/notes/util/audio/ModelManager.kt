@@ -1,4 +1,4 @@
-package com.xenonware.notes.util
+package com.xenonware.notes.util.audio
 
 data class ModelInfo(
     val key: String,

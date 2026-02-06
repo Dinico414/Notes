@@ -1,4 +1,4 @@
-package com.xenonware.notes.util
+package com.xenonware.notes.util.text
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle

@@ -24,7 +24,7 @@ import com.xenonware.notes.presentation.sign_in.SignInEvent
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
 import com.xenonware.notes.ui.layouts.MainLayout
 import com.xenonware.notes.ui.theme.ScreenEnvironment
-import com.xenonware.notes.util.GlobalAudioPlayer
+import com.xenonware.notes.util.audio.GlobalAudioPlayer
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.NotesViewModel
 import kotlinx.coroutines.launch

@@ -1,10 +1,11 @@
-package com.xenonware.notes.util
+package com.xenonware.notes.util.audio
 
 import android.Manifest
 import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +22,7 @@ import org.vosk.LogLevel
 import org.vosk.Model
 import org.vosk.Recognizer
 import java.io.File
+import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
 data class TranscriptSegment(
@@ -96,7 +98,7 @@ class VoskSpeechRecognitionManager(
 
         isModelLoading = true
         errorMessage = null
-        android.util.Log.i(TAG, "Switching to model: ${info.name} (old freed)")
+        Log.i(TAG, "Switching to model: ${info.name} (old freed)")
 
         scope.launch {
             val modelDir = File(context.filesDir, info.folderName)
@@ -122,7 +124,7 @@ class VoskSpeechRecognitionManager(
             context.assets.open(info.zipName).use { input ->
                 ZipInputStream(input).use { zip ->
                     targetDir.mkdirs()
-                    var entry: java.util.zip.ZipEntry?
+                    var entry: ZipEntry?
                     while (zip.nextEntry.also { entry = it } != null) {
                         val file = File(targetDir, entry!!.name)
                         if (entry.isDirectory) file.mkdirs()
@@ -134,10 +136,10 @@ class VoskSpeechRecognitionManager(
                     }
                 }
             }
-            android.util.Log.i(TAG, "Extracted from assets: ${info.name}")
+            Log.i(TAG, "Extracted from assets: ${info.name}")
             true
         } catch (e: Exception) {
-            android.util.Log.w(TAG, "No asset zip for ${info.zipName}: ${e.message}")
+            Log.w(TAG, "No asset zip for ${info.zipName}: ${e.message}")
             false
         }
     }
@@ -152,13 +154,13 @@ class VoskSpeechRecognitionManager(
             model = Model(path)
             recognizer = Recognizer(model, sampleRate.toFloat())
             isModelLoading = false
-            android.util.Log.i(TAG, "Vosk model loaded successfully: $path")
+            Log.i(TAG, "Vosk model loaded successfully: $path")
             onSuccess()
             onReady?.invoke()
         } catch (e: Exception) {
             isModelLoading = false
             errorMessage = "Failed to load model"
-            android.util.Log.e(TAG, "Model load failed: ${e.message}")
+            Log.e(TAG, "Model load failed: ${e.message}")
             onError("Load failed: ${e.message}")
         }
     }
@@ -212,7 +214,7 @@ class VoskSpeechRecognitionManager(
                     try {
                         recognizer?.acceptWaveForm(buffer, read)
                     } catch (e: Throwable) {
-                        android.util.Log.e(TAG, "acceptWaveForm crashed", e)
+                        Log.e(TAG, "acceptWaveForm crashed", e)
                     }
 
                     try {
@@ -249,7 +251,7 @@ class VoskSpeechRecognitionManager(
                         }
                     } catch (_: Throwable) {}
                 }
-                delay(35)
+                delay(50)
             }
         }
     }
@@ -289,7 +291,7 @@ class VoskSpeechRecognitionManager(
                         }
                     }
                 } catch (e: Throwable) {
-                    android.util.Log.e(TAG, "Final result crash prevented", e)
+                    Log.e(TAG, "Final result crash prevented", e)
                 }
             }
             currentPartialText = ""

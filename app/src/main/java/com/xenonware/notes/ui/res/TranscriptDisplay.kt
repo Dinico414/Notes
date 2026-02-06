@@ -45,8 +45,8 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.xenonware.notes.util.RecordingState
-import com.xenonware.notes.util.TranscriptSegment
+import com.xenonware.notes.util.audio.RecordingState
+import com.xenonware.notes.util.audio.TranscriptSegment
 import kotlinx.coroutines.launch
 
 @Composable

@@ -1,4 +1,4 @@
-package com.xenonware.notes.util
+package com.xenonware.notes.util.sketch
 
 import androidx.compose.ui.geometry.Offset
 import com.xenonware.notes.viewmodel.PathOffset
@@ -77,7 +77,7 @@ object ShapeRecognizer {
         // If we didn't find distinct corners, OR if the corner check failed, check variance.
         val (isCircle, avgRadius) = analyzeCircularity(rawPoints, centroid)
 
-        // If variance is low, it's a circle. 
+        // If variance is low, it's a circle.
         // Note: We accept higher variance if corner count was 0 or >5 (messy blob)
         if (isCircle || corners.size < 3 || corners.size > 5) {
             return generateCircleOrOval(rawPoints, centroid, originalThickness)
@@ -291,7 +291,7 @@ object ShapeRecognizer {
             if (d < minD) { minD = d; p1 = i; p2 = j }
         }
         val newPoints = points.toMutableList()
-        val mp = Offset((points[p1].x + points[p2].x)/2, (points[p1].y + points[p2].y)/2)
+        val mp = Offset((points[p1].x + points[p2].x) / 2, (points[p1].y + points[p2].y) / 2)
         val max = maxOf(p1,p2); val min = minOf(p1,p2)
         newPoints.removeAt(max); newPoints.removeAt(min)
         newPoints.add(min, mp)
@@ -317,8 +317,15 @@ object ShapeRecognizer {
         val list = mutableListOf<PathOffset>()
         val steps = 60
         for (i in 0..steps) {
-            val theta = (i.toFloat()/steps)*2*PI
-            list.add(PathOffset(Offset((center.x + radius*cos(theta)).toFloat(), (center.y + radius*sin(theta)).toFloat()), thickness))
+            val theta = (i.toFloat()/steps)*2* PI
+            list.add(
+                PathOffset(
+                    Offset(
+                        (center.x + radius * cos(theta)).toFloat(),
+                        (center.y + radius * sin(theta)).toFloat()
+                    ), thickness
+                )
+            )
         }
         return list
     }
@@ -328,8 +335,15 @@ object ShapeRecognizer {
         val cx = minX + w/2; val cy = minY + h/2
         val steps = 60
         for (i in 0..steps) {
-            val theta = (i.toFloat()/steps)*2*PI
-            list.add(PathOffset(Offset((cx + (w/2)*cos(theta)).toFloat(), (cy + (h/2)*sin(theta)).toFloat()), thickness))
+            val theta = (i.toFloat()/steps)*2* PI
+            list.add(
+                PathOffset(
+                    Offset(
+                        (cx + (w / 2) * cos(theta)).toFloat(),
+                        (cy + (h / 2) * sin(theta)).toFloat()
+                    ), thickness
+                )
+            )
         }
         return list
     }
@@ -338,7 +352,7 @@ object ShapeRecognizer {
     private fun calculateCentroid(points: List<Offset>): Offset {
         var sx = 0f; var sy = 0f
         points.forEach { sx += it.x; sy += it.y }
-        return Offset(sx/points.size, sy/points.size)
+        return Offset(sx / points.size, sy / points.size)
     }
     private fun getBounds(points: List<Offset>): FloatArray {
         var minX=Float.MAX_VALUE; var maxX=Float.MIN_VALUE; var minY=Float.MAX_VALUE; var maxY=Float.MIN_VALUE
@@ -361,7 +375,14 @@ object ShapeRecognizer {
         val steps = 15
         for(i in 0 until steps) {
             val t = i.toFloat()/steps
-            list.add(PathOffset(Offset(start.x + (end.x-start.x)*t, start.y + (end.y-start.y)*t), thickness))
+            list.add(
+                PathOffset(
+                    Offset(
+                        start.x + (end.x - start.x) * t,
+                        start.y + (end.y - start.y) * t
+                    ), thickness
+                )
+            )
         }
     }
     private fun resample(points: List<Offset>, targetCount: Int): List<Offset> {

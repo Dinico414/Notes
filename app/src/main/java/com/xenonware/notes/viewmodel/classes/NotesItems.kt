@@ -26,11 +26,9 @@ data class NotesItems(
     val labelId: String? = null,
     val audioUrl: String? = null,
     val localAudioId: String? = null,
-    // CRITICAL FIX: Use @PropertyName + var
     @PropertyName("isOffline")
     var isOffline: Boolean = false
 ) {
-    // Keep constructor for backward compatibility
     constructor() : this(
         id = 0,
         title = "",
@@ -43,6 +41,5 @@ data class NotesItems(
         labels = emptyList(),
         isOffline = false
     )
-
     var currentHeader = ""
 }

@@ -19,6 +19,7 @@ import com.xenonware.notes.ui.theme.notePurpleLight
 import com.xenonware.notes.ui.theme.noteRedLight
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowLight
+import com.xenonware.notes.util.audio.loadTranscript
 import com.xenonware.notes.viewmodel.classes.Label
 import com.xenonware.notes.viewmodel.classes.NoteType
 import com.xenonware.notes.viewmodel.classes.NotesItems
@@ -106,6 +107,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         loadLabels()
         loadLayoutSettings()
         applySortingAndFiltering()
+        migrateAllAudioTranscripts()
 
         auth.currentUser?.uid?.let { uid ->
             startRealtimeListenerForFutureChanges(uid)
@@ -401,6 +403,43 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun ensureTranscriptsAreFilled(context: android.content.Context) {
+        val updatedList = _allNotesItems.map { note ->
+            if (note.noteType != NoteType.AUDIO) return@map note
+            if (!note.transcript.isNullOrBlank()) return@map note
+
+            val audioId = note.description ?: return@map note
+            val segments = com.xenonware.notes.util.audio.loadTranscript(context, audioId)
+
+            if (segments.isEmpty()) return@map note
+
+            val joined = segments.joinToString(" ") { it.text.trim() }
+                .takeIf { it.isNotBlank() } ?: return@map note
+
+            note.copy(transcript = joined)
+        }
+
+        if (updatedList != _allNotesItems) {
+            _allNotesItems.clear()
+            _allNotesItems.addAll(updatedList)
+            saveAllNotes()
+            applySortingAndFiltering()
+        }
+    }
+
+    init {
+        loadAllNotes()
+        ensureTranscriptsAreFilled(getApplication<Application>().applicationContext)
+        loadLabels()
+        loadLayoutSettings()
+        applySortingAndFiltering()
+
+        auth.currentUser?.uid?.let { uid ->
+            startRealtimeListenerForFutureChanges(uid)
+            startLabelsRealtimeListener(uid)
+        }
+    }
+
     fun saveAllNotes() {
         prefsManager.notesItems = _allNotesItems.toList()
     }
@@ -575,10 +614,28 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         var notesToDisplay = tempAllNoteItems.toList()
 
         if (searchQuery.value.isNotBlank()) {
+            val query = searchQuery.value
+
             notesToDisplay = notesToDisplay.filter { note ->
-                note.title.contains(searchQuery.value, ignoreCase = true) ||
-                        (note.description?.contains(searchQuery.value, ignoreCase = true) == true) ||
-                        (note.transcript?.contains(searchQuery.value, ignoreCase = true) == true)  // ← NEW
+                // Title always checked
+                val matchesTitle = note.title.contains(query, ignoreCase = true)
+
+                val matchesDescription = note.description?.contains(query, ignoreCase = true) == true
+
+                val matchesTranscript = when {
+                    note.transcript?.isNotBlank() == true -> {
+                        note.transcript.contains(query, ignoreCase = true)
+                    }
+                    note.noteType == NoteType.AUDIO -> {
+                        val audioId = note.description ?: return@filter false
+                        val segments = loadTranscript(getApplication<Application>().applicationContext, audioId)
+                        val joined = segments.joinToString(" ") { it.text.trim() }
+                        joined.contains(query, ignoreCase = true)
+                    }
+                    else -> false
+                }
+
+                matchesTitle || matchesDescription || matchesTranscript
             }
         }
 
@@ -629,6 +686,26 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             sortedNotes.forEach { it.currentHeader = "" }
             _displayedNotesItems.addAll(sortedNotes)
+        }
+    }
+
+    fun migrateAllAudioTranscripts() {
+        val context = getApplication<Application>().applicationContext
+        val updated = _allNotesItems.map { note ->
+            if (note.noteType != NoteType.AUDIO || !note.transcript.isNullOrBlank()) return@map note
+
+            val audioId = note.description ?: return@map note
+            val segments = loadTranscript(context, audioId)
+            val joined = segments.joinToString(" ") { it.text.trim() }.takeIf { it.isNotBlank() }
+
+            note.copy(transcript = joined)
+        }
+
+        if (updated != _allNotesItems) {
+            _allNotesItems.clear()
+            _allNotesItems.addAll(updated)
+            saveAllNotes()
+            applySortingAndFiltering()
         }
     }
 

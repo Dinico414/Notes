@@ -22,7 +22,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.xenonware.notes.util.RecordingState
+import com.xenonware.notes.util.audio.RecordingState
 import java.io.File
 import java.io.IOException
 

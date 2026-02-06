@@ -5,6 +5,7 @@ package com.xenonware.notes.ui.res.sheets
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
@@ -103,13 +104,13 @@ import com.xenonware.notes.ui.theme.notePurpleLight
 import com.xenonware.notes.ui.theme.noteRedLight
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowLight
-import com.xenonware.notes.util.AudioRecorderManager
-import com.xenonware.notes.util.GlobalAudioPlayer
-import com.xenonware.notes.util.RecordingState
-import com.xenonware.notes.util.TranscriptSegment
-import com.xenonware.notes.util.VoskSpeechRecognitionManager
-import com.xenonware.notes.util.loadTranscript
-import com.xenonware.notes.util.saveTranscript
+import com.xenonware.notes.util.audio.AudioRecorderManager
+import com.xenonware.notes.util.audio.GlobalAudioPlayer
+import com.xenonware.notes.util.audio.RecordingState
+import com.xenonware.notes.util.audio.TranscriptSegment
+import com.xenonware.notes.util.audio.VoskSpeechRecognitionManager
+import com.xenonware.notes.util.audio.loadTranscript
+import com.xenonware.notes.util.audio.saveTranscript
 import com.xenonware.notes.viewmodel.NoteEditingViewModel
 import com.xenonware.notes.viewmodel.NotesViewModel
 import com.xenonware.notes.viewmodel.classes.Label
@@ -131,7 +132,7 @@ import java.util.concurrent.TimeUnit
 @OptIn(
     ExperimentalMaterial3Api::class,
     ExperimentalMaterial3ExpressiveApi::class,
-    ExperimentalHazeMaterialsApi::class, ExperimentalHazeMaterialsApi::class
+    ExperimentalHazeMaterialsApi::class
 )
 @Composable
 fun NoteAudioSheet(
@@ -145,7 +146,7 @@ fun NoteAudioSheet(
     allLabels: List<Label>,
     onAddNewLabel: (String) -> Unit,
     noteEditingViewModel: NoteEditingViewModel,
-    notesViewModel: NotesViewModel,  // ← NEW: pass this from parent
+    notesViewModel: NotesViewModel,
     onHasUnsavedAudioChange: (Boolean) -> Unit = {},
     isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false,
@@ -187,8 +188,8 @@ fun NoteAudioSheet(
         VoskSpeechRecognitionManager(context).apply {
             switchModel(
                 modelKey = currentModelKey,
-                onSuccess = { android.util.Log.i("Vosk", "Model ready: $currentModelKey") },
-                onError = { msg -> android.util.Log.e("Vosk", "Model error: $msg") }
+                onSuccess = { Log.i("Vosk", "Model ready: $currentModelKey") },
+                onError = { msg -> Log.e("Vosk", "Model error: $msg") }
             )
             onTranscriptUpdate = { segments ->
                 noteEditingViewModel.setAudioTranscriptSegments(segments)
@@ -333,10 +334,10 @@ fun NoteAudioSheet(
                 player.stopAudio()
                 recorder.markAudioAsPersistent()
 
-                if (amplitudes.isNotEmpty()) saveAmplitudes(context, audioId, amplitudes)
-                if (transcriptSegments.isNotEmpty()) saveTranscript(context, audioId, transcriptSegments)
+                if (amplitudes.isNotEmpty()) saveAmplitudes(context, audioId!!, amplitudes)
+                if (transcriptSegments.isNotEmpty()) saveTranscript(context, audioId!!, transcriptSegments)
 
-                val serializedTranscript = transcriptSegments
+                val joinedTranscript = transcriptSegments
                     .joinToString(" ") { it.text.trim() }
                     .takeIf { it.isNotBlank() }
 
@@ -357,7 +358,7 @@ fun NoteAudioSheet(
                     id = noteId,
                     title = title.trim(),
                     description = audioId,
-                    transcript = serializedTranscript,
+                    transcript = joinedTranscript,
                     noteType = NoteType.AUDIO,
                     color = themeColorMap[selectedTheme],
                     labels = labelId?.let { listOf(it) } ?: emptyList(),
@@ -383,6 +384,7 @@ fun NoteAudioSheet(
             onSaveTriggerConsumed()
         }
     }
+
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->

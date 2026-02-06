@@ -1,4 +1,4 @@
-package com.xenonware.notes.util
+package com.xenonware.notes.util.audio
 
 import android.content.Context
 import kotlinx.serialization.Serializable

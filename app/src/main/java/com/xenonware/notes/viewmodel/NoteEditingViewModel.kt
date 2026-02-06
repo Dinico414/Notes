@@ -2,7 +2,7 @@ package com.xenonware.notes.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.xenonware.notes.ui.res.sheets.ListItem
-import com.xenonware.notes.util.TranscriptSegment
+import com.xenonware.notes.util.audio.TranscriptSegment
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

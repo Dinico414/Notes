@@ -1,4 +1,4 @@
-package com.xenonware.notes.util
+package com.xenonware.notes.util.audio
 
 fun postProcessText(raw: String): String {
     if (raw.isBlank()) return raw.trim()
