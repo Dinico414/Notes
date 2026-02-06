@@ -2,8 +2,17 @@ package com.xenonware.notes.ui.res
 
 import android.content.Context
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.MicOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,23 +36,44 @@ fun WaveformDisplay(
     recordingState: RecordingState
 ) {
     if (amplitudes.isEmpty()) {
-        Box(modifier, Alignment.Center) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.MicOff,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = colorScheme.onSurface.copy(alpha = 0.3f)
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "No waveform available",
+                style = typography.bodyLarge,
+                color = colorScheme.onSurface.copy(alpha = 0.6f),
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(8.dp))
+
             val text = if (recordingState == RecordingState.VIEWING_SAVED_AUDIO) {
-                "No waveform available"
+                ""
             } else {
-                "Start recording..."
+                "Start recording to generate a waveform"
             }
             Text(
                 text = text,
-                style = MaterialTheme.typography.bodyLarge,
+                style = typography.bodySmall,
+                color = colorScheme.onSurface.copy(alpha = 0.4f),
                 textAlign = TextAlign.Center
             )
         }
-        return
     }
 
-    val color = MaterialTheme.colorScheme.primary
-    val inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+    val color = colorScheme.primary
+    val inactiveColor = colorScheme.onSurface.copy(alpha = 0.2f)
     val maxAmplitudeValue = 32767f
 
     Canvas(modifier = modifier) {

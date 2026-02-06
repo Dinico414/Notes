@@ -280,7 +280,6 @@ fun CompactNotes(
         // 8. Audio Note Editor Specific
         // ============================================================================
         var selectedAudioViewType by rememberSaveable { mutableStateOf(AudioViewType.Waveform) }
-        var hasAudioContent by rememberSaveable { mutableStateOf(false) }
 
         // ============================================================================
         // 9. Sketch / Drawing Note Editor Specific
@@ -1790,9 +1789,10 @@ fun CompactNotes(
                         allLabels = allLabels,
                         onAddNewLabel = { viewModel.addLabel(it) },
                         noteEditingViewModel = noteEditingViewModel,
-                        onHasUnsavedAudioChange = { hasAudioContent = it },
+                        onHasUnsavedAudioChange = { },
                         isBlackThemeActive = isBlackedOut,
-                        isCoverModeActive = false
+                        isCoverModeActive = false,
+                        notesViewModel = viewModel
                     )
                 }
 

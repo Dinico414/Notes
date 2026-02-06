@@ -1583,7 +1583,8 @@ fun CoverNotes(
                         noteEditingViewModel = noteEditingViewModel,
                         onHasUnsavedAudioChange = { hasAudioContent = it },
                         isBlackThemeActive = isBlackedOut,
-                        isCoverModeActive = false
+                        isCoverModeActive = false,
+                        notesViewModel = viewModel
                     )
                 }
 

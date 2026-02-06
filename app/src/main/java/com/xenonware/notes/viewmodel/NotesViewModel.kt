@@ -47,7 +47,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _displayedNotesItems = mutableStateListOf<Any>()
     val noteItems: List<Any> get() = _displayedNotesItems
 
-    private var currentNoteId = 1
+    var currentNoteId = 1
 
     private val syncingNoteIds = mutableStateSetOf<Int>()
     private val offlineNoteIds = mutableStateSetOf<Int>()
@@ -79,7 +79,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _showLocalOnly = MutableStateFlow(prefsManager.showLocalOnlyNotes)
     val showLocalOnly: StateFlow<Boolean> = _showLocalOnly.asStateFlow()
-
 
     private val _selectedColors = MutableStateFlow<Set<Long?>>(emptySet())
     val selectedColors: StateFlow<Set<Long?>> = _selectedColors.asStateFlow()
@@ -123,7 +122,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     val note = change.document.toObject(NotesItems::class.java)
                     when (change.type) {
                         DocumentChange.Type.ADDED -> {
-                            // Only add if it's not marked as local-only on this device
                             if (!offlineNoteIds.contains(note.id)) {
                                 if (_allNotesItems.none { it.id == note.id }) {
                                     _allNotesItems.add(0, note.copy(isOffline = false))
@@ -218,7 +216,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         startLabelsRealtimeListener(uid)
         syncLabelsToCloud()
 
-
         viewModelScope.launch {
             _allNotesItems.toList().forEach { note ->
                 if (note.isOffline || note.id in syncingNoteIds) return@forEach
@@ -232,7 +229,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     syncingNoteIds.remove(note.id)
                 } catch (_: Exception) {
                     syncingNoteIds.remove(note.id)
-
                 }
             }
         }
@@ -284,6 +280,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     fun addItem(
         title: String,
         description: String? = null,
+        transcript: String? = null,
         noteType: NoteType = NoteType.TEXT,
         color: Long? = null,
         labels: List<String> = emptyList(),
@@ -296,6 +293,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             id = newId,
             title = title.trim(),
             description = description?.trim()?.takeIf { it.isNotBlank() },
+            transcript = transcript?.trim()?.takeIf { it.isNotBlank() },
             creationTimestamp = System.currentTimeMillis(),
             displayOrder = _allNotesItems.size,
             noteType = noteType,
@@ -322,7 +320,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 }
         }
     }
-
 
     fun updateItem(updatedItem: NotesItems, forceLocal: Boolean = false) {
         val index = _allNotesItems.indexOfFirst { it.id == updatedItem.id }
@@ -437,7 +434,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             in 600 until 840 -> when (_gridColumnCount.value) {
                 3 -> 4; 4 -> 5; else -> 3
             }
-
             else -> when (_gridColumnCount.value) {
                 4 -> 5; 5 -> 6; else -> 4
             }
@@ -492,7 +488,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     firestore.collection("notes").document(it.uid).collection("labels")
                         .document(newLabel.id).set(newLabel).await()
                 } catch (_: Exception) {
-
                 }
             }
         }
@@ -531,6 +526,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
     fun toggleShowLocalOnly() {
         val newValue = !prefsManager.showLocalOnlyNotes
         prefsManager.showLocalOnlyNotes = newValue
@@ -580,9 +576,9 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
         if (searchQuery.value.isNotBlank()) {
             notesToDisplay = notesToDisplay.filter { note ->
-                note.title.contains(
-                    searchQuery.value, ignoreCase = true
-                ) || (note.description?.contains(searchQuery.value, ignoreCase = true) == true)
+                note.title.contains(searchQuery.value, ignoreCase = true) ||
+                        (note.description?.contains(searchQuery.value, ignoreCase = true) == true) ||
+                        (note.transcript?.contains(searchQuery.value, ignoreCase = true) == true)  // ← NEW
             }
         }
 

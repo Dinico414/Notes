@@ -1,28 +1,20 @@
 package com.xenonware.notes.util
 
 import android.Manifest
-import android.app.DownloadManager
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.net.Uri
 import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.core.content.ContextCompat
-import androidx.core.content.getSystemService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.vosk.LibVosk
 import org.vosk.LogLevel
@@ -39,7 +31,6 @@ data class TranscriptSegment(
 
 class VoskSpeechRecognitionManager(
     private val context: Context,
-    private val language: String = "en",
     private val sampleRate: Int = 16000,
 ) {
 
@@ -83,6 +74,8 @@ class VoskSpeechRecognitionManager(
     private var recordingStartTimeMs: Long = 0L
     private var shouldContinue = false
 
+    private var lastPartialUpdateTime = 0L
+
     init {
         val defaultKey = "en-small"
         switchModel(defaultKey, {}, {})
@@ -96,7 +89,6 @@ class VoskSpeechRecognitionManager(
         val info = AVAILABLE_MODELS.find { it.key == modelKey }
             ?: return onError("Unknown model key: $modelKey")
 
-        // Sofort alten Recognizer/Model freigeben
         model?.close()
         recognizer?.close()
         model = null
@@ -123,105 +115,6 @@ class VoskSpeechRecognitionManager(
         }
     }
 
-    fun downloadModel(
-        modelKey: String,
-        onComplete: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        val info = AVAILABLE_MODELS.find { it.key == modelKey }
-            ?: return onError("Unknown model key: $modelKey")
-
-        scope.launch {
-            val modelDir = File(context.filesDir, info.folderName)
-
-            if (modelDir.exists() && modelDir.listFiles()?.isNotEmpty() == true) {
-                loadModelFromPath(modelDir.absolutePath, onComplete, onError)
-                return@launch
-            }
-
-            try {
-                val url = "https://alphacephei.com/vosk/models/${info.zipName}"
-                android.util.Log.i(TAG, "Starting download: $url")
-
-                val request = DownloadManager.Request(Uri.parse(url)).apply {
-                    setTitle("Downloading ${info.name}")
-                    setDescription("~${info.approxSizeMB} MB")
-                    setDestinationInExternalFilesDir(context, null, "vosk_${info.zipName}")
-                    setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                    setAllowedOverMetered(true)
-                    setAllowedOverRoaming(false)
-                }
-
-                val dm = context.getSystemService<DownloadManager>()!!
-
-                // Download starten und ID holen
-                val downloadId = dm.enqueue(request)
-                android.util.Log.i(TAG, "Download enqueued with ID: $downloadId for $modelKey")
-
-                // Receiver registrieren (nach enqueue, damit ID bekannt ist)
-                val receiver = object : BroadcastReceiver() {
-                    override fun onReceive(ctx: Context?, intent: Intent?) {
-                        val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) ?: -1
-                        if (id == downloadId) {
-                            val query = DownloadManager.Query().setFilterById(id)
-                            dm.query(query)?.use { cursor ->
-                                if (cursor.moveToFirst()) {
-                                    val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-                                    android.util.Log.i(TAG, "Download finished for $modelKey - status: $status")
-
-                                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                                        val uriCol = cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_LOCAL_URI)
-                                        val uriStr = cursor.getString(uriCol)
-                                        val path = uriStr.removePrefix("file://")
-                                        android.util.Log.i(TAG, "Download successful, extracting: $path")
-                                        extractZipAndLoad(path, modelDir, onComplete, onError)
-                                    } else {
-                                        onError("Download failed (status $status)")
-                                    }
-                                }
-                            }
-                            ctx?.unregisterReceiver(this)
-                        }
-                    }
-                }
-
-                ContextCompat.registerReceiver(
-                    context,
-                    receiver,
-                    IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-                    ContextCompat.RECEIVER_NOT_EXPORTED
-                )
-
-                // Progress-Logging
-                scope.launch {
-                    while (isActive) {
-                        val query = DownloadManager.Query().setFilterById(downloadId)
-                        dm.query(query)?.use { cursor ->
-                            if (cursor.moveToFirst()) {
-                                val bytesDownloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                                val bytesTotal = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                                val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-                                val statusText = when (status) {
-                                    DownloadManager.STATUS_PENDING -> "Pending"
-                                    DownloadManager.STATUS_RUNNING -> "Running (${(bytesDownloaded * 100 / bytesTotal.coerceAtLeast(1))}% - ${bytesDownloaded / (1024 * 1024)}MB / ${bytesTotal / (1024 * 1024)}MB)"
-                                    DownloadManager.STATUS_PAUSED -> "Paused"
-                                    DownloadManager.STATUS_SUCCESSFUL -> "Successful"
-                                    DownloadManager.STATUS_FAILED -> "Failed"
-                                    else -> "Unknown ($status)"
-                                }
-                                android.util.Log.d(TAG, "Download progress for $modelKey: $statusText")
-                            }
-                        }
-                        delay(5000)
-                    }
-                }
-            } catch (e: Exception) {
-                android.util.Log.e(TAG, "Download setup failed for $modelKey", e)
-                onError("Download setup failed: ${e.message}")
-            }
-        }
-    }
-
     private fun tryExtractFromAssets(info: ModelInfo, targetDir: File): Boolean {
         if (targetDir.exists() && targetDir.listFiles()?.isNotEmpty() == true) return true
 
@@ -232,7 +125,7 @@ class VoskSpeechRecognitionManager(
                     var entry: java.util.zip.ZipEntry?
                     while (zip.nextEntry.also { entry = it } != null) {
                         val file = File(targetDir, entry!!.name)
-                        if (entry!!.isDirectory) file.mkdirs()
+                        if (entry.isDirectory) file.mkdirs()
                         else {
                             file.parentFile?.mkdirs()
                             file.outputStream().use { out -> zip.copyTo(out) }
@@ -246,41 +139,6 @@ class VoskSpeechRecognitionManager(
         } catch (e: Exception) {
             android.util.Log.w(TAG, "No asset zip for ${info.zipName}: ${e.message}")
             false
-        }
-    }
-
-    private fun extractZipAndLoad(
-        zipPath: String,
-        targetDir: File,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        scope.launch(Dispatchers.IO) {
-            try {
-                targetDir.mkdirs()
-                ZipInputStream(java.io.FileInputStream(zipPath)).use { zip ->
-                    var entry: java.util.zip.ZipEntry?
-                    while (zip.nextEntry.also { entry = it } != null) {
-                        val file = File(targetDir, entry!!.name)
-                        if (entry!!.isDirectory) file.mkdirs()
-                        else {
-                            file.parentFile?.mkdirs()
-                            file.outputStream().use { out -> zip.copyTo(out) }
-                        }
-                        zip.closeEntry()
-                    }
-                }
-                File(zipPath).delete()
-                withContext(Dispatchers.Main) {
-                    android.util.Log.i(TAG, "Extraction complete - loading model from $targetDir")
-                    loadModelFromPath(targetDir.absolutePath, onSuccess, onError)
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    android.util.Log.e(TAG, "Extraction failed", e)
-                    onError("Extraction failed: ${e.message}")
-                }
-            }
         }
     }
 
@@ -319,14 +177,18 @@ class VoskSpeechRecognitionManager(
         recordingStartTimeMs = recordingStartTime
         shouldContinue = true
 
-        val minBuffer = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+        val minBuffer = AudioRecord.getMinBufferSize(
+            sampleRate,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT
+        )
 
         audioRecord = AudioRecord(
             MediaRecorder.AudioSource.MIC,
             sampleRate,
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT,
-            minBuffer * 2
+            minBuffer * 4
         )
 
         try {
@@ -340,6 +202,7 @@ class VoskSpeechRecognitionManager(
         isListening = true
         isTranscribing = true
         currentPartialText = ""
+        lastPartialUpdateTime = 0L
 
         job = scope.launch {
             val buffer = ShortArray(BUFFER_SIZE)
@@ -357,7 +220,11 @@ class VoskSpeechRecognitionManager(
                             if (jsonStr.isNotBlank()) {
                                 val json = JSONObject(jsonStr)
                                 val text = json.optString("partial", "").trim()
-                                if (text.isNotBlank()) currentPartialText = text
+                                val currentTime = System.currentTimeMillis()
+                                if (text.isNotBlank() && (currentTime - lastPartialUpdateTime >= 300)) {
+                                    currentPartialText = text
+                                    lastPartialUpdateTime = currentTime
+                                }
                             }
                         }
                     } catch (_: Throwable) {}
@@ -366,21 +233,23 @@ class VoskSpeechRecognitionManager(
                         recognizer?.result?.let { jsonStr ->
                             if (jsonStr.isNotBlank()) {
                                 val json = JSONObject(jsonStr)
-                                val text = json.optString("text", "").trim()
-                                if (text.isNotBlank()) {
+                                val rawText = json.optString("text", "").trim()
+                                if (rawText.isNotBlank()) {
+                                    val cleanedText = postProcessText(rawText)
                                     val segment = TranscriptSegment(
-                                        text = text,
+                                        text = cleanedText,
                                         timestampMillis = System.currentTimeMillis() - recordingStartTimeMs
                                     )
                                     transcriptSegments.add(segment)
                                     onTranscriptUpdate?.invoke(transcriptSegments.toList())
                                     currentPartialText = ""
+                                    lastPartialUpdateTime = 0L
                                 }
                             }
                         }
                     } catch (_: Throwable) {}
                 }
-                delay(5)
+                delay(35)
             }
         }
     }
@@ -406,10 +275,14 @@ class VoskSpeechRecognitionManager(
                     rec.result?.let { jsonStr ->
                         if (jsonStr.isNotBlank()) {
                             val json = JSONObject(jsonStr)
-                            val text = json.optString("text", "").trim()
-                            if (text.isNotBlank() && text != currentPartialText) {
+                            val rawText = json.optString("text", "").trim()
+                            if (rawText.isNotBlank() && rawText != currentPartialText) {
+                                val cleanedText = postProcessText(rawText)
                                 transcriptSegments.add(
-                                    TranscriptSegment(text, System.currentTimeMillis() - recordingStartTimeMs)
+                                    TranscriptSegment(
+                                        text = cleanedText,
+                                        timestampMillis = System.currentTimeMillis() - recordingStartTimeMs
+                                    )
                                 )
                                 onTranscriptUpdate?.invoke(transcriptSegments.toList())
                             }
@@ -420,6 +293,7 @@ class VoskSpeechRecognitionManager(
                 }
             }
             currentPartialText = ""
+            lastPartialUpdateTime = 0L
         }
     }
 

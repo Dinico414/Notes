@@ -91,6 +91,12 @@ class NoteEditingViewModel : ViewModel() {
     private val _audioTranscriptSegments = MutableStateFlow<List<TranscriptSegment>>(emptyList())
     val audioTranscriptSegments: StateFlow<List<TranscriptSegment>> = _audioTranscriptSegments.asStateFlow()
 
+    // NEW: transcript setter for saving to NotesItems
+    fun setAudioTranscriptForSearch(transcriptText: String) {
+        // This can be called from sheet on save
+        // But actually we set it in NotesViewModel
+    }
+
     // ========== SKETCH NOTE STATES ==========
     private val _sketchTitle = MutableStateFlow("")
     val sketchTitle: StateFlow<String> = _sketchTitle.asStateFlow()

@@ -13,6 +13,7 @@ data class NotesItems(
     val id: Int = 0,
     val title: String,
     val description: String? = null,
+    val transcript: String? = null,
     val notificationCount: Int = 0,
     val attachmentCount: Int = 0,
     var listId: String = "",
