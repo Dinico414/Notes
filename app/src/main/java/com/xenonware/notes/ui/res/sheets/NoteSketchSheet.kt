@@ -65,6 +65,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -85,6 +86,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -93,14 +95,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
-import com.xenonware.notes.util.sketch.NoteCanvas
 import com.xenonware.notes.R
-import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.res.LabelSelectionDialog
 import com.xenonware.notes.ui.res.MenuItem
+import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
+import com.xenonware.notes.util.sketch.NoteCanvas
 import com.xenonware.notes.viewmodel.CanvasViewModel
 import com.xenonware.notes.viewmodel.DrawingAction
 import com.xenonware.notes.viewmodel.NotesViewModel
@@ -203,20 +205,50 @@ fun NoteSketchSheet(
     val pathState = viewModel.pathState.collectAsState()
     val isHandwritingMode by viewModel.isHandwritingMode.collectAsState()
 
+
+    val currentColorScheme = colorScheme
+    val currentExtendedColorScheme = extendedMaterialColorScheme
+
+    val themeDrawColors by remember(currentColorScheme, isDarkTheme) {
+        derivedStateOf {
+            listOf(
+                currentColorScheme.onSurface,           // ← MUST be first
+                currentExtendedColorScheme.drawRed,
+                currentExtendedColorScheme.drawOrange,
+                currentExtendedColorScheme.drawYellow,
+                currentExtendedColorScheme.drawGreen,
+                currentExtendedColorScheme.drawTurquoise,
+                currentExtendedColorScheme.drawBlue,
+                currentExtendedColorScheme.drawPurple
+            )
+        }
+    }
+
+// Very early – force set colors on first composition
+    LaunchedEffect(Unit) {
+        viewModel.setDrawColors(themeDrawColors)
+    }
+
+// Also react to any later changes (theme switch, etc.)
+    LaunchedEffect(themeDrawColors) {
+        viewModel.setDrawColors(themeDrawColors)
+    }
+
     LaunchedEffect(Unit) { // Check for developer options
         isDeveloperOptionsEnabled = Settings.Global.getInt(
             context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0
         ) == 1
     }
+    val message = stringResource(R.string.navigate_back_description)
 
     BackHandler {
         val currentTime = System.currentTimeMillis()
-        if (currentTime - lastBackPressTime < 2000L) { // 2 seconds
+        if (currentTime - lastBackPressTime < 2000L) {
             onDismiss()
         } else {
             scope.launch {
                 snackbarHostState.showSnackbar(
-                    message = context.getString(R.string.navigate_back_description),
+                    message = message,
                     duration = SnackbarDuration.Short
                 )
             }
@@ -363,6 +395,7 @@ fun NoteSketchSheet(
                         style = HazeMaterials.ultraThin(hazeThinColor),
                     ), verticalAlignment = Alignment.CenterVertically
             ) {
+                val message = stringResource(R.string.open_navigation_menu)
                 IconButton(
                     onClick = {
                         val currentTime = System.currentTimeMillis()
@@ -371,7 +404,7 @@ fun NoteSketchSheet(
                         } else {
                             scope.launch {
                                 snackbarHostState.showSnackbar(
-                                    message = context.getString(R.string.open_navigation_menu),
+                                    message = message,
                                     duration = SnackbarDuration.Short
                                 )
                             }

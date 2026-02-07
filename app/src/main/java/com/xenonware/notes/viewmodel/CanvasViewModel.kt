@@ -19,7 +19,7 @@ data class DrawingState(
 
 data class CurrentPathState(
     val path: PathData? = null,
-    val color: Color,
+    val color: Color = Color.Transparent,   // ← changed: no hard-coded color here
     val isEraser: Boolean = false,
     val usePressure: Boolean = true,
     val strokeWidth: Float = 10f
@@ -62,7 +62,7 @@ sealed interface DrawingAction {
 class CanvasViewModel(application: Application) : AndroidViewModel(application) {
     private val prefManager = SharedPreferenceManager(application.applicationContext)
 
-    private val _currentPathState = MutableStateFlow(CurrentPathState(color = Color.Black))
+    private val _currentPathState = MutableStateFlow(CurrentPathState())
     val currentPathState = _currentPathState.asStateFlow()
 
     private val _pathState = MutableStateFlow(DrawingState())
@@ -92,24 +92,49 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         val oldColors = drawColors
         drawColors = colors
 
-        if (oldColors != null && oldColors != colors) {
-            val colorMap = oldColors.zip(colors).toMap()
+        if (colors.isEmpty()) return
+
+        val primaryColor = colors.getOrElse(0) { Color.Black }  // fallback only
+
+        // First initialization – very important!
+        if (oldColors == null) {
+            _currentPathState.update { it.copy(color = primaryColor) }
+            return
+        }
+
+        // Theme / palette change
+        if (oldColors.size == colors.size) {
+            val oldColorToIndex = oldColors.withIndex()
+                .associate { (idx, c) -> c to idx }
+
             _pathState.update { drawingState ->
                 val updatedPaths = drawingState.paths.map { pathData ->
-                    colorMap[pathData.color]?.let { newColor ->
-                        pathData.copy(color = newColor)
-                    } ?: pathData
+                    val oldIndex = oldColorToIndex[pathData.color]
+                    if (oldIndex != null && oldIndex < colors.size) {
+                        pathData.copy(color = colors[oldIndex])
+                    } else {
+                        // Most important fallback: use current primary color
+                        pathData.copy(color = primaryColor)
+                    }
                 }
                 drawingState.copy(paths = updatedPaths)
             }
 
-            _currentPathState.update { currentPathState ->
-                colorMap[currentPathState.color]?.let {
-                    currentPathState.copy(color = it)
-                } ?: currentPathState
+            _currentPathState.update { current ->
+                val oldIndex = oldColorToIndex[current.color]
+                val newColor = if (oldIndex != null && oldIndex < colors.size) {
+                    colors[oldIndex]
+                } else {
+                    primaryColor
+                }
+                current.copy(color = newColor)
             }
-        } else if (oldColors == null && colors.isNotEmpty()) {
-            _currentPathState.update { it.copy(color = colors.first()) }
+        } else {
+            // Size changed → reset to primary
+            _pathState.update { state ->
+                state.copy(paths = state.paths.map { it.copy(color = primaryColor) })
+            }
+            _currentPathState.update { it.copy(color = primaryColor) }
         }
     }
 
@@ -136,42 +161,21 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
             is DrawingAction.EnableGrid -> onEnableGrid(action.enabled)
             is DrawingAction.ToggleHandwritingMode -> onToggleHandwritingMode(action.enabled)
             is DrawingAction.UpdateTool -> onUpdateTool(action.isEraser, action.usePressure, action.strokeWidth, action.strokeColor)
-            // HANDLE NEW ACTION
             is DrawingAction.SnapToShape -> onSnapToShape(action.newPath)
         }
     }
 
-    private fun onSnapToShape(newPathPoints: List<PathOffset>) {
-        // Recalculate control points for smooth rendering of the new shape
-        recalculateControlPoints(newPathPoints)
-
-        _currentPathState.update { state ->
-            state.path?.let { currentPath ->
-                state.copy(
-                    path = currentPath.copy(path = newPathPoints)
-                )
-            } ?: state
-        }
-    }
-
-    private fun onUpdateTool(isEraser: Boolean, usePressure: Boolean, strokeWidth: Float, strokeColor: Color) {
-        _currentPathState.update {
-            it.copy(
-                isEraser = isEraser,
-                usePressure = usePressure,
-                strokeWidth = strokeWidth,
-                color = if(isEraser) Color.Transparent else strokeColor
-            )
-        }
-    }
-
     private fun onNewPathStart() {
+        // Very important: always use the current primary color (index 0) when starting
+        val primary = drawColors?.getOrNull(0) ?: Color.Black   // fallback only
+
         _currentPathState.update {
             it.copy(
                 isEraser = false,
+                color = primary,   // ← enforced here
                 path = PathData(
                     id = System.currentTimeMillis().toString(),
-                    color = it.color,
+                    color = primary,   // ← enforced here too
                     path = emptyList()
                 )
             )
@@ -191,9 +195,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun getSmoothness(): Float {
-        return smoothness
-    }
+    fun getSmoothness(): Float = smoothness
 
     private fun updateControlPoints(path: List<PathOffset>, new: PathOffset) {
         val i = path.lastIndex
@@ -203,8 +205,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
             )
             path[i].controlPoint1 = controlPts.first
             path[i].controlPoint2 = controlPts.second
-        }
-        else if (path.size == 2) {
+        } else if (path.size == 2) {
             val controlPts = calculateBezierControlPoints(
                 path[i - 1].offset, path[i - 1].offset, path[i].offset, new.offset, smoothness
             )
@@ -221,19 +222,12 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun recalculateControlPoints(path: List<PathOffset>) {
-        // Simple recalculation for all points
         if (path.isEmpty()) return
         for (i in 2 until path.size) {
-            // Use a simpler window logic or reuse updateControlPoints logic
-            // Here we just ensure the data structure is valid.
-            // For a perfect shape (circle/rect), bezier points are usually calculated differently,
-            // but reusing the smoothing alg allows it to fit the existing render pipeline.
-            val prev = path[i-1]
+            val prev = path[i - 1]
             val curr = path[i]
-            // (Omitted full loop for brevity, reliant on existing draw loop logic)
+            // (logic omitted – same as original)
         }
-        // Note: For perfect shapes generated by ShapeRecognizer, we might not even need smoothing
-        // if the resolution (steps) is high enough.
     }
 
     private fun distancePointToLineSegment(
@@ -247,14 +241,14 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         val t = ((point.x - segmentStart.x) * (segmentEnd.x - segmentStart.x) +
                 (point.y - segmentStart.y) * (segmentEnd.y - segmentStart.y)) / l2
 
-        return if (t < 0) {
-            (point - segmentStart).getDistance()
-        } else if (t > 1) {
-            (point - segmentEnd).getDistance()
-        } else {
-            val projectionX = segmentStart.x + t * (segmentEnd.x - segmentStart.x)
-            val projectionY = segmentStart.y + t * (segmentEnd.y - segmentStart.y)
-            (point - Offset(projectionX, projectionY)).getDistance()
+        return when {
+            t < 0 -> (point - segmentStart).getDistance()
+            t > 1 -> (point - segmentEnd).getDistance()
+            else -> {
+                val projX = segmentStart.x + t * (segmentEnd.x - segmentStart.x)
+                val projY = segmentStart.y + t * (segmentEnd.y - segmentStart.y)
+                (point - Offset(projX, projY)).getDistance()
+            }
         }
     }
 
@@ -272,8 +266,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
 
         if (path.isNotEmpty()) {
             val last = path.last()
-            if (abs(last.offset.x - offset.x) + abs(last.offset.y - offset.y) < 0.1)
-                return
+            if (abs(last.x - offset.x) + abs(last.y - offset.y) < 0.1f) return
         }
 
         val po = PathOffset(offset, thickness)
@@ -296,16 +289,8 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         val currentPathData = currentPathState.value.path ?: return
-        _currentPathState.update {
-            it.copy(
-                path = null
-            )
-        }
-        _pathState.update {
-            it.copy(
-                paths = it.paths + currentPathData
-            )
-        }
+        _currentPathState.update { it.copy(path = null) }
+        _pathState.update { it.copy(paths = it.paths + currentPathData) }
         saveStateForUndoRedo()
     }
 
@@ -315,18 +300,12 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         }
         val thickness = currentPathState.value.strokeWidth
         val eraserRadius = thickness / 2
-        val updatedPaths = _pathState.value.paths.filterNot { existingPath ->
-            existingPath.path.windowed(2, 1).any { (p1, p2) ->
-                val distance = distancePointToLineSegment(
-                    point = offset,
-                    segmentStart = p1.offset,
-                    segmentEnd = p2.offset
-                )
-                val segmentThickness = (p1.thickness + p2.thickness) / 2
-                distance <= eraserRadius + (segmentThickness / 2)
-            } || existingPath.path.any { pathOffset ->
-                val distance = (pathOffset.offset - offset).getDistance()
-                distance <= eraserRadius + (pathOffset.thickness / 2)
+        val updatedPaths = _pathState.value.paths.filterNot { path ->
+            path.path.windowed(2, 1).any { (p1, p2) ->
+                distancePointToLineSegment(offset, p1.offset, p2.offset) <=
+                        eraserRadius + (p1.thickness + p2.thickness) / 2
+            } || path.path.any { p ->
+                (p.offset - offset).getDistance() <= eraserRadius + p.thickness / 2
             }
         }
         _pathState.update { it.copy(paths = updatedPaths) }
@@ -337,7 +316,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         steps: Int = 100,
     ) {
         onAction(DrawingAction.NewPathStart)
-        for (step in 0..steps - 1) {
+        for (step in 0 until steps) {
             onAction(DrawingAction.Draw(f(step), 3f))
         }
         onAction(DrawingAction.PathEnd)
@@ -378,6 +357,27 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         if (_undoRedoPointer < _undoRedoHistory.lastIndex) {
             _undoRedoPointer++
             _pathState.update { it.copy(paths = _undoRedoHistory[_undoRedoPointer]) }
+        }
+    }
+
+    private fun onSnapToShape(newPathPoints: List<PathOffset>) {
+        recalculateControlPoints(newPathPoints)
+
+        _currentPathState.update { state ->
+            state.path?.let { current ->
+                state.copy(path = current.copy(path = newPathPoints))
+            } ?: state
+        }
+    }
+
+    private fun onUpdateTool(isEraser: Boolean, usePressure: Boolean, strokeWidth: Float, strokeColor: Color) {
+        _currentPathState.update {
+            it.copy(
+                isEraser = isEraser,
+                usePressure = usePressure,
+                strokeWidth = strokeWidth,
+                color = if (isEraser) Color.Transparent else strokeColor
+            )
         }
     }
 }
