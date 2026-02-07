@@ -19,7 +19,7 @@ data class DrawingState(
 
 data class CurrentPathState(
     val path: PathData? = null,
-    val color: Color = Color.Transparent,   // ← changed: no hard-coded color here
+    val color: Color = Color.Transparent,
     val isEraser: Boolean = false,
     val usePressure: Boolean = true,
     val strokeWidth: Float = 10f
@@ -55,7 +55,6 @@ sealed interface DrawingAction {
     data class EnableGrid(val enabled: Boolean) : DrawingAction
     data class ToggleHandwritingMode(val enabled: Boolean) : DrawingAction
     data class UpdateTool(val isEraser: Boolean, val usePressure: Boolean, val strokeWidth: Float, val strokeColor: Color) : DrawingAction
-    // NEW ACTION
     data class SnapToShape(val newPath: List<PathOffset>) : DrawingAction
 }
 
@@ -94,47 +93,39 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
 
         if (colors.isEmpty()) return
 
-        val primaryColor = colors.getOrElse(0) { Color.Black }  // fallback only
+        val primary = colors.getOrElse(0) { Color.Black }
 
-        // First initialization – very important!
         if (oldColors == null) {
-            _currentPathState.update { it.copy(color = primaryColor) }
+            _currentPathState.update { it.copy(color = primary) }
             return
         }
 
-        // Theme / palette change
         if (oldColors.size == colors.size) {
-            val oldColorToIndex = oldColors.withIndex()
-                .associate { (idx, c) -> c to idx }
+            val oldToIndex = oldColors.withIndex().associate { (i, c) -> c to i }
 
-            _pathState.update { drawingState ->
-                val updatedPaths = drawingState.paths.map { pathData ->
-                    val oldIndex = oldColorToIndex[pathData.color]
-                    if (oldIndex != null && oldIndex < colors.size) {
-                        pathData.copy(color = colors[oldIndex])
-                    } else {
-                        // Most important fallback: use current primary color
-                        pathData.copy(color = primaryColor)
+            _pathState.update { st ->
+                st.copy(
+                    paths = st.paths.map { p ->
+                        val idx = oldToIndex[p.color]
+                        if (idx != null && idx < colors.size) {
+                            p.copy(color = colors[idx])
+                        } else {
+                            p.copy(color = primary)
+                        }
                     }
-                }
-                drawingState.copy(paths = updatedPaths)
+                )
             }
 
-            _currentPathState.update { current ->
-                val oldIndex = oldColorToIndex[current.color]
-                val newColor = if (oldIndex != null && oldIndex < colors.size) {
-                    colors[oldIndex]
-                } else {
-                    primaryColor
-                }
-                current.copy(color = newColor)
+            _currentPathState.update { cur ->
+                val idx = oldToIndex[cur.color]
+                val newColor = if (idx != null && idx < colors.size) colors[idx] else primary
+                cur.copy(color = newColor)
             }
         } else {
-            // Size changed → reset to primary
-            _pathState.update { state ->
-                state.copy(paths = state.paths.map { it.copy(color = primaryColor) })
+            _pathState.update { st ->
+                st.copy(paths = st.paths.map { it.copy(color = primary) })
             }
-            _currentPathState.update { it.copy(color = primaryColor) }
+            _currentPathState.update { it.copy(color = primary) }
         }
     }
 
@@ -166,18 +157,10 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun onNewPathStart() {
-        // Very important: always use the current primary color (index 0) when starting
-        val primary = drawColors?.getOrNull(0) ?: Color.Black   // fallback only
-
         _currentPathState.update {
             it.copy(
                 isEraser = false,
-                color = primary,   // ← enforced here
-                path = PathData(
-                    id = System.currentTimeMillis().toString(),
-                    color = primary,   // ← enforced here too
-                    path = emptyList()
-                )
+                path = null   // delay until first Draw
             )
         }
     }
@@ -224,9 +207,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     private fun recalculateControlPoints(path: List<PathOffset>) {
         if (path.isEmpty()) return
         for (i in 2 until path.size) {
-            val prev = path[i - 1]
-            val curr = path[i]
-            // (logic omitted – same as original)
+            // (minimal – same as original)
         }
     }
 
@@ -245,9 +226,9 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
             t < 0 -> (point - segmentStart).getDistance()
             t > 1 -> (point - segmentEnd).getDistance()
             else -> {
-                val projX = segmentStart.x + t * (segmentEnd.x - segmentStart.x)
-                val projY = segmentStart.y + t * (segmentEnd.y - segmentStart.y)
-                (point - Offset(projX, projY)).getDistance()
+                val px = segmentStart.x + t * (segmentEnd.x - segmentStart.x)
+                val py = segmentStart.y + t * (segmentEnd.y - segmentStart.y)
+                (point - Offset(px, py)).getDistance()
             }
         }
     }
@@ -255,10 +236,19 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     private fun Float.square() = this * this
 
     private fun onDraw(offset: Offset, pressure: Float) {
-        val thickness = if (currentPathState.value.usePressure) {
-            pressure * currentPathState.value.strokeWidth
-        } else {
-            currentPathState.value.strokeWidth
+        val current = currentPathState.value
+
+        if (current.path == null) {
+            val primary = drawColors?.getOrNull(0) ?: Color.Black
+            val colorToUse = current.color.takeIf { it != Color.Transparent } ?: primary
+
+            val newPath = PathData(
+                id = System.currentTimeMillis().toString(),
+                color = colorToUse,
+                path = emptyList()
+            )
+
+            _currentPathState.update { it.copy(path = newPath) }
         }
 
         val currentPathData = currentPathState.value.path ?: return
@@ -269,14 +259,13 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
             if (abs(last.x - offset.x) + abs(last.y - offset.y) < 0.1f) return
         }
 
+        val thickness = if (current.usePressure) pressure * current.strokeWidth else current.strokeWidth
         val po = PathOffset(offset, thickness)
         updateControlPoints(path, po)
 
         _currentPathState.update {
             it.copy(
-                path = currentPathData.copy(
-                    path = path + po
-                )
+                path = currentPathData.copy(path = path + po)
             )
         }
     }
@@ -299,26 +288,21 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
             _currentPathState.update { it.copy(isEraser = true) }
         }
         val thickness = currentPathState.value.strokeWidth
-        val eraserRadius = thickness / 2
+        val eraserRadius = thickness / 2f
         val updatedPaths = _pathState.value.paths.filterNot { path ->
-            path.path.windowed(2, 1).any { (p1, p2) ->
-                distancePointToLineSegment(offset, p1.offset, p2.offset) <=
-                        eraserRadius + (p1.thickness + p2.thickness) / 2
+            path.path.windowed(2, 1).any { (a, b) ->
+                distancePointToLineSegment(offset, a.offset, b.offset) <=
+                        eraserRadius + (a.thickness + b.thickness) / 2f
             } || path.path.any { p ->
-                (p.offset - offset).getDistance() <= eraserRadius + p.thickness / 2
+                (p.offset - offset).getDistance() <= eraserRadius + p.thickness / 2f
             }
         }
         _pathState.update { it.copy(paths = updatedPaths) }
     }
 
-    fun drawFunction(
-        f: (step: Int) -> Offset,
-        steps: Int = 100,
-    ) {
+    fun drawFunction(f: (Int) -> Offset, steps: Int = 100) {
         onAction(DrawingAction.NewPathStart)
-        for (step in 0 until steps) {
-            onAction(DrawingAction.Draw(f(step), 3f))
-        }
+        repeat(steps) { i -> onAction(DrawingAction.Draw(f(i), 3f)) }
         onAction(DrawingAction.PathEnd)
     }
 
@@ -362,11 +346,8 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun onSnapToShape(newPathPoints: List<PathOffset>) {
         recalculateControlPoints(newPathPoints)
-
-        _currentPathState.update { state ->
-            state.path?.let { current ->
-                state.copy(path = current.copy(path = newPathPoints))
-            } ?: state
+        _currentPathState.update { st ->
+            st.path?.let { p -> st.copy(path = p.copy(path = newPathPoints)) } ?: st
         }
     }
 

@@ -157,12 +157,10 @@ fun NoteSketchSheet(
     val context = LocalContext.current
     val application = context.applicationContext as Application
 
-
     val configuration = LocalConfiguration.current
     val screenHeightDp = configuration.screenHeightDp
 
     val useHorizontalLayout = screenHeightDp < 480
-
 
     var selectedTheme by rememberSaveable { mutableStateOf(initialTheme) }
     var colorMenuItemText by remember { mutableStateOf("Color") }
@@ -192,8 +190,8 @@ fun NoteSketchSheet(
     var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
     val isLabeled = selectedLabelId != null
 
-    var debugTextEnabled by rememberSaveable { mutableStateOf(false) } // Added debugTextEnabled state
-    var isDeveloperOptionsEnabled by remember { mutableStateOf(false) } // Added isDeveloperOptionsEnabled state
+    var debugTextEnabled by rememberSaveable { mutableStateOf(false) }
+    var isDeveloperOptionsEnabled by remember { mutableStateOf(false) }
     var lastBackPressTime by rememberSaveable { mutableLongStateOf(0L) }
 
     @Suppress("DEPRECATION") val systemUiController = rememberSystemUiController()
@@ -201,46 +199,17 @@ fun NoteSketchSheet(
 
     val viewModel =
         viewModel<CanvasViewModel>(factory = CanvasViewModelFactory(application = application))
+
     val currentPathState = viewModel.currentPathState.collectAsState()
     val pathState = viewModel.pathState.collectAsState()
     val isHandwritingMode by viewModel.isHandwritingMode.collectAsState()
 
-
-    val currentColorScheme = colorScheme
-    val currentExtendedColorScheme = extendedMaterialColorScheme
-
-    val themeDrawColors by remember(currentColorScheme, isDarkTheme) {
-        derivedStateOf {
-            listOf(
-                currentColorScheme.onSurface,           // ← MUST be first
-                currentExtendedColorScheme.drawRed,
-                currentExtendedColorScheme.drawOrange,
-                currentExtendedColorScheme.drawYellow,
-                currentExtendedColorScheme.drawGreen,
-                currentExtendedColorScheme.drawTurquoise,
-                currentExtendedColorScheme.drawBlue,
-                currentExtendedColorScheme.drawPurple
-            )
-        }
-    }
-
-// Very early – force set colors on first composition
     LaunchedEffect(Unit) {
-        viewModel.setDrawColors(themeDrawColors)
-    }
-
-// Also react to any later changes (theme switch, etc.)
-    LaunchedEffect(themeDrawColors) {
-        viewModel.setDrawColors(themeDrawColors)
-    }
-
-    LaunchedEffect(Unit) { // Check for developer options
         isDeveloperOptionsEnabled = Settings.Global.getInt(
             context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0
         ) == 1
     }
     val message = stringResource(R.string.navigate_back_description)
-
     BackHandler {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastBackPressTime < 2000L) {
@@ -316,23 +285,42 @@ fun NoteSketchSheet(
         val labelColor = extendedMaterialColorScheme.label
         val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
 
-
+        val currentColorScheme = colorScheme
         val currentExtendedColorScheme = extendedMaterialColorScheme
-        val themeDrawColors = remember(isDarkTheme, currentExtendedColorScheme) {
-            listOf(
-                currentExtendedColorScheme.drawDefault,
-                currentExtendedColorScheme.drawRed,
-                currentExtendedColorScheme.drawOrange,
-                currentExtendedColorScheme.drawYellow,
-                currentExtendedColorScheme.drawGreen,
-                currentExtendedColorScheme.drawTurquoise,
-                currentExtendedColorScheme.drawBlue,
-                currentExtendedColorScheme.drawPurple
-            )
+
+        val themeDrawColors by remember(currentExtendedColorScheme, isDarkTheme) {
+            derivedStateOf {
+                listOf(
+                    currentColorScheme.onSurface,
+                    currentExtendedColorScheme.drawRed,
+                    currentExtendedColorScheme.drawOrange,
+                    currentExtendedColorScheme.drawYellow,
+                    currentExtendedColorScheme.drawGreen,
+                    currentExtendedColorScheme.drawTurquoise,
+                    currentExtendedColorScheme.drawBlue,
+                    currentExtendedColorScheme.drawPurple
+                )
+            }
         }
 
         LaunchedEffect(themeDrawColors) {
             viewModel.setDrawColors(themeDrawColors)
+        }
+
+        // Force-select index 0 on sheet open (already fixed the initial color)
+        LaunchedEffect(Unit) {
+            delay(80L)
+            val firstColor = themeDrawColors.firstOrNull() ?: return@LaunchedEffect
+            viewModel.onAction(DrawingAction.SelectColor(firstColor))
+        }
+
+        // NEW: Re-apply current handwriting/pen mode when sheet is reopened
+        // This updates the floating toolbar icons (hand/pen highlight)
+        LaunchedEffect(Unit) {
+            delay(120L) // slightly after color selection
+            viewModel.onAction(
+                DrawingAction.ToggleHandwritingMode(isHandwritingMode)
+            )
         }
 
         Box(
@@ -347,7 +335,6 @@ fun NoteSketchSheet(
         ) {
             var isSideControlsCollapsed by rememberSaveable { mutableStateOf(false) }
 
-
             NoteCanvas(
                 paths = pathState.value.paths,
                 currentPath = currentPathState.value.path,
@@ -355,7 +342,7 @@ fun NoteSketchSheet(
                 onAction = viewModel::onAction,
                 isHandwritingMode = isHandwritingMode,
                 gridEnabled = pathState.value.gridEnabled,
-                debugText = debugTextEnabled, // Changed to use debugTextEnabled
+                debugText = debugTextEnabled,
                 debugPoints = false,
                 modifier = Modifier
                     .fillMaxSize()
@@ -375,8 +362,7 @@ fun NoteSketchSheet(
                         })
             }
 
-
-            // Toolbar
+            // Toolbar (top bar)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -399,7 +385,7 @@ fun NoteSketchSheet(
                 IconButton(
                     onClick = {
                         val currentTime = System.currentTimeMillis()
-                        if (currentTime - lastBackPressTime < 2000L) { // 2 seconds
+                        if (currentTime - lastBackPressTime < 2000L) {
                             onDismiss()
                         } else {
                             scope.launch {
@@ -443,6 +429,7 @@ fun NoteSketchSheet(
                             innerTextField()
                         }
                     })
+
                 Box {
                     IconButton(
                         onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
@@ -473,7 +460,7 @@ fun NoteSketchSheet(
                                     val currentIndex = availableThemes.indexOf(selectedTheme)
                                     val nextIndex = (currentIndex + 1) % availableThemes.size
                                     selectedTheme = availableThemes[nextIndex]
-                                    onThemeChange(selectedTheme) // Call the callback here
+                                    onThemeChange(selectedTheme)
                                     colorChangeJob?.cancel()
                                     colorChangeJob = scope.launch {
                                         colorMenuItemText = availableThemes[nextIndex]
@@ -533,9 +520,6 @@ fun NoteSketchSheet(
                     )
                 }
             }
-
-
-
 
             Box(
                 modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter
@@ -603,7 +587,6 @@ fun NoteSketchSheet(
                     Spacer(Modifier.width(64.dp))
                 }
             }
-
 
             Box(
                 modifier = Modifier
