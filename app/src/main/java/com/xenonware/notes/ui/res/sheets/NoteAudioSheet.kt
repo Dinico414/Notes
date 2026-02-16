@@ -20,10 +20,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -150,6 +152,7 @@ fun NoteAudioSheet(
     onHasUnsavedAudioChange: (Boolean) -> Unit = {},
     isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false,
+    backProgress: Float = 0f,
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
@@ -446,6 +449,19 @@ fun NoteAudioSheet(
 
         val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
+
+        val safeDrawingPaddingBottom = if (WindowInsets.ime.asPaddingValues().calculateBottomPadding() > WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()) {
+            WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+        } else {
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
+        }
+
+        val safeDrawingPaddingTop = WindowInsets.safeDrawing.only(WindowInsetsSides.Top).asPaddingValues().calculateTopPadding()
+
+        val topPadding = 4.dp + safeDrawingPaddingTop - safeDrawingPaddingTop * backProgress
+        val animatedTopPadding = if (topPadding < 16.dp) 16.dp else topPadding
+
+        val bottomPadding = safeDrawingPaddingBottom + toolbarHeight + 16.dp
         val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
 
         Box(
@@ -457,12 +473,10 @@ fun NoteAudioSheet(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = 4.dp)
+                    .padding(top = animatedTopPadding, bottom = bottomPadding)
                     .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
                     .hazeSource(hazeState)
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical))
                     .padding(horizontal = 20.dp)
-                    .padding(bottom = toolbarHeight + 8.dp)
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     Spacer(Modifier.height(68.dp))
@@ -754,9 +768,8 @@ fun NoteAudioSheet(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                     .padding(horizontal = 16.dp)
-                    .padding(top = 4.dp)
+                    .padding(top = animatedTopPadding)
                     .clip(RoundedCornerShape(100f))
                     .background(colorScheme.surfaceDim)
                     .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)),

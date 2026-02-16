@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
@@ -150,7 +151,8 @@ fun NoteSketchSheet(
     editingNoteId: Int?,
     notesViewModel: NotesViewModel,
     isBlackThemeActive: Boolean = false,
-    isCoverModeActive: Boolean = false
+    isCoverModeActive: Boolean = false,
+    backProgress: Float = 0f,
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
@@ -303,6 +305,11 @@ fun NoteSketchSheet(
             }
         }
 
+        val safeDrawingPaddingTop = WindowInsets.safeDrawing.only(WindowInsetsSides.Top).asPaddingValues().calculateTopPadding()
+
+        val topPadding = 4.dp + safeDrawingPaddingTop - safeDrawingPaddingTop * backProgress
+        val animatedTopPadding = if (topPadding < 16.dp) 16.dp else topPadding
+
         LaunchedEffect(themeDrawColors) {
             viewModel.setDrawColors(themeDrawColors)
         }
@@ -367,13 +374,8 @@ fun NoteSketchSheet(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            WindowInsetsSides.Top
-                        )
-                    )
                     .padding(horizontal = 16.dp)
-                    .padding(top = 4.dp)
+                    .padding(top = animatedTopPadding)
                     .clip(RoundedCornerShape(100f))
                     .background(colorScheme.surfaceDim)
                     .hazeEffect(

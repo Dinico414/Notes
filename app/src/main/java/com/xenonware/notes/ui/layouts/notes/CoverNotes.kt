@@ -5,6 +5,7 @@ package com.xenonware.notes.ui.layouts.notes
 import android.annotation.SuppressLint
 import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -21,6 +22,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -81,6 +83,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
@@ -108,6 +111,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -178,6 +182,7 @@ import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -198,6 +203,7 @@ fun CoverNotes(
         // 1. Device, Screen & Layout Configuration
         // ============================================================================
         val deviceConfig = LocalDeviceConfig.current
+        var backProgress by remember { mutableFloatStateOf(0f) }
         val context = LocalContext.current
 
         val density = LocalDensity.current
@@ -1348,333 +1354,387 @@ fun CoverNotes(
                     }
                 )
 
-                AnimatedVisibility(
-                    visible = showTextNoteCard,
-                    enter = slideInVertically(initialOffsetY = { it }),
-                    exit = slideOutVertically(targetOffsetY = { it })
-                ) {
-                    BackHandler {
-                        viewModel.hideTextCard()
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
-                        resetNoteState()
-                    }
-
-                    NoteTextSheet(
-                        onDismiss = {
-                            viewModel.hideTextCard()
-                            isSearchActive = false
-                            viewModel.setSearchQuery("")
-                            resetNoteState()
-                        },
-                        onSave = { title, description, theme, labelId, isOffline ->
-                            // same save logic as Compact
-                            if (title.isBlank() && description.isBlank()) {
-                                viewModel.hideTextCard()
-                                resetNoteState()
-                                return@NoteTextSheet
-                            }
-
-                            val colorLong = themeColorMap[theme]?.toLong()
-
-                            if (editingNoteId != null) {
-                                val existingNote = viewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }
-                                if (existingNote != null) {
-                                    val updatedNote = existingNote.copy(
-                                        title = title.trim(),
-                                        description = description.takeIf { it.isNotBlank() },
-                                        color = colorLong,
-                                        labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                        isOffline = isOffline
-                                    )
-                                    viewModel.updateItem(updatedNote, forceLocal = isOffline)
-                                } else {
-                                    viewModel.addItem(
-                                        title = title.trim(),
-                                        description = description.takeIf { it.isNotBlank() },
-                                        noteType = NoteType.TEXT,
-                                        color = colorLong,
-                                        labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                        forceLocal = isOffline
-                                    )
-                                }
-                            } else {
-                                viewModel.addItem(
-                                    title = title.trim(),
-                                    description = description.takeIf { it.isNotBlank() },
-                                    noteType = NoteType.TEXT,
-                                    color = colorLong,
-                                    labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                    forceLocal = isOffline
-                                )
-                            }
-
-                            viewModel.hideTextCard()
-                            isSearchActive = false
-                            viewModel.setSearchQuery("")
-                            resetNoteState()
-                        },
-                        saveTrigger = saveTrigger,
-                        onSaveTriggerConsumed = { saveTrigger = false },
-                        editorFontSize = editorFontSize,
-                        toolbarHeight = 72.dp,
-                        allLabels = allLabels,
-                        onAddNewLabel = { viewModel.addLabel(it) },
-                        isBlackThemeActive = isBlackedOut,
-                        isCoverModeActive = true,  // forced true for cover
-                        noteEditingViewModel = noteEditingViewModel
-                    )
-                }
-
-                // The other three AnimatedVisibility blocks (List, Audio, Sketch) follow the exact same pattern:
-                // - same BackHandler logic
-                // - same onDismiss / onSave logic
-                // - same parameters
-                // - only difference: isCoverModeActive = true and isBlackThemeActive = true
-
-                AnimatedVisibility(
-                    visible = showListNoteCard,
-                    enter = slideInVertically(initialOffsetY = { it }),
-                    exit = slideOutVertically(targetOffsetY = { it })
-                ) {
-                    BackHandler {
-                        viewModel.hideListCard()
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
-                        resetNoteState()
-                    }
-
-                    NoteListSheet(
-                        onDismiss = {
-                            viewModel.hideListCard()
-                            isSearchActive = false
-                            viewModel.setSearchQuery("")
-                            resetNoteState()
-                        },
-                        onSave = { title, items, theme, labelId, isOffline ->
-                            val nonEmptyItems = items.filter { it.text.isNotBlank() }
-                            val description = nonEmptyItems.joinToString("\n") {
-                                "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
-                            }
-
-                            if (title.isBlank() && description.isBlank()) {
-                                viewModel.hideListCard()
-                                resetNoteState()
-                                return@NoteListSheet
-                            }
-
-                            val colorLong = themeColorMap[theme]?.toLong()
-
-                            if (editingNoteId != null) {
-                                val existingNote = viewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }
-                                existingNote?.let { it ->
-                                    val updatedNote = it.copy(
-                                        title = title.trim(),
-                                        description = description.takeIf { it.isNotBlank() },
-                                        color = colorLong,
-                                        labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                        isOffline = isOffline
-                                    )
-                                    viewModel.updateItem(updatedNote, forceLocal = isOffline)
-                                }
-                            } else {
-                                viewModel.addItem(
-                                    title = title.trim(),
-                                    description = description.takeIf { it.isNotBlank() },
-                                    noteType = NoteType.LIST,
-                                    color = colorLong,
-                                    labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                    forceLocal = isOffline
-                                )
-                            }
-
-                            viewModel.hideListCard()
-                            isSearchActive = false
-                            viewModel.setSearchQuery("")
-                            resetNoteState()
-                        },
-                        toolbarHeight = 72.dp,
-                        saveTrigger = saveTrigger,
-                        onSaveTriggerConsumed = { saveTrigger = false },
-                        addItemTrigger = addListItemTrigger,
-                        onAddItemTriggerConsumed = { addListItemTrigger = false },
-                        editorFontSize = listEditorFontSize,
-                        allLabels = allLabels,
-                        onAddNewLabel = { viewModel.addLabel(it) },
-                        noteEditingViewModel = noteEditingViewModel,
-                        isBlackThemeActive = isBlackedOut,
-                        isCoverModeActive = true
-                    )
-                }
-
-                AnimatedVisibility(
-                    visible = showAudioNoteCard,
-                    enter = slideInVertically(initialOffsetY = { it }),
-                    exit = slideOutVertically(targetOffsetY = { it })
-                ) {
-                    LaunchedEffect(showAudioNoteCard) {
-                        if (!showAudioNoteCard) {
-                            GlobalAudioPlayer.getInstance().stopAudio()
+                PredictiveBackHandler(enabled = isAnyNoteSheetOpen) { progressFlow ->
+                    try {
+                        progressFlow.collect { event ->
+                            backProgress = event.progress
                         }
-                    }
-                    BackHandler {
+                        viewModel.hideTextCard()
+                        viewModel.hideListCard()
                         viewModel.hideAudioCard()
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
-                        resetNoteState()
-                    }
-                    val context = LocalContext.current
-                    NoteAudioSheet(
-                        onDismiss = {
-                            viewModel.hideAudioCard()
-                            isSearchActive = false
-                            viewModel.setSearchQuery("")
-                            resetNoteState()
-                        },
-                        onSave = { title, uniqueAudioId, theme, labelId, isOffline ->
-                            if (title.isBlank() && uniqueAudioId.isBlank()) {
-                                viewModel.hideAudioCard()
-                                resetNoteState()
-                                return@NoteAudioSheet
-                            }
-
-                            val colorLong = themeColorMap[theme]?.toLong()
-
-                            if (editingNoteId != null) {
-                                val existingNote =
-                                    viewModel.noteItems.filterIsInstance<NotesItems>()
-                                        .find { it.id == editingNoteId }
-
-                                existingNote?.let {
-                                    val updatedNote = it.copy(
-                                        title = title.trim(),
-                                        description = uniqueAudioId.takeIf { it -> it.isNotBlank() },
-                                        color = colorLong,
-                                        labels = labelId?.let { it -> listOf(it) } ?: emptyList(),
-                                        isOffline = isOffline)
-                                    viewModel.updateItem(updatedNote, forceLocal = isOffline)
-                                }
-                            } else {
-                                viewModel.addItem(
-                                    title = title.trim(),
-                                    description = uniqueAudioId.takeIf { it.isNotBlank() },
-                                    noteType = NoteType.AUDIO,
-                                    color = colorLong,
-                                    labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                    forceLocal = isOffline)
-                            }
-
-                            viewModel.hideAudioCard()
-                            isSearchActive = false
-                            viewModel.setSearchQuery("")
-                            resetNoteState()
-                        },
-                        toolbarHeight = 72.dp,
-                        saveTrigger = saveTrigger,
-                        onSaveTriggerConsumed = { saveTrigger = false },
-                        selectedAudioViewType = selectedAudioViewType,
-                        initialAudioFilePath = descriptionState.let { uniqueId ->
-                            File(
-                                context.filesDir, "$uniqueId.mp3"
-                            ).takeIf { it.exists() }?.absolutePath
-                        },
-                        allLabels = allLabels,
-                        onAddNewLabel = { viewModel.addLabel(it) },
-                        noteEditingViewModel = noteEditingViewModel,
-                        onHasUnsavedAudioChange = { hasAudioContent = it },
-                        isBlackThemeActive = isBlackedOut,
-                        isCoverModeActive = false,
-                        notesViewModel = viewModel
-                    )
-                }
-
-                AnimatedVisibility(
-                    visible = showSketchNoteCard,
-                    enter = slideInVertically(initialOffsetY = { it }),
-                    exit = slideOutVertically(targetOffsetY = { it })
-                ) {
-                    BackHandler {
                         viewModel.hideSketchCard()
                         isSearchActive = false
                         viewModel.setSearchQuery("")
                         resetNoteState()
+                    } catch (_: CancellationException) {
+                        backProgress = 0f
                     }
+                }
 
-                    NoteSketchSheet(
-                        sketchTitle = titleState,
-                        onSketchTitleChange = { titleState = it },
-                        onDismiss = {
-                            viewModel.hideSketchCard()
-                            isSearchActive = false
-                            viewModel.setSearchQuery("")
-                            resetNoteState()
-                        },
-                        initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
-                        onThemeChange = { newThemeName -> editingNoteColor = themeColorMap[newThemeName] },
-                        onSave = { title, theme, labelId, isOffline ->
-                            if (title.isBlank()) {
-                                viewModel.hideSketchCard()
-                                resetNoteState()
-                                return@NoteSketchSheet
-                            }
+                LaunchedEffect(isAnyNoteSheetOpen) {
+                    if (!isAnyNoteSheetOpen) {
+                        delay(200)
+                        backProgress = 0f
+                    }
+                }
 
-                            val colorLong = themeColorMap[theme]?.toLong()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    val scrimAlpha = 0.6f * (1f - backProgress / 2)
+                    AnimatedVisibility(
+                        visible = isAnyNoteSheetOpen,
+                        enter = fadeIn(tween(300)),
+                        exit = fadeOut(tween(300))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(colorScheme.scrim.copy(alpha = scrimAlpha))
+                                .combinedClickable(
+                                    onClick = {
+                                        viewModel.hideTextCard()
+                                        viewModel.hideListCard()
+                                        viewModel.hideAudioCard()
+                                        viewModel.hideSketchCard()
+                                    },
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() })
+                        )
+                    }
+                    AnimatedVisibility(
+                        visible = isAnyNoteSheetOpen,
+                        enter = slideInVertically(initialOffsetY = { it }),
+                        exit = slideOutVertically(
+                            targetOffsetY = { it },
+                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                        )
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    translationY = backProgress * (size.height * 0.2f)
+                                    val exponentialProgress =
+                                        kotlin.math.sqrt(backProgress.toDouble()).toFloat()
+                                    val radius = (exponentialProgress * 40).dp
+                                    shape = RoundedCornerShape((radius))
+                                    clip = true
+                                },
+                            color = if (isBlackedOut) Color.Black else colorScheme.surfaceContainer,
+                        ) {
 
-                            if (editingNoteId != null) {
-                                val existingNote = viewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }
-                                existingNote?.let { it ->
-                                    val updatedNote = it.copy(
-                                        title = title.trim(),
-                                        color = colorLong,
-                                        labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                        isOffline = isOffline
-                                    )
-                                    viewModel.updateItem(updatedNote, forceLocal = isOffline)
+                            LaunchedEffect(showAudioNoteCard) {
+                                if (!showAudioNoteCard) {
+                                    GlobalAudioPlayer.getInstance().stopAudio()
                                 }
-                            } else {
-                                viewModel.addItem(
-                                    title = title.trim(),
-                                    description = null,
-                                    noteType = NoteType.SKETCH,
-                                    color = colorLong,
-                                    labels = labelId?.let { listOf(it) } ?: emptyList(),
-                                    forceLocal = isOffline
-                                )
                             }
+                            when {
+                                showTextNoteCard -> {
+                                    NoteTextSheet(
+                                        onDismiss = {
+                                            viewModel.hideTextCard()
+                                            isSearchActive = false
+                                            viewModel.setSearchQuery("")
+                                            resetNoteState()
+                                        },
 
-                            viewModel.hideSketchCard()
-                            isSearchActive = false
-                            viewModel.setSearchQuery("")
-                            resetNoteState()
-                        },
-                        saveTrigger = saveTrigger,
-                        onSaveTriggerConsumed = { saveTrigger = false },
-                        isEraserMode = isEraserMode,
-                        usePressure = usePressure,
-                        strokeWidth = currentSketchSize,
-                        strokeColor = currentSketchColor,
-                        showColorPicker = showColorPicker,
-                        onColorPickerDismiss = { showColorPicker = false },
-                        onColorSelected = { color ->
-                            currentSketchColor = color
-                            showColorPicker = false
-                        },
-                        showPenSizePicker = showSketchSizePopup,
-                        onPenSizePickerDismiss = { showSketchSizePopup = false },
-                        onPenSizeSelected = { size ->
-                            currentSketchSize = size
-                            showSketchSizePopup = false
-                        },
-                        snackbarHostState = snackbarHostState,
-                        allLabels = allLabels,
-                        initialSelectedLabelId = selectedLabelId,
-                        onLabelSelected = { selectedLabelId = it },
-                        onAddNewLabel = { viewModel.addLabel(it) },
-                        isBlackThemeActive = isBlackedOut,
-                        isCoverModeActive = true,
-                        editingNoteId = editingNoteId,
-                        notesViewModel = viewModel,
-                    )
+                                        onSave = { title, description, theme, labelId, isOffline ->
+                                            if (title.isBlank() && description.isBlank()) {
+                                                viewModel.hideTextCard()
+                                                resetNoteState()
+                                                return@NoteTextSheet
+                                            }
+
+                                            val colorLong = themeColorMap[theme]?.toLong()
+
+                                            if (editingNoteId != null) {
+                                                val existingNote =
+                                                    viewModel.noteItems.filterIsInstance<NotesItems>()
+                                                        .find { it.id == editingNoteId }
+
+                                                if (existingNote != null) {
+                                                    val updatedNote =
+                                                        existingNote.copy(
+                                                            title = title.trim(),
+                                                            description = description.takeIf { it.isNotBlank() },
+                                                            color = colorLong,
+                                                            labels = labelId?.let { listOf(it) }
+                                                                ?: emptyList(),
+                                                            isOffline = isOffline)
+                                                    viewModel.updateItem(
+                                                        updatedNote, forceLocal = isOffline
+                                                    )
+                                                } else {
+                                                    viewModel.addItem(
+                                                        title = title.trim(),
+                                                        description = description.takeIf { it.isNotBlank() },
+                                                        noteType = NoteType.TEXT,
+                                                        color = colorLong,
+                                                        labels = labelId?.let { listOf(it) }
+                                                            ?: emptyList(),
+                                                        forceLocal = isOffline)
+                                                }
+                                            } else {
+                                                viewModel.addItem(
+                                                    title = title.trim(),
+                                                    description = description.takeIf { it.isNotBlank() },
+                                                    noteType = NoteType.TEXT,
+                                                    color = colorLong,
+                                                    labels = labelId?.let { listOf(it) }
+                                                        ?: emptyList(),
+                                                    forceLocal = isOffline)
+                                            }
+
+                                            viewModel.hideTextCard()
+                                            isSearchActive = false
+                                            viewModel.setSearchQuery("")
+                                            resetNoteState()
+                                        },
+                                        saveTrigger = saveTrigger,
+                                        onSaveTriggerConsumed = { saveTrigger = false },
+                                        editorFontSize = editorFontSize,
+                                        toolbarHeight = 72.dp,
+
+                                        allLabels = allLabels,
+                                        onAddNewLabel = { viewModel.addLabel(it) },
+                                        isBlackThemeActive = isBlackedOut,
+                                        isCoverModeActive = false,
+                                        noteEditingViewModel = noteEditingViewModel,
+                                        backProgress = backProgress
+                                    )
+                                }
+
+                                showListNoteCard -> {
+                                    NoteListSheet(
+                                        onDismiss = {
+                                            viewModel.hideListCard()
+                                            isSearchActive = false
+                                            viewModel.setSearchQuery("")
+                                            resetNoteState()
+                                        },
+                                        onSave = { title, items, theme, labelId, isOffline ->
+                                            val nonEmptyItems =
+                                                items.filter { it.text.isNotBlank() }
+                                            val description = nonEmptyItems.joinToString("\n") {
+                                                "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
+                                            }
+
+                                            if (title.isBlank() && description.isBlank()) {
+                                                viewModel.hideListCard()
+                                                resetNoteState()
+                                                return@NoteListSheet
+                                            }
+
+                                            val colorLong = themeColorMap[theme]?.toLong()
+
+                                            if (editingNoteId != null) {
+                                                val existingNote =
+                                                    viewModel.noteItems.filterIsInstance<NotesItems>()
+                                                        .find { it.id == editingNoteId }
+
+                                                existingNote?.let {
+                                                    val updatedNote = it.copy(
+                                                        title = title.trim(),
+                                                        description = description.takeIf { it -> it.isNotBlank() },
+                                                        color = colorLong,
+                                                        labels = labelId?.let { it -> listOf(it) }
+                                                            ?: emptyList(),
+                                                        isOffline = isOffline)
+                                                    viewModel.updateItem(
+                                                        updatedNote, forceLocal = isOffline
+                                                    )
+                                                }
+                                            } else {
+                                                viewModel.addItem(
+                                                    title = title.trim(),
+                                                    description = description.takeIf { it.isNotBlank() },
+                                                    noteType = NoteType.LIST,
+                                                    color = colorLong,
+                                                    labels = labelId?.let { listOf(it) }
+                                                        ?: emptyList(),
+                                                    forceLocal = isOffline)
+                                            }
+
+                                            viewModel.hideListCard()
+                                            isSearchActive = false
+                                            viewModel.setSearchQuery("")
+                                            resetNoteState()
+                                        },
+                                        toolbarHeight = 72.dp,
+                                        saveTrigger = saveTrigger,
+                                        onSaveTriggerConsumed = { saveTrigger = false },
+                                        addItemTrigger = addListItemTrigger,
+                                        onAddItemTriggerConsumed = { },
+                                        editorFontSize = listEditorFontSize,
+                                        allLabels = allLabels,
+                                        onAddNewLabel = { viewModel.addLabel(it) },
+                                        isBlackThemeActive = isBlackedOut,
+                                        isCoverModeActive = false,
+                                        noteEditingViewModel = noteEditingViewModel,
+                                        backProgress = backProgress
+                                    )
+                                }
+
+
+                                showAudioNoteCard -> {
+
+                                    val context = LocalContext.current
+                                    NoteAudioSheet(
+                                        onDismiss = {
+                                            viewModel.hideAudioCard()
+                                            isSearchActive = false
+                                            viewModel.setSearchQuery("")
+                                            resetNoteState()
+                                        },
+                                        onSave = { title, uniqueAudioId, theme, labelId, isOffline ->
+                                            if (title.isBlank() && uniqueAudioId.isBlank()) {
+                                                viewModel.hideAudioCard()
+                                                resetNoteState()
+                                                return@NoteAudioSheet
+                                            }
+
+                                            val colorLong = themeColorMap[theme]?.toLong()
+
+                                            if (editingNoteId != null) {
+                                                val existingNote =
+                                                    viewModel.noteItems.filterIsInstance<NotesItems>()
+                                                        .find { it.id == editingNoteId }
+
+                                                existingNote?.let {
+                                                    val updatedNote = it.copy(
+                                                        title = title.trim(),
+                                                        description = uniqueAudioId.takeIf { it -> it.isNotBlank() },
+                                                        color = colorLong,
+                                                        labels = labelId?.let { it -> listOf(it) }
+                                                            ?: emptyList(),
+                                                        isOffline = isOffline)
+                                                    viewModel.updateItem(
+                                                        updatedNote, forceLocal = isOffline
+                                                    )
+                                                }
+                                            } else {
+                                                viewModel.addItem(
+                                                    title = title.trim(),
+                                                    description = uniqueAudioId.takeIf { it.isNotBlank() },
+                                                    noteType = NoteType.AUDIO,
+                                                    color = colorLong,
+                                                    labels = labelId?.let { listOf(it) }
+                                                        ?: emptyList(),
+                                                    forceLocal = isOffline)
+                                            }
+
+                                            viewModel.hideAudioCard()
+                                            isSearchActive = false
+                                            viewModel.setSearchQuery("")
+                                            resetNoteState()
+                                        },
+                                        toolbarHeight = 72.dp,
+                                        saveTrigger = saveTrigger,
+                                        onSaveTriggerConsumed = { saveTrigger = false },
+                                        selectedAudioViewType = selectedAudioViewType,
+                                        initialAudioFilePath = descriptionState.let { uniqueId ->
+                                            File(
+                                                context.filesDir, "$uniqueId.mp3"
+                                            ).takeIf { it.exists() }?.absolutePath
+                                        },
+                                        allLabels = allLabels,
+                                        onAddNewLabel = { viewModel.addLabel(it) },
+                                        noteEditingViewModel = noteEditingViewModel,
+                                        onHasUnsavedAudioChange = { },
+                                        isBlackThemeActive = isBlackedOut,
+                                        isCoverModeActive = false,
+                                        notesViewModel = viewModel,
+                                        backProgress = backProgress
+                                    )
+                                }
+
+                                showSketchNoteCard -> {
+                                    NoteSketchSheet(
+                                        sketchTitle = titleState,
+                                        onSketchTitleChange = { titleState = it },
+                                        onDismiss = {
+                                            viewModel.hideSketchCard()
+                                            isSearchActive = false
+                                            viewModel.setSearchQuery("")
+                                            resetNoteState()
+                                        },
+                                        initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
+                                        onThemeChange = { newThemeName ->
+                                            editingNoteColor = themeColorMap[newThemeName]
+                                        },
+                                        onSave = { title, theme, labelId, isOffline ->
+                                            if (title.isBlank()) {
+                                                viewModel.hideSketchCard()
+                                                resetNoteState()
+                                                return@NoteSketchSheet
+                                            }
+
+                                            val colorLong = themeColorMap[theme]?.toLong()
+
+                                            if (editingNoteId != null) {
+                                                val existingNote =
+                                                    viewModel.noteItems.filterIsInstance<NotesItems>()
+                                                        .find { it.id == editingNoteId }
+
+                                                existingNote?.let { it ->
+                                                    val updatedNote = it.copy(
+                                                        title = title.trim(),
+                                                        color = colorLong,
+                                                        labels = labelId?.let { it -> listOf(it) }
+                                                            ?: emptyList(),
+                                                        isOffline = isOffline)
+                                                    viewModel.updateItem(
+                                                        updatedNote, forceLocal = isOffline
+                                                    )
+                                                }
+                                            } else {
+                                                viewModel.addItem(
+                                                    title = title.trim(),
+                                                    description = null,
+                                                    noteType = NoteType.SKETCH,
+                                                    color = colorLong,
+                                                    labels = labelId?.let { listOf(it) }
+                                                        ?: emptyList(),
+                                                    forceLocal = isOffline)
+                                            }
+
+                                            viewModel.hideSketchCard()
+                                            isSearchActive = false
+                                            viewModel.setSearchQuery("")
+                                            resetNoteState()
+                                        },
+                                        saveTrigger = saveTrigger,
+                                        onSaveTriggerConsumed = { saveTrigger = false },
+                                        isEraserMode = isEraserMode,
+                                        usePressure = usePressure,
+                                        strokeWidth = currentSketchSize,
+                                        strokeColor = currentSketchColor,
+                                        showColorPicker = showColorPicker,
+                                        onColorPickerDismiss = { showColorPicker = false },
+                                        onColorSelected = { color ->
+                                            currentSketchColor = color
+                                            showColorPicker = false
+                                        },
+                                        showPenSizePicker = showSketchSizePopup,
+                                        onPenSizePickerDismiss = { showSketchSizePopup = false },
+                                        onPenSizeSelected = { size ->
+                                            currentSketchSize = size
+                                            showSketchSizePopup = false
+                                        },
+                                        snackbarHostState = snackbarHostState,
+                                        allLabels = allLabels,
+                                        initialSelectedLabelId = selectedLabelId,
+                                        onLabelSelected = { selectedLabelId = it },
+                                        onAddNewLabel = { viewModel.addLabel(it) },
+                                        isBlackThemeActive = isBlackedOut,
+                                        isCoverModeActive = false,
+                                        editingNoteId = editingNoteId,
+                                        notesViewModel = viewModel,
+                                        backProgress = backProgress
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
