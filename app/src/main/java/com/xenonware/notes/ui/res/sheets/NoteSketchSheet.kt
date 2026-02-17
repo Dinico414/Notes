@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
@@ -86,6 +88,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -304,11 +307,18 @@ fun NoteSketchSheet(
                 )
             }
         }
+        val layoutDirection = LocalLayoutDirection.current
 
         val safeDrawingPaddingTop = WindowInsets.safeDrawing.only(WindowInsetsSides.Top).asPaddingValues().calculateTopPadding()
 
         val topPadding = 4.dp + safeDrawingPaddingTop - safeDrawingPaddingTop * backProgress
         val animatedTopPadding = if (topPadding < 16.dp) 16.dp else topPadding
+
+        val safeDrawingPaddingStart = WindowInsets.safeDrawing.only(WindowInsetsSides.Start).asPaddingValues().calculateStartPadding(layoutDirection)
+        val safeDrawingPaddingEnd = WindowInsets.safeDrawing.only(WindowInsetsSides.End).asPaddingValues().calculateEndPadding(layoutDirection)
+
+        val adaptivePaddingStart = if (safeDrawingPaddingStart <= 16.dp) 16.dp-safeDrawingPaddingStart else safeDrawingPaddingStart
+        val adaptivePaddingEnd = if (safeDrawingPaddingEnd <= 16.dp) 16.dp-safeDrawingPaddingEnd else safeDrawingPaddingEnd
 
         LaunchedEffect(themeDrawColors) {
             viewModel.setDrawColors(themeDrawColors)
@@ -334,11 +344,8 @@ fun NoteSketchSheet(
             modifier = Modifier
                 .fillMaxSize()
                 .background(backgroundColor)
-                .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(
-                        WindowInsetsSides.Horizontal
-                    )
-                )
+                .padding(start = adaptivePaddingStart, end = adaptivePaddingEnd)
+
         ) {
             var isSideControlsCollapsed by rememberSaveable { mutableStateOf(false) }
 
@@ -374,7 +381,6 @@ fun NoteSketchSheet(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
                     .padding(top = animatedTopPadding)
                     .clip(RoundedCornerShape(100f))
                     .background(colorScheme.surfaceDim)
@@ -594,7 +600,7 @@ fun NoteSketchSheet(
                 modifier = Modifier
                     .align(if (useHorizontalLayout) Alignment.TopEnd else Alignment.CenterEnd)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical))
-                    .padding(top = 68.dp, bottom = 68.dp, end = 16.dp)
+                    .padding(top = 68.dp, bottom = 68.dp)
                     .wrapContentHeight(),
                 contentAlignment = Alignment.Center
             ) {

@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,7 +34,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -81,6 +82,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -450,6 +452,8 @@ fun NoteAudioSheet(
         val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
 
+        val layoutDirection = LocalLayoutDirection.current
+
         val safeDrawingPaddingBottom = if (WindowInsets.ime.asPaddingValues().calculateBottomPadding() > WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()) {
             WindowInsets.ime.asPaddingValues().calculateBottomPadding()
         } else {
@@ -464,11 +468,17 @@ fun NoteAudioSheet(
         val bottomPadding = safeDrawingPaddingBottom + toolbarHeight + 16.dp
         val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
 
+        val safeDrawingPaddingStart = WindowInsets.safeDrawing.only(WindowInsetsSides.Start).asPaddingValues().calculateStartPadding(layoutDirection)
+        val safeDrawingPaddingEnd = WindowInsets.safeDrawing.only(WindowInsetsSides.End).asPaddingValues().calculateEndPadding(layoutDirection)
+
+        val adaptivePaddingStart = if (safeDrawingPaddingStart <= 16.dp) 16.dp-safeDrawingPaddingStart else safeDrawingPaddingStart
+        val adaptivePaddingEnd = if (safeDrawingPaddingEnd <= 16.dp) 16.dp-safeDrawingPaddingEnd else safeDrawingPaddingEnd
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(backgroundColor)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                .padding(start = adaptivePaddingStart, end = adaptivePaddingEnd)
         ) {
             Box(
                 modifier = Modifier
@@ -476,7 +486,7 @@ fun NoteAudioSheet(
                     .padding(top = animatedTopPadding, bottom = bottomPadding)
                     .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
                     .hazeSource(hazeState)
-                    .padding(horizontal = 20.dp)
+                    .padding(horizontal = 1.dp)
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     Spacer(Modifier.height(68.dp))
@@ -768,7 +778,6 @@ fun NoteAudioSheet(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
                     .padding(top = animatedTopPadding)
                     .clip(RoundedCornerShape(100f))
                     .background(colorScheme.surfaceDim)
