@@ -136,11 +136,13 @@ class SettingsActivity : ComponentActivity() {
                                 lifecycleScope.launch {
                                     try {
                                         val signInResult = googleAuthUiClient.signIn()
-                                        oneTapLauncher.launch(
-                                            IntentSenderRequest.Builder(
-                                                signInResult.pendingIntent.intentSender
-                                            ).build()
-                                        )
+                                        signInResult?.let {
+                                            oneTapLauncher.launch(
+                                                IntentSenderRequest.Builder(
+                                                    it.pendingIntent.intentSender
+                                                ).build()
+                                            )
+                                        }
                                     } catch (e: ApiException) {
                                         traditionalSignInLauncher.launch(googleAuthUiClient.getTraditionalSignInIntent())
                                     }
