@@ -22,7 +22,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.auth.api.identity.Identity
-import com.google.android.gms.common.api.ApiException
 import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.notes.presentation.sign_in.SignInViewModel
@@ -134,16 +133,10 @@ class SettingsActivity : ComponentActivity() {
                             googleAuthUiClient = googleAuthUiClient,
                             onSignInClick = {
                                 lifecycleScope.launch {
-                                    try {
-                                        val signInResult = googleAuthUiClient.signIn()
-                                        signInResult?.let {
-                                            oneTapLauncher.launch(
-                                                IntentSenderRequest.Builder(
-                                                    it.pendingIntent.intentSender
-                                                ).build()
-                                            )
-                                        }
-                                    } catch (e: ApiException) {
+                                    val signInResult = googleAuthUiClient.signIn()
+                                    if (signInResult != null) {
+                                        oneTapLauncher.launch(IntentSenderRequest.Builder(signInResult.pendingIntent.intentSender).build())
+                                    } else {
                                         traditionalSignInLauncher.launch(googleAuthUiClient.getTraditionalSignInIntent())
                                     }
                                 }
