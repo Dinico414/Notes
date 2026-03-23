@@ -708,7 +708,6 @@ fun XenonTheme(
     useBlackedOutDarkTheme: Boolean = false,
     isCoverMode: Boolean = false,
     dynamicColor: Boolean = true,
-    useDefaultTheme: Boolean = true,
     useBlueTheme: Boolean = false,
     useGreenTheme: Boolean = false,
     useOrangeTheme: Boolean = false,
