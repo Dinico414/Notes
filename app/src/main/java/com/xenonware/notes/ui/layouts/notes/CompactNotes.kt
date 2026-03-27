@@ -931,9 +931,7 @@ fun CompactNotes(
         } else if (showSketchNoteCard) {
             {
                 //Sketch Note
-//                val vmSketchTitle by noteEditingViewModel.sketchTitle.collectAsState()
-//                val canSave = vmSketchTitle.isNotBlank() /*&& hasSketchContent*/
-                val canSave = titleState.isNotBlank() /*&& hasSketchContent*/
+                val canSave = titleState.isNotBlank()
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -1078,7 +1076,7 @@ fun CompactNotes(
                     confirmContainerColor = colorScheme.error,
                     confirmContentColor = colorScheme.onError,
                     content = {
-                        Text("If you proceed now, all unsaved changes get lost")
+                        Text("Warning! If you proceed now, all unsaved changes get lost!")
                     },
 
                     )
