@@ -173,6 +173,7 @@ import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
 import com.xenonware.notes.util.audio.GlobalAudioPlayer
+import com.xenonware.notes.util.text.fromRichTextJson
 import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.NoteEditingViewModel
 import com.xenonware.notes.viewmodel.NotesLayoutType
@@ -1668,12 +1669,14 @@ fun CompactNotes(
                                     },
 
                                         onSave = { title, description, theme, labelId, isOffline ->
-                                            if (title.isBlank() && description.isBlank()) {
+                                            val descriptionText = description.fromRichTextJson().text
+                                            if (title.isBlank()) {
                                                 viewModel.hideTextCard()
                                                 resetNoteState()
                                                 return@NoteTextSheet
                                             }
 
+                                            val finalDescription = if (descriptionText.isBlank()) null else description
                                             val colorLong = themeColorMap[theme]?.toLong()
 
                                             if (editingNoteId != null) {
@@ -1685,7 +1688,7 @@ fun CompactNotes(
                                                     val updatedNote =
                                                         existingNote.copy(
                                                             title = title.trim(),
-                                                            description = description.takeIf { it.isNotBlank() },
+                                                            description = finalDescription,
                                                             color = colorLong,
                                                             labels = labelId?.let { listOf(it) }
                                                                 ?: emptyList(),
@@ -1696,7 +1699,7 @@ fun CompactNotes(
                                                 } else {
                                                     viewModel.addItem(
                                                         title = title.trim(),
-                                                        description = description.takeIf { it.isNotBlank() },
+                                                        description = finalDescription,
                                                         noteType = NoteType.TEXT,
                                                         color = colorLong,
                                                         labels = labelId?.let { listOf(it) }
@@ -1706,7 +1709,7 @@ fun CompactNotes(
                                             } else {
                                                 viewModel.addItem(
                                                     title = title.trim(),
-                                                    description = description.takeIf { it.isNotBlank() },
+                                                    description = finalDescription,
                                                     noteType = NoteType.TEXT,
                                                     color = colorLong,
                                                     labels = labelId?.let { listOf(it) }

@@ -201,7 +201,7 @@ fun NoteTextSheet(
 
     LaunchedEffect(textFieldValue.annotatedString) {
         val serialized = textFieldValue.annotatedString.toSerialized()
-        if (serialized != content && textFieldValue.annotatedString.text.isNotEmpty()) {
+        if (serialized != content) {
             noteEditingViewModel.setTextContent(serialized)
         }
     }

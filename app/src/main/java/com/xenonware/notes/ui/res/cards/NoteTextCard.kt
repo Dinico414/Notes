@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
+import com.xenon.mylibrary.values.LargestSpacing
 import com.xenon.mylibrary.values.MediumCornerRadius
 import com.xenon.mylibrary.values.MediumSpacing
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
@@ -149,6 +150,8 @@ fun NoteTextCard(
                         maxLines = maxLines,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
+                } else {
+                    Spacer(Modifier.height(LargestSpacing))
                 }
             }
 
