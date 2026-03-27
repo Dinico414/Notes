@@ -434,7 +434,6 @@ fun CoverNotes(
             @Composable {
                 XenonTheme(
                     darkTheme = true,
-                    useDefaultTheme = selectedNoteTheme == "Default",
                     useRedTheme = selectedNoteTheme == "Red",
                     useOrangeTheme = selectedNoteTheme == "Orange",
                     useYellowTheme = selectedNoteTheme == "Yellow",
@@ -866,7 +865,6 @@ fun CoverNotes(
                 bottomBar = {
                     XenonTheme(
                         darkTheme = true,
-                        useDefaultTheme = selectedNoteTheme == "Default",
                         useRedTheme = selectedNoteTheme == "Red",
                         useOrangeTheme = selectedNoteTheme == "Orange",
                         useYellowTheme = selectedNoteTheme == "Yellow",

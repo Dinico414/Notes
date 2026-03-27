@@ -172,7 +172,6 @@ fun NoteAudioCard(
 
     XenonTheme(
         darkTheme = isDarkTheme,
-        useDefaultTheme = selectedTheme == "Default",
         useRedTheme = selectedTheme == "Red",
         useOrangeTheme = selectedTheme == "Orange",
         useYellowTheme = selectedTheme == "Yellow",

@@ -256,6 +256,16 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onSignedOut() {
+        val localNotes = _allNotesItems.filter { it.isOffline }
+        if (localNotes.size != _allNotesItems.size) {
+            _allNotesItems.clear()
+            _allNotesItems.addAll(localNotes)
+            saveAllNotes()
+            applySortingAndFiltering()
+        }
+    }
+
     private fun uploadLocalLabelsIfNeeded(userId: String) {
         if (_labels.value.isEmpty()) return
 
@@ -424,19 +434,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             _allNotesItems.addAll(updatedList)
             saveAllNotes()
             applySortingAndFiltering()
-        }
-    }
-
-    init {
-        loadAllNotes()
-        ensureTranscriptsAreFilled(getApplication<Application>().applicationContext)
-        loadLabels()
-        loadLayoutSettings()
-        applySortingAndFiltering()
-
-        auth.currentUser?.uid?.let { uid ->
-            startRealtimeListenerForFutureChanges(uid)
-            startLabelsRealtimeListener(uid)
         }
     }
 

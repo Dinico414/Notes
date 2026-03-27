@@ -465,7 +465,6 @@ fun CompactNotes(
             @Composable {
                 XenonTheme(
                     darkTheme = isDarkTheme,
-                    useDefaultTheme = selectedNoteTheme == "Default",
                     useRedTheme = selectedNoteTheme == "Red",
                     useOrangeTheme = selectedNoteTheme == "Orange",
                     useYellowTheme = selectedNoteTheme == "Yellow",
@@ -944,7 +943,6 @@ fun CompactNotes(
             }, bottomBar = {
                 XenonTheme(
                     darkTheme = isDarkTheme,
-                    useDefaultTheme = selectedNoteTheme == "Default",
                     useRedTheme = selectedNoteTheme == "Red",
                     useOrangeTheme = selectedNoteTheme == "Orange",
                     useYellowTheme = selectedNoteTheme == "Yellow",
