@@ -35,7 +35,9 @@ class GoogleAuthUiClient(
 
     suspend fun signIn(): BeginSignInResult? {
         return try {
-            oneTapClient.beginSignIn(buildSignInRequest()).await()
+            val request = buildSignInRequest()
+            val result = oneTapClient.beginSignIn(request).await()
+            result
         } catch (e: Exception) {
             if (e is UnsupportedApiCallException || e is ApiException) {
                 return null
@@ -105,6 +107,8 @@ class GoogleAuthUiClient(
                 profilePictureUrl = user.photoUrl?.toString(),
                 email = user.email ?: ""
             )
+        }?: run {
+            null
         }
     } catch (e: Exception) {
         if (e is UnsupportedApiCallException ||
@@ -118,9 +122,9 @@ class GoogleAuthUiClient(
     private fun buildSignInRequest(): BeginSignInRequest {
         return BeginSignInRequest.Builder().setGoogleIdTokenRequestOptions(
             BeginSignInRequest.GoogleIdTokenRequestOptions.builder().setSupported(true)
-                .setFilterByAuthorizedAccounts(true)
+                .setFilterByAuthorizedAccounts(false)
                 .setServerClientId(context.getString(R.string.default_web_client_id)).build()
-        ).setAutoSelectEnabled(true).build()
+        ).setAutoSelectEnabled(false).build()
 
     }
 }

@@ -104,15 +104,17 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val user = googleAuthUiClient.getSignedInUser()
             val isSignedIn = user != null
+            val wasSignedIn = sharedPreferenceManager.isUserLoggedIn
 
             // Sync login state
             sharedPreferenceManager.isUserLoggedIn = isSignedIn
             signInViewModel.updateSignInState(isSignedIn)
 
             // Start real-time sync when app resumes (if already signed in)
-            // DELETE THIS LINE — IT WIPES LOCAL DATA!
             if (isSignedIn) {
-                viewModel.onSignedIn() // ← This is correct
+                viewModel.onSignedIn() 
+            } else if (wasSignedIn && !isSignedIn) {
+                viewModel.onSignedOut()
             }
         }
 
