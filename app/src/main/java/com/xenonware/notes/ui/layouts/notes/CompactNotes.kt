@@ -428,19 +428,7 @@ fun CompactNotes(
 
         val signInViewModel: SignInViewModel = viewModel()
 
-        var isSavingNewNote by remember { mutableStateOf(false) }
-        val notes = remember(noteItemsWithHeaders) { noteItemsWithHeaders.filterIsInstance<NotesItems>() }
-        var previousNoteCount by remember { mutableIntStateOf(notes.size) }
-
-        LaunchedEffect(notes) {
-            if (isSavingNewNote && notes.size > previousNoteCount) {
-                notes.maxByOrNull { it.id }?.let { newNote ->
-                    editingNoteId = newNote.id
-                }
-                isSavingNewNote = false
-            }
-            previousNoteCount = notes.size
-        }
+        val notes = noteItemsWithHeaders.filterIsInstance<NotesItems>()
 
         // ============================================================================
         // 14. Small Utility Functions & Effects
@@ -1909,7 +1897,7 @@ fun CompactNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
-                                                isSavingNewNote = true
+                                                editingNoteId = viewModel.noteItems.filterIsInstance<NotesItems>().maxByOrNull { it.id }?.id
                                             }
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Note Saved")
@@ -1972,7 +1960,7 @@ fun CompactNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
-                                                isSavingNewNote = true
+                                                editingNoteId = viewModel.noteItems.filterIsInstance<NotesItems>().maxByOrNull { it.id }?.id
                                             }
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Note Saved")
@@ -2035,7 +2023,7 @@ fun CompactNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
-                                                isSavingNewNote = true
+                                                editingNoteId = viewModel.noteItems.filterIsInstance<NotesItems>().maxByOrNull { it.id }?.id
                                             }
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Note Saved")
@@ -2104,7 +2092,7 @@ fun CompactNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
-                                                isSavingNewNote = true
+                                                editingNoteId = viewModel.noteItems.filterIsInstance<NotesItems>().maxByOrNull { it.id }?.id
                                             }
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Note Saved")
