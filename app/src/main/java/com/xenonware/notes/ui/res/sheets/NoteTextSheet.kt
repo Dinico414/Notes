@@ -139,6 +139,73 @@ fun String.fromSerialized(): AnnotatedString {
     }
 }
 
+fun AnnotatedString.toggleStyle(
+    start: Int,
+    end: Int,
+    bold: Boolean? = null,
+    italic: Boolean? = null,
+    underline: Boolean? = null
+): AnnotatedString {
+    class CharStyle(var bold: Boolean = false, var italic: Boolean = false, var underline: Boolean = false)
+    val charStyles = Array(text.length) { CharStyle() }
+    
+    spanStyles.forEach { range ->
+        val safeRangeStart = maxOf(0, range.start)
+        val safeRangeEnd = minOf(text.length, range.end)
+        for (i in safeRangeStart until safeRangeEnd) {
+            if (range.item.fontWeight == FontWeight.Bold) charStyles[i].bold = true
+            if (range.item.fontStyle == FontStyle.Italic) charStyles[i].italic = true
+            if (range.item.textDecoration?.contains(TextDecoration.Underline) == true) charStyles[i].underline = true
+        }
+    }
+    
+    val safeStart = maxOf(0, start)
+    val safeEnd = minOf(text.length, end)
+    for (i in safeStart until safeEnd) {
+        if (bold != null) charStyles[i].bold = bold
+        if (italic != null) charStyles[i].italic = italic
+        if (underline != null) charStyles[i].underline = underline
+    }
+    
+    return buildAnnotatedString {
+        append(text)
+        var currentStyle: CharStyle? = null
+        var currentStart = -1
+        
+        fun applyStyle(startIdx: Int, endIdx: Int, style: CharStyle) {
+            if (!style.bold && !style.italic && !style.underline) return
+            val span = SpanStyle(
+                fontWeight = if (style.bold) FontWeight.Bold else null,
+                fontStyle = if (style.italic) FontStyle.Italic else null,
+                textDecoration = if (style.underline) TextDecoration.Underline else null
+            )
+            addStyle(span, startIdx, endIdx)
+        }
+        
+        for (i in charStyles.indices) {
+            val style = charStyles[i]
+            if (currentStyle == null) {
+                currentStyle = style
+                currentStart = i
+            } else if (style.bold != currentStyle.bold || style.italic != currentStyle.italic || style.underline != currentStyle.underline) {
+                applyStyle(currentStart, i, currentStyle)
+                currentStyle = style
+                currentStart = i
+            }
+        }
+        if (currentStyle != null && currentStart < charStyles.size) {
+            applyStyle(currentStart, charStyles.size, currentStyle)
+        }
+    }
+}
+
+class SelectionStateTracker {
+    var selection: TextRange? = null
+    var isBold: Boolean? = null
+    var isItalic: Boolean? = null
+    var isUnderlined: Boolean? = null
+}
+
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun NoteTextSheet(
@@ -231,40 +298,86 @@ fun NoteTextSheet(
         }
     }
 
-    LaunchedEffect(textFieldValue.selection) {
-        if (textFieldValue.selection.collapsed && textFieldValue.text.isNotEmpty()) {
-            val cursorPos = textFieldValue.selection.start
-            if (cursorPos > 0) {
-                val checkPos = cursorPos - 1
+    val previousState = remember { SelectionStateTracker() }
+
+    LaunchedEffect(textFieldValue.selection, isBold, isItalic, isUnderlined) {
+        val currentSelection = textFieldValue.selection
+        val selectionChanged = previousState.selection != currentSelection
+        
+        val formatToggled = !selectionChanged && (
+            previousState.isBold != isBold ||
+            previousState.isItalic != isItalic ||
+            previousState.isUnderlined != isUnderlined
+        )
+
+        if (selectionChanged) {
+            if (textFieldValue.text.isNotEmpty()) {
+                val checkPos = if (currentSelection.collapsed) {
+                    if (currentSelection.start > 0) currentSelection.start - 1 else 0
+                } else {
+                    currentSelection.min
+                }
+                
                 val spansAtPos = textFieldValue.annotatedString.spanStyles.filter {
-                    it.start <= checkPos && it.end > checkPos
+                    if (currentSelection.collapsed && currentSelection.start == 0) {
+                        it.start == 0 && it.end > 0
+                    } else {
+                        it.start <= checkPos && it.end > checkPos
+                    }
                 }
                 var effectiveStyle = SpanStyle()
-                spansAtPos.forEach { range ->
-                    effectiveStyle = effectiveStyle.merge(range.item)
-                }
+                spansAtPos.forEach { range -> effectiveStyle = effectiveStyle.merge(range.item) }
+                
                 val shouldBeBold = effectiveStyle.fontWeight == FontWeight.Bold
                 val shouldBeItalic = effectiveStyle.fontStyle == FontStyle.Italic
                 val shouldBeUnderlined = effectiveStyle.textDecoration?.contains(TextDecoration.Underline) ?: false
-                if (isBold != shouldBeBold) noteEditingViewModel.setTextIsBold(shouldBeBold)
-                if (isItalic != shouldBeItalic) noteEditingViewModel.setTextIsItalic(shouldBeItalic)
-                if (isUnderlined != shouldBeUnderlined) noteEditingViewModel.setTextIsUnderlined(shouldBeUnderlined)
-            } else if (cursorPos == 0 && textFieldValue.text.isNotEmpty()) {
-                val spansAtPos = textFieldValue.annotatedString.spanStyles.filter {
-                    it.start == 0 && it.end > 0
+                
+                var formatUpdated = false
+                if (isBold != shouldBeBold) { noteEditingViewModel.setTextIsBold(shouldBeBold); formatUpdated = true }
+                if (isItalic != shouldBeItalic) { noteEditingViewModel.setTextIsItalic(shouldBeItalic); formatUpdated = true }
+                if (isUnderlined != shouldBeUnderlined) { noteEditingViewModel.setTextIsUnderlined(shouldBeUnderlined); formatUpdated = true }
+                
+                if (formatUpdated) {
+                    previousState.isBold = shouldBeBold
+                    previousState.isItalic = shouldBeItalic
+                    previousState.isUnderlined = shouldBeUnderlined
+                } else {
+                    previousState.isBold = isBold
+                    previousState.isItalic = isItalic
+                    previousState.isUnderlined = isUnderlined
                 }
-                var effectiveStyle = SpanStyle()
-                spansAtPos.forEach { range ->
-                    effectiveStyle = effectiveStyle.merge(range.item)
-                }
-                val shouldBeBold = effectiveStyle.fontWeight == FontWeight.Bold
-                val shouldBeItalic = effectiveStyle.fontStyle == FontStyle.Italic
-                val shouldBeUnderlined = effectiveStyle.textDecoration?.contains(TextDecoration.Underline) ?: false
-                if (isBold != shouldBeBold) noteEditingViewModel.setTextIsBold(shouldBeBold)
-                if (isItalic != shouldBeItalic) noteEditingViewModel.setTextIsItalic(shouldBeItalic)
-                if (isUnderlined != shouldBeUnderlined) noteEditingViewModel.setTextIsUnderlined(shouldBeUnderlined)
+            } else {
+                previousState.isBold = isBold
+                previousState.isItalic = isItalic
+                previousState.isUnderlined = isUnderlined
             }
+        } else if (formatToggled && !currentSelection.collapsed) {
+            var newAnnotated = textFieldValue.annotatedString
+            val start = currentSelection.min
+            val end = currentSelection.max
+            
+            if (previousState.isBold != isBold) {
+                newAnnotated = newAnnotated.toggleStyle(start, end, bold = isBold)
+            }
+            if (previousState.isItalic != isItalic) {
+                newAnnotated = newAnnotated.toggleStyle(start, end, italic = isItalic)
+            }
+            if (previousState.isUnderlined != isUnderlined) {
+                newAnnotated = newAnnotated.toggleStyle(start, end, underline = isUnderlined)
+            }
+            
+            textFieldValue = textFieldValue.copy(annotatedString = newAnnotated)
+            
+            previousState.isBold = isBold
+            previousState.isItalic = isItalic
+            previousState.isUnderlined = isUnderlined
+        } else {
+            previousState.isBold = isBold
+            previousState.isItalic = isItalic
+            previousState.isUnderlined = isUnderlined
         }
+
+        previousState.selection = currentSelection
     }
 
     XenonTheme(
