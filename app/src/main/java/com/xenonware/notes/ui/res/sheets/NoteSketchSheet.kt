@@ -147,6 +147,7 @@ fun NoteSketchSheet(
     onLabelSelected: (String?) -> Unit,
     onAddNewLabel: (String) -> Unit,
     editingNoteId: Int?,
+    newSketchCounter: Int,
     notesViewModel: NotesViewModel,
     isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false,
@@ -197,8 +198,12 @@ fun NoteSketchSheet(
     @Suppress("DEPRECATION") val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
 
+    val viewModelKey = editingNoteId?.toString() ?: "new_$newSketchCounter"
     val viewModel =
-        viewModel<CanvasViewModel>(factory = CanvasViewModelFactory(application = application))
+        viewModel<CanvasViewModel>(
+            key = viewModelKey,
+            factory = CanvasViewModelFactory(application = application)
+        )
 
     val currentPathState = viewModel.currentPathState.collectAsState()
     val pathState = viewModel.pathState.collectAsState()
@@ -218,9 +223,7 @@ fun NoteSketchSheet(
     LaunchedEffect(initialPaths) {
         if (!initialPaths.isNullOrBlank()) {
             val loadedPaths = SketchSerializer.deserializePaths(initialPaths)
-            if (loadedPaths.isNotEmpty()) {
-                viewModel.setPaths(loadedPaths)
-            }
+            viewModel.setPaths(loadedPaths)
         }
     }
 

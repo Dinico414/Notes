@@ -290,6 +290,7 @@ fun CoverNotes(
         val initialSketchColor = colorScheme.onSurface
         var currentSketchColor by remember { mutableStateOf(initialSketchColor) }
         var sketchPathsState by rememberSaveable { mutableStateOf<String?>(null) }
+        var newSketchCounter by rememberSaveable { mutableIntStateOf(0) }
 
         // ============================================================================
         // 10. UI / Navigation / Interaction State
@@ -1837,6 +1838,7 @@ fun CoverNotes(
                                         editingNoteId = editingNoteId,
                                         notesViewModel = viewModel,
                                         backProgress = backProgress,
+                                        newSketchCounter = newSketchCounter,
                                         initialPaths = viewModel.noteItems.filterIsInstance<NotesItems>()
                                             .find { it.id == editingNoteId }?.description
                                     )

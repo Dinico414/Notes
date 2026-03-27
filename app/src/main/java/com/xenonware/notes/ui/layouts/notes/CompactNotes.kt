@@ -304,6 +304,7 @@ fun CompactNotes(
         val initialSketchColor = colorScheme.onSurface
         var currentSketchColor by remember { mutableStateOf(initialSketchColor) }
         var sketchPathsState by rememberSaveable { mutableStateOf<String?>(null) }
+        var newSketchCounter by rememberSaveable { mutableIntStateOf(0) }
 
 
         // ============================================================================
@@ -875,7 +876,23 @@ fun CompactNotes(
             @Composable {
                 //Text Note
                 val vmTextTitle by noteEditingViewModel.textTitle.collectAsState()
-                val canSave = vmTextTitle.isNotBlank()
+                val vmTextContent by noteEditingViewModel.textContent.collectAsState()
+                val vmTextTheme by noteEditingViewModel.textTheme.collectAsState()
+                val vmTextLabelId by noteEditingViewModel.textLabelId.collectAsState()
+                val vmTextIsOffline by noteEditingViewModel.textIsOffline.collectAsState()
+
+                val originalNote = editingNoteId?.let { id -> notes.find { it.id == id } }
+
+                val hasChanges = if (originalNote == null) {
+                    vmTextTitle.isNotBlank()
+                } else {
+                    originalNote.title != vmTextTitle.trim() ||
+                            (originalNote.description ?: "") != vmTextContent ||
+                            (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmTextTheme ||
+                            originalNote.labels.firstOrNull() != vmTextLabelId ||
+                            originalNote.isOffline != vmTextIsOffline
+                }
+                val canSave = vmTextTitle.isNotBlank() && hasChanges
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -894,7 +911,27 @@ fun CompactNotes(
                 //List Note
                 val vmListTitle by noteEditingViewModel.listTitle.collectAsState()
                 val vmListItems by noteEditingViewModel.listItems.collectAsState()
-                val canSave = vmListTitle.isNotBlank() && vmListItems.any { it.text.isNotBlank() }
+                val vmListTheme by noteEditingViewModel.listTheme.collectAsState()
+                val vmListLabelId by noteEditingViewModel.listLabelId.collectAsState()
+                val vmListIsOffline by noteEditingViewModel.listIsOffline.collectAsState()
+
+                val originalNote = editingNoteId?.let { id -> notes.find { it.id == id } }
+
+                val currentItemsDescription = vmListItems.joinToString("\n") {
+                    "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
+                }
+
+                val hasChanges = if (originalNote == null) {
+                    vmListTitle.isNotBlank() || vmListItems.any { it.text.isNotBlank() }
+                } else {
+                    originalNote.title != vmListTitle.trim() ||
+                            (originalNote.description ?: "") != currentItemsDescription ||
+                            (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmListTheme ||
+                            originalNote.labels.firstOrNull() != vmListLabelId ||
+                            originalNote.isOffline != vmListIsOffline
+                }
+
+                val canSave = vmListTitle.isNotBlank() && vmListItems.any { it.text.isNotBlank() } && hasChanges
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -913,8 +950,24 @@ fun CompactNotes(
                 //Audio Note
                 val vmAudioTitle by noteEditingViewModel.audioTitle.collectAsState()
                 val vmAudioUniqueId by noteEditingViewModel.audioUniqueId.collectAsState()
+                val vmAudioTheme by noteEditingViewModel.audioTheme.collectAsState()
+                val vmAudioLabelId by noteEditingViewModel.audioLabelId.collectAsState()
+                val vmAudioIsOffline by noteEditingViewModel.audioIsOffline.collectAsState()
+
+                val originalNote = editingNoteId?.let { id -> notes.find { it.id == id } }
+
+                val hasChanges = if (originalNote == null) {
+                    vmAudioTitle.isNotBlank() && !vmAudioUniqueId.isNullOrBlank()
+                } else {
+                    originalNote.title != vmAudioTitle.trim() ||
+                            (originalNote.description ?: "") != vmAudioUniqueId ||
+                            (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmAudioTheme ||
+                            originalNote.labels.firstOrNull() != vmAudioLabelId ||
+                            originalNote.isOffline != vmAudioIsOffline
+                }
+
                 val hasAudio = vmAudioUniqueId != null
-                val canSave = vmAudioTitle.isNotBlank() && hasAudio
+                val canSave = vmAudioTitle.isNotBlank() && hasAudio && hasChanges
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -931,7 +984,20 @@ fun CompactNotes(
         } else if (showSketchNoteCard) {
             {
                 //Sketch Note
-                val canSave = titleState.isNotBlank()
+                val vmTheme = colorThemeMap[editingNoteColor] ?: "Default"
+                val vmLabelId = selectedLabelId
+                val originalNote = editingNoteId?.let { id -> notes.find { it.id == id } }
+                val isSketchEmpty = sketchPathsState.isNullOrBlank() || sketchPathsState == "[]"
+
+                val hasChanges = if (originalNote == null) {
+                    titleState.isNotBlank() || (sketchPathsState != null && sketchPathsState != "[]")
+                } else {
+                    originalNote.title != titleState.trim() ||
+                            originalNote.description != sketchPathsState ||
+                            (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmTheme ||
+                            originalNote.labels.firstOrNull() != vmLabelId
+                }
+                val canSave = titleState.isNotBlank() && hasChanges && !isSketchEmpty
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -1219,6 +1285,8 @@ fun CompactNotes(
                                 }
                                 // Sketch Note
                                 IconButton(onClick = {
+                                    resetNoteState()
+                                    newSketchCounter++
                                     isSearchActive = false
                                     viewModel.setSearchQuery("")
                                     viewModel.showSketchCard()
@@ -2068,6 +2136,7 @@ fun CompactNotes(
                                         isBlackThemeActive = isBlackedOut,
                                         isCoverModeActive = false,
                                         editingNoteId = editingNoteId,
+                                        newSketchCounter = newSketchCounter,
                                         notesViewModel = viewModel,
                                         backProgress = backProgress,
                                         initialPaths = viewModel.noteItems.filterIsInstance<NotesItems>()
