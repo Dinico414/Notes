@@ -393,6 +393,20 @@ fun CoverNotes(
 
         val signInViewModel: SignInViewModel = viewModel()
 
+        var isSavingNewNote by remember { mutableStateOf(false) }
+        val notes = remember(noteItemsWithHeaders) { noteItemsWithHeaders.filterIsInstance<NotesItems>() }
+        var previousNoteCount by remember { mutableIntStateOf(notes.size) }
+
+        LaunchedEffect(notes) {
+            if (isSavingNewNote && notes.size > previousNoteCount) {
+                notes.maxByOrNull { it.id }?.let { newNote ->
+                    editingNoteId = newNote.id
+                }
+                isSavingNewNote = false
+            }
+            previousNoteCount = notes.size
+        }
+
         // ============================================================================
         // 14. Small Utility Functions & Effects
         // ============================================================================
@@ -483,10 +497,12 @@ fun CoverNotes(
                     if (originalNote == null) {
                         vmTitle.isNotBlank() || vmItems.any { it.text.isNotBlank() }
                     } else {
+                        val currentItemsDescription = vmItems.joinToString("\n") {
+                            "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
+                        }
                         originalNote.title != vmTitle.trim() ||
-                                listItemsState.toList() != vmItems ||
-                                (colorThemeMap[originalNote.color?.toULong()]
-                                    ?: "Default") != vmTheme ||
+                                (originalNote.description ?: "") != currentItemsDescription ||
+                                (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmTheme ||
                                 originalNote.labels.firstOrNull() != vmLabelId ||
                                 originalNote.isOffline != vmIsOffline
                     }
@@ -1559,8 +1575,7 @@ fun CoverNotes(
 
                                         onSave = { title, description, theme, labelId, isOffline ->
                                             if (title.isBlank() && description.isBlank()) {
-                                                viewModel.hideTextCard()
-                                                resetNoteState()
+                                                scope.launch { snackbarHostState.showSnackbar("Note is empty") }
                                                 return@NoteTextSheet
                                             }
 
@@ -1583,15 +1598,6 @@ fun CoverNotes(
                                                     viewModel.updateItem(
                                                         updatedNote, forceLocal = isOffline
                                                     )
-                                                } else {
-                                                    viewModel.addItem(
-                                                        title = title.trim(),
-                                                        description = description.takeIf { it.isNotBlank() },
-                                                        noteType = NoteType.TEXT,
-                                                        color = colorLong,
-                                                        labels = labelId?.let { listOf(it) }
-                                                            ?: emptyList(),
-                                                        forceLocal = isOffline)
                                                 }
                                             } else {
                                                 viewModel.addItem(
@@ -1602,12 +1608,11 @@ fun CoverNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
+                                                isSavingNewNote = true
                                             }
-
-                                            viewModel.hideTextCard()
-                                            isSearchActive = false
-                                            viewModel.setSearchQuery("")
-                                            resetNoteState()
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("Note Saved")
+                                            }
                                         },
                                         saveTrigger = saveTrigger,
                                         onSaveTriggerConsumed = { saveTrigger = false },
@@ -1634,8 +1639,7 @@ fun CoverNotes(
                                             }
 
                                             if (title.isBlank() && description.isBlank()) {
-                                                viewModel.hideListCard()
-                                                resetNoteState()
+                                                scope.launch { snackbarHostState.showSnackbar("Note is empty") }
                                                 return@NoteListSheet
                                             }
 
@@ -1649,9 +1653,9 @@ fun CoverNotes(
                                                 existingNote?.let {
                                                     val updatedNote = it.copy(
                                                         title = title.trim(),
-                                                        description = description.takeIf { it -> it.isNotBlank() },
+                                                        description = description.takeIf { it.isNotBlank() },
                                                         color = colorLong,
-                                                        labels = labelId?.let { it -> listOf(it) }
+                                                        labels = labelId?.let { it1 -> listOf(it1) }
                                                             ?: emptyList(),
                                                         isOffline = isOffline)
                                                     viewModel.updateItem(
@@ -1667,12 +1671,13 @@ fun CoverNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
+                                                isSavingNewNote = true
                                             }
-
-                                            viewModel.hideListCard()
-                                            isSearchActive = false
-                                            viewModel.setSearchQuery("")
-                                            resetNoteState()
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("Note Saved")
+                                            }
+                                            listItemsState.clear()
+                                            listItemsState.addAll(items)
                                         },
                                         toolbarHeight = 72.dp,
                                         saveTrigger = saveTrigger,
@@ -1697,8 +1702,7 @@ fun CoverNotes(
                                         onDismiss = handleDismissRequest,
                                         onSave = { title, uniqueAudioId, theme, labelId, isOffline ->
                                             if (title.isBlank() && uniqueAudioId.isBlank()) {
-                                                viewModel.hideAudioCard()
-                                                resetNoteState()
+                                                scope.launch { snackbarHostState.showSnackbar("Note is empty") }
                                                 return@NoteAudioSheet
                                             }
 
@@ -1712,9 +1716,9 @@ fun CoverNotes(
                                                 existingNote?.let {
                                                     val updatedNote = it.copy(
                                                         title = title.trim(),
-                                                        description = uniqueAudioId.takeIf { it -> it.isNotBlank() },
+                                                        description = uniqueAudioId.takeIf { it.isNotBlank() },
                                                         color = colorLong,
-                                                        labels = labelId?.let { it -> listOf(it) }
+                                                        labels = labelId?.let { it1 -> listOf(it1) }
                                                             ?: emptyList(),
                                                         isOffline = isOffline)
                                                     viewModel.updateItem(
@@ -1730,12 +1734,11 @@ fun CoverNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
+                                                isSavingNewNote = true
                                             }
-
-                                            viewModel.hideAudioCard()
-                                            isSearchActive = false
-                                            viewModel.setSearchQuery("")
-                                            resetNoteState()
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("Note Saved")
+                                            }
                                         },
                                         toolbarHeight = 72.dp,
                                         saveTrigger = saveTrigger,
@@ -1768,8 +1771,7 @@ fun CoverNotes(
                                         },
                                         onSave = { title, theme, labelId, isOffline, serializedPaths ->
                                             if (title.isBlank()) {
-                                                viewModel.hideSketchCard()
-                                                resetNoteState()
+                                                scope.launch { snackbarHostState.showSnackbar("Title cannot be empty") }
                                                 return@NoteSketchSheet
                                             }
 
@@ -1780,12 +1782,12 @@ fun CoverNotes(
                                                     viewModel.noteItems.filterIsInstance<NotesItems>()
                                                         .find { it.id == editingNoteId }
 
-                                                existingNote?.let { it ->
-                                                    val updatedNote = it.copy(
+                                                existingNote?.let { it1 ->
+                                                    val updatedNote = it1.copy(
                                                         title = title.trim(),
                                                         description = serializedPaths,
                                                         color = colorLong,
-                                                        labels = labelId?.let { it -> listOf(it) }
+                                                        labels = labelId?.let { it2 -> listOf(it2) }
                                                             ?: emptyList(),
                                                         isOffline = isOffline)
                                                     viewModel.updateItem(
@@ -1801,15 +1803,15 @@ fun CoverNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
+                                                isSavingNewNote = true
                                             }
-
-                                            viewModel.hideSketchCard()
-                                            isSearchActive = false
-                                            viewModel.setSearchQuery("")
-                                            resetNoteState()
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("Note Saved")
+                                            }
                                         },
                                         saveTrigger = saveTrigger,
                                         onSaveTriggerConsumed = { saveTrigger = false },
+                                        onDrawingChanged = { sketchPathsState = it },
                                         isEraserMode = isEraserMode,
                                         usePressure = usePressure,
                                         strokeWidth = currentSketchSize,
@@ -1826,7 +1828,6 @@ fun CoverNotes(
                                             currentSketchSize = size
                                             showSketchSizePopup = false
                                         },
-                                        snackbarHostState = snackbarHostState,
                                         allLabels = allLabels,
                                         initialSelectedLabelId = selectedLabelId,
                                         onLabelSelected = { selectedLabelId = it },
@@ -1836,10 +1837,9 @@ fun CoverNotes(
                                         editingNoteId = editingNoteId,
                                         notesViewModel = viewModel,
                                         backProgress = backProgress,
-                                        initialPaths = viewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.description,
-                                        onDrawingChanged = { sketchPathsState = it },
-
-                                        )
+                                        initialPaths = viewModel.noteItems.filterIsInstance<NotesItems>()
+                                            .find { it.id == editingNoteId }?.description
+                                    )
                                 }
                             }
                         }

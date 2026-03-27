@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.os.Build
 import android.provider.Settings
-import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -61,8 +60,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -70,7 +67,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -90,7 +86,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -123,7 +118,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
-@Suppress("AssignedValueIsNeverRead")
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalHazeMaterialsApi::class, ExperimentalComposeUiApi::class)
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -148,7 +142,6 @@ fun NoteSketchSheet(
     showPenSizePicker: Boolean,
     onPenSizePickerDismiss: () -> Unit,
     onPenSizeSelected: (Float) -> Unit,
-    snackbarHostState: SnackbarHostState,
     allLabels: List<Label>,
     initialSelectedLabelId: String?,
     onLabelSelected: (String?) -> Unit,
@@ -200,7 +193,6 @@ fun NoteSketchSheet(
 
     var debugTextEnabled by rememberSaveable { mutableStateOf(false) }
     var isDeveloperOptionsEnabled by remember { mutableStateOf(false) }
-    var lastBackPressTime by rememberSaveable { mutableLongStateOf(0L) }
 
     @Suppress("DEPRECATION") val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
@@ -229,22 +221,6 @@ fun NoteSketchSheet(
             if (loadedPaths.isNotEmpty()) {
                 viewModel.setPaths(loadedPaths)
             }
-        }
-    }
-
-    val message = stringResource(R.string.navigate_back_description)
-    BackHandler {
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - lastBackPressTime < 2000L) {
-            onDismiss()
-        } else {
-            scope.launch {
-                snackbarHostState.showSnackbar(
-                    message = message,
-                    duration = SnackbarDuration.Short
-                )
-            }
-            lastBackPressTime = currentTime
         }
     }
 
@@ -407,22 +383,9 @@ fun NoteSketchSheet(
                         style = HazeMaterials.ultraThin(hazeThinColor),
                     ), verticalAlignment = Alignment.CenterVertically
             ) {
-                val message = stringResource(R.string.open_navigation_menu)
                 IconButton(
-                    onClick = {
-                        val currentTime = System.currentTimeMillis()
-                        if (currentTime - lastBackPressTime < 2000L) {
-                            onDismiss()
-                        } else {
-                            scope.launch {
-                                snackbarHostState.showSnackbar(
-                                    message = message,
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-                            lastBackPressTime = currentTime
-                        }
-                    }, modifier = Modifier.padding(4.dp)
+                    onClick = { onDismiss() },
+                    modifier = Modifier.padding(4.dp)
                 ) {
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                 }
