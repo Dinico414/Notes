@@ -137,6 +137,7 @@ fun NoteSketchSheet(
     onSave: (String, String, String?, Boolean, String) -> Unit,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
+    onDrawingChanged: (String) -> Unit,
     isEraserMode: Boolean,
     usePressure: Boolean,
     strokeWidth: Float,
@@ -211,12 +212,16 @@ fun NoteSketchSheet(
     val pathState = viewModel.pathState.collectAsState()
     val isHandwritingMode by viewModel.isHandwritingMode.collectAsState()
 
+    LaunchedEffect(pathState.value) {
+        onDrawingChanged(SketchSerializer.serializePaths(pathState.value.paths))
+    }
+
     LaunchedEffect(Unit) {
         isDeveloperOptionsEnabled = Settings.Global.getInt(
             context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0
         ) == 1
     }
-    
+
     // Load initial paths
     LaunchedEffect(initialPaths) {
         if (!initialPaths.isNullOrBlank()) {

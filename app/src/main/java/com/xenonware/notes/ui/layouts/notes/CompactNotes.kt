@@ -111,10 +111,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
@@ -124,6 +126,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.auth.api.identity.Identity
@@ -132,6 +135,7 @@ import com.xenon.mylibrary.res.FloatingToolbarContent
 import com.xenon.mylibrary.res.GoogleProfilBorder
 import com.xenon.mylibrary.res.GoogleProfilePicture
 import com.xenon.mylibrary.res.SpannedModeFAB
+import com.xenon.mylibrary.res.XenonDialog
 import com.xenon.mylibrary.res.XenonSnackbar
 import com.xenon.mylibrary.theme.DeviceConfigProvider
 import com.xenon.mylibrary.theme.LocalDeviceConfig
@@ -211,6 +215,7 @@ fun CompactNotes(
         val deviceConfig = LocalDeviceConfig.current
         var backProgress by remember { mutableFloatStateOf(0f) }
         val context = LocalContext.current
+        val haptic = LocalHapticFeedback.current
         val sharedPreferenceManager = remember { SharedPreferenceManager(context) }
 
         val density = LocalDensity.current
@@ -298,6 +303,8 @@ fun CompactNotes(
         var currentSketchSize by remember { mutableFloatStateOf(10f) }
         val initialSketchColor = colorScheme.onSurface
         var currentSketchColor by remember { mutableStateOf(initialSketchColor) }
+        var sketchPathsState by rememberSaveable { mutableStateOf<String?>(null) }
+
 
         // ============================================================================
         // 10. UI / Navigation / Interaction State
@@ -317,6 +324,8 @@ fun CompactNotes(
 
         var showResizeValue by remember { mutableStateOf(false) }
         var resizeTimerKey by remember { mutableIntStateOf(0) }
+        var showUnsavedChangesDialog by remember { mutableStateOf(false) }
+
 
         // ============================================================================
         // 11. ViewModel-derived / Layout Settings
@@ -443,6 +452,7 @@ fun CompactNotes(
             selectedAudioViewType = AudioViewType.Waveform
             selectedLabelId = null
             noteEditingViewModel.clearAllStates()
+            sketchPathsState = null
         }
 
         LaunchedEffect(resizeTimerKey) {
@@ -925,6 +935,98 @@ fun CompactNotes(
             }
         } else null
 
+
+        val dismissAction = {
+            viewModel.hideTextCard()
+            viewModel.hideListCard()
+            viewModel.hideAudioCard()
+            viewModel.hideSketchCard()
+            isSearchActive = false
+            viewModel.setSearchQuery("")
+            resetNoteState()
+        }
+
+        val hasUnsavedChanges = {
+            val originalNote = editingNoteId?.let { id ->
+                viewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == id }
+            }
+            when {
+                showTextNoteCard -> {
+                    val vmState = noteEditingViewModel.textTitle.value
+                    val vmContent = noteEditingViewModel.textContent.value
+                    val vmTheme = noteEditingViewModel.textTheme.value
+                    val vmLabelId = noteEditingViewModel.textLabelId.value
+                    val vmIsOffline = noteEditingViewModel.textIsOffline.value
+
+                    if (originalNote == null) { // New note
+                        vmState.isNotBlank() || vmContent.fromRichTextJson().text.trim()
+                            .isNotEmpty()
+                    } else { // Existing note
+                        originalNote.title != vmState.trim() || (originalNote.description
+                            ?: "") != vmContent || (colorThemeMap[originalNote.color?.toULong()]
+                            ?: "Default") != vmTheme || (originalNote.labels.firstOrNull()) != vmLabelId || originalNote.isOffline != vmIsOffline
+                    }
+                }
+
+                showListNoteCard -> {
+                    val vmTitle = noteEditingViewModel.listTitle.value
+                    val vmItems = noteEditingViewModel.listItems.value
+                    val vmTheme = noteEditingViewModel.listTheme.value
+                    val vmLabelId = noteEditingViewModel.listLabelId.value
+                    val vmIsOffline = noteEditingViewModel.listIsOffline.value
+
+                    if (originalNote == null) {
+                        vmTitle.isNotBlank() || vmItems.any { it.text.isNotBlank() }
+                    } else {
+                        originalNote.title != vmTitle.trim() || listItemsState.toList() != vmItems || (colorThemeMap[originalNote.color?.toULong()]
+                            ?: "Default") != vmTheme || originalNote.labels.firstOrNull() != vmLabelId || originalNote.isOffline != vmIsOffline
+                    }
+                }
+
+                showAudioNoteCard -> {
+                    val vmTitle = noteEditingViewModel.audioTitle.value
+                    val vmUniqueId = noteEditingViewModel.audioUniqueId.value
+                    val vmTheme = noteEditingViewModel.audioTheme.value
+                    val vmLabelId = noteEditingViewModel.audioLabelId.value
+                    val vmIsOffline = noteEditingViewModel.audioIsOffline.value
+
+                    if (originalNote == null) {
+                        vmTitle.isNotBlank() && !vmUniqueId.isNullOrBlank()
+                    } else {
+                        originalNote.title != vmTitle.trim() || (originalNote.description
+                            ?: "") != vmUniqueId || (colorThemeMap[originalNote.color?.toULong()]
+                            ?: "Default") != vmTheme || originalNote.labels.firstOrNull() != vmLabelId || originalNote.isOffline != vmIsOffline
+                    }
+                }
+
+                showSketchNoteCard -> {
+                    val vmTheme = colorThemeMap[editingNoteColor] ?: "Default"
+                    val vmLabelId = selectedLabelId
+                    if (originalNote == null) {
+                        titleState.isNotBlank() || (sketchPathsState != null && sketchPathsState != "[]")
+                    } else {
+                        originalNote.title != titleState.trim() ||
+                                originalNote.description != sketchPathsState ||
+                                (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmTheme ||
+                                originalNote.labels.firstOrNull() != vmLabelId
+                    }
+                }
+
+                else -> false
+            }
+        }
+
+        val handleDismissRequest = {
+            if (hasUnsavedChanges()) {
+                backProgress = 0f
+                showUnsavedChangesDialog = true
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            } else {
+                dismissAction()
+            }
+        }
+
+
         ModalNavigationDrawer(
             drawerContent = {
                 ListContent(
@@ -934,6 +1036,29 @@ fun CompactNotes(
                     onFilterSelected = { viewModel.setNoteFilterType(it) })
             }, drawerState = drawerState, gesturesEnabled = !isAnyNoteSheetOpen
         ) {
+            if (showUnsavedChangesDialog) {
+                XenonDialog(
+                    onDismissRequest = { showUnsavedChangesDialog = false },
+                    properties = DialogProperties(usePlatformDefaultWidth = true),
+                    title = "Unsaved changes!",
+                    confirmButtonText = "Proceed",
+                    onConfirmButtonClick = {
+                        showUnsavedChangesDialog = false
+                        dismissAction()
+                    },
+                    containerColor = colorScheme.errorContainer,
+                    dismissIconButtonContainerColor = colorScheme.error.copy(alpha = 0.15f),
+                    dismissIconButtonContentColor = colorScheme.onErrorContainer.copy(
+                        alpha = 0.8f
+                    ),
+                    confirmContainerColor = colorScheme.error,
+                    confirmContentColor = colorScheme.onError,
+                    content = {
+                        Text("If you proceed now, all unsaved changes get lost")
+                    },
+
+                    )
+            }
             Scaffold(snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState) { data ->
                     XenonSnackbar(
@@ -1384,6 +1509,7 @@ fun CompactNotes(
                                                                         }
 
                                                                         NoteType.SKETCH -> {
+                                                                            sketchPathsState = itemToEdit.description
                                                                             isSearchActive = false
                                                                             viewModel.setSearchQuery(
                                                                                 ""
@@ -1560,7 +1686,10 @@ fun CompactNotes(
                                                                         itemToEdit.color?.toULong()
                                                                 }
 
-                                                                NoteType.SKETCH -> viewModel.showSketchCard()
+                                                                NoteType.SKETCH -> {
+                                                                    sketchPathsState = itemToEdit.description
+                                                                    viewModel.showSketchCard()
+                                                                }
                                                             }
                                                         },
                                                         maxLines = gridMaxLines,
@@ -1590,13 +1719,8 @@ fun CompactNotes(
                         progressFlow.collect { event ->
                             backProgress = event.progress
                         }
-                        viewModel.hideTextCard()
-                        viewModel.hideListCard()
-                        viewModel.hideAudioCard()
-                        viewModel.hideSketchCard()
-                        isSearchActive = false
-                        viewModel.setSearchQuery("")
-                        resetNoteState()
+                        handleDismissRequest()
+
                     } catch (_: CancellationException) {
                         backProgress = 0f
                     }
@@ -1622,11 +1746,8 @@ fun CompactNotes(
                                 .background(colorScheme.scrim.copy(alpha = scrimAlpha))
                                 .combinedClickable(
                                     onClick = {
-                                    viewModel.hideTextCard()
-                                    viewModel.hideListCard()
-                                    viewModel.hideAudioCard()
-                                    viewModel.hideSketchCard()
-                                },
+                                        handleDismissRequest()
+                                    },
                                     indication = null,
                                     interactionSource = remember { MutableInteractionSource() })
                         )
@@ -1661,22 +1782,19 @@ fun CompactNotes(
                             when {
                                 showTextNoteCard -> {
                                     NoteTextSheet(
-                                        onDismiss = {
-                                        viewModel.hideTextCard()
-                                        isSearchActive = false
-                                        viewModel.setSearchQuery("")
-                                        resetNoteState()
-                                    },
+                                        onDismiss = handleDismissRequest,
 
                                         onSave = { title, description, theme, labelId, isOffline ->
-                                            val descriptionText = description.fromRichTextJson().text
+                                            val descriptionText =
+                                                description.fromRichTextJson().text
                                             if (title.isBlank()) {
                                                 viewModel.hideTextCard()
                                                 resetNoteState()
                                                 return@NoteTextSheet
                                             }
 
-                                            val finalDescription = if (descriptionText.isBlank()) null else description
+                                            val finalDescription =
+                                                if (descriptionText.isBlank()) null else description
                                             val colorLong = themeColorMap[theme]?.toLong()
 
                                             if (editingNoteId != null) {
@@ -1738,12 +1856,7 @@ fun CompactNotes(
 
                                 showListNoteCard -> {
                                     NoteListSheet(
-                                        onDismiss = {
-                                        viewModel.hideListCard()
-                                        isSearchActive = false
-                                        viewModel.setSearchQuery("")
-                                        resetNoteState()
-                                    },
+                                        onDismiss = handleDismissRequest,
                                         onSave = { title, items, theme, labelId, isOffline ->
                                             val nonEmptyItems =
                                                 items.filter { it.text.isNotBlank() }
@@ -1812,12 +1925,7 @@ fun CompactNotes(
 
                                     val context = LocalContext.current
                                     NoteAudioSheet(
-                                        onDismiss = {
-                                        viewModel.hideAudioCard()
-                                        isSearchActive = false
-                                        viewModel.setSearchQuery("")
-                                        resetNoteState()
-                                    },
+                                        onDismiss = handleDismissRequest,
                                         onSave = { title, uniqueAudioId, theme, labelId, isOffline ->
                                             if (title.isBlank() && uniqueAudioId.isBlank()) {
                                                 viewModel.hideAudioCard()
@@ -1884,12 +1992,7 @@ fun CompactNotes(
                                     NoteSketchSheet(
                                         sketchTitle = titleState,
                                         onSketchTitleChange = { titleState = it },
-                                        onDismiss = {
-                                            viewModel.hideSketchCard()
-                                            isSearchActive = false
-                                            viewModel.setSearchQuery("")
-                                            resetNoteState()
-                                        },
+                                        onDismiss = handleDismissRequest,
                                         initialTheme = colorThemeMap[editingNoteColor] ?: "Default",
                                         onThemeChange = { newThemeName ->
                                             editingNoteColor = themeColorMap[newThemeName]
@@ -1938,6 +2041,7 @@ fun CompactNotes(
                                         },
                                         saveTrigger = saveTrigger,
                                         onSaveTriggerConsumed = { saveTrigger = false },
+                                        onDrawingChanged = { sketchPathsState = it },
                                         isEraserMode = isEraserMode,
                                         usePressure = usePressure,
                                         strokeWidth = currentSketchSize,
@@ -1964,7 +2068,8 @@ fun CompactNotes(
                                         editingNoteId = editingNoteId,
                                         notesViewModel = viewModel,
                                         backProgress = backProgress,
-                                        initialPaths = viewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.description
+                                        initialPaths = viewModel.noteItems.filterIsInstance<NotesItems>()
+                                            .find { it.id == editingNoteId }?.description
                                     )
                                 }
                             }
