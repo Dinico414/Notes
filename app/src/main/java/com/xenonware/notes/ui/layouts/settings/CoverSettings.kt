@@ -38,6 +38,7 @@ import com.xenon.mylibrary.res.ThemeSetting
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoCornerRadius
 import com.xenon.mylibrary.values.NoSpacing
+import com.xenon.mylibrary.values.SmallerCornerRadius
 import com.xenonware.notes.BuildConfig
 import com.xenonware.notes.R
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
@@ -145,7 +146,7 @@ fun CoverSettings(
                     tileBackgroundColor = coverScreenBackgroundColor,
                     tileContentColor = coverScreenContentColor,
                     tileSubtitleColor = coverScreenContentColor.copy(alpha = 0.7f),
-                    tileShapeOverride = RoundedCornerShape(NoCornerRadius),
+                    tileShapeOverride = RoundedCornerShape(SmallerCornerRadius),
                     tileHorizontalPadding = MediumPadding,
                     tileVerticalPadding = MediumPadding,
                     useGroupStyling = false,
