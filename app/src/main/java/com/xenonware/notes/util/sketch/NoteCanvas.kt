@@ -85,14 +85,16 @@ fun NoteCanvas(
     var lastTouchPosition by remember { mutableStateOf(Offset.Zero) }
     var isShapeSnapped by remember { mutableStateOf(false) } // Blocks drawing after snap
 
-    // 1. Handle Paths Updates (Drawing, Erasing, Undo)
-    LaunchedEffect(paths) {
+    // 1. Handle Paths Updates (Drawing, Erasing, Undo, Load)
+    LaunchedEffect(paths, canvasSize) {
         if (canvasSize == IntSize.Zero) return@LaunchedEffect
 
         val currentBitmap = cachedBitmap
-        val needsFullRedraw = paths.size < drawnPathsCount || (paths.size == drawnPathsCount && paths.isNotEmpty()) || currentBitmap == null
-        val isAppend = paths.size == drawnPathsCount + 1 && currentBitmap != null
-
+        val isAppend = paths.size == drawnPathsCount + 1 && 
+                       currentBitmap != null && 
+                       currentBitmap.width == canvasSize.width && 
+                       currentBitmap.height == canvasSize.height
+                       
         if (isAppend && currentBitmap != null) {
             val canvas = ComposeCanvas(currentBitmap)
             val paint = Paint().apply { isAntiAlias = true }
@@ -100,8 +102,7 @@ fun NoteCanvas(
             drawPathToCanvas(canvas, paint, newPath.path, newPath.color)
             drawnPathsCount = paths.size
             currentPathBakedSize = 0
-        }
-        else if (needsFullRedraw) {
+        } else {
             coroutineScope.launch(Dispatchers.Default) {
                 val newBitmap = ImageBitmap(canvasSize.width, canvasSize.height)
                 val canvas = ComposeCanvas(newBitmap)

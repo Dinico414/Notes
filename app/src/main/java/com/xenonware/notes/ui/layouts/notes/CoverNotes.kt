@@ -1659,7 +1659,7 @@ fun CoverNotes(
                                         onThemeChange = { newThemeName ->
                                             editingNoteColor = themeColorMap[newThemeName]
                                         },
-                                        onSave = { title, theme, labelId, isOffline ->
+                                        onSave = { title, theme, labelId, isOffline, serializedPaths ->
                                             if (title.isBlank()) {
                                                 viewModel.hideSketchCard()
                                                 resetNoteState()
@@ -1676,6 +1676,7 @@ fun CoverNotes(
                                                 existingNote?.let { it ->
                                                     val updatedNote = it.copy(
                                                         title = title.trim(),
+                                                        description = serializedPaths,
                                                         color = colorLong,
                                                         labels = labelId?.let { it -> listOf(it) }
                                                             ?: emptyList(),
@@ -1687,7 +1688,7 @@ fun CoverNotes(
                                             } else {
                                                 viewModel.addItem(
                                                     title = title.trim(),
-                                                    description = null,
+                                                    description = serializedPaths,
                                                     noteType = NoteType.SKETCH,
                                                     color = colorLong,
                                                     labels = labelId?.let { listOf(it) }
@@ -1727,7 +1728,8 @@ fun CoverNotes(
                                         isCoverModeActive = false,
                                         editingNoteId = editingNoteId,
                                         notesViewModel = viewModel,
-                                        backProgress = backProgress
+                                        backProgress = backProgress,
+                                        initialPaths = viewModel.noteItems.filterIsInstance<NotesItems>().find { it.id == editingNoteId }?.description
                                     )
                                 }
                             }

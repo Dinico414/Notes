@@ -86,6 +86,13 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     fun setCanvasSize(size: Size) {
         _canvasSize.update { size }
     }
+    
+    fun setPaths(paths: List<PathData>) {
+        _pathState.update { it.copy(paths = paths) }
+        _undoRedoHistory.clear()
+        _undoRedoHistory.add(paths)
+        _undoRedoPointer = 0
+    }
 
     fun setDrawColors(colors: List<Color>) {
         val oldColors = drawColors

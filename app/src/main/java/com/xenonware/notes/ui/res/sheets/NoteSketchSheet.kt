@@ -107,6 +107,7 @@ import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.util.sketch.NoteCanvas
+import com.xenonware.notes.util.sketch.SketchSerializer
 import com.xenonware.notes.viewmodel.CanvasViewModel
 import com.xenonware.notes.viewmodel.DrawingAction
 import com.xenonware.notes.viewmodel.NotesViewModel
@@ -133,7 +134,7 @@ fun NoteSketchSheet(
     onDismiss: () -> Unit,
     initialTheme: String = "Default",
     onThemeChange: (String) -> Unit,
-    onSave: (String, String, String?, Boolean) -> Unit,
+    onSave: (String, String, String?, Boolean, String) -> Unit,
     saveTrigger: Boolean,
     onSaveTriggerConsumed: () -> Unit,
     isEraserMode: Boolean,
@@ -156,6 +157,7 @@ fun NoteSketchSheet(
     isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false,
     backProgress: Float = 0f,
+    initialPaths: String? = null
 ) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
@@ -214,6 +216,17 @@ fun NoteSketchSheet(
             context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0
         ) == 1
     }
+    
+    // Load initial paths
+    LaunchedEffect(initialPaths) {
+        if (!initialPaths.isNullOrBlank()) {
+            val loadedPaths = SketchSerializer.deserializePaths(initialPaths)
+            if (loadedPaths.isNotEmpty()) {
+                viewModel.setPaths(loadedPaths)
+            }
+        }
+    }
+
     val message = stringResource(R.string.navigate_back_description)
     BackHandler {
         val currentTime = System.currentTimeMillis()
@@ -232,7 +245,8 @@ fun NoteSketchSheet(
 
     LaunchedEffect(saveTrigger) {
         if (saveTrigger) {
-            onSave(sketchTitle, selectedTheme, selectedLabelId, isOffline)
+            val serializedPaths = SketchSerializer.serializePaths(pathState.value.paths)
+            onSave(sketchTitle, selectedTheme, selectedLabelId, isOffline, serializedPaths)
             onSaveTriggerConsumed()
         }
     }
