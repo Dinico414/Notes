@@ -462,6 +462,10 @@ fun CompactNotes(
             selectedLabelId = null
             noteEditingViewModel.clearAllStates()
             sketchPathsState = null
+            isEraserMode = false
+            usePressure = true
+            showColorPicker = false
+            showSketchSizePopup = false
         }
 
         LaunchedEffect(resizeTimerKey) {
@@ -1394,6 +1398,7 @@ fun CompactNotes(
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
+                                            .padding(scaffoldPadding)
                                             .fillMaxWidth(),
                                         contentAlignment = Alignment.Center
                                     ) {
