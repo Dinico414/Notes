@@ -73,6 +73,12 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     private val _isHandwritingMode = MutableStateFlow(true)
     val isHandwritingMode = _isHandwritingMode.asStateFlow()
 
+    private val _canUndo = MutableStateFlow(false)
+    val canUndo = _canUndo.asStateFlow()
+
+    private val _canRedo = MutableStateFlow(false)
+    val canRedo = _canRedo.asStateFlow()
+
     private var drawColors: List<Color>? = null
 
     private val _undoRedoHistory = mutableListOf<List<PathData>>()
@@ -81,6 +87,12 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     init {
         _undoRedoHistory.add(_pathState.value.paths)
         _undoRedoPointer = 0
+        updateUndoRedoState()
+    }
+
+    private fun updateUndoRedoState() {
+        _canUndo.update { _undoRedoPointer > 0 }
+        _canRedo.update { _undoRedoPointer < _undoRedoHistory.lastIndex }
     }
 
     fun setCanvasSize(size: Size) {
@@ -92,6 +104,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         _undoRedoHistory.clear()
         _undoRedoHistory.add(paths)
         _undoRedoPointer = 0
+        updateUndoRedoState()
     }
 
     fun setDrawColors(colors: List<Color>) {
@@ -142,6 +155,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         }
         _undoRedoHistory.add(_pathState.value.paths)
         _undoRedoPointer++
+        updateUndoRedoState()
     }
 
     fun onAction(action: DrawingAction) {
@@ -327,6 +341,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         _undoRedoHistory.clear()
         _undoRedoHistory.add(emptyList())
         _undoRedoPointer = 0
+        updateUndoRedoState()
     }
 
     private fun onEnableGrid(enabled: Boolean) {
@@ -341,6 +356,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         if (_undoRedoPointer > 0) {
             _undoRedoPointer--
             _pathState.update { it.copy(paths = _undoRedoHistory[_undoRedoPointer]) }
+            updateUndoRedoState()
         }
     }
 
@@ -348,6 +364,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         if (_undoRedoPointer < _undoRedoHistory.lastIndex) {
             _undoRedoPointer++
             _pathState.update { it.copy(paths = _undoRedoHistory[_undoRedoPointer]) }
+            updateUndoRedoState()
         }
     }
 

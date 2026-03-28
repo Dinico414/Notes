@@ -7,15 +7,17 @@ import android.provider.Settings
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -82,7 +84,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -209,6 +210,8 @@ fun NoteSketchSheet(
     val currentPathState = viewModel.currentPathState.collectAsState()
     val pathState = viewModel.pathState.collectAsState()
     val isHandwritingMode by viewModel.isHandwritingMode.collectAsState()
+    val canUndo by viewModel.canUndo.collectAsState()
+    val canRedo by viewModel.canRedo.collectAsState()
 
     LaunchedEffect(pathState.value) {
         onDrawingChanged(SketchSerializer.serializePaths(pathState.value.paths))
@@ -614,6 +617,8 @@ fun NoteSketchSheet(
                     },
                     onCollapseChange = { isSideControlsCollapsed = it },
                     isCollapsed = isSideControlsCollapsed,
+                    canUndo = canUndo,
+                    canRedo = canRedo,
                     hazeState = hazeState,
                     hazeThinColor = hazeThinColor,
                 )
@@ -633,7 +638,7 @@ class CanvasViewModelFactory(private val application: Application) : ViewModelPr
 }
 
 @SuppressLint("ConfigurationScreenWidthHeight")
-@OptIn(ExperimentalHazeMaterialsApi::class)
+@OptIn(ExperimentalHazeMaterialsApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun VerticalFloatingToolbar(
     onAction: (DrawingAction) -> Unit,
@@ -641,6 +646,8 @@ fun VerticalFloatingToolbar(
     onToggleHandwritingMode: (Boolean) -> Unit,
     onCollapseChange: (Boolean) -> Unit,
     isCollapsed: Boolean,
+    canUndo: Boolean,
+    canRedo: Boolean,
     hazeState: HazeState,
     hazeThinColor: Color,
     modifier: Modifier = Modifier,
@@ -661,40 +668,81 @@ fun VerticalFloatingToolbar(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        IconButton(onClick = {}) {
+                        // Undo
+                        Box(
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .combinedClickable(
+                                    onClick = { if (canUndo)onAction(DrawingAction.Undo) },
+                                    onLongClick = { onAction(DrawingAction.ClearCanvas) }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.Undo,
-                                "Undo",
-                                modifier = Modifier.pointerInput(Unit) {
-                                    detectTapGestures(
-                                        onTap = { onAction(DrawingAction.Undo) },
-                                        onLongPress = { onAction(DrawingAction.ClearCanvas) })
-                                })
+                                contentDescription = "Undo",
+                                tint = if (canUndo) colorScheme.onSurface else colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
                         }
-                        IconButton(onClick = { onAction(DrawingAction.Redo) }) {
+                        // Redo
+                        IconButton(
+                            onClick = { onAction(DrawingAction.Redo) },
+                            enabled = canRedo
+                        ) {
                             Icon(Icons.AutoMirrored.Rounded.Redo, "Redo")
                         }
+                        val handRadius by animateFloatAsState(
+                            targetValue = if (isHandwritingMode) 100f else 25f,
+                            label = ""
+                        )
+                        val penRadius by animateFloatAsState(
+                            targetValue = if (!isHandwritingMode) 100f else 25f,
+                            label = ""
+                        )
 
+                        val handModeShape = RoundedCornerShape(
+                            topStart = 100f,
+                            bottomStart = 100f,
+                            topEnd = handRadius,
+                            bottomEnd = handRadius
+                        )
+
+                        val penModeShape = RoundedCornerShape(
+                            topStart = penRadius,
+                            bottomStart = penRadius,
+                            topEnd = 100f,
+                            bottomEnd = 100f
+                        )
+                        // HandMode
                         FilledIconButton(
-                            onClick = { onToggleHandwritingMode(true) },
+                            modifier = Modifier.size(48.dp),
+                            shape = handModeShape,
                             colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = if (isHandwritingMode) colorScheme.tertiary else Color.Transparent,
+                                containerColor = if (isHandwritingMode) colorScheme.tertiary else colorScheme.surfaceBright,
                                 contentColor = if (isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurface
-                            )
+                            ),
+                            onClick = { onToggleHandwritingMode(true) },
+
                         ) {
                             Icon(painterResource(R.drawable.hand_drawn), "Hand")
                         }
+                        // PenMode
                         FilledIconButton(
-                            onClick = { onToggleHandwritingMode(false) },
+                            modifier = Modifier.size(48.dp),
+                            shape = penModeShape,
                             colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = if (!isHandwritingMode) colorScheme.tertiary else Color.Transparent,
+                                containerColor = if (!isHandwritingMode) colorScheme.tertiary else colorScheme.surfaceBright,
                                 contentColor = if (!isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurface
-                            )
+                            ),
+                            onClick = { onToggleHandwritingMode(false) },
                         ) {
                             Icon(painterResource(R.drawable.pen_drawn), "Pen")
                         }
                     }
                 }
+                // Collapse
                 FilledIconButton(
                     onClick = { onCollapseChange(!isCollapsed) },
                     modifier = Modifier.size(height = 48.dp, width = 56.dp)
@@ -719,22 +767,34 @@ fun VerticalFloatingToolbar(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        IconButton(onClick = {}) {
+                        // Undo
+                        Box(
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .combinedClickable(
+                                    onClick = { if (canUndo)onAction(DrawingAction.Undo) },
+                                    onLongClick = { onAction(DrawingAction.ClearCanvas) }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.Undo,
-                                "Undo",
-                                modifier = Modifier.pointerInput(Unit) {
-                                    detectTapGestures(
-                                        onTap = { onAction(DrawingAction.Undo) },
-                                        onLongPress = { onAction(DrawingAction.ClearCanvas) })
-                                })
+                                contentDescription = "Undo",
+                                tint = if (canUndo) colorScheme.onSurface else colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
                         }
-                        IconButton(onClick = { onAction(DrawingAction.Redo) }) {
+                        // Redo
+                        IconButton(
+                            onClick = { onAction(DrawingAction.Redo) },
+                            enabled = canRedo
+                        ) {
                             Icon(Icons.AutoMirrored.Rounded.Redo, "Redo")
                         }
                     }
                 }
-
+                //Collapse
                 FilledIconButton(
                     onClick = { onCollapseChange(!isCollapsed) },
                     modifier = Modifier.size(width = 48.dp, height = 56.dp)
@@ -751,21 +811,50 @@ fun VerticalFloatingToolbar(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        val handRadius by animateFloatAsState(
+                            targetValue = if (isHandwritingMode) 100f else 25f,
+                            label = ""
+                        )
+                        val penRadius by animateFloatAsState(
+                            targetValue = if (!isHandwritingMode) 100f else 25f,
+                            label = ""
+                        )
+
+                        val handModeShape = RoundedCornerShape(
+                            topStart = 100f,
+                            bottomStart = handRadius,
+                            topEnd = 100f,
+                            bottomEnd = handRadius
+                        )
+
+                        val penModeShape = RoundedCornerShape(
+                            topStart = penRadius,
+                            bottomStart = 100f,
+                            topEnd = penRadius,
+                            bottomEnd = 100f
+                        )
+                        // HandMode
                         FilledIconButton(
-                            onClick = { onToggleHandwritingMode(true) },
+                            modifier = Modifier.size(48.dp),
+                            shape = handModeShape,
                             colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = if (isHandwritingMode) colorScheme.tertiary else Color.Transparent,
+                                containerColor = if (isHandwritingMode) colorScheme.tertiary else colorScheme.surfaceBright,
                                 contentColor = if (isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurface
-                            )
-                        ) {
+                            ),
+                            onClick = { onToggleHandwritingMode(true) },
+
+                            ) {
                             Icon(painterResource(R.drawable.hand_drawn), "Hand")
                         }
+                        // PenMode
                         FilledIconButton(
-                            onClick = { onToggleHandwritingMode(false) },
+                            modifier = Modifier.size(48.dp),
+                            shape = penModeShape,
                             colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = if (!isHandwritingMode) colorScheme.tertiary else Color.Transparent,
+                                containerColor = if (!isHandwritingMode) colorScheme.tertiary else colorScheme.surfaceBright,
                                 contentColor = if (!isHandwritingMode) colorScheme.onTertiary else colorScheme.onSurface
-                            )
+                            ),
+                            onClick = { onToggleHandwritingMode(false) },
                         ) {
                             Icon(painterResource(R.drawable.pen_drawn), "Pen")
                         }

@@ -765,7 +765,12 @@ fun CompactNotes(
                         )
                     }
 
-                    IconButton(onClick = { usePressure = !usePressure }) {
+                    FilledIconButton(onClick = { usePressure = !usePressure },
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = if (usePressure) colorScheme.tertiary else Color.Transparent,
+                            contentColor = if (usePressure) colorScheme.onTertiary else colorScheme.onSurface
+                        )
+                    ) {
                         Icon(
                             painter = painterResource(id = if (usePressure) R.drawable.dynamic else R.drawable.constant),
                             contentDescription = "Toggle Pressure/Speed"
