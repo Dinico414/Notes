@@ -56,6 +56,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -407,7 +408,17 @@ fun NoteTextSheet(
             )
         }
 
-        val hazeThinColor = colorScheme.surfaceDim
+        val targetSurfaceDim by animateColorAsState(
+            targetValue = if (selectedTheme != "Default") {
+                lerp(colorScheme.surfaceDim, colorScheme.secondary, 0.2f)
+            } else {
+                colorScheme.surfaceDim
+            },
+            animationSpec = tween(durationMillis = 500),
+            label = "targetSurfaceDim"
+        )
+
+        val hazeThinColor = targetSurfaceDim
         val labelColor = extendedMaterialColorScheme.label
 
         val layoutDirection = LocalLayoutDirection.current
