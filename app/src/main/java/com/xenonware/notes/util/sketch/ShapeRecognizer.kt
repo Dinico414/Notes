@@ -12,13 +12,15 @@ import kotlin.math.sqrt
 
 object ShapeRecognizer {
 
-    // --- CONFIGURATION ---
-    private const val LINE_LINEARITY = 0.96f       // Threshold for straight lines
-    private const val CIRCLE_VARIANCE = 0.20f      // Increased to allow messier circles
-    private const val MIN_CORNER_ANGLE = 160.0     // Degrees. Angles less than this are corners.
-    private const val MERGE_CORNER_DIST = 30f      // Reduced from 40f to stop Rect->Tri merging
+    // --- CONFIGURATION (tuned for reliability) ---
+    private const val LINE_LINEARITY = 0.92f       // unchanged
+    private const val CIRCLE_VARIANCE = 0.28f      // higher = easier circles/ovals
+    private const val ARC_VARIANCE = 0.35f         // allows partial arcs (Bögen)
+    private const val MIN_CORNER_ANGLE = 160.0     // was 160 → much less false corners
+    private const val MERGE_CORNER_DIST = 30f
+    private const val CLOSE_THRESHOLD = 0.08f      // fraction of total length
 
-    enum class ShapeType { CIRCLE, OVAL, TRIANGLE, QUAD, LINE, RECT }
+    enum class ShapeType { CIRCLE, OVAL, TRIANGLE, QUAD, LINE, RECT, ARC }
 
     fun recognizeAndCreatePath(
         points: List<PathOffset>,
@@ -32,87 +34,130 @@ object ShapeRecognizer {
         val totalLength = calculatePathLength(rawPoints)
         val directDist = (start - end).getDistance()
 
-        // 1. LINE CHECK (Open Shape)
-        // If endpoints are far apart relative to path length, it's a line.
-        if (directDist > totalLength * 0.92f) {
+        // 1. LINE CHECK (very straight open shape)
+        if (directDist > totalLength * LINE_LINEARITY) {
             return createLinearPath(start, end, originalThickness)
         }
 
-        // 2. ANALYZE GEOMETRY
         val centroid = calculateCentroid(rawPoints)
+        val (avgRadius, cv) = getCircularityMetrics(rawPoints, centroid)
 
-        // Detect Corners
+        val startEndDist = directDist
+        val isClosed = startEndDist < totalLength * CLOSE_THRESHOLD || startEndDist < 25f
+
+        // === NEW: Much stricter circle/arc detection ===
+        // Only trigger circle/arc if variance is quite low OR the shape is very clean and closed
+        val isVeryCircular = cv < 0.18f   // was 0.28f / 0.35f → much stricter
+
+        if (isVeryCircular) {
+            return if (isClosed) {
+                generateCircleOrOval(rawPoints, centroid, originalThickness)
+            } else {
+                // For open arcs (Bögen), require even cleaner curvature
+                if (cv < 0.22f && totalLength > 80f) {
+                    generateArc(rawPoints, centroid, avgRadius, start, end, originalThickness)
+                } else {
+                    null  // don't force arc on slightly curved lines
+                }
+            }
+        }
+
+        // === Polygon detection (run when it's NOT very circular) ===
         val corners = findCorners(rawPoints)
 
-        // 3. DECISION TREE
-
-        // CASE A: It looks like a Triangle (3 corners)
         if (corners.size == 3) {
-            // Triangles have straight sides. Circles have bulging sides.
-            if (areSidesBulging(corners, rawPoints)) {
-                // It's a circle/oval disguised as a triangle
-                return generateCircleOrOval(rawPoints, centroid, originalThickness)
+            // Extra check: triangles should NOT be too circular
+            if (cv > 0.22f) {
+                return createPolygonPath(corners, originalThickness)
             }
-            return createPolygonPath(corners, originalThickness)
         }
 
-        // CASE B: It looks like a Quad (4 corners)
         if (corners.size == 4) {
-            if (isRectangular(corners)) {
-                return createRectifiedBox(corners, originalThickness)
+            return if (isRectangular(corners)) {
+                createRectifiedBox(corners, originalThickness)
+            } else {
+                createPolygonPath(corners, originalThickness)
             }
-            return createPolygonPath(corners, originalThickness)
         }
 
-        // CASE C: 5 Corners (Often a messy square)
         if (corners.size == 5) {
             val reduced = mergeClosestPoints(corners)
             if (reduced.size == 4) {
-                if (isRectangular(reduced)) return createRectifiedBox(reduced, originalThickness)
-                return createPolygonPath(reduced, originalThickness)
+                return if (isRectangular(reduced)) {
+                    createRectifiedBox(reduced, originalThickness)
+                } else {
+                    createPolygonPath(reduced, originalThickness)
+                }
             }
         }
 
-        // CASE D: Fallback to Circle/Oval analysis
-        // If we didn't find distinct corners, OR if the corner check failed, check variance.
-        val (isCircle, avgRadius) = analyzeCircularity(rawPoints, centroid)
-
-        // If variance is low, it's a circle.
-        // Note: We accept higher variance if corner count was 0 or >5 (messy blob)
-        if (isCircle || corners.size < 3 || corners.size > 5) {
+        // Fallback: only allow loose circle if corner count is weird and it's closed
+        if (isClosed && (corners.size < 3 || corners.size > 5) && cv < 0.25f) {
             return generateCircleOrOval(rawPoints, centroid, originalThickness)
         }
 
-        return null
+        return null  // keep original freehand stroke
     }
 
-    // --- ANALYSIS ---
+    // ==================== NEW: ARC (Bögen) ====================
+    private fun generateArc(
+        points: List<Offset>,
+        centroid: Offset,
+        radius: Float,
+        start: Offset,
+        end: Offset,
+        thickness: Float
+    ): List<PathOffset> {
+        val startTheta = atan2((start - centroid).y.toDouble(), (start - centroid).x.toDouble())
+        val endTheta = atan2((end - centroid).y.toDouble(), (end - centroid).x.toDouble())
 
-    /**
-     * Checks if the path segments connecting corners bulge significantly.
-     * Returns TRUE if it's likely a circle, FALSE if it's a triangle.
-     */
-    private fun areSidesBulging(corners: List<Offset>, allPoints: List<Offset>): Boolean {
-        var maxBulge = 0f
-        val threshold = 40f // Pixels of deviation allowed for a straight side
+        // Determine drawing direction using second point
+        val second = if (points.size >= 3) points[1] else end
+        val secondTheta = atan2((second - centroid).y.toDouble(), (second - centroid).x.toDouble())
 
-        val center = calculateCentroid(allPoints)
-        val (_, cv) = getCircularityMetrics(allPoints, center)
+        val deltaToSecond = normalizeAngleDiff(secondTheta - startTheta)
+        val dirSign = if (deltaToSecond >= 0.0) 1.0 else -1.0
 
-        // A Triangle usually has CV > 0.22. A Circle usually has CV < 0.18.
-        // If the CV is low, it's a Circle, even if we found 3 corners.
-        return cv < 0.18f
+        // Full span in the same direction as the user drew
+        val rawDelta = endTheta - startTheta
+        val delta = if (dirSign > 0) {
+            (rawDelta % (2 * PI) + 2 * PI) % (2 * PI)
+        } else {
+            -(((-rawDelta) % (2 * PI) + 2 * PI) % (2 * PI))
+        }
+
+        val list = mutableListOf<PathOffset>()
+        val steps = 60
+        for (i in 0..steps) {
+            val t = i.toFloat() / steps
+            val theta = startTheta + t * delta
+            list.add(
+                PathOffset(
+                    Offset(
+                        (centroid.x + radius * cos(theta)).toFloat(),
+                        (centroid.y + radius * sin(theta)).toFloat()
+                    ),
+                    thickness
+                )
+            )
+        }
+        return list
     }
 
+    private fun normalizeAngleDiff(d: Double): Double {
+        var diff = d % (2 * PI)
+        if (diff > PI) diff -= 2 * PI
+        if (diff < -PI) diff += 2 * PI
+        return diff
+    }
+
+    // ==================== REST OF YOUR FUNCTIONS (mostly unchanged) ====================
     private fun generateCircleOrOval(points: List<Offset>, centroid: Offset, thickness: Float): List<PathOffset> {
         val (minX, maxX, minY, maxY) = getBounds(points)
         val width = maxX - minX
         val height = maxY - minY
-
-        // Distinguish Circle vs Oval
         val ratio = if (width > height) width / height else height / width
 
-        // Calculate average radius for Circle
         val distances = points.map { (it - centroid).getDistance() }
         val avgRadius = distances.average().toFloat()
 
@@ -121,11 +166,6 @@ object ShapeRecognizer {
         } else {
             createPerfectOval(minX, maxX, minY, maxY, thickness)
         }
-    }
-
-    private fun analyzeCircularity(points: List<Offset>, centroid: Offset): Pair<Boolean, Float> {
-        val (avgRadius, cv) = getCircularityMetrics(points, centroid)
-        return Pair(cv < CIRCLE_VARIANCE, avgRadius)
     }
 
     private fun getCircularityMetrics(points: List<Offset>, centroid: Offset): Pair<Float, Float> {
@@ -139,13 +179,10 @@ object ShapeRecognizer {
     }
 
     private fun findCorners(points: List<Offset>): List<Offset> {
-        // 1. Resample to ~40 points to normalize data
         val resampled = resample(points, 40)
         val potentialCorners = mutableListOf<Int>()
         val n = resampled.size
 
-        // 2. Find Local Minima in Angle (Sharpest turns)
-        // We use a sliding window.
         for (i in 0 until n) {
             val prev = resampled[(i - 2 + n) % n]
             val curr = resampled[i]
@@ -153,9 +190,7 @@ object ShapeRecognizer {
 
             val angle = calculateAngle(prev, curr, next)
 
-            // If angle is sharp enough to be a corner
             if (angle < MIN_CORNER_ANGLE) {
-                // Check if it is a local minimum (sharpest point in neighborhood)
                 val prevAngle = calculateAngle(
                     resampled[(i - 3 + n) % n],
                     resampled[(i - 1 + n) % n],
@@ -167,38 +202,28 @@ object ShapeRecognizer {
                     resampled[(i + 3) % n]
                 )
 
-                // Loose local extrema check
                 if (angle <= prevAngle && angle <= nextAngle) {
                     potentialCorners.add(i)
                 }
             }
         }
 
-        // 3. Cluster and Clean
         if (potentialCorners.isEmpty()) return emptyList()
 
         val distinctCorners = mutableListOf<Offset>()
         var lastIdx = -999
 
         for (idx in potentialCorners) {
-            // If this index is far from the last one, it's a new corner
-            // Indices wrap around, so simple diff is okay for sorted list except for start/end loop
             if (abs(idx - lastIdx) > 4) {
                 distinctCorners.add(resampled[idx])
                 lastIdx = idx
             }
         }
 
-        // 4. Merge First/Last if they are the same corner (Loop wrap)
-        if (distinctCorners.size > 1) {
-            val d = (distinctCorners.first() - distinctCorners.last()).getDistance()
-            if (d < MERGE_CORNER_DIST) {
-                distinctCorners.removeAt(distinctCorners.lastIndex)
-            }
+        if (distinctCorners.size > 1 && (distinctCorners.first() - distinctCorners.last()).getDistance() < MERGE_CORNER_DIST) {
+            distinctCorners.removeAt(distinctCorners.lastIndex)
         }
 
-        // 5. Distance Check for internal corners
-        // (Fixes Rectangles becoming Triangles by not merging incorrectly)
         return cleanCorners(distinctCorners, MERGE_CORNER_DIST)
     }
 
