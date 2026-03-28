@@ -315,6 +315,12 @@ fun CompactNotes(
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
 
+        LaunchedEffect(showTextNoteCard, showListNoteCard, showAudioNoteCard, showSketchNoteCard) {
+            if (showTextNoteCard || showListNoteCard || showAudioNoteCard || showSketchNoteCard) {
+                snackbarHostState.currentSnackbarData?.dismiss()
+            }
+        }
+
         val lazyListState = rememberLazyListState()
 
         var selectedNoteIds by remember { mutableStateOf(emptySet<Int>()) }

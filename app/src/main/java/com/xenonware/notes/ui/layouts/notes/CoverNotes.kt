@@ -300,6 +300,12 @@ fun CoverNotes(
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
 
+        LaunchedEffect(showTextNoteCard, showListNoteCard, showAudioNoteCard, showSketchNoteCard) {
+            if (showTextNoteCard || showListNoteCard || showAudioNoteCard || showSketchNoteCard) {
+                snackbarHostState.currentSnackbarData?.dismiss()
+            }
+        }
+
         val lazyListState = rememberLazyListState()
 
         var selectedNoteIds by remember { mutableStateOf(emptySet<Int>()) }
@@ -394,19 +400,7 @@ fun CoverNotes(
 
         val signInViewModel: SignInViewModel = viewModel()
 
-        var isSavingNewNote by remember { mutableStateOf(false) }
-        val notes = remember(noteItemsWithHeaders) { noteItemsWithHeaders.filterIsInstance<NotesItems>() }
-        var previousNoteCount by remember { mutableIntStateOf(notes.size) }
-
-        LaunchedEffect(notes) {
-            if (isSavingNewNote && notes.size > previousNoteCount) {
-                notes.maxByOrNull { it.id }?.let { newNote ->
-                    editingNoteId = newNote.id
-                }
-                isSavingNewNote = false
-            }
-            previousNoteCount = notes.size
-        }
+        val notes = noteItemsWithHeaders.filterIsInstance<NotesItems>()
 
         // ============================================================================
         // 14. Small Utility Functions & Effects
@@ -908,8 +902,24 @@ fun CoverNotes(
 
         val fabOverride = if (showTextNoteCard) {
             @Composable {
-                val vmTitle by noteEditingViewModel.textTitle.collectAsState()
-                val canSave = vmTitle.isNotBlank()
+                val vmTextTitle by noteEditingViewModel.textTitle.collectAsState()
+                val vmTextContent by noteEditingViewModel.textContent.collectAsState()
+                val vmTextTheme by noteEditingViewModel.textTheme.collectAsState()
+                val vmTextLabelId by noteEditingViewModel.textLabelId.collectAsState()
+                val vmTextIsOffline by noteEditingViewModel.textIsOffline.collectAsState()
+
+                val originalNote = editingNoteId?.let { id -> notes.find { it.id == id } }
+
+                val hasChanges = if (originalNote == null) {
+                    vmTextTitle.isNotBlank()
+                } else {
+                    originalNote.title != vmTextTitle.trim() ||
+                            (originalNote.description ?: "") != vmTextContent ||
+                            (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmTextTheme ||
+                            originalNote.labels.firstOrNull() != vmTextLabelId ||
+                            originalNote.isOffline != vmTextIsOffline
+                }
+                val canSave = vmTextTitle.isNotBlank() && hasChanges
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -925,7 +935,27 @@ fun CoverNotes(
             {
                 val vmListTitle by noteEditingViewModel.listTitle.collectAsState()
                 val vmListItems by noteEditingViewModel.listItems.collectAsState()
-                val canSave = vmListTitle.isNotBlank() && vmListItems.any { it.text.isNotBlank() }
+                val vmListTheme by noteEditingViewModel.listTheme.collectAsState()
+                val vmListLabelId by noteEditingViewModel.listLabelId.collectAsState()
+                val vmListIsOffline by noteEditingViewModel.listIsOffline.collectAsState()
+
+                val originalNote = editingNoteId?.let { id -> notes.find { it.id == id } }
+
+                val currentItemsDescription = vmListItems.joinToString("\n") {
+                    "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
+                }
+
+                val hasChanges = if (originalNote == null) {
+                    vmListTitle.isNotBlank() || vmListItems.any { it.text.isNotBlank() }
+                } else {
+                    originalNote.title != vmListTitle.trim() ||
+                            (originalNote.description ?: "") != currentItemsDescription ||
+                            (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmListTheme ||
+                            originalNote.labels.firstOrNull() != vmListLabelId ||
+                            originalNote.isOffline != vmListIsOffline
+                }
+
+                val canSave = vmListTitle.isNotBlank() && vmListItems.any { it.text.isNotBlank() } && hasChanges
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -939,7 +969,26 @@ fun CoverNotes(
             }
         } else if (showAudioNoteCard) {
             {
-                val canSave = titleState.isNotBlank() && hasAudioContent
+                val vmAudioTitle by noteEditingViewModel.audioTitle.collectAsState()
+                val vmAudioUniqueId by noteEditingViewModel.audioUniqueId.collectAsState()
+                val vmAudioTheme by noteEditingViewModel.audioTheme.collectAsState()
+                val vmAudioLabelId by noteEditingViewModel.audioLabelId.collectAsState()
+                val vmAudioIsOffline by noteEditingViewModel.audioIsOffline.collectAsState()
+
+                val originalNote = editingNoteId?.let { id -> notes.find { it.id == id } }
+
+                val hasChanges = if (originalNote == null) {
+                    vmAudioTitle.isNotBlank() && !vmAudioUniqueId.isNullOrBlank()
+                } else {
+                    originalNote.title != vmAudioTitle.trim() ||
+                            (originalNote.description ?: "") != vmAudioUniqueId ||
+                            (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmAudioTheme ||
+                            originalNote.labels.firstOrNull() != vmAudioLabelId ||
+                            originalNote.isOffline != vmAudioIsOffline
+                }
+
+                val hasAudio = vmAudioUniqueId != null
+                val canSave = vmAudioTitle.isNotBlank() && hasAudio && hasChanges
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -953,7 +1002,20 @@ fun CoverNotes(
             }
         } else if (showSketchNoteCard) {
             {
-                val canSave = titleState.isNotBlank()
+                val vmTheme = colorThemeMap[editingNoteColor] ?: "Default"
+                val vmLabelId = selectedLabelId
+                val originalNote = editingNoteId?.let { id -> notes.find { it.id == id } }
+                val isSketchEmpty = sketchPathsState.isNullOrBlank() || sketchPathsState == "[]"
+
+                val hasChanges = if (originalNote == null) {
+                    titleState.isNotBlank() || (sketchPathsState != null && sketchPathsState != "[]")
+                } else {
+                    originalNote.title != titleState.trim() ||
+                            originalNote.description != sketchPathsState ||
+                            (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmTheme ||
+                            originalNote.labels.firstOrNull() != vmLabelId
+                }
+                val canSave = titleState.isNotBlank() && hasChanges && !isSketchEmpty
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -1121,6 +1183,8 @@ fun CoverNotes(
                                         Icon(Icons.Rounded.Mic, contentDescription = stringResource(R.string.add_mic_note), tint = colorScheme.onSecondaryContainer)
                                     }
                                     IconButton(onClick = {
+                                        resetNoteState()
+                                        newSketchCounter++
                                         isSearchActive = false
                                         viewModel.setSearchQuery("")
                                         viewModel.showSketchCard()
@@ -1609,7 +1673,7 @@ fun CoverNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
-                                                isSavingNewNote = true
+                                                editingNoteId = viewModel.noteItems.filterIsInstance<NotesItems>().maxByOrNull { it.id }?.id
                                             }
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Note Saved")
@@ -1672,7 +1736,7 @@ fun CoverNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
-                                                isSavingNewNote = true
+                                                editingNoteId = viewModel.noteItems.filterIsInstance<NotesItems>().maxByOrNull { it.id }?.id
                                             }
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Note Saved")
@@ -1735,7 +1799,7 @@ fun CoverNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
-                                                isSavingNewNote = true
+                                                editingNoteId = viewModel.noteItems.filterIsInstance<NotesItems>().maxByOrNull { it.id }?.id
                                             }
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Note Saved")
@@ -1804,7 +1868,7 @@ fun CoverNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
-                                                isSavingNewNote = true
+                                                editingNoteId = viewModel.noteItems.filterIsInstance<NotesItems>().maxByOrNull { it.id }?.id
                                             }
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Note Saved")
