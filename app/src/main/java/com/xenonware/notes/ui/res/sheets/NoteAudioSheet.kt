@@ -1116,8 +1116,8 @@ fun AudioControlButtons(
                             onClick = onDiscardClick,
                             shape = RoundedCornerShape(64.dp),
                             colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = colorScheme.errorContainer,
-                                contentColor = colorScheme.onErrorContainer
+                                containerColor = colorScheme.error,
+                                contentColor = colorScheme.onError
                             ),
                             modifier = Modifier
                                 .height(136.dp)
