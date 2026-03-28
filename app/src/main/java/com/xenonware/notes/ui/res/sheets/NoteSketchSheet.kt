@@ -358,7 +358,6 @@ fun NoteSketchSheet(
             modifier = Modifier
                 .fillMaxSize()
                 .background(backgroundColor)
-                .padding(start = adaptivePaddingStart, end = adaptivePaddingEnd)
 
         ) {
             var isSideControlsCollapsed by rememberSaveable { mutableStateOf(false) }
@@ -395,6 +394,7 @@ fun NoteSketchSheet(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
+                    .padding(start = adaptivePaddingStart, end = adaptivePaddingEnd)
                     .padding(top = animatedTopPadding)
                     .clip(RoundedCornerShape(100f))
                     .background(colorScheme.surfaceDim)
@@ -602,6 +602,7 @@ fun NoteSketchSheet(
                     .align(if (useHorizontalLayout) Alignment.TopEnd else Alignment.CenterEnd)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical))
                     .padding(top = 68.dp, bottom = 68.dp)
+                    .padding(start = adaptivePaddingStart, end = adaptivePaddingEnd)
                     .wrapContentHeight(),
                 contentAlignment = Alignment.Center
             ) {
