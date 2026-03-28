@@ -191,6 +191,17 @@ fun NoteSketchSheet(
 
     var showLabelDialog by remember { mutableStateOf(false) }
     var selectedLabelId by rememberSaveable { mutableStateOf(initialSelectedLabelId) }
+    val stableSketchId = rememberSaveable(
+        editingNoteId,
+        newSketchCounter
+    ) {
+        editingNoteId?.toString() ?: "new_sketch_${newSketchCounter}"
+    }
+
+    val viewModel = viewModel<CanvasViewModel>(
+        key = stableSketchId,
+        factory = CanvasViewModelFactory(application)
+    )
     val isLabeled = selectedLabelId != null
 
     var debugTextEnabled by rememberSaveable { mutableStateOf(false) }
@@ -198,13 +209,6 @@ fun NoteSketchSheet(
 
     @Suppress("DEPRECATION") val systemUiController = rememberSystemUiController()
     val originalStatusBarColor = Color.Transparent
-
-    val viewModelKey = editingNoteId?.toString() ?: "new_$newSketchCounter"
-    val viewModel =
-        viewModel<CanvasViewModel>(
-            key = viewModelKey,
-            factory = CanvasViewModelFactory(application = application)
-        )
 
     val currentPathState = viewModel.currentPathState.collectAsState()
     val pathState = viewModel.pathState.collectAsState()
@@ -222,11 +226,14 @@ fun NoteSketchSheet(
         ) == 1
     }
 
-    // Load initial paths
-    LaunchedEffect(initialPaths) {
-        if (!initialPaths.isNullOrBlank()) {
+    LaunchedEffect(initialPaths, stableSketchId) {
+        if (!initialPaths.isNullOrBlank() &&
+            viewModel.pathState.value.paths.isEmpty()) {
+
             val loadedPaths = SketchSerializer.deserializePaths(initialPaths)
-            viewModel.setPaths(loadedPaths)
+            if (loadedPaths.isNotEmpty()) {
+                viewModel.setPaths(loadedPaths)
+            }
         }
     }
 
@@ -347,6 +354,13 @@ fun NoteSketchSheet(
             viewModel.onAction(
                 DrawingAction.ToggleHandwritingMode(isHandwritingMode)
             )
+        }
+
+        DisposableEffect(Unit) {
+            onDispose {
+                val currentSerialized = SketchSerializer.serializePaths(pathState.value.paths)
+                onDrawingChanged(currentSerialized)
+            }
         }
 
         Box(
