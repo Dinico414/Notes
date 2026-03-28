@@ -67,7 +67,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -307,19 +306,17 @@ fun NoteSketchSheet(
         val currentColorScheme = colorScheme
         val currentExtendedColorScheme = extendedMaterialColorScheme
 
-        val themeDrawColors by remember(currentExtendedColorScheme, isDarkTheme) {
-            derivedStateOf {
-                listOf(
-                    currentColorScheme.onSurface,
-                    currentExtendedColorScheme.drawRed,
-                    currentExtendedColorScheme.drawOrange,
-                    currentExtendedColorScheme.drawYellow,
-                    currentExtendedColorScheme.drawGreen,
-                    currentExtendedColorScheme.drawTurquoise,
-                    currentExtendedColorScheme.drawBlue,
-                    currentExtendedColorScheme.drawPurple
-                )
-            }
+        val themeDrawColors = remember(currentColorScheme, currentExtendedColorScheme, isDarkTheme) {
+            listOf(
+                currentColorScheme.onSurface,
+                currentExtendedColorScheme.drawRed,
+                currentExtendedColorScheme.drawOrange,
+                currentExtendedColorScheme.drawYellow,
+                currentExtendedColorScheme.drawGreen,
+                currentExtendedColorScheme.drawTurquoise,
+                currentExtendedColorScheme.drawBlue,
+                currentExtendedColorScheme.drawPurple
+            )
         }
         val layoutDirection = LocalLayoutDirection.current
 
@@ -345,10 +342,8 @@ fun NoteSketchSheet(
             viewModel.onAction(DrawingAction.SelectColor(firstColor))
         }
 
-        // NEW: Re-apply current handwriting/pen mode when sheet is reopened
-        // This updates the floating toolbar icons (hand/pen highlight)
         LaunchedEffect(Unit) {
-            delay(120L) // slightly after color selection
+            delay(120L)
             viewModel.onAction(
                 DrawingAction.ToggleHandwritingMode(isHandwritingMode)
             )
@@ -369,6 +364,7 @@ fun NoteSketchSheet(
                 onAction = viewModel::onAction,
                 isHandwritingMode = isHandwritingMode,
                 gridEnabled = pathState.value.gridEnabled,
+                drawColors = themeDrawColors,
                 debugText = debugTextEnabled,
                 debugPoints = false,
                 modifier = Modifier

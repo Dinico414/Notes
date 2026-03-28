@@ -5,7 +5,6 @@ import androidx.compose.ui.graphics.Color
 import com.xenonware.notes.viewmodel.PathData
 import com.xenonware.notes.viewmodel.PathOffset
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Serializable
@@ -23,11 +22,12 @@ data class SerializableOffset(val x: Float, val y: Float)
 data class SerializablePathData(
     val id: String,
     val colorValue: ULong,
+    val colorIndex: Int,
     val pathPoints: List<SerializablePathOffset>
 )
 
 object SketchSerializer {
-    private val json = Json { 
+    private val json = Json {
         ignoreUnknownKeys = true
         allowSpecialFloatingPointValues = true
     }
@@ -37,6 +37,7 @@ object SketchSerializer {
             SerializablePathData(
                 id = pd.id,
                 colorValue = pd.color.value,
+                colorIndex = pd.colorIndex,
                 pathPoints = pd.path.map { po ->
                     SerializablePathOffset(
                         offset = SerializableOffset(po.x, po.y),
@@ -44,8 +45,7 @@ object SketchSerializer {
                         cp1 = SerializableOffset(po.controlPoint1.x, po.controlPoint1.y),
                         cp2 = SerializableOffset(po.controlPoint2.x, po.controlPoint2.y)
                     )
-                }
-            )
+                })
         }
         return json.encodeToString(serializablePaths)
     }
@@ -58,18 +58,17 @@ object SketchSerializer {
                 PathData(
                     id = spd.id,
                     color = Color(spd.colorValue),
+                    colorIndex = spd.colorIndex,
                     path = spd.pathPoints.map { spo ->
                         val po = PathOffset(
-                            offset = Offset(spo.offset.x, spo.offset.y),
-                            thickness = spo.thickness
+                            offset = Offset(spo.offset.x, spo.offset.y), thickness = spo.thickness
                         )
                         po.controlPoint1 = Offset(spo.cp1.x, spo.cp1.y)
                         po.controlPoint2 = Offset(spo.cp2.x, spo.cp2.y)
                         po
-                    }
-                )
+                    })
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
     }

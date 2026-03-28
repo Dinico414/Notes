@@ -460,12 +460,15 @@ fun CompactNotes(
             nextListItemId = 0L
             selectedAudioViewType = AudioViewType.Waveform
             selectedLabelId = null
-            noteEditingViewModel.clearAllStates()
+
+            // === SKETCH SPECIFIC RESET ===
             sketchPathsState = null
             isEraserMode = false
             usePressure = true
             showColorPicker = false
             showSketchSizePopup = false
+
+            noteEditingViewModel.clearAllStates()
         }
 
         LaunchedEffect(resizeTimerKey) {

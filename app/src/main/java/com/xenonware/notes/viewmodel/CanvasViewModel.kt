@@ -28,6 +28,7 @@ data class CurrentPathState(
 data class PathData(
     val id: String,
     val color: Color,
+    val colorIndex: Int = -1,
     val path: List<PathOffset>,
 )
 
@@ -80,6 +81,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     val canRedo = _canRedo.asStateFlow()
 
     private var drawColors: List<Color>? = null
+    private var _selectedColorIndex: Int = 0
 
     private val _undoRedoHistory = mutableListOf<List<PathData>>()
     private var _undoRedoPointer = -1
@@ -108,44 +110,12 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun setDrawColors(colors: List<Color>) {
-        val oldColors = drawColors
         drawColors = colors
-
         if (colors.isEmpty()) return
 
-        val primary = colors.getOrElse(0) { Color.Black }
-
-        if (oldColors == null) {
-            _currentPathState.update { it.copy(color = primary) }
-            return
-        }
-
-        if (oldColors.size == colors.size) {
-            val oldToIndex = oldColors.withIndex().associate { (i, c) -> c to i }
-
-            _pathState.update { st ->
-                st.copy(
-                    paths = st.paths.map { p ->
-                        val idx = oldToIndex[p.color]
-                        if (idx != null && idx < colors.size) {
-                            p.copy(color = colors[idx])
-                        } else {
-                            p.copy(color = primary)
-                        }
-                    }
-                )
-            }
-
-            _currentPathState.update { cur ->
-                val idx = oldToIndex[cur.color]
-                val newColor = if (idx != null && idx < colors.size) colors[idx] else primary
-                cur.copy(color = newColor)
-            }
-        } else {
-            _pathState.update { st ->
-                st.copy(paths = st.paths.map { it.copy(color = primary) })
-            }
-            _currentPathState.update { it.copy(color = primary) }
+        val newColor = colors.getOrElse(_selectedColorIndex) { colors[0] }
+        _currentPathState.update { cur ->
+            if (!cur.isEraser) cur.copy(color = newColor) else cur
         }
     }
 
@@ -266,6 +236,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
             val newPath = PathData(
                 id = System.currentTimeMillis().toString(),
                 color = colorToUse,
+                colorIndex = if (!current.isEraser) _selectedColorIndex else -1,
                 path = emptyList()
             )
 
@@ -328,6 +299,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun onSelectColor(color: Color) {
+        _selectedColorIndex = drawColors?.indexOfFirst { it == color }?.takeIf { it >= 0 } ?: 0
         _currentPathState.update { it.copy(color = color) }
     }
 
