@@ -285,8 +285,11 @@ fun NoteSketchSheet(
 
         val hazeThinColor = colorScheme.surfaceDim
         val labelColor = extendedMaterialColorScheme.label
-        val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
-
+        val backgroundColorState by animateColorAsState(
+            targetValue = if (selectedTheme == "Default") colorScheme.surfaceContainer else colorScheme.secondaryContainer,
+            animationSpec = tween(durationMillis = 500), label = "backgroundColorState"
+        )
+        val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else backgroundColorState
         val currentColorScheme = colorScheme
         val currentExtendedColorScheme = extendedMaterialColorScheme
 

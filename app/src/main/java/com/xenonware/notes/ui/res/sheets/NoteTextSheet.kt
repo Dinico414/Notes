@@ -193,7 +193,7 @@ fun AnnotatedString.toggleStyle(
                 currentStart = i
             }
         }
-        if (currentStyle != null && currentStart < charStyles.size) {
+        if (currentStyle != null) {
             applyStyle(currentStart, charStyles.size, currentStyle)
         }
     }
@@ -428,9 +428,12 @@ fun NoteTextSheet(
         } else {
             WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
         }
-
+        val backgroundColorState by animateColorAsState(
+            targetValue = if (selectedTheme == "Default") colorScheme.surfaceContainer else colorScheme.secondaryContainer,
+            animationSpec = tween(durationMillis = 500), label = "backgroundColorState"
+        )
         val bottomPadding = safeDrawingPaddingBottom + toolbarHeight + 16.dp
-        val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
+        val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else backgroundColorState
 
         Box(
             modifier = Modifier

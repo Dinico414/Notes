@@ -277,7 +277,6 @@ fun CoverNotes(
         // 8. Audio Note Editor Specific
         // ============================================================================
         var selectedAudioViewType by rememberSaveable { mutableStateOf(AudioViewType.Waveform) }
-        var hasAudioContent by rememberSaveable { mutableStateOf(false) }
 
         // ============================================================================
         // 9. Sketch / Drawing Note Editor Specific
@@ -1715,7 +1714,7 @@ fun CoverNotes(
                                                     viewModel.noteItems.filterIsInstance<NotesItems>()
                                                         .find { it.id == editingNoteId }
 
-                                                existingNote?.let {
+                                                existingNote?.let { it ->
                                                     val updatedNote = it.copy(
                                                         title = title.trim(),
                                                         description = description.takeIf { it.isNotBlank() },
@@ -1778,7 +1777,7 @@ fun CoverNotes(
                                                     viewModel.noteItems.filterIsInstance<NotesItems>()
                                                         .find { it.id == editingNoteId }
 
-                                                existingNote?.let {
+                                                existingNote?.let { it ->
                                                     val updatedNote = it.copy(
                                                         title = title.trim(),
                                                         description = uniqueAudioId.takeIf { it.isNotBlank() },

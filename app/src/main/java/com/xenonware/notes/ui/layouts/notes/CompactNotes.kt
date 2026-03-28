@@ -1945,7 +1945,7 @@ fun CompactNotes(
                                                     viewModel.noteItems.filterIsInstance<NotesItems>()
                                                         .find { it.id == editingNoteId }
 
-                                                existingNote?.let {
+                                                existingNote?.let { it ->
                                                     val updatedNote = it.copy(
                                                         title = title.trim(),
                                                         description = description.takeIf { it.isNotBlank() },
@@ -2008,7 +2008,7 @@ fun CompactNotes(
                                                     viewModel.noteItems.filterIsInstance<NotesItems>()
                                                         .find { it.id == editingNoteId }
 
-                                                existingNote?.let {
+                                                existingNote?.let { it ->
                                                     val updatedNote = it.copy(
                                                         title = title.trim(),
                                                         description = uniqueAudioId.takeIf { it.isNotBlank() },

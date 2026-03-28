@@ -448,7 +448,32 @@ fun NoteAudioSheet(
             )
         }
 
-        val hazeThinColor = colorScheme.surfaceDim
+        val languageButtonColor by animateColorAsState(
+            targetValue = if (selectedTheme == "Default") colorScheme.primaryContainer else colorScheme.secondary,
+            animationSpec = tween(durationMillis = 500), label = "languageButtonColor"
+        )
+        val languageTextColor by animateColorAsState(
+            targetValue = if (selectedTheme == "Default") colorScheme.onPrimaryContainer else colorScheme.onSecondary,
+            animationSpec = tween(durationMillis = 500), label = "languageTextColor"
+        )
+        val primary by animateColorAsState(
+            targetValue = colorScheme.primary,
+            animationSpec = tween(durationMillis = 500), label = "primary"
+        )
+        val surfaceDim by animateColorAsState(
+            targetValue = colorScheme.surfaceDim,
+            animationSpec = tween(durationMillis = 500), label = "surfaceDim"
+        )
+        val onSurface by animateColorAsState(
+            targetValue = colorScheme.onSurface,
+            animationSpec = tween(durationMillis = 500), label = "onSurface"
+        )
+        val onSurfaceVariant by animateColorAsState(
+            targetValue = colorScheme.onSurfaceVariant,
+            animationSpec = tween(durationMillis = 500), label = "onSurfaceVariant"
+        )
+
+        val hazeThinColor = surfaceDim
         val labelColor = extendedMaterialColorScheme.label
 
         val layoutDirection = LocalLayoutDirection.current
@@ -464,8 +489,12 @@ fun NoteAudioSheet(
         val topPadding = 4.dp + safeDrawingPaddingTop - safeDrawingPaddingTop * backProgress
         val animatedTopPadding = if (topPadding < 16.dp) 16.dp else topPadding
 
+        val backgroundColorState by animateColorAsState(
+            targetValue = if (selectedTheme == "Default") colorScheme.surfaceContainer else colorScheme.secondaryContainer,
+            animationSpec = tween(durationMillis = 500), label = "backgroundColorState"
+        )
         val bottomPadding = safeDrawingPaddingBottom + toolbarHeight + 16.dp
-        val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else colorScheme.surfaceContainer
+        val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else backgroundColorState
 
         val safeDrawingPaddingStart = WindowInsets.safeDrawing.only(WindowInsetsSides.Start).asPaddingValues().calculateStartPadding(layoutDirection)
         val safeDrawingPaddingEnd = WindowInsets.safeDrawing.only(WindowInsetsSides.End).asPaddingValues().calculateEndPadding(layoutDirection)
@@ -526,8 +555,8 @@ fun NoteAudioSheet(
                                         modelSwitchTrigger++
                                     },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = colorScheme.primaryContainer,
-                                        contentColor = colorScheme.onPrimaryContainer
+                                        containerColor = languageButtonColor,
+                                        contentColor = languageTextColor
                                     ),
                                     shape = RoundedCornerShape(28.dp),
                                     modifier = Modifier.height(48.dp)
@@ -654,8 +683,8 @@ fun NoteAudioSheet(
                                         modelSwitchTrigger++
                                     },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = colorScheme.primaryContainer,
-                                        contentColor = colorScheme.onPrimaryContainer
+                                        containerColor = languageButtonColor,
+                                        contentColor = languageTextColor
                                     ),
                                     shape = RoundedCornerShape(28.dp)
                                 ) {
@@ -663,7 +692,6 @@ fun NoteAudioSheet(
                                         text = langName,
                                         style = typography.labelLarge,
                                         textAlign = TextAlign.Center,
-                                        color = colorScheme.onSurface
                                     )
                                 }
                             }
@@ -692,7 +720,7 @@ fun NoteAudioSheet(
                                         Text(
                                             "(First time may take 5 - 10 seconds)",
                                             style = typography.bodySmall,
-                                            color = colorScheme.onSurfaceVariant
+                                            color = onSurfaceVariant
                                         )
                                     }
                                 } else {
@@ -779,7 +807,7 @@ fun NoteAudioSheet(
                     .fillMaxWidth()
                     .padding(top = animatedTopPadding)
                     .clip(RoundedCornerShape(100f))
-                    .background(colorScheme.surfaceDim)
+                    .background(surfaceDim)
                     .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -791,7 +819,7 @@ fun NoteAudioSheet(
                     TextStyle(
                         fontFamily = QuicksandTitleVariable,
                         textAlign = TextAlign.Center,
-                        color = colorScheme.onSurface
+                        color = onSurface
                     )
                 )
 
@@ -801,14 +829,14 @@ fun NoteAudioSheet(
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     textStyle = titleTextStyle,
-                    cursorBrush = SolidColor(colorScheme.primary),
+                    cursorBrush = SolidColor(primary),
                     decorationBox = { innerTextField ->
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             if (title.isEmpty()) {
                                 Text(
                                     "Title",
                                     style = titleTextStyle,
-                                    color = colorScheme.onSurface.copy(alpha = 0.6f)
+                                    color = onSurface.copy(alpha = 0.6f)
                                 )
                             }
                             innerTextField()
@@ -856,7 +884,7 @@ fun NoteAudioSheet(
                                     Icon(
                                         Icons.Rounded.ColorLens,
                                         null,
-                                        tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                                        tint = if (selectedTheme == "Default") onSurfaceVariant else primary
                                     )
                                 },
                                 textColor = animatedTextColor
@@ -905,6 +933,23 @@ fun AudioControlButtons(
         label = "controlButtonRadius"
     )
 
+    val primary by animateColorAsState(
+        targetValue = colorScheme.primary,
+        animationSpec = tween(durationMillis = 500), label = "primary"
+    )
+    val onPrimary by animateColorAsState(
+        targetValue = colorScheme.onPrimary,
+        animationSpec = tween(durationMillis = 500), label = "onPrimary"
+    )
+    val secondary by animateColorAsState(
+        targetValue = colorScheme.secondary,
+        animationSpec = tween(durationMillis = 500), label = "secondary"
+    )
+    val onSecondary by animateColorAsState(
+        targetValue = colorScheme.onSecondary,
+        animationSpec = tween(durationMillis = 500), label = "onSecondary"
+    )
+
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
@@ -916,7 +961,7 @@ fun AudioControlButtons(
                     onClick = onRecordClick,
                     shape = RoundedCornerShape(64.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = colorScheme.primary, contentColor = colorScheme.onPrimary
+                        containerColor = primary, contentColor = onPrimary
                     ),
                     modifier = Modifier
                         .height(136.dp)
@@ -933,8 +978,8 @@ fun AudioControlButtons(
                         onClick = onPauseRecordingClick,
                         shape = RoundedCornerShape(animatedRadius),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = colorScheme.primary,
-                            contentColor = colorScheme.onPrimary
+                            containerColor = primary,
+                            contentColor = onPrimary
                         ),
                         modifier = Modifier
                             .height(136.dp)
@@ -966,8 +1011,8 @@ fun AudioControlButtons(
                         onClick = onResumeRecordingClick,
                         shape = RoundedCornerShape(animatedRadius),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = colorScheme.primary,
-                            contentColor = colorScheme.onPrimary
+                            containerColor = primary,
+                            contentColor = onPrimary
                         ),
                         modifier = Modifier
                             .height(136.dp)
@@ -999,8 +1044,8 @@ fun AudioControlButtons(
                         onClick = onPlayPauseClick,
                         shape = RoundedCornerShape(animatedRadius),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = colorScheme.primary,
-                            contentColor = colorScheme.onPrimary
+                            containerColor = primary,
+                            contentColor = onPrimary
                         ),
                         modifier = Modifier
                             .height(136.dp)
@@ -1019,8 +1064,8 @@ fun AudioControlButtons(
                         enabled = isSheetAudioPlaying || isSheetAudioPaused,
                         shape = RoundedCornerShape(64.dp),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = colorScheme.primaryContainer,
-                            contentColor = colorScheme.onPrimaryContainer
+                            containerColor = secondary,
+                            contentColor = onSecondary
                         ),
                         modifier = Modifier
                             .height(136.dp)
@@ -1106,6 +1151,11 @@ fun AudioProgressBar(
     val progress =
         (currentPositionMillis.toFloat() / totalDurationMillis.coerceAtLeast(1L)).coerceIn(0f, 1f)
 
+    val primary by animateColorAsState(
+        targetValue = colorScheme.primary,
+        animationSpec = tween(durationMillis = 500), label = "primary"
+    )
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -1125,8 +1175,8 @@ fun AudioProgressBar(
                 .fillMaxWidth()
                 .height(32.dp)
                 .clip(RoundedCornerShape(100f))
-                .background(colorScheme.primary.copy(alpha = 0.1f)),
-            color = colorScheme.primary,
+                .background(primary.copy(alpha = 0.1f)),
+            color = primary,
             trackColor = Color.Transparent,
             strokeCap = StrokeCap.Round
         )
@@ -1145,11 +1195,16 @@ fun AudioTimerDisplay(
     val time = if (isRecording) recordingDurationMillis else currentPlaybackPositionMillis
     val showTotal = totalAudioDurationMillis > 0L
 
+    val onSurface by animateColorAsState(
+        targetValue = colorScheme.onSurface,
+        animationSpec = tween(durationMillis = 500), label = "onSurface"
+    )
+
     Text(
         text = formatDuration(time) + if (showTotal) " / ${formatDuration(totalAudioDurationMillis)}" else "",
         fontFamily = QuicksandTitleVariable,
         style = typography.headlineSmall,
-        color = colorScheme.onSurface,
+        color = onSurface,
         modifier = modifier
     )
 }
