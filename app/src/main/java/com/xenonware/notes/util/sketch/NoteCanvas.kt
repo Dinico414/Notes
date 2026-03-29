@@ -7,7 +7,6 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +23,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
@@ -34,7 +34,9 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import com.xenonware.notes.viewmodel.CurrentPathState
@@ -46,12 +48,12 @@ import com.xenonware.notes.viewmodel.DrawingAction.PathEnd
 import com.xenonware.notes.viewmodel.DrawingAction.UpdateTool
 import com.xenonware.notes.viewmodel.PathData
 import com.xenonware.notes.viewmodel.PathOffset
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 import kotlin.math.ceil
 import androidx.compose.ui.graphics.Canvas as ComposeCanvas
 
@@ -87,6 +89,8 @@ fun NoteCanvas(
 
     val coroutineScope = rememberCoroutineScope()
     val view = LocalView.current
+    
+    val textMeasurer = rememberTextMeasurer()
 
     // --- SHAPE SNAP STATE ---
     var holdJob by remember { mutableStateOf<Job?>(null) }
@@ -420,12 +424,31 @@ fun NoteCanvas(
                             drawPathScope(liveSegment, it.color, it.colorIndex, drawColorsState.value, debugPoints, it.isShape, it.fillColor)
                         }
                         cursorPos?.let { drawCursor(it) }
+
+                        if (debugText && debugString.isNotEmpty()) {
+                            val textLayoutResult = textMeasurer.measure(
+                                text = debugString,
+                                style = TextStyle(fontSize = 14.sp)
+                            )
+                            val textWidth = textLayoutResult.size.width
+                            val textHeight = textLayoutResult.size.height
+                            val textOffset = Offset(
+                                x = (size.width - textWidth) / 2f,
+                                y = (size.height - textHeight) / 2f
+                            )
+
+                            // Draw inverted white text that forces maximum pixel contrast against whatever is beneath it.
+                            drawText(
+                                textMeasurer = textMeasurer,
+                                text = debugString,
+                                topLeft = textOffset,
+                                style = TextStyle(fontSize = 14.sp, color = Color.White),
+                                blendMode = BlendMode.Difference
+                            )
+                        }
                     }
                 }
         )
-        if (debugText) {
-            Text(debugString, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-        }
     }
 }
 
