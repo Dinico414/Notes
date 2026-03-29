@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,6 +73,11 @@ fun NoteCanvas(
     var debugString by remember { mutableStateOf("") }
     var wasEraserMode by remember { mutableStateOf(false) }
 
+    // --- DOUBLE TAP AND HOLD STATE ---
+    var lastUpTime by remember { mutableLongStateOf(0L) }
+    var isDoubleTapSequence by remember { mutableStateOf(false) }
+    var fillJob by remember { mutableStateOf<Job?>(null) }
+
     // --- BUFFERING STATE ---
     var cachedBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var drawnPathsCount by remember { mutableIntStateOf(0) }
@@ -106,7 +112,7 @@ fun NoteCanvas(
             val canvas = ComposeCanvas(currentBitmap)
             val paint = Paint().apply { isAntiAlias = true }
             val newPath = paths.last()
-            drawPathToCanvas(canvas, paint, newPath.path, newPath.color, newPath.colorIndex, drawColors)
+            drawPathToCanvas(canvas, paint, newPath.path, newPath.color, newPath.colorIndex, drawColors, newPath.isShape, newPath.fillColor)
             drawnPathsCount = paths.size
             currentPathBakedSize = 0
         } else {
@@ -115,7 +121,7 @@ fun NoteCanvas(
                 val canvas = ComposeCanvas(newBitmap)
                 val paint = Paint().apply { isAntiAlias = true }
                 paths.forEach { pathData ->
-                    drawPathToCanvas(canvas, paint, pathData.path, pathData.color, pathData.colorIndex, drawColors)
+                    drawPathToCanvas(canvas, paint, pathData.path, pathData.color, pathData.colorIndex, drawColors, pathData.isShape, pathData.fillColor)
                 }
                 withContext(Dispatchers.Main) {
                     cachedBitmap = newBitmap
@@ -167,7 +173,7 @@ fun NoteCanvas(
                 // 2. Draw ONLY the completed paths (the viewmodel paths).
                 // The messy stroke currently in 'currentPath' is NOT drawn here.
                 paths.forEach { pathData ->
-                    drawPathToCanvas(canvas, paint, pathData.path, pathData.color, pathData.colorIndex, drawColors)
+                    drawPathToCanvas(canvas, paint, pathData.path, pathData.color, pathData.colorIndex, drawColors, pathData.isShape, pathData.fillColor)
                 }
 
                 // 3. Swap the bitmap
@@ -241,6 +247,22 @@ fun NoteCanvas(
 
                         when (event.action) {
                             MotionEvent.ACTION_DOWN -> {
+                                val now = System.currentTimeMillis()
+                                if (now - lastUpTime < 300L) {
+                                    isDoubleTapSequence = true
+                                    fillJob = coroutineScope.launch {
+                                        delay(500L)
+                                        // Double tap and hold triggered
+                                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                        withContext(Dispatchers.Main) {
+                                            onAction(DrawingAction.NewPathStart) // Cancel current drawing
+                                            onAction(DrawingAction.FillShape(currentPos, currentToolState.color))
+                                        }
+                                    }
+                                } else {
+                                    isDoubleTapSequence = false
+                                }
+
                                 cursorPos = null
                                 // Reset state
                                 isShapeSnapped = false
@@ -252,14 +274,17 @@ fun NoteCanvas(
                             }
 
                             MotionEvent.ACTION_MOVE -> {
+                                val dist = (currentPos - lastTouchPosition).getDistance()
+                                if (dist > 20f) {
+                                    fillJob?.cancel()
+                                }
+
                                 // If snapped, we stop drawing to protect the perfect shape
                                 if (!isShapeSnapped) {
                                     onAction(Draw(currentPos, event.pressure))
                                 }
 
                                 // --- SNAP LOGIC ---
-                                val dist = (currentPos - lastTouchPosition).getDistance()
-
                                 // If moved > 20px, reset timer
                                 if (dist > 20f) {
                                     lastTouchPosition = currentPos
@@ -295,6 +320,8 @@ fun NoteCanvas(
                             }
 
                             MotionEvent.ACTION_UP -> {
+                                lastUpTime = System.currentTimeMillis()
+                                fillJob?.cancel()
                                 holdJob?.cancel()
                                 isShapeSnapped = false
                                 onAction(PathEnd)
@@ -342,7 +369,7 @@ fun NoteCanvas(
                         currentPath?.let {
                             val startIdx = (currentPathBakedSize - 1).coerceAtLeast(0)
                             val liveSegment = if (startIdx < it.path.size) it.path.subList(startIdx, it.path.size) else emptyList()
-                            drawPathScope(liveSegment, it.color, it.colorIndex, drawColorsState.value, debugPoints) // ← .value
+                            drawPathScope(liveSegment, it.color, it.colorIndex, drawColorsState.value, debugPoints, it.isShape, it.fillColor)
                         }
                         cursorPos?.let { drawCursor(it) }
                     }
@@ -362,9 +389,27 @@ private fun drawPathToCanvas(
     path: List<PathOffset>,
     color: Color,
     colorIndex: Int = -1,
-    drawColors: List<Color> = emptyList()
+    drawColors: List<Color> = emptyList(),
+    isShape: Boolean = false,
+    fillColor: Color = Color.Transparent
 ) {
     if (path.isEmpty()) return
+
+    if (isShape && fillColor != Color.Transparent) {
+        val fillPaint = Paint().apply {
+            this.color = fillColor
+            this.style = PaintingStyle.Fill
+            this.isAntiAlias = true
+        }
+        val composePath = androidx.compose.ui.graphics.Path()
+        composePath.moveTo(path[0].offset.x, path[0].offset.y)
+        for (i in 1 until path.size) {
+            composePath.lineTo(path[i].offset.x, path[i].offset.y)
+        }
+        composePath.close()
+        canvas.drawPath(composePath, fillPaint)
+    }
+
     val resolvedColor = if (colorIndex in drawColors.indices) {
         drawColors[colorIndex]
     } else {
@@ -423,9 +468,26 @@ private fun DrawScope.drawPathScope(
     color: Color,
     colorIndex: Int = -1,
     drawColors: List<Color> = emptyList(),
-    drawDebugPoints: Boolean = false
+    drawDebugPoints: Boolean = false,
+    isShape: Boolean = false,
+    fillColor: Color = Color.Transparent
 ) {
     if (path.isEmpty()) return
+
+    if (isShape && fillColor != Color.Transparent) {
+        val composePath = androidx.compose.ui.graphics.Path()
+        composePath.moveTo(path[0].offset.x, path[0].offset.y)
+        for (i in 1 until path.size) {
+            composePath.lineTo(path[i].offset.x, path[i].offset.y)
+        }
+        composePath.close()
+        drawPath(
+            path = composePath,
+            color = fillColor,
+            style = androidx.compose.ui.graphics.drawscope.Fill
+        )
+    }
+
     val resolvedColor = if (colorIndex in drawColors.indices) {
         drawColors[colorIndex]
     } else {
@@ -434,7 +496,7 @@ private fun DrawScope.drawPathScope(
 
     if (path.size < 2) {
         val p = path.first()
-        drawCircle(resolvedColor, radius = p.thickness / 2, center = p.offset) // was `color`
+        drawCircle(resolvedColor, radius = p.thickness / 2, center = p.offset)
         return
     }
 
@@ -445,7 +507,7 @@ private fun DrawScope.drawPathScope(
 
         if (distance < 1f) {
             drawLine(
-                color = resolvedColor, // was `color`
+                color = resolvedColor,
                 start = start.offset,
                 end = end.offset,
                 strokeWidth = (start.thickness + end.thickness) / 2f,
@@ -473,7 +535,7 @@ private fun DrawScope.drawPathScope(
             val currentThickness = lerp(start.thickness, end.thickness, t)
 
             drawLine(
-                color = resolvedColor, // was `color`
+                color = resolvedColor,
                 start = previousPoint,
                 end = currentPoint,
                 strokeWidth = (previousThickness + currentThickness) / 2f,

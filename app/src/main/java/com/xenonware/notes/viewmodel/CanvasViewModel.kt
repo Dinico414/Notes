@@ -30,6 +30,8 @@ data class PathData(
     val color: Color,
     val colorIndex: Int = -1,
     val path: List<PathOffset>,
+    val isShape: Boolean = false,
+    val fillColor: Color = Color.Transparent
 )
 
 data class PathOffset(
@@ -57,6 +59,7 @@ sealed interface DrawingAction {
     data class ToggleHandwritingMode(val enabled: Boolean) : DrawingAction
     data class UpdateTool(val isEraser: Boolean, val usePressure: Boolean, val strokeWidth: Float, val strokeColor: Color) : DrawingAction
     data class SnapToShape(val newPath: List<PathOffset>) : DrawingAction
+    data class FillShape(val offset: Offset, val color: Color) : DrawingAction
 }
 
 class CanvasViewModel(application: Application) : AndroidViewModel(application) {
@@ -144,6 +147,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
             is DrawingAction.ToggleHandwritingMode -> onToggleHandwritingMode(action.enabled)
             is DrawingAction.UpdateTool -> onUpdateTool(action.isEraser, action.usePressure, action.strokeWidth, action.strokeColor)
             is DrawingAction.SnapToShape -> onSnapToShape(action.newPath)
+            is DrawingAction.FillShape -> onFillShape(action.offset, action.color)
         }
     }
 
@@ -237,7 +241,9 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
                 id = System.currentTimeMillis().toString(),
                 color = colorToUse,
                 colorIndex = if (!current.isEraser) _selectedColorIndex else -1,
-                path = emptyList()
+                path = emptyList(),
+                isShape = false,
+                fillColor = Color.Transparent
             )
 
             _currentPathState.update { it.copy(path = newPath) }
@@ -343,7 +349,7 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
     private fun onSnapToShape(newPathPoints: List<PathOffset>) {
         recalculateControlPoints(newPathPoints)
         _currentPathState.update { st ->
-            st.path?.let { p -> st.copy(path = p.copy(path = newPathPoints)) } ?: st
+            st.path?.let { p -> st.copy(path = p.copy(path = newPathPoints, isShape = true)) } ?: st
         }
     }
 
@@ -355,6 +361,45 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
                 strokeWidth = strokeWidth,
                 color = if (isEraser) Color.Transparent else strokeColor
             )
+        }
+    }
+
+    private fun isPointInPolygon(point: Offset, polygon: List<Offset>): Boolean {
+        var isInside = false
+        var j = polygon.lastIndex
+        for (i in polygon.indices) {
+            val pi = polygon[i]
+            val pj = polygon[j]
+            if (((pi.y > point.y) != (pj.y > point.y)) &&
+                (point.x < (pj.x - pi.x) * (point.y - pi.y) / (pj.y - pi.y) + pi.x)
+            ) {
+                isInside = !isInside
+            }
+            j = i
+        }
+        return isInside
+    }
+
+    private fun onFillShape(offset: Offset, color: Color) {
+        var targetShapeIndex = -1
+        for (i in _pathState.value.paths.indices.reversed()) {
+            val pathData = _pathState.value.paths[i]
+            if (pathData.isShape) {
+                val points = pathData.path.map { it.offset }
+                if (points.size > 2) {
+                    if (isPointInPolygon(offset, points)) {
+                        targetShapeIndex = i
+                        break
+                    }
+                }
+            }
+        }
+        
+        if (targetShapeIndex != -1) {
+            val updatedPaths = _pathState.value.paths.toMutableList()
+            updatedPaths[targetShapeIndex] = updatedPaths[targetShapeIndex].copy(fillColor = color)
+            _pathState.update { it.copy(paths = updatedPaths) }
+            saveStateForUndoRedo()
         }
     }
 }
