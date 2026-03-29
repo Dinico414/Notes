@@ -51,6 +51,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import kotlin.math.ceil
 import androidx.compose.ui.graphics.Canvas as ComposeCanvas
 
@@ -200,7 +201,40 @@ fun NoteCanvas(
                     if (!interactable) return@pointerInteropFilter true
 
                     if (debugText) {
-                        debugString = "${event.action}\nPoints: ${currentPath?.path?.size ?: 0}\nSnapped: $isShapeSnapped"
+                        val actionStr = MotionEvent.actionToString(event.action)
+                        val toolInt = event.getToolType(0)
+                        val toolStr = when (toolInt) {
+                            MotionEvent.TOOL_TYPE_UNKNOWN -> "UNKNOWN"
+                            MotionEvent.TOOL_TYPE_FINGER -> "FINGER"
+                            MotionEvent.TOOL_TYPE_STYLUS -> "STYLUS"
+                            MotionEvent.TOOL_TYPE_MOUSE -> "MOUSE"
+                            MotionEvent.TOOL_TYPE_ERASER -> "ERASER"
+                            else -> "OTHER"
+                        }
+                        
+                        val btnState = event.buttonState
+                        val btnStr = buildString {
+                            if (btnState == 0) append("NONE ")
+                            if ((btnState and MotionEvent.BUTTON_PRIMARY) != 0) append("PRIMARY ")
+                            if ((btnState and MotionEvent.BUTTON_SECONDARY) != 0) append("SECONDARY ")
+                            if ((btnState and MotionEvent.BUTTON_TERTIARY) != 0) append("TERTIARY ")
+                            if ((btnState and MotionEvent.BUTTON_BACK) != 0) append("BACK ")
+                            if ((btnState and MotionEvent.BUTTON_FORWARD) != 0) append("FORWARD ")
+                            if ((btnState and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0) append("STYLUS_PRIMARY ")
+                            if ((btnState and MotionEvent.BUTTON_STYLUS_SECONDARY) != 0) append("STYLUS_SECONDARY ")
+                        }.trimEnd()
+
+                        debugString = "" +
+                            "Action: $actionStr (${event.action})\n" +
+                            "X: ${String.format(Locale.US, "%.1f", event.x)}, Y: ${String.format(Locale.US, "%.1f", event.y)}\n" +
+                            "Pressure: ${String.format(Locale.US, "%.2f", event.pressure)}\n" +
+                            "Tool: $toolStr ($toolInt)\n" +
+                            "Button: $btnStr ($btnState)\n" +
+                            "Pointer Count: ${event.pointerCount}\n" +
+                            "Size: ${String.format(Locale.US, "%.2f", event.size)}\n" +
+                            "Orientation: ${String.format(Locale.US, "%.2f", event.orientation)}\n" +
+                            "Path Points: ${currentPath?.path?.size ?: 0}\n" +
+                            "Snapped: $isShapeSnapped"
                     }
 
                     val isDetectedToolEraser = event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
