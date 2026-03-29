@@ -256,6 +256,20 @@ fun NoteCanvas(
                                         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                                         withContext(Dispatchers.Main) {
                                             onAction(DrawingAction.NewPathStart) // Cancel current drawing
+                                            
+                                            // Check if the previous path was just a dot/short tap
+                                            val lastPath = paths.lastOrNull()
+                                            if (lastPath != null) {
+                                                var pathLength = 0f
+                                                for (i in 1 until lastPath.path.size) {
+                                                    pathLength += (lastPath.path[i].offset - lastPath.path[i-1].offset).getDistance()
+                                                }
+                                                // If the entire first tap was less than 50 pixels long, undo it
+                                                if (pathLength < 50f) {
+                                                    onAction(DrawingAction.Undo)
+                                                }
+                                            }
+
                                             onAction(DrawingAction.FillShape(currentPos, currentToolState.color))
                                         }
                                     }
