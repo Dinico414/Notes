@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import com.xenonware.notes.viewmodel.PathData
 import com.xenonware.notes.viewmodel.PathOffset
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Serializable
@@ -23,7 +24,9 @@ data class SerializablePathData(
     val id: String,
     val colorValue: ULong,
     val colorIndex: Int,
-    val pathPoints: List<SerializablePathOffset>
+    val pathPoints: List<SerializablePathOffset>,
+    val isShape: Boolean = false,
+    val fillColorValue: ULong = Color.Transparent.value
 )
 
 object SketchSerializer {
@@ -40,12 +43,15 @@ object SketchSerializer {
                 colorIndex = pd.colorIndex,
                 pathPoints = pd.path.map { po ->
                     SerializablePathOffset(
-                        offset = SerializableOffset(po.x, po.y),
+                        offset = SerializableOffset(po.offset.x, po.offset.y),
                         thickness = po.thickness,
                         cp1 = SerializableOffset(po.controlPoint1.x, po.controlPoint1.y),
                         cp2 = SerializableOffset(po.controlPoint2.x, po.controlPoint2.y)
                     )
-                })
+                },
+                isShape = pd.isShape,
+                fillColorValue = pd.fillColor.value
+            )
         }
         return json.encodeToString(serializablePaths)
     }
@@ -66,7 +72,10 @@ object SketchSerializer {
                         po.controlPoint1 = Offset(spo.cp1.x, spo.cp1.y)
                         po.controlPoint2 = Offset(spo.cp2.x, spo.cp2.y)
                         po
-                    })
+                    },
+                    isShape = spd.isShape,
+                    fillColor = Color(spd.fillColorValue)
+                )
             }
         } catch (_: Exception) {
             emptyList()
