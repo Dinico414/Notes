@@ -59,7 +59,8 @@ fun NoteCard(
             isSelected = isSelected,
             isSelectionModeActive = isSelectionModeActive,
             onSelectItem = onSelectItem,
-            onEditItem = onEditItem
+            onEditItem = onEditItem,
+            maxLines = maxLines
         )
     }
 }

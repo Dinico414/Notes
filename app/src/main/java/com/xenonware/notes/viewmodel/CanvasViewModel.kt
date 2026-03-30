@@ -31,7 +31,8 @@ data class PathData(
     val colorIndex: Int = -1,
     val path: List<PathOffset>,
     val isShape: Boolean = false,
-    val fillColor: Color = Color.Transparent
+    val fillColor: Color = Color.Transparent,
+    val fillColorIndex: Int = -1
 )
 
 data class PathOffset(
@@ -243,7 +244,8 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
                 colorIndex = if (!current.isEraser) _selectedColorIndex else -1,
                 path = emptyList(),
                 isShape = false,
-                fillColor = Color.Transparent
+                fillColor = Color.Transparent,
+                fillColorIndex = -1
             )
 
             _currentPathState.update { it.copy(path = newPath) }
@@ -397,7 +399,10 @@ class CanvasViewModel(application: Application) : AndroidViewModel(application) 
         
         if (targetShapeIndex != -1) {
             val updatedPaths = _pathState.value.paths.toMutableList()
-            updatedPaths[targetShapeIndex] = updatedPaths[targetShapeIndex].copy(fillColor = color)
+            updatedPaths[targetShapeIndex] = updatedPaths[targetShapeIndex].copy(
+                fillColor = color,
+                fillColorIndex = drawColors?.indexOfFirst { it == color }?.takeIf { it >= 0 } ?: -1
+            )
             _pathState.update { it.copy(paths = updatedPaths) }
             saveStateForUndoRedo()
         }

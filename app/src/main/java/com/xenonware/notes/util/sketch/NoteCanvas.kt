@@ -8,7 +8,6 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -46,15 +45,14 @@ import com.xenonware.notes.viewmodel.DrawingAction.Draw
 import com.xenonware.notes.viewmodel.DrawingAction.Erase
 import com.xenonware.notes.viewmodel.DrawingAction.NewPathStart
 import com.xenonware.notes.viewmodel.DrawingAction.PathEnd
-import com.xenonware.notes.viewmodel.DrawingAction.UpdateTool
 import com.xenonware.notes.viewmodel.PathData
 import com.xenonware.notes.viewmodel.PathOffset
-import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import kotlin.math.ceil
 import androidx.compose.ui.graphics.Canvas as ComposeCanvas
 
@@ -118,7 +116,7 @@ fun NoteCanvas(
             val canvas = ComposeCanvas(currentBitmap)
             val paint = Paint().apply { isAntiAlias = true }
             val newPath = paths.last()
-            drawPathToCanvas(canvas, paint, newPath.path, newPath.color, newPath.colorIndex, drawColors, newPath.isShape, newPath.fillColor)
+            drawPathToCanvas(canvas, paint, newPath.path, newPath.color, newPath.colorIndex, drawColors, newPath.isShape, newPath.fillColor, newPath.fillColorIndex)
             drawnPathsCount = paths.size
             currentPathBakedSize = 0
         } else {
@@ -127,7 +125,7 @@ fun NoteCanvas(
                 val canvas = ComposeCanvas(newBitmap)
                 val paint = Paint().apply { isAntiAlias = true }
                 paths.forEach { pathData ->
-                    drawPathToCanvas(canvas, paint, pathData.path, pathData.color, pathData.colorIndex, drawColors, pathData.isShape, pathData.fillColor)
+                    drawPathToCanvas(canvas, paint, pathData.path, pathData.color, pathData.colorIndex, drawColors, pathData.isShape, pathData.fillColor, pathData.fillColorIndex)
                 }
                 withContext(Dispatchers.Main) {
                     cachedBitmap = newBitmap
@@ -179,7 +177,7 @@ fun NoteCanvas(
                 // 2. Draw ONLY the completed paths (the viewmodel paths).
                 // The messy stroke currently in 'currentPath' is NOT drawn here.
                 paths.forEach { pathData ->
-                    drawPathToCanvas(canvas, paint, pathData.path, pathData.color, pathData.colorIndex, drawColors, pathData.isShape, pathData.fillColor)
+                    drawPathToCanvas(canvas, paint, pathData.path, pathData.color, pathData.colorIndex, drawColors, pathData.isShape, pathData.fillColor, pathData.fillColorIndex)
                 }
 
                 // 3. Swap the bitmap
@@ -416,7 +414,7 @@ fun NoteCanvas(
                         currentPath?.let {
                             val startIdx = (currentPathBakedSize - 1).coerceAtLeast(0)
                             val liveSegment = if (startIdx < it.path.size) it.path.subList(startIdx, it.path.size) else emptyList()
-                            drawPathScope(liveSegment, it.color, it.colorIndex, drawColorsState.value, debugPoints, it.isShape, it.fillColor)
+                            drawPathScope(liveSegment, it.color, it.colorIndex, drawColorsState.value, debugPoints, it.isShape, it.fillColor, it.fillColorIndex)
                         }
                         cursorPos?.let { drawCursor(it) }
 
@@ -457,13 +455,15 @@ private fun drawPathToCanvas(
     colorIndex: Int = -1,
     drawColors: List<Color> = emptyList(),
     isShape: Boolean = false,
-    fillColor: Color = Color.Transparent
+    fillColor: Color = Color.Transparent,
+    fillColorIndex: Int = -1
 ) {
     if (path.isEmpty()) return
 
     if (isShape && fillColor != Color.Transparent) {
+        val resolvedFillColor = if (fillColorIndex in drawColors.indices) drawColors[fillColorIndex] else fillColor
         val fillPaint = Paint().apply {
-            this.color = fillColor
+            this.color = resolvedFillColor
             this.style = PaintingStyle.Fill
             this.isAntiAlias = true
         }
@@ -536,11 +536,13 @@ private fun DrawScope.drawPathScope(
     drawColors: List<Color> = emptyList(),
     drawDebugPoints: Boolean = false,
     isShape: Boolean = false,
-    fillColor: Color = Color.Transparent
+    fillColor: Color = Color.Transparent,
+    fillColorIndex: Int = -1
 ) {
     if (path.isEmpty()) return
 
     if (isShape && fillColor != Color.Transparent) {
+        val resolvedFillColor = if (fillColorIndex in drawColors.indices) drawColors[fillColorIndex] else fillColor
         val composePath = androidx.compose.ui.graphics.Path()
         composePath.moveTo(path[0].offset.x, path[0].offset.y)
         for (i in 1 until path.size) {
@@ -549,7 +551,7 @@ private fun DrawScope.drawPathScope(
         composePath.close()
         drawPath(
             path = composePath,
-            color = fillColor,
+            color = resolvedFillColor,
             style = androidx.compose.ui.graphics.drawscope.Fill
         )
     }

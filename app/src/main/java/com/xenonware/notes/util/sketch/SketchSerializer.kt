@@ -26,7 +26,8 @@ data class SerializablePathData(
     val colorIndex: Int,
     val pathPoints: List<SerializablePathOffset>,
     val isShape: Boolean = false,
-    val fillColorValue: ULong = Color.Transparent.value
+    val fillColorValue: ULong = Color.Transparent.value,
+    val fillColorIndex: Int = -1
 )
 
 object SketchSerializer {
@@ -50,7 +51,8 @@ object SketchSerializer {
                     )
                 },
                 isShape = pd.isShape,
-                fillColorValue = pd.fillColor.value
+                fillColorValue = pd.fillColor.value,
+                fillColorIndex = pd.fillColorIndex
             )
         }
         return json.encodeToString(serializablePaths)
@@ -74,7 +76,8 @@ object SketchSerializer {
                         po
                     },
                     isShape = spd.isShape,
-                    fillColor = Color(spd.fillColorValue)
+                    fillColor = Color(spd.fillColorValue),
+                    fillColorIndex = spd.fillColorIndex
                 )
             }
         } catch (_: Exception) {
