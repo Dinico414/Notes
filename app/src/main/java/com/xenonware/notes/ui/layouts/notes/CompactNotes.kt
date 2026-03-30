@@ -469,6 +469,8 @@ fun CompactNotes(
             usePressure = true
             showColorPicker = false
             showSketchSizePopup = false
+            currentSketchColor = initialSketchColor
+            currentSketchSize = 10f
 
             noteEditingViewModel.clearAllStates()
         }

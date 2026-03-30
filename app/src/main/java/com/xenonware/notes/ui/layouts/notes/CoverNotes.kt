@@ -434,6 +434,8 @@ fun CoverNotes(
             usePressure = true
             showColorPicker = false
             showSketchSizePopup = false
+            currentSketchColor = initialSketchColor
+            currentSketchSize = 10f
         }
 
         LaunchedEffect(resizeTimerKey) {
