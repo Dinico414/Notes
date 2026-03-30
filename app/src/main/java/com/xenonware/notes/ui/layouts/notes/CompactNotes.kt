@@ -1191,7 +1191,7 @@ fun CompactNotes(
                         lazyListState = lazyListState,
                         allowToolbarScrollBehavior = !isAppBarExpandable && !isAnyNoteSheetOpen,
                         selectedNoteIds = selectedNoteIds.toList(),
-                        onClearSelection = { },
+                        onClearSelection = { selectedNoteIds = emptySet() },
                         isAddModeActive = isAddModeActive,
                         isSearchActive = isSearchActive,
                         onIsSearchActiveChange = { isSearchActive = it },
