@@ -129,5 +129,8 @@
     <string name="add_new_label">Add label</string>
     <string name="waveform_view">Wellenform-Ansicht</string>
     <string name="transcript_view">Transkript-Ansicht</string>
+    <string name="unsaved_changes">Ungespeicherte Änderungen!</string>
+    <string name="proceed">Fortfahren</string>
+    <string name="warning_datalose">Achtung! Wenn du jetzt fortfährst, gehen alle ungespeicherten Änderungen verloren!</string>
 
 </resources>

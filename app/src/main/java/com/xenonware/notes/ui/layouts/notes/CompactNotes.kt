@@ -3,6 +3,7 @@ package com.xenonware.notes.ui.layouts.notes
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
@@ -60,6 +61,7 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.OpenWith
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TextFields
@@ -71,6 +73,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -83,7 +86,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -772,7 +774,8 @@ fun CompactNotes(
                         )
                     }
 
-                    FilledIconButton(onClick = { usePressure = !usePressure },
+                    FilledIconButton(
+                        onClick = { usePressure = !usePressure },
                         colors = IconButtonDefaults.iconButtonColors(
                             containerColor = if (usePressure) colorScheme.tertiary else Color.Transparent,
                             contentColor = if (usePressure) colorScheme.onTertiary else colorScheme.onSurface
@@ -892,11 +895,9 @@ fun CompactNotes(
                 val hasChanges = if (originalNote == null) {
                     vmTextTitle.isNotBlank()
                 } else {
-                    originalNote.title != vmTextTitle.trim() ||
-                            (originalNote.description ?: "") != vmTextContent ||
-                            (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmTextTheme ||
-                            originalNote.labels.firstOrNull() != vmTextLabelId ||
-                            originalNote.isOffline != vmTextIsOffline
+                    originalNote.title != vmTextTitle.trim() || (originalNote.description
+                        ?: "") != vmTextContent || (colorThemeMap[originalNote.color?.toULong()]
+                        ?: "Default") != vmTextTheme || originalNote.labels.firstOrNull() != vmTextLabelId || originalNote.isOffline != vmTextIsOffline
                 }
                 val canSave = vmTextTitle.isNotBlank() && hasChanges
                 FloatingActionButton(
@@ -930,14 +931,13 @@ fun CompactNotes(
                 val hasChanges = if (originalNote == null) {
                     vmListTitle.isNotBlank() || vmListItems.any { it.text.isNotBlank() }
                 } else {
-                    originalNote.title != vmListTitle.trim() ||
-                            (originalNote.description ?: "") != currentItemsDescription ||
-                            (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmListTheme ||
-                            originalNote.labels.firstOrNull() != vmListLabelId ||
-                            originalNote.isOffline != vmListIsOffline
+                    originalNote.title != vmListTitle.trim() || (originalNote.description
+                        ?: "") != currentItemsDescription || (colorThemeMap[originalNote.color?.toULong()]
+                        ?: "Default") != vmListTheme || originalNote.labels.firstOrNull() != vmListLabelId || originalNote.isOffline != vmListIsOffline
                 }
 
-                val canSave = vmListTitle.isNotBlank() && vmListItems.any { it.text.isNotBlank() } && hasChanges
+                val canSave =
+                    vmListTitle.isNotBlank() && vmListItems.any { it.text.isNotBlank() } && hasChanges
                 FloatingActionButton(
                     onClick = { if (canSave) saveTrigger = true },
                     containerColor = colorScheme.primary
@@ -965,11 +965,9 @@ fun CompactNotes(
                 val hasChanges = if (originalNote == null) {
                     vmAudioTitle.isNotBlank() && !vmAudioUniqueId.isNullOrBlank()
                 } else {
-                    originalNote.title != vmAudioTitle.trim() ||
-                            (originalNote.description ?: "") != vmAudioUniqueId ||
-                            (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmAudioTheme ||
-                            originalNote.labels.firstOrNull() != vmAudioLabelId ||
-                            originalNote.isOffline != vmAudioIsOffline
+                    originalNote.title != vmAudioTitle.trim() || (originalNote.description
+                        ?: "") != vmAudioUniqueId || (colorThemeMap[originalNote.color?.toULong()]
+                        ?: "Default") != vmAudioTheme || originalNote.labels.firstOrNull() != vmAudioLabelId || originalNote.isOffline != vmAudioIsOffline
                 }
 
                 val hasAudio = vmAudioUniqueId != null
@@ -998,10 +996,8 @@ fun CompactNotes(
                 val hasChanges = if (originalNote == null) {
                     titleState.isNotBlank() || (sketchPathsState != null && sketchPathsState != "[]")
                 } else {
-                    originalNote.title != titleState.trim() ||
-                            originalNote.description != sketchPathsState ||
-                            (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmTheme ||
-                            originalNote.labels.firstOrNull() != vmLabelId
+                    originalNote.title != titleState.trim() || originalNote.description != sketchPathsState || (colorThemeMap[originalNote.color?.toULong()]
+                        ?: "Default") != vmTheme || originalNote.labels.firstOrNull() != vmLabelId
                 }
                 val canSave = titleState.isNotBlank() && hasChanges && !isSketchEmpty
                 FloatingActionButton(
@@ -1046,11 +1042,9 @@ fun CompactNotes(
                         vmState.isNotBlank() || vmContent.fromRichTextJson().text.trim()
                             .isNotEmpty()
                     } else { // Existing note
-                        originalNote.title != vmState.trim() ||
-                                (originalNote.description ?: "") != vmContent ||
-                                (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmTheme ||
-                                (originalNote.labels.firstOrNull()) != vmLabelId ||
-                                originalNote.isOffline != vmIsOffline
+                        originalNote.title != vmState.trim() || (originalNote.description
+                            ?: "") != vmContent || (colorThemeMap[originalNote.color?.toULong()]
+                            ?: "Default") != vmTheme || (originalNote.labels.firstOrNull()) != vmLabelId || originalNote.isOffline != vmIsOffline
                     }
                 }
 
@@ -1067,11 +1061,9 @@ fun CompactNotes(
                         val currentItemsDescription = vmItems.joinToString("\n") {
                             "${if (it.isChecked) "[x]" else "[ ]"} ${it.text}"
                         }
-                        originalNote.title != vmTitle.trim() ||
-                                (originalNote.description ?: "") != currentItemsDescription ||
-                                (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmTheme ||
-                                originalNote.labels.firstOrNull() != vmLabelId ||
-                                originalNote.isOffline != vmIsOffline
+                        originalNote.title != vmTitle.trim() || (originalNote.description
+                            ?: "") != currentItemsDescription || (colorThemeMap[originalNote.color?.toULong()]
+                            ?: "Default") != vmTheme || originalNote.labels.firstOrNull() != vmLabelId || originalNote.isOffline != vmIsOffline
                     }
                 }
 
@@ -1085,11 +1077,9 @@ fun CompactNotes(
                     if (originalNote == null) {
                         vmTitle.isNotBlank() && !vmUniqueId.isNullOrBlank()
                     } else {
-                        originalNote.title != vmTitle.trim() ||
-                                (originalNote.description ?: "") != vmUniqueId ||
-                                (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmTheme ||
-                                originalNote.labels.firstOrNull() != vmLabelId ||
-                                originalNote.isOffline != vmIsOffline
+                        originalNote.title != vmTitle.trim() || (originalNote.description
+                            ?: "") != vmUniqueId || (colorThemeMap[originalNote.color?.toULong()]
+                            ?: "Default") != vmTheme || originalNote.labels.firstOrNull() != vmLabelId || originalNote.isOffline != vmIsOffline
                     }
                 }
 
@@ -1099,10 +1089,8 @@ fun CompactNotes(
                     if (originalNote == null) {
                         titleState.isNotBlank() || (sketchPathsState != null && sketchPathsState != "[]")
                     } else {
-                        originalNote.title != titleState.trim() ||
-                                originalNote.description != sketchPathsState ||
-                                (colorThemeMap[originalNote.color?.toULong()] ?: "Default") != vmTheme ||
-                                originalNote.labels.firstOrNull() != vmLabelId
+                        originalNote.title != titleState.trim() || originalNote.description != sketchPathsState || (colorThemeMap[originalNote.color?.toULong()]
+                            ?: "Default") != vmTheme || originalNote.labels.firstOrNull() != vmLabelId
                     }
                 }
 
@@ -1134,8 +1122,8 @@ fun CompactNotes(
                 XenonDialog(
                     onDismissRequest = { showUnsavedChangesDialog = false },
                     properties = DialogProperties(usePlatformDefaultWidth = true),
-                    title = "Unsaved changes!",
-                    confirmButtonText = "Proceed",
+                    title = stringResource(R.string.unsaved_changes),
+                    confirmButtonText = stringResource(R.string.proceed),
                     onConfirmButtonClick = {
                         showUnsavedChangesDialog = false
                         dismissAction()
@@ -1148,9 +1136,8 @@ fun CompactNotes(
                     confirmContainerColor = colorScheme.error,
                     confirmContentColor = colorScheme.onError,
                     content = {
-                        Text("Warning! If you proceed now, all unsaved changes get lost!")
+                        Text(stringResource(R.string.warning_datalose))
                     },
-
                     )
             }
             Scaffold(snackbarHost = {
@@ -1210,28 +1197,48 @@ fun CompactNotes(
                         onIsSearchActiveChange = { isSearchActive = it },
                         defaultContent = commonToolbarProps,
                         onAddModeToggle = onAddModeToggle,
-                        isSelectedColor = extendedMaterialColorScheme.inverseErrorContainer,
+                        isSelectedColor = colorScheme.surfaceDim,
                         selectionContentOverride = {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                TextButton(
+                                FilledTonalButton(
                                     onClick = {
                                         viewModel.deleteItems(selectedNoteIds.toList())
                                         selectedNoteIds = emptySet()
-                                    }, modifier = Modifier.width(192.dp)
+                                    },
+                                    modifier = Modifier
+                                        .width(140.dp)
+                                        .height(56.dp),
+                                    colors = ButtonDefaults.filledTonalButtonColors(
+                                        containerColor = extendedMaterialColorScheme.inverseErrorContainer,
+                                        contentColor = extendedMaterialColorScheme.inverseOnErrorContainer
+                                    )
                                 ) {
                                     Text(
                                         stringResource(R.string.delete),
                                         textAlign = TextAlign.Center,
                                         style = typography.bodyLarge.copy(
                                             fontFamily = QuicksandTitleVariable,
-                                            color = extendedMaterialColorScheme.inverseOnErrorContainer
                                         )
                                     )
                                 }
+                                FilledTonalIconButton(
+                                    onClick = {
+                                        Toast.makeText(
+                                            context, "Coming soon ...", Toast.LENGTH_SHORT
+                                        ).show()
+                                    }, colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = colorScheme.surfaceDim,
+                                        contentColor = colorScheme.onSurface.copy(alpha = 0.38f)
+                                    ), content = {
+                                        Icon(
+                                            Icons.Rounded.PushPin, contentDescription = ""
+                                        )
+                                    }
+                                )
                             }
                         },
                         addModeContentOverride = {
@@ -1402,8 +1409,7 @@ fun CompactNotes(
                                         modifier = Modifier
                                             .weight(1f)
                                             .padding(scaffoldPadding)
-                                            .fillMaxWidth(),
-                                        contentAlignment = Alignment.Center
+                                            .fillMaxWidth(), contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = stringResource(R.string.no_notes_message),
@@ -1606,7 +1612,8 @@ fun CompactNotes(
                                                                         }
 
                                                                         NoteType.SKETCH -> {
-                                                                            sketchPathsState = itemToEdit.description
+                                                                            sketchPathsState =
+                                                                                itemToEdit.description
                                                                             isSearchActive = false
                                                                             viewModel.setSearchQuery(
                                                                                 ""
@@ -1784,7 +1791,8 @@ fun CompactNotes(
                                                                 }
 
                                                                 NoteType.SKETCH -> {
-                                                                    sketchPathsState = itemToEdit.description
+                                                                    sketchPathsState =
+                                                                        itemToEdit.description
                                                                     viewModel.showSketchCard()
                                                                 }
                                                             }
@@ -1916,7 +1924,9 @@ fun CompactNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
-                                                editingNoteId = viewModel.noteItems.filterIsInstance<NotesItems>().maxByOrNull { it.id }?.id
+                                                editingNoteId =
+                                                    viewModel.noteItems.filterIsInstance<NotesItems>()
+                                                        .maxByOrNull { it.id }?.id
                                             }
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Note Saved")
@@ -1979,7 +1989,9 @@ fun CompactNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
-                                                editingNoteId = viewModel.noteItems.filterIsInstance<NotesItems>().maxByOrNull { it.id }?.id
+                                                editingNoteId =
+                                                    viewModel.noteItems.filterIsInstance<NotesItems>()
+                                                        .maxByOrNull { it.id }?.id
                                             }
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Note Saved")
@@ -2042,7 +2054,9 @@ fun CompactNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
-                                                editingNoteId = viewModel.noteItems.filterIsInstance<NotesItems>().maxByOrNull { it.id }?.id
+                                                editingNoteId =
+                                                    viewModel.noteItems.filterIsInstance<NotesItems>()
+                                                        .maxByOrNull { it.id }?.id
                                             }
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Note Saved")
@@ -2111,7 +2125,9 @@ fun CompactNotes(
                                                     labels = labelId?.let { listOf(it) }
                                                         ?: emptyList(),
                                                     forceLocal = isOffline)
-                                                editingNoteId = viewModel.noteItems.filterIsInstance<NotesItems>().maxByOrNull { it.id }?.id
+                                                editingNoteId =
+                                                    viewModel.noteItems.filterIsInstance<NotesItems>()
+                                                        .maxByOrNull { it.id }?.id
                                             }
                                             scope.launch {
                                                 snackbarHostState.showSnackbar("Note Saved")

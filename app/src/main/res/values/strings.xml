@@ -129,5 +129,8 @@
     <string name="add_new_label">Add label</string>
     <string name="waveform_view">Waveform view</string>
     <string name="transcript_view">Transcript view</string>
+    <string name="unsaved_changes">Unsaved changes!</string>
+    <string name="proceed">Proceed</string>
+    <string name="warning_datalose">Warning! If you proceed now, all unsaved changes get lost!</string>
 
 </resources>

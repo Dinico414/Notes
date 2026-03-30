@@ -4,6 +4,7 @@ package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
@@ -61,6 +62,7 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.OpenWith
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TextFields
@@ -72,6 +74,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -84,7 +87,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -1048,8 +1050,8 @@ fun CoverNotes(
                 XenonDialog(
                     onDismissRequest = { showUnsavedChangesDialog = false },
                     properties = DialogProperties(usePlatformDefaultWidth = true),
-                    title = "Unsaved changes!",
-                    confirmButtonText = "Proceed",
+                    title = stringResource(R.string.unsaved_changes),
+                    confirmButtonText = stringResource(R.string.proceed),
                     onConfirmButtonClick = {
                         showUnsavedChangesDialog = false
                         dismissAction()
@@ -1062,10 +1064,9 @@ fun CoverNotes(
                     confirmContainerColor = colorScheme.error,
                     confirmContentColor = colorScheme.onError,
                     content = {
-                        Text("If you proceed now, all unsaved changes get lost")
+                        Text(stringResource(R.string.warning_datalose))
                     },
-
-                    )
+                )
             }
             Scaffold(
                 snackbarHost = {
@@ -1124,25 +1125,44 @@ fun CoverNotes(
                             selectionContentOverride = {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    TextButton(
+                                    FilledTonalButton(
                                         onClick = {
                                             viewModel.deleteItems(selectedNoteIds.toList())
                                             selectedNoteIds = emptySet()
                                         },
-                                        modifier = Modifier.width(192.dp)
+                                        modifier = Modifier
+                                            .width(140.dp)
+                                            .height(56.dp),
+                                        colors = ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = extendedMaterialColorScheme.inverseErrorContainer,
+                                            contentColor = extendedMaterialColorScheme.inverseOnErrorContainer
+                                        )
                                     ) {
                                         Text(
                                             stringResource(R.string.delete),
                                             textAlign = TextAlign.Center,
                                             style = typography.bodyLarge.copy(
                                                 fontFamily = QuicksandTitleVariable,
-                                                color = extendedMaterialColorScheme.inverseOnErrorContainer
                                             )
                                         )
                                     }
+                                    FilledTonalIconButton(
+                                        onClick = {
+                                            Toast.makeText(
+                                                context, "Coming soon ...", Toast.LENGTH_SHORT
+                                            ).show()
+                                        }, colors = IconButtonDefaults.iconButtonColors(
+                                            containerColor = colorScheme.surfaceDim,
+                                            contentColor = colorScheme.onSurface.copy(alpha = 0.38f)
+                                        ), content = {
+                                            Icon(
+                                                Icons.Rounded.PushPin, contentDescription = ""
+                                            )
+                                        }
+                                    )
                                 }
                             },
                             addModeContentOverride = {
