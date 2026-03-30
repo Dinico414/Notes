@@ -246,6 +246,7 @@ fun NoteSketchSheet(
     }
 
     LaunchedEffect(isEraserMode, usePressure, strokeWidth, strokeColor) {
+        android.util.Log.d("SketchInput", "Eraser: $isEraserMode, DynamicThickness: $usePressure")
         viewModel.onAction(
             DrawingAction.UpdateTool(
                 isEraserMode, usePressure, strokeWidth, strokeColor
@@ -375,6 +376,7 @@ fun NoteSketchSheet(
                 paths = pathState.value.paths,
                 currentPath = currentPathState.value.path,
                 currentToolState = currentPathState.value,
+                isEraserMode = isEraserMode,
                 onAction = viewModel::onAction,
                 isHandwritingMode = isHandwritingMode,
                 gridEnabled = pathState.value.gridEnabled,

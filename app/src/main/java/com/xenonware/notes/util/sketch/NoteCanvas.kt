@@ -1,6 +1,7 @@
 package com.xenonware.notes.util.sketch
 
 import android.os.Build
+import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import androidx.annotation.RequiresApi
@@ -64,6 +65,7 @@ fun NoteCanvas(
     paths: List<PathData>,
     currentPath: PathData?,
     currentToolState: CurrentPathState,
+    isEraserMode: Boolean,
     onAction: (DrawingAction) -> Unit,
     isHandwritingMode: Boolean,
     modifier: Modifier = Modifier,
@@ -74,7 +76,6 @@ fun NoteCanvas(
     interactable: Boolean = true
 ) {
     var debugString by remember { mutableStateOf("") }
-    var wasEraserMode by remember { mutableStateOf(false) }
 
     // --- DOUBLE TAP AND HOLD STATE ---
     var lastUpTime by remember { mutableLongStateOf(0L) }
@@ -204,18 +205,18 @@ fun NoteCanvas(
                 .pointerInteropFilter { event ->
                     if (!interactable) return@pointerInteropFilter true
 
+                    val toolInt = event.getToolType(0)
+                    val toolStr = when (toolInt) {
+                        MotionEvent.TOOL_TYPE_UNKNOWN -> "UNKNOWN"
+                        MotionEvent.TOOL_TYPE_FINGER -> "FINGER"
+                        MotionEvent.TOOL_TYPE_STYLUS -> "STYLUS"
+                        MotionEvent.TOOL_TYPE_MOUSE -> "MOUSE"
+                        MotionEvent.TOOL_TYPE_ERASER -> "ERASER"
+                        else -> "OTHER"
+                    }
+
                     if (debugText) {
                         val actionStr = MotionEvent.actionToString(event.action)
-                        val toolInt = event.getToolType(0)
-                        val toolStr = when (toolInt) {
-                            MotionEvent.TOOL_TYPE_UNKNOWN -> "UNKNOWN"
-                            MotionEvent.TOOL_TYPE_FINGER -> "FINGER"
-                            MotionEvent.TOOL_TYPE_STYLUS -> "STYLUS"
-                            MotionEvent.TOOL_TYPE_MOUSE -> "MOUSE"
-                            MotionEvent.TOOL_TYPE_ERASER -> "ERASER"
-                            else -> "OTHER"
-                        }
-                        
                         val btnState = event.buttonState
                         val btnStr = buildString {
                             if (btnState == 0) append("NONE ")
@@ -242,24 +243,17 @@ fun NoteCanvas(
                     }
 
                     val isDetectedToolEraser = event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
-                    if (isDetectedToolEraser != wasEraserMode) {
-                        wasEraserMode = isDetectedToolEraser
-                        onAction(UpdateTool(
-                            isEraser = isDetectedToolEraser,
-                            usePressure = currentToolState.usePressure,
-                            strokeWidth = currentToolState.strokeWidth,
-                            strokeColor = currentToolState.color
-                        ))
-                    }
-
                     val isStylus = event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS
                     val isFinger = event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER
-                    val isEraser = currentToolState.isEraser
+                    val isEraser = isDetectedToolEraser || isEraserMode
 
                     // --- ERASER INPUT ---
                     if (isEraser) {
                         when (event.action) {
                             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                                if (event.action == MotionEvent.ACTION_DOWN) {
+                                    Log.d("NoteCanvasInput", "Input Tool: $toolStr")
+                                }
                                 onAction(Erase(Offset(event.x, event.y)))
                                 cursorPos = Offset(event.x, event.y)
                             }
@@ -285,6 +279,7 @@ fun NoteCanvas(
 
                         when (event.action) {
                             MotionEvent.ACTION_DOWN -> {
+                                Log.d("NoteCanvasInput", "Input Tool: $toolStr")
                                 val now = System.currentTimeMillis()
                                 if (now - lastUpTime < 300L) {
                                     isDoubleTapSequence = true
