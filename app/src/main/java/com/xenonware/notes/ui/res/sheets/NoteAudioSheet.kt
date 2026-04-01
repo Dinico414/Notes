@@ -341,6 +341,8 @@ fun NoteAudioSheet(
                 if (recorder.currentRecordingState == RecordingState.RECORDING || recorder.currentRecordingState == RecordingState.PAUSED) {
                     recorder.stopRecording()
                     speechRecognitionManager.stopListening()
+                    // Allow Vosk to process the final audio segment before saving transcript
+                    delay(600)
                 }
                 player.stopAudio()
                 recorder.markAudioAsPersistent()

@@ -1,6 +1,7 @@
 package com.xenonware.notes.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -11,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.ui.theme.noteBlueLight
 import com.xenonware.notes.ui.theme.noteGreenLight
@@ -28,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -115,6 +118,65 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private suspend fun uploadAudioFilesSuspend(note: NotesItems, uid: String) {
+        if (note.noteType != NoteType.AUDIO || note.isOffline) return
+        val audioId = note.description ?: return
+        val context = getApplication<Application>().applicationContext
+        val storageRef = FirebaseStorage.getInstance().reference
+
+        val filesToUpload = listOf("$audioId.mp3", "$audioId.amp", "${audioId}_transcript.json")
+        for (fileName in filesToUpload) {
+            val file = File(context.filesDir, fileName)
+            if (file.exists()) {
+                Log.i("NotesAudioSync", "Uploading: $fileName")
+                try {
+                    storageRef.child("users/$uid/audio/$fileName").putFile(android.net.Uri.fromFile(file)).await()
+                    Log.i("NotesAudioSync", "Upload successful: $fileName")
+                } catch (e: Exception) {
+                    Log.e("NotesAudioSync", "Upload failed: $fileName", e)
+                }
+            }
+        }
+    }
+
+    private suspend fun downloadAudioFilesSuspend(note: NotesItems, uid: String) {
+        if (note.noteType != NoteType.AUDIO) return
+        val audioId = note.description ?: return
+        val context = getApplication<Application>().applicationContext
+        val storageRef = FirebaseStorage.getInstance().reference
+
+        val filesToDownload = listOf("$audioId.mp3", "$audioId.amp", "${audioId}_transcript.json")
+        for (fileName in filesToDownload) {
+            val file = File(context.filesDir, fileName)
+            if (!file.exists()) {
+                Log.i("NotesAudioSync", "Downloading: $fileName")
+                try {
+                    storageRef.child("users/$uid/audio/$fileName").getFile(file).await()
+                    Log.i("NotesAudioSync", "Download successful: $fileName")
+                } catch (e: Exception) {
+                    Log.e("NotesAudioSync", "Download failed: $fileName", e)
+                }
+            }
+        }
+    }
+
+    private suspend fun deleteAudioFilesSuspend(note: NotesItems, uid: String) {
+        if (note.noteType != NoteType.AUDIO) return
+        val audioId = note.description ?: return
+        val storageRef = FirebaseStorage.getInstance().reference
+
+        val filesToDelete = listOf("$audioId.mp3", "$audioId.amp", "${audioId}_transcript.json")
+        for (fileName in filesToDelete) {
+            Log.i("NotesAudioSync", "Deleting: $fileName")
+            try {
+                storageRef.child("users/$uid/audio/$fileName").delete().await()
+                Log.i("NotesAudioSync", "Delete successful: $fileName")
+            } catch (e: Exception) {
+                Log.e("NotesAudioSync", "Delete failed: $fileName", e)
+            }
+        }
+    }
+
     private fun startRealtimeListenerForFutureChanges(userId: String) {
         firestore.collection("notes").document(userId).collection("user_notes")
             .addSnapshotListener { snapshot, error ->
@@ -129,6 +191,16 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                                     _allNotesItems.add(0, note.copy(isOffline = false))
                                     saveAllNotes()
                                     applySortingAndFiltering()
+                                    
+                                    if (note.noteType == NoteType.AUDIO) {
+                                        viewModelScope.launch {
+                                            syncingNoteIds.add(note.id)
+                                            applySortingAndFiltering()
+                                            downloadAudioFilesSuspend(note, userId)
+                                            syncingNoteIds.remove(note.id)
+                                            applySortingAndFiltering()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -140,6 +212,16 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                                     _allNotesItems[index] = note.copy(isOffline = false)
                                     saveAllNotes()
                                     applySortingAndFiltering()
+
+                                    if (note.noteType == NoteType.AUDIO) {
+                                        viewModelScope.launch {
+                                            syncingNoteIds.add(note.id)
+                                            applySortingAndFiltering()
+                                            downloadAudioFilesSuspend(note, userId)
+                                            syncingNoteIds.remove(note.id)
+                                            applySortingAndFiltering()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -222,15 +304,21 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             _allNotesItems.toList().forEach { note ->
                 if (note.isOffline || note.id in syncingNoteIds) return@forEach
 
-                syncingNoteIds.add(note.id)
-                try {
-                    firestore.collection("notes").document(uid).collection("user_notes")
-                        .document(note.id.toString()).set(note).await()
-
-                    offlineNoteIds.remove(note.id)
-                    syncingNoteIds.remove(note.id)
-                } catch (_: Exception) {
-                    syncingNoteIds.remove(note.id)
+                viewModelScope.launch {
+                    syncingNoteIds.add(note.id)
+                    applySortingAndFiltering()
+                    try {
+                        if (note.noteType == NoteType.AUDIO) {
+                            uploadAudioFilesSuspend(note, uid)
+                        }
+                        firestore.collection("notes").document(uid).collection("user_notes")
+                            .document(note.id.toString()).set(note).await()
+                        offlineNoteIds.remove(note.id)
+                    } catch (_: Exception) {
+                    } finally {
+                        syncingNoteIds.remove(note.id)
+                        applySortingAndFiltering()
+                    }
                 }
             }
         }
@@ -321,15 +409,24 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         if (forceLocal) {
             offlineNoteIds.add(newId)
         } else if (auth.currentUser != null) {
-            syncingNoteIds.add(newId)
-            applySortingAndFiltering()
-
             val uid = auth.currentUser!!.uid
-            firestore.collection("notes").document(uid).collection("user_notes")
-                .document(newId.toString()).set(newItem).addOnSuccessListener {
+            
+            viewModelScope.launch {
+                syncingNoteIds.add(newId)
+                applySortingAndFiltering()
+                try {
+                    if (newItem.noteType == NoteType.AUDIO) {
+                        uploadAudioFilesSuspend(newItem, uid)
+                    }
+                    firestore.collection("notes").document(uid).collection("user_notes")
+                        .document(newId.toString()).set(newItem).await()
+                } catch (e: Exception) {
+                    Log.e("NotesAudioSync", "Failed to upload new note", e)
+                } finally {
                     syncingNoteIds.remove(newId)
                     applySortingAndFiltering()
                 }
+            }
         }
     }
 
@@ -354,26 +451,30 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         applySortingAndFiltering()
 
         if (!nowShouldBeOffline && auth.currentUser != null) {
-            syncingNoteIds.add(finalNote.id)
-            applySortingAndFiltering()
-
+            val uid = auth.currentUser!!.uid
+            
             viewModelScope.launch {
+                syncingNoteIds.add(finalNote.id)
+                applySortingAndFiltering()
                 try {
-                    firestore.collection("notes").document(auth.currentUser!!.uid)
+                    if (finalNote.noteType == NoteType.AUDIO) {
+                        uploadAudioFilesSuspend(finalNote, uid)
+                    }
+                    firestore.collection("notes").document(uid)
                         .collection("user_notes").document(finalNote.id.toString()).set(finalNote)
                         .await()
-
-                    syncingNoteIds.remove(finalNote.id)
-                    applySortingAndFiltering()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    Log.e("NotesAudioSync", "Failed to update note", e)
+                } finally {
                     syncingNoteIds.remove(finalNote.id)
                     applySortingAndFiltering()
                 }
             }
         } else if (!wasOffline && nowShouldBeOffline && auth.currentUser != null) {
+            val uid = auth.currentUser!!.uid
             viewModelScope.launch {
                 try {
-                    firestore.collection("notes").document(auth.currentUser!!.uid)
+                    firestore.collection("notes").document(uid)
                         .collection("user_notes").document(finalNote.id.toString()).delete().await()
                 } catch (_: Exception) {
                 }
@@ -382,16 +483,23 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteItems(itemIds: List<Int>) {
+        val deletedNotes = _allNotesItems.filter { it.id in itemIds }
         _allNotesItems.removeAll { it.id in itemIds }
         offlineNoteIds.removeAll(itemIds)
         saveAllNotes()
         applySortingAndFiltering()
 
         if (auth.currentUser != null) {
+            val uid = auth.currentUser!!.uid
             viewModelScope.launch {
+                deletedNotes.forEach { note ->
+                    if (note.noteType == NoteType.AUDIO) {
+                        deleteAudioFilesSuspend(note, uid)
+                    }
+                }
                 itemIds.forEach { id ->
                     try {
-                        firestore.collection("notes").document(auth.currentUser!!.uid)
+                        firestore.collection("notes").document(uid)
                             .collection("user_notes").document(id.toString()).delete().await()
                     } catch (_: Exception) {
                     }

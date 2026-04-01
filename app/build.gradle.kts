@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.firebase.database)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
     implementation(libs.androidx.compose.ui.graphics)
 
     val composeBom = platform("androidx.compose:compose-bom:2025.05.01")

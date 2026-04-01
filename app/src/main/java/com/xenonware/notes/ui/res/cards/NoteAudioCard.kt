@@ -50,7 +50,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -141,29 +143,44 @@ fun NoteAudioCard(
     }
     val selectedTheme = item.color?.let { colorToThemeName[it.toULong()] } ?: "Default"
 
-    // Resolve actual file path
-    val audioFilePath = remember(item.description) {
-        item.description?.let { uniqueId ->
-            File(context.filesDir, "$uniqueId.mp3").takeIf { it.exists() }?.absolutePath
+    // Resolve actual file path asynchronously (waiting for download if needed)
+    var audioFilePath by remember { mutableStateOf<String?>(null) }
+    
+    LaunchedEffect(item.description) {
+        if (item.description != null) {
+            val file = File(context.filesDir, "${item.description}.mp3")
+            while (isActive) {
+                if (file.exists()) {
+                    audioFilePath = file.absolutePath
+                    break
+                }
+                delay(1000) // Poll for download completion less aggressively
+            }
+        } else {
+            audioFilePath = null
         }
     }
 
     // Duration of THIS specific audio file (cached once)
-    val thisAudioDuration by remember(audioFilePath) {
-        mutableLongStateOf(audioFilePath?.let { player.getAudioDuration(it) } ?: 0L)
+    var thisAudioDuration by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(audioFilePath) {
+        thisAudioDuration = audioFilePath?.let { player.getAudioDuration(it) } ?: 0L
     }
 
     // Determine if THIS card is the one currently active
     val isThisAudioActive = player.currentFilePath == audioFilePath
     val isPlayingThis = player.isPlaying && isThisAudioActive
 
-    // Live playback position updater
-    LaunchedEffect(player.isPlaying) {
-        if (player.isPlaying) {
+    // Live playback position updater — ONLY if THIS specific card is active
+    var currentPlaybackPosition by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(player.isPlaying, player.currentFilePath) {
+        if (isThisAudioActive) {
             while (isActive) {
-                player.currentPlaybackPositionMillis = player.mediaPlayer?.currentPosition?.toLong() ?: 0L
-                delay(100L)
+                currentPlaybackPosition = player.mediaPlayer?.currentPosition?.toLong() ?: 0L
+                delay(50L)
             }
+        } else {
+            currentPlaybackPosition = 0L
         }
     }
 
@@ -218,7 +235,7 @@ fun NoteAudioCard(
                     Column(modifier = Modifier.fillMaxWidth()) {
                         // Calculate progress for THIS file only
                         val currentProgress = when {
-                            isThisAudioActive -> player.currentPlaybackPositionMillis.toFloat() / thisAudioDuration.coerceAtLeast(1L)
+                            isThisAudioActive -> currentPlaybackPosition.toFloat() / thisAudioDuration.coerceAtLeast(1L)
                             else -> 0f
                         }
 
@@ -294,7 +311,7 @@ fun NoteAudioCard(
                                         ) {
                                             Text(
                                                 text = when {
-                                                    isThisAudioActive -> "${formatDuration(player.currentPlaybackPositionMillis)} / ${
+                                                    isThisAudioActive -> "${formatDuration(currentPlaybackPosition)} / ${
                                                         formatDuration(
                                                             thisAudioDuration
                                                         )
@@ -323,7 +340,7 @@ fun NoteAudioCard(
                                         ) {
                                             Text(
                                                 text = if (isThisAudioActive)
-                                                    "${formatDuration(player.currentPlaybackPositionMillis)} / ${
+                                                    "${formatDuration(currentPlaybackPosition)} / ${
                                                         formatDuration(
                                                             thisAudioDuration
                                                         )
