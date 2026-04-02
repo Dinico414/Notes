@@ -1,3 +1,5 @@
+@file:Suppress("UnusedVariable")
+
 package com.xenonware.notes
 
 import android.os.Bundle

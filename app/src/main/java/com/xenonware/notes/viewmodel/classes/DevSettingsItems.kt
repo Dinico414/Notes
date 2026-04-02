@@ -1,3 +1,5 @@
+@file:Suppress("UnusedVariable")
+
 package com.xenonware.notes.viewmodel.classes
 
 import androidx.compose.foundation.layout.Column
@@ -121,7 +123,7 @@ fun DevSettingsItems(
         )
 
         if (isDeveloperModeEnabled) {
-            Spacer(modifier = Modifier.Companion.height(SmallSpacing))
+            Spacer(modifier = Modifier.height(SmallSpacing))
         }
     }
 }

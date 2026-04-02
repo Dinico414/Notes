@@ -13,8 +13,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -40,8 +41,8 @@ fun DevDefaultSettings(
     val hazeState = rememberHazeState()
     val context = LocalContext.current
 
-    val configuration = LocalConfiguration.current
-    val appHeight = configuration.screenHeightDp.dp
+    val density = LocalDensity.current
+    val appHeight = with(density) { LocalWindowInfo.current.containerSize.height.toDp() }
     val isAppBarExpandable = when (layoutType) {
         LayoutType.COVER -> false
         LayoutType.SMALL -> false
@@ -83,7 +84,7 @@ fun DevDefaultSettings(
             }
         },
         modifier = Modifier.hazeSource(hazeState),
-        content = { innerPadding ->
+        content = { _ ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()

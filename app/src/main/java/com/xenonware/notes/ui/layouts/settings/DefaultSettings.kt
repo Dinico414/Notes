@@ -20,8 +20,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -100,8 +100,8 @@ fun DefaultSettings(
         viewModel.applyCoverTheme(containerSize)
     }
 
-    val configuration = LocalConfiguration.current
-    val appHeight = configuration.screenHeightDp.dp
+    val density = LocalDensity.current
+    val appHeight = with(density) { LocalWindowInfo.current.containerSize.height.toDp() }
     val isAppBarExpandable = when (layoutType) {
         LayoutType.COVER -> false
         LayoutType.SMALL -> false

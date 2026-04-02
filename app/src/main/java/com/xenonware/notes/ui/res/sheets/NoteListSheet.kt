@@ -1,4 +1,4 @@
-@file:Suppress("DEPRECATION", "AssignedValueIsNeverRead")
+@file:Suppress("DEPRECATION")
 
 package com.xenonware.notes.ui.res.sheets
 

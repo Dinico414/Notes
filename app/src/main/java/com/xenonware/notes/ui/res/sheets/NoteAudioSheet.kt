@@ -1,4 +1,4 @@
-@file:Suppress("AssignedValueIsNeverRead", "unused", "DEPRECATION")
+@file:Suppress("DEPRECATION")
 
 package com.xenonware.notes.ui.res.sheets
 
@@ -578,7 +578,6 @@ fun NoteAudioSheet(
                                 ) {
                                     AudioTimerDisplay(
                                         isRecording = isInRecordingMode,
-                                        isPlaying = isSheetAudioPlaying,
                                         recordingDurationMillis = recorder.recordingDurationMillis,
                                         currentPlaybackPositionMillis = player.currentPlaybackPositionMillis,
                                         totalAudioDurationMillis = if (hasAudioFile && !isInRecordingMode) sheetAudioDuration else 0L,
@@ -669,7 +668,6 @@ fun NoteAudioSheet(
                                     isSheetAudioPaused = isSheetAudioPaused,
                                     currentSheetAudioPath = currentSheetAudioPath,
                                     hasUnsavedRecording = !recorder.isPersistentAudio,
-                                    toolbarHeight = toolbarHeight,
                                     onRecordClick = {
                                         if (ContextCompat.checkSelfPermission(
                                                 context, Manifest.permission.RECORD_AUDIO
@@ -737,7 +735,6 @@ fun NoteAudioSheet(
 
                             AudioTimerDisplay(
                                 isRecording = isInRecordingMode,
-                                isPlaying = isSheetAudioPlaying,
                                 recordingDurationMillis = recorder.recordingDurationMillis,
                                 currentPlaybackPositionMillis = player.currentPlaybackPositionMillis,
                                 totalAudioDurationMillis = if (hasAudioFile && !isInRecordingMode) sheetAudioDuration else 0L
@@ -806,7 +803,6 @@ fun NoteAudioSheet(
                                 isSheetAudioPaused = isSheetAudioPaused,
                                 currentSheetAudioPath = currentSheetAudioPath,
                                 hasUnsavedRecording = !recorder.isPersistentAudio,
-                                toolbarHeight = toolbarHeight,
                                 onRecordClick = {
                                     if (ContextCompat.checkSelfPermission(
                                             context, Manifest.permission.RECORD_AUDIO
@@ -955,7 +951,6 @@ fun AudioControlButtons(
     isSheetAudioPaused: Boolean,
     currentSheetAudioPath: String?,
     hasUnsavedRecording: Boolean = false,
-    toolbarHeight: Dp,
     onRecordClick: () -> Unit,
     onPauseRecordingClick: () -> Unit,
     onResumeRecordingClick: () -> Unit,
@@ -1225,7 +1220,6 @@ fun AudioProgressBar(
 @Composable
 fun AudioTimerDisplay(
     isRecording: Boolean,
-    isPlaying: Boolean,
     recordingDurationMillis: Long,
     currentPlaybackPositionMillis: Long,
     totalAudioDurationMillis: Long,

@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.xenonware.notes.util.sketch
 
 import androidx.compose.ui.geometry.Offset
@@ -42,8 +44,7 @@ object ShapeRecognizer {
         val centroid = calculateCentroid(rawPoints)
         val (avgRadius, cv) = getCircularityMetrics(rawPoints, centroid)
 
-        val startEndDist = directDist
-        val isClosed = startEndDist < totalLength * CLOSE_THRESHOLD || startEndDist < 25f
+        val isClosed = directDist < totalLength * CLOSE_THRESHOLD || directDist < 25f
 
         // === NEW: Much stricter circle/arc detection ===
         // Only trigger circle/arc if variance is quite low OR the shape is very clean and closed
@@ -54,7 +55,7 @@ object ShapeRecognizer {
                 generateCircleOrOval(rawPoints, centroid, originalThickness)
             } else {
                 // For open arcs (Bögen), require even cleaner curvature
-                if (cv < 0.22f && totalLength > 80f) {
+                if (totalLength > 80f) {
                     generateArc(rawPoints, centroid, avgRadius, start, end, originalThickness)
                 } else {
                     null  // don't force arc on slightly curved lines
@@ -92,7 +93,7 @@ object ShapeRecognizer {
         }
 
         // Fallback: only allow loose circle if corner count is weird and it's closed
-        if (isClosed && (corners.size < 3 || corners.size > 5) && cv < 0.25f) {
+        if (isClosed && (corners.size !in 3..5) && cv < 0.25f) {
             return generateCircleOrOval(rawPoints, centroid, originalThickness)
         }
 
@@ -298,7 +299,7 @@ object ShapeRecognizer {
         val rotated = raw.map { p ->
             val rx = p.x * cos(angle01) - p.y * sin(angle01)
             val ry = p.x * sin(angle01) + p.y * cos(angle01)
-            Offset((center.x + rx).toFloat(), (center.y + ry).toFloat())
+            Offset((center.x + rx), (center.y + ry))
         }
 
         return createPolygonPath(rotated, thickness)

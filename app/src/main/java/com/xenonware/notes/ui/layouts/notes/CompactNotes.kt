@@ -1138,7 +1138,7 @@ fun CompactNotes(
                     confirmContainerColor = colorScheme.error,
                     confirmContentColor = colorScheme.onError,
                     content = {
-                        Text(stringResource(R.string.warning_datalose))
+                        Text(stringResource(R.string.warning_datalost))
                     },
                     )
             }

@@ -23,8 +23,6 @@ fun DevSettingsLayout(
                 DevCoverSettings(
                     onNavigateBack = onNavigateBack,
                     viewModel = viewModel,
-                    layoutType = layoutType,
-                    isLandscape = isLandscape
                 )
             }
             LayoutType.SMALL, LayoutType.COMPACT, LayoutType.MEDIUM, LayoutType.EXPANDED -> {

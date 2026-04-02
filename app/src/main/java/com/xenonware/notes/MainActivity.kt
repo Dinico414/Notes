@@ -113,7 +113,7 @@ class MainActivity : ComponentActivity() {
             // Start real-time sync when app resumes (if already signed in)
             if (isSignedIn) {
                 viewModel.onSignedIn() 
-            } else if (wasSignedIn && !isSignedIn) {
+            } else if (wasSignedIn) {
                 viewModel.onSignedOut()
             }
         }

@@ -1,3 +1,5 @@
+@file:Suppress("ControlFlowWithEmptyBody", "unused")
+
 package com.xenonware.notes.viewmodel
 
 import android.app.Application

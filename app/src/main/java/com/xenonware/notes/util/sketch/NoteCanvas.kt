@@ -1,3 +1,5 @@
+@file:Suppress("VariableNeverRead", "AssignedValueIsNeverRead")
+
 package com.xenonware.notes.util.sketch
 
 import android.os.Build
@@ -138,30 +140,30 @@ fun NoteCanvas(
 
     // 2. Handle "Current" Active Path
     LaunchedEffect(currentPath) {
-        val pathData = currentPath
         val bitmap = cachedBitmap ?: return@LaunchedEffect
 
-        if (pathData == null) {
+        if (currentPath == null) {
             currentPathBakedSize = 0
             return@LaunchedEffect
         }
 
         // If the path shrunk (replaced by shape), reset baking to redraw the clean shape
-        if (pathData.path.size < currentPathBakedSize) {
+        if (currentPath.path.size < currentPathBakedSize) {
             currentPathBakedSize = 0
         }
 
         val bufferSize = 4
-        val safeIndex = pathData.path.size - bufferSize
+        val safeIndex = currentPath.path.size - bufferSize
 
         if (safeIndex > currentPathBakedSize && safeIndex > 1) {
             val canvas = ComposeCanvas(bitmap)
             val paint = Paint().apply { isAntiAlias = true }
 
             val startIdx = (currentPathBakedSize - 1).coerceAtLeast(0)
-            val segmentToBake = pathData.path.subList(startIdx, safeIndex + 1)
+            val segmentToBake = currentPath.path.subList(startIdx, safeIndex + 1)
 
-            drawPathToCanvas(canvas, paint, segmentToBake, pathData.color, pathData.colorIndex, drawColors)
+            drawPathToCanvas(canvas, paint, segmentToBake,
+                currentPath.color, currentPath.colorIndex, drawColors)
             currentPathBakedSize = safeIndex
         }
     }

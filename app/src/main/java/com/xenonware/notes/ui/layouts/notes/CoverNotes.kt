@@ -1,5 +1,3 @@
-@file:Suppress("AssignedValueIsNeverRead")
-
 package com.xenonware.notes.ui.layouts.notes
 
 import android.annotation.SuppressLint
@@ -1066,7 +1064,7 @@ fun CoverNotes(
                     confirmContainerColor = colorScheme.error,
                     confirmContentColor = colorScheme.onError,
                     content = {
-                        Text(stringResource(R.string.warning_datalose))
+                        Text(stringResource(R.string.warning_datalost))
                     },
                 )
             }

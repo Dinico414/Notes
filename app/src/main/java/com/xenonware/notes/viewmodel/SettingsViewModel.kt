@@ -352,7 +352,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     // ViewModel Members
     private var currentToast: Toast? = null
 
-    fun onInfoTileClicked(context1: Context) {
+    fun onInfoTileClicked() {
         val context = getApplication<Application>().applicationContext
         currentToast?.cancel()
         singleTapJob?.cancel()

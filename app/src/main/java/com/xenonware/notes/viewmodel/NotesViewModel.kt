@@ -151,7 +151,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             
             val cloudMetadata = try {
                 storageRef.child("users/$uid/audio/$fileName").metadata.await()
-            } catch (e: Exception) { null }
+            } catch (_: Exception) { null }
             
             val shouldDownload = if (!file.exists() || file.length() == 0L) {
                 true
@@ -551,30 +551,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun ensureTranscriptsAreFilled(context: android.content.Context) {
-        val updatedList = _allNotesItems.map { note ->
-            if (note.noteType != NoteType.AUDIO) return@map note
-            if (!note.transcript.isNullOrBlank()) return@map note
-
-            val audioId = note.description ?: return@map note
-            val segments = loadTranscript(context, audioId)
-
-            if (segments.isEmpty()) return@map note
-
-            val joined = segments.joinToString(" ") { it.text.trim() }
-                .takeIf { it.isNotBlank() } ?: return@map note
-
-            note.copy(transcript = joined)
-        }
-
-        if (updatedList != _allNotesItems) {
-            _allNotesItems.clear()
-            _allNotesItems.addAll(updatedList)
-            saveAllNotes()
-            applySortingAndFiltering()
-        }
-    }
-
     fun saveAllNotes() {
         prefsManager.notesItems = _allNotesItems.toList()
     }
@@ -710,29 +686,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setLabelFilter(labelId: String?) {
         _selectedLabel.value = if (_selectedLabel.value == labelId) null else labelId
-        applySortingAndFiltering()
-    }
-
-    fun moveItemInFreeSort(itemIdToMove: Int, newDisplayOrderCandidate: Int) {
-        if (currentSortOption != SortOption.FREE_SORTING) return
-
-        val itemsInList = _allNotesItems.sortedBy { it.displayOrder }.toMutableList()
-        val itemToMoveIndex = itemsInList.indexOfFirst { it.id == itemIdToMove }
-        if (itemToMoveIndex == -1) return
-
-        val item = itemsInList.removeAt(itemToMoveIndex)
-        val targetIndex = newDisplayOrderCandidate.coerceIn(0, itemsInList.size)
-        itemsInList.add(targetIndex, item)
-
-        itemsInList.forEachIndexed { newOrder, noteItem ->
-            val originalIndex = _allNotesItems.indexOfFirst { it.id == noteItem.id }
-            if (originalIndex != -1 && _allNotesItems[originalIndex].displayOrder != newOrder) {
-                _allNotesItems[originalIndex] =
-                    _allNotesItems[originalIndex].copy(displayOrder = newOrder)
-            }
-        }
-
-        saveAllNotes()
         applySortingAndFiltering()
     }
 

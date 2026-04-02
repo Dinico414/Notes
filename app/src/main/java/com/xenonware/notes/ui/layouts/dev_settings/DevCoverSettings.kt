@@ -22,7 +22,6 @@ import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoSpacing
 import com.xenonware.notes.R
 import com.xenonware.notes.viewmodel.DevSettingsViewModel
-import com.xenonware.notes.viewmodel.LayoutType
 import com.xenonware.notes.viewmodel.SettingsViewModel
 import com.xenonware.notes.viewmodel.classes.DevSettingsItems
 import dev.chrisbanes.haze.hazeSource
@@ -32,9 +31,7 @@ import dev.chrisbanes.haze.rememberHazeState
 fun DevCoverSettings(
     onNavigateBack: () -> Unit,
     viewModel: DevSettingsViewModel,
-    settingsViewModel: SettingsViewModel = viewModel(),
-    layoutType: LayoutType,
-    isLandscape: Boolean,
+    settingsViewModel: SettingsViewModel = viewModel()
 ) {
     val hazeState = rememberHazeState()
     val context = LocalContext.current
@@ -72,7 +69,7 @@ fun DevCoverSettings(
             }
         },
         modifier = Modifier.hazeSource(hazeState),
-        content = { innerPadding ->
+        content = { _ ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
