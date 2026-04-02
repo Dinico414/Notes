@@ -557,7 +557,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             if (!note.transcript.isNullOrBlank()) return@map note
 
             val audioId = note.description ?: return@map note
-            val segments = com.xenonware.notes.util.audio.loadTranscript(context, audioId)
+            val segments = loadTranscript(context, audioId)
 
             if (segments.isEmpty()) return@map note
 

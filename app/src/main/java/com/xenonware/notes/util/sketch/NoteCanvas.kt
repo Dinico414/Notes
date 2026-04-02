@@ -286,7 +286,7 @@ fun NoteCanvas(
                                         // Double tap and hold triggered
                                         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                                         withContext(Dispatchers.Main) {
-                                            onAction(DrawingAction.NewPathStart) // Cancel current drawing
+                                            onAction(NewPathStart) // Cancel current drawing
                                             
                                             // Check if the previous path was just a dot/short tap
                                             val lastPath = paths.lastOrNull()
