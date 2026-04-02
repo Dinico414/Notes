@@ -26,6 +26,7 @@ data class NotesItems(
     val labelId: String? = null,
     val audioUrl: String? = null,
     val localAudioId: String? = null,
+    val audioLastModified: Long = 0L,
     @PropertyName("isOffline")
     var isOffline: Boolean = false
 ) {

@@ -148,7 +148,21 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         val filesToDownload = listOf("$audioId.mp3", "$audioId.amp", "${audioId}_transcript.json")
         for (fileName in filesToDownload) {
             val file = File(context.filesDir, fileName)
-            if (!file.exists()) {
+            
+            val cloudMetadata = try {
+                storageRef.child("users/$uid/audio/$fileName").metadata.await()
+            } catch (e: Exception) { null }
+            
+            val shouldDownload = if (!file.exists() || file.length() == 0L) {
+                true
+            } else if (cloudMetadata != null) {
+                // Only download if cloud file is newer than local file
+                cloudMetadata.updatedTimeMillis > file.lastModified()
+            } else {
+                false
+            }
+
+            if (shouldDownload) {
                 Log.i("NotesAudioSync", "Downloading: $fileName")
                 try {
                     storageRef.child("users/$uid/audio/$fileName").getFile(file).await()
@@ -156,6 +170,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 } catch (e: Exception) {
                     Log.e("NotesAudioSync", "Download failed: $fileName", e)
                 }
+            } else {
+                Log.d("NotesAudioSync", "Skipping download, local file is up-to-date: $fileName")
             }
         }
     }
@@ -209,9 +225,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                             if (!offlineNoteIds.contains(note.id)) {
                                 val index = _allNotesItems.indexOfFirst { it.id == note.id }
                                 if (index != -1) {
-                                    _allNotesItems[index] = note.copy(isOffline = false)
-                                    saveAllNotes()
-                                    applySortingAndFiltering()
+                                    val oldNote = _allNotesItems[index]
+                                    
+                                    // Check if metadata actually changed before updating local list
+                                    if (oldNote != note) {
+                                        _allNotesItems[index] = note.copy(isOffline = false)
+                                        saveAllNotes()
+                                        applySortingAndFiltering()
+                                    }
 
                                     if (note.noteType == NoteType.AUDIO) {
                                         viewModelScope.launch {
@@ -399,7 +420,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             noteType = noteType,
             color = color,
             labels = labels,
-            isOffline = forceLocal
+            isOffline = forceLocal,
+            audioLastModified = if (noteType == NoteType.AUDIO) System.currentTimeMillis() else 0L
         )
 
         _allNotesItems.add(0, newItem)
@@ -438,7 +460,15 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         val wasOffline = oldNote.isOffline
         val nowShouldBeOffline = forceLocal || updatedItem.isOffline
 
-        val finalNote = updatedItem.copy(isOffline = nowShouldBeOffline)
+        // Determine if we need to update audio timestamp
+        val finalAudioLastModified = if (updatedItem.noteType == NoteType.AUDIO && 
+            (updatedItem.title != oldNote.title || updatedItem.description != oldNote.description)) {
+            System.currentTimeMillis()
+        } else {
+            updatedItem.audioLastModified
+        }
+
+        val finalNote = updatedItem.copy(isOffline = nowShouldBeOffline, audioLastModified = finalAudioLastModified)
         _allNotesItems[index] = finalNote
 
         if (nowShouldBeOffline) {
@@ -457,7 +487,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 syncingNoteIds.add(finalNote.id)
                 applySortingAndFiltering()
                 try {
-                    if (finalNote.noteType == NoteType.AUDIO) {
+                    if (finalNote.noteType == NoteType.AUDIO && finalAudioLastModified > oldNote.audioLastModified) {
                         uploadAudioFilesSuspend(finalNote, uid)
                     }
                     firestore.collection("notes").document(uid)
