@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.storage.FirebaseStorage
 import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.ui.theme.noteBlueLight
@@ -55,6 +56,9 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val syncingNoteIds = mutableStateSetOf<Int>()
     private val offlineNoteIds = mutableStateSetOf<Int>()
+
+    private var notesListenerRegistration: ListenerRegistration? = null
+    private var labelsListenerRegistration: ListenerRegistration? = null
 
     fun isNoteBeingSynced(noteId: Int) = syncingNoteIds.contains(noteId)
 
@@ -130,7 +134,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             if (file.exists()) {
                 Log.i("NotesAudioSync", "Uploading: $fileName")
                 try {
-                    storageRef.child("users/$uid/audio/$fileName").putFile(android.net.Uri.fromFile(file)).await()
+                    storageRef.child("users/$uid/audio/$fileName")
+                        .putFile(android.net.Uri.fromFile(file)).await()
                     Log.i("NotesAudioSync", "Upload successful: $fileName")
                 } catch (e: Exception) {
                     Log.e("NotesAudioSync", "Upload failed: $fileName", e)
@@ -139,7 +144,12 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun downloadAudioFilesSuspend(note: NotesItems, uid: String) {
+
+    private suspend fun downloadAudioFilesSuspend(
+        note: NotesItems,
+        uid: String,
+        forceDownload: Boolean = false,
+    ) {
         if (note.noteType != NoteType.AUDIO) return
         val audioId = note.description ?: return
         val context = getApplication<Application>().applicationContext
@@ -148,22 +158,9 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         val filesToDownload = listOf("$audioId.mp3", "$audioId.amp", "${audioId}_transcript.json")
         for (fileName in filesToDownload) {
             val file = File(context.filesDir, fileName)
-            
-            val cloudMetadata = try {
-                storageRef.child("users/$uid/audio/$fileName").metadata.await()
-            } catch (_: Exception) { null }
-            
-            val shouldDownload = if (!file.exists() || file.length() == 0L) {
-                true
-            } else if (cloudMetadata != null) {
-                // Only download if cloud file is newer than local file
-                cloudMetadata.updatedTimeMillis > file.lastModified()
-            } else {
-                false
-            }
-
+            val shouldDownload = forceDownload || !file.exists() || file.length() == 0L
             if (shouldDownload) {
-                Log.i("NotesAudioSync", "Downloading: $fileName")
+                Log.i("NotesAudioSync", "Downloading: $fileName (force=$forceDownload)")
                 try {
                     storageRef.child("users/$uid/audio/$fileName").getFile(file).await()
                     Log.i("NotesAudioSync", "Download successful: $fileName")
@@ -171,7 +168,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     Log.e("NotesAudioSync", "Download failed: $fileName", e)
                 }
             } else {
-                Log.d("NotesAudioSync", "Skipping download, local file is up-to-date: $fileName")
+                Log.d("NotesAudioSync", "Skipping download, file exists and up-to-date: $fileName")
             }
         }
     }
@@ -194,7 +191,10 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun startRealtimeListenerForFutureChanges(userId: String) {
-        firestore.collection("notes").document(userId).collection("user_notes")
+        if (notesListenerRegistration != null) return
+
+        notesListenerRegistration = firestore
+            .collection("notes").document(userId).collection("user_notes")
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
 
@@ -207,14 +207,25 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                                     _allNotesItems.add(0, note.copy(isOffline = false))
                                     saveAllNotes()
                                     applySortingAndFiltering()
-                                    
+
                                     if (note.noteType == NoteType.AUDIO) {
-                                        viewModelScope.launch {
-                                            syncingNoteIds.add(note.id)
-                                            applySortingAndFiltering()
-                                            downloadAudioFilesSuspend(note, userId)
-                                            syncingNoteIds.remove(note.id)
-                                            applySortingAndFiltering()
+                                        val audioId = note.description
+                                        val context = getApplication<Application>().applicationContext
+                                        val mp3 = if (audioId != null)
+                                            File(context.filesDir, "$audioId.mp3") else null
+                                        val missingLocally = mp3 == null ||
+                                                !mp3.exists() || mp3.length() == 0L
+
+                                        if (missingLocally) {
+                                            viewModelScope.launch {
+                                                syncingNoteIds.add(note.id)
+                                                applySortingAndFiltering()
+                                                downloadAudioFilesSuspend(
+                                                    note, userId, forceDownload = false
+                                                )
+                                                syncingNoteIds.remove(note.id)
+                                                applySortingAndFiltering()
+                                            }
                                         }
                                     }
                                 }
@@ -226,19 +237,22 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                                 val index = _allNotesItems.indexOfFirst { it.id == note.id }
                                 if (index != -1) {
                                     val oldNote = _allNotesItems[index]
-                                    
-                                    // Check if metadata actually changed before updating local list
+
                                     if (oldNote != note) {
                                         _allNotesItems[index] = note.copy(isOffline = false)
                                         saveAllNotes()
                                         applySortingAndFiltering()
                                     }
 
-                                    if (note.noteType == NoteType.AUDIO) {
+                                    if (note.noteType == NoteType.AUDIO &&
+                                        note.audioLastModified > oldNote.audioLastModified
+                                    ) {
                                         viewModelScope.launch {
                                             syncingNoteIds.add(note.id)
                                             applySortingAndFiltering()
-                                            downloadAudioFilesSuspend(note, userId)
+                                            downloadAudioFilesSuspend(
+                                                note, userId, forceDownload = true
+                                            )
                                             syncingNoteIds.remove(note.id)
                                             applySortingAndFiltering()
                                         }
@@ -260,11 +274,15 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun startLabelsRealtimeListener(userId: String) {
-        firestore.collection("notes").document(userId).collection("labels")
+        if (labelsListenerRegistration != null) return
+
+        labelsListenerRegistration = firestore
+            .collection("notes").document(userId).collection("labels")
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
 
-                val cloudLabels = snapshot.documents.mapNotNull { it.toObject(Label::class.java) }
+                val cloudLabels = snapshot.documents
+                    .mapNotNull { it.toObject(Label::class.java) }
                     .sortedBy { it.text.lowercase() }
 
                 if (cloudLabels != _labels.value) {
@@ -274,42 +292,24 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
-    fun showTextCard() {
-        _showTextCard.value = true
-    }
-    fun showAudioCard() {
-        _showAudioCard.value = true
-    }
-    fun showListCard() {
-        _showListCard.value = true
-    }
-    fun showSketchCard() {
-        _showSketchCard.value = true
-    }
+    fun showTextCard() { _showTextCard.value = true }
+    fun showAudioCard() { _showAudioCard.value = true }
+    fun showListCard() { _showListCard.value = true }
+    fun showSketchCard() { _showSketchCard.value = true }
 
-    fun hideTextCard() {
-        _showTextCard.value = false
-    }
-    fun hideAudioCard() {
-        _showAudioCard.value = false
-    }
-    fun hideSketchCard() {
-        _showSketchCard.value = false
-    }
-    fun hideListCard() {
-        _showListCard.value = false
-    }
+    fun hideTextCard() { _showTextCard.value = false }
+    fun hideAudioCard() { _showAudioCard.value = false }
+    fun hideSketchCard() { _showSketchCard.value = false }
+    fun hideListCard() { _showListCard.value = false }
 
     fun syncLabelsToCloud() {
         val uid = auth.currentUser?.uid ?: return
-
         viewModelScope.launch {
             _labels.value.forEach { label ->
                 try {
                     firestore.collection("notes").document(uid).collection("labels")
                         .document(label.id).set(label).await()
-                } catch (_: Exception) {
-                }
+                } catch (_: Exception) { }
             }
         }
     }
@@ -324,7 +324,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _allNotesItems.toList().forEach { note ->
                 if (note.isOffline || note.id in syncingNoteIds) return@forEach
-
                 viewModelScope.launch {
                     syncingNoteIds.add(note.id)
                     applySortingAndFiltering()
@@ -345,17 +344,13 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         uploadLocalLabelsIfNeeded(uid)
+
         viewModelScope.launch {
             try {
                 val cloudSnapshot = firestore.collection("notes")
-                    .document(uid)
-                    .collection("labels")
-                    .get()
-                    .await()
-
+                    .document(uid).collection("labels").get().await()
                 val cloudLabelIds = cloudSnapshot.documents.map { it.id }.toSet()
                 val localLabelIds = _labels.value.map { it.id }.toSet()
-
                 val orphaned = cloudLabelIds - localLabelIds
                 orphaned.forEach { id ->
                     firestore.collection("notes").document(uid).collection("labels")
@@ -366,6 +361,11 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onSignedOut() {
+        notesListenerRegistration?.remove()
+        notesListenerRegistration = null
+        labelsListenerRegistration?.remove()
+        labelsListenerRegistration = null
+
         val localNotes = _allNotesItems.filter { it.isOffline }
         if (localNotes.size != _allNotesItems.size) {
             _allNotesItems.clear()
@@ -377,24 +377,19 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun uploadLocalLabelsIfNeeded(userId: String) {
         if (_labels.value.isEmpty()) return
-
         viewModelScope.launch {
             try {
-                val snapshot =
-                    firestore.collection("notes").document(userId).collection("labels").get()
-                        .await()
-
+                val snapshot = firestore.collection("notes").document(userId)
+                    .collection("labels").get().await()
                 val cloudLabelIds = snapshot.documents.mapNotNull { it.id }.toSet()
                 val localLabelsToUpload = _labels.value.filter { it.id !in cloudLabelIds }
-
                 if (localLabelsToUpload.isNotEmpty()) {
                     localLabelsToUpload.forEach { label ->
                         firestore.collection("notes").document(userId).collection("labels")
                             .document(label.id).set(label).await()
                     }
                 }
-            } catch (_: Exception) {
-            }
+            } catch (_: Exception) { }
         }
     }
 
@@ -432,7 +427,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             offlineNoteIds.add(newId)
         } else if (auth.currentUser != null) {
             val uid = auth.currentUser!!.uid
-            
             viewModelScope.launch {
                 syncingNoteIds.add(newId)
                 applySortingAndFiltering()
@@ -459,40 +453,41 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         val oldNote = _allNotesItems[index]
         val wasOffline = oldNote.isOffline
         val nowShouldBeOffline = forceLocal || updatedItem.isOffline
-
-        // Determine if we need to update audio timestamp
-        val finalAudioLastModified = if (updatedItem.noteType == NoteType.AUDIO && 
-            (updatedItem.title != oldNote.title || updatedItem.description != oldNote.description)) {
+        
+        val finalAudioLastModified = if (updatedItem.noteType == NoteType.AUDIO &&
+            (updatedItem.title != oldNote.title || updatedItem.description != oldNote.description)
+        ) {
             System.currentTimeMillis()
         } else {
             updatedItem.audioLastModified
         }
 
-        val finalNote = updatedItem.copy(isOffline = nowShouldBeOffline, audioLastModified = finalAudioLastModified)
+        val finalNote = updatedItem.copy(
+            isOffline = nowShouldBeOffline,
+            audioLastModified = finalAudioLastModified
+        )
         _allNotesItems[index] = finalNote
 
-        if (nowShouldBeOffline) {
-            offlineNoteIds.add(finalNote.id)
-        } else {
-            offlineNoteIds.remove(finalNote.id)
-        }
+        if (nowShouldBeOffline) offlineNoteIds.add(finalNote.id)
+        else offlineNoteIds.remove(finalNote.id)
 
         saveAllNotes()
         applySortingAndFiltering()
 
         if (!nowShouldBeOffline && auth.currentUser != null) {
             val uid = auth.currentUser!!.uid
-            
             viewModelScope.launch {
                 syncingNoteIds.add(finalNote.id)
                 applySortingAndFiltering()
                 try {
-                    if (finalNote.noteType == NoteType.AUDIO && finalAudioLastModified > oldNote.audioLastModified) {
+                    if (finalNote.noteType == NoteType.AUDIO &&
+                        finalAudioLastModified > oldNote.audioLastModified
+                    ) {
                         uploadAudioFilesSuspend(finalNote, uid)
                     }
                     firestore.collection("notes").document(uid)
-                        .collection("user_notes").document(finalNote.id.toString()).set(finalNote)
-                        .await()
+                        .collection("user_notes").document(finalNote.id.toString())
+                        .set(finalNote).await()
                 } catch (e: Exception) {
                     Log.e("NotesAudioSync", "Failed to update note", e)
                 } finally {
@@ -506,8 +501,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 try {
                     firestore.collection("notes").document(uid)
                         .collection("user_notes").document(finalNote.id.toString()).delete().await()
-                } catch (_: Exception) {
-                }
+                } catch (_: Exception) { }
             }
         }
     }
@@ -531,8 +525,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     try {
                         firestore.collection("notes").document(uid)
                             .collection("user_notes").document(id.toString()).delete().await()
-                    } catch (_: Exception) {
-                    }
+                    } catch (_: Exception) { }
                 }
             }
         }
@@ -601,11 +594,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleColorFilter(color: Long?) {
         val currentColors = _selectedColors.value.toMutableSet()
-        if (currentColors.contains(color)) {
-            currentColors.remove(color)
-        } else {
-            currentColors.add(color)
-        }
+        if (currentColors.contains(color)) currentColors.remove(color)
+        else currentColors.add(color)
         _selectedColors.value = currentColors
         applySortingAndFiltering()
     }
@@ -627,27 +617,24 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addLabel(labelText: String) {
         if (labelText.isBlank()) return
-
         val newLabel = Label(id = UUID.randomUUID().toString(), text = labelText.trim())
         _labels.value = (_labels.value + newLabel).sortedBy { it.text.lowercase() }
         saveLabels()
-
         auth.currentUser?.let {
             viewModelScope.launch {
                 try {
                     firestore.collection("notes").document(it.uid).collection("labels")
                         .document(newLabel.id).set(newLabel).await()
-                } catch (_: Exception) {
-                }
+                } catch (_: Exception) { }
             }
         }
     }
 
     fun removeLabel(labelId: String) {
         val updatedNotes = _allNotesItems.map { note ->
-            if (note.labels.contains(labelId)) {
+            if (note.labels.contains(labelId))
                 note.copy(labels = note.labels.filter { it != labelId })
-            } else note
+            else note
         }
         _allNotesItems.clear()
         _allNotesItems.addAll(updatedNotes)
@@ -656,23 +643,16 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         _labels.value = _labels.value.filter { it.id != labelId }
         saveLabels()
 
-        if (_selectedLabel.value == labelId) {
-            _selectedLabel.value = null
-        }
+        if (_selectedLabel.value == labelId) _selectedLabel.value = null
 
         applySortingAndFiltering()
 
         auth.currentUser?.let {
             viewModelScope.launch {
                 try {
-                    firestore.collection("notes")
-                        .document(it.uid)
-                        .collection("labels")
-                        .document(labelId)
-                        .delete()
-                        .await()
-                } catch (_: Exception) {
-                }
+                    firestore.collection("notes").document(it.uid)
+                        .collection("labels").document(labelId).delete().await()
+                } catch (_: Exception) { }
             }
         }
     }
@@ -703,26 +683,23 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
         if (searchQuery.value.isNotBlank()) {
             val query = searchQuery.value
-
             notesToDisplay = notesToDisplay.filter { note ->
-                // Title always checked
                 val matchesTitle = note.title.contains(query, ignoreCase = true)
-
-                val matchesDescription = note.description?.contains(query, ignoreCase = true) == true
-
+                val matchesDescription =
+                    note.description?.contains(query, ignoreCase = true) == true
                 val matchesTranscript = when {
-                    note.transcript?.isNotBlank() == true -> {
+                    note.transcript?.isNotBlank() == true ->
                         note.transcript.contains(query, ignoreCase = true)
-                    }
                     note.noteType == NoteType.AUDIO -> {
                         val audioId = note.description ?: return@filter false
-                        val segments = loadTranscript(getApplication<Application>().applicationContext, audioId)
-                        val joined = segments.joinToString(" ") { it.text.trim() }
-                        joined.contains(query, ignoreCase = true)
+                        val segments = loadTranscript(
+                            getApplication<Application>().applicationContext, audioId
+                        )
+                        segments.joinToString(" ") { it.text.trim() }
+                            .contains(query, ignoreCase = true)
                     }
                     else -> false
                 }
-
                 matchesTitle || matchesDescription || matchesTranscript
             }
         }
@@ -738,17 +715,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         val currentSelectedColors = _selectedColors.value
         if (currentSelectedColors.isNotEmpty()) {
             notesToDisplay = notesToDisplay.filter { note ->
-                if (currentSelectedColors.contains(null)) {
+                if (currentSelectedColors.contains(null))
                     note.color == null || currentSelectedColors.contains(note.color)
-                } else {
+                else
                     currentSelectedColors.contains(note.color)
-                }
             }
         }
 
-        if (_showLocalOnly.value) {
-            notesToDisplay = notesToDisplay.filter { it.isOffline }
-        }
+        if (_showLocalOnly.value) notesToDisplay = notesToDisplay.filter { it.isOffline }
 
         if (_selectedLabel.value != null) {
             notesToDisplay = notesToDisplay.filter { note ->
@@ -761,7 +735,6 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         if (currentSortOption != SortOption.FREE_SORTING && sortedNotes.isNotEmpty()) {
             val groupedItems = mutableListOf<Any>()
             var lastHeader: String? = null
-
             for (note in sortedNotes) {
                 note.currentHeader = getHeaderForNote(note, currentSortOption)
                 if (note.currentHeader != lastHeader) {
@@ -781,14 +754,11 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         val context = getApplication<Application>().applicationContext
         val updated = _allNotesItems.map { note ->
             if (note.noteType != NoteType.AUDIO || !note.transcript.isNullOrBlank()) return@map note
-
             val audioId = note.description ?: return@map note
             val segments = loadTranscript(context, audioId)
             val joined = segments.joinToString(" ") { it.text.trim() }.takeIf { it.isNotBlank() }
-
             note.copy(transcript = joined)
         }
-
         if (updated != _allNotesItems) {
             _allNotesItems.clear()
             _allNotesItems.addAll(updated)
@@ -797,17 +767,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun getHeaderForNote(
-        note: NotesItems,
-        sortOption: SortOption,
-    ): String {
+    private fun getHeaderForNote(note: NotesItems, sortOption: SortOption): String {
         return when (sortOption) {
             SortOption.CREATION_DATE -> {
                 val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
                 sdf.format(Date(note.creationTimestamp))
             }
-
-            SortOption.NAME -> note.title.firstOrNull()?.uppercaseChar()?.toString() ?: "Unknown"
+            SortOption.NAME ->
+                note.title.firstOrNull()?.uppercaseChar()?.toString() ?: "Unknown"
             SortOption.FREE_SORTING -> ""
         }
     }
@@ -819,8 +786,11 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     ): List<NotesItems> {
         val comparator: Comparator<NotesItems> = when (option) {
             SortOption.FREE_SORTING -> compareBy { it.displayOrder }
-            SortOption.CREATION_DATE -> compareBy<NotesItems> { it.creationTimestamp }.thenBy { it.displayOrder }
-            SortOption.NAME -> compareBy<NotesItems, String>(String.CASE_INSENSITIVE_ORDER) { it.title }.thenBy { it.displayOrder }
+            SortOption.CREATION_DATE ->
+                compareBy<NotesItems> { it.creationTimestamp }.thenBy { it.displayOrder }
+            SortOption.NAME ->
+                compareBy<NotesItems, String>(String.CASE_INSENSITIVE_ORDER) { it.title }
+                    .thenBy { it.displayOrder }
         }
         return if (order == SortOrder.ASCENDING) notes.sortedWith(comparator)
         else notes.sortedWith(comparator.reversed())
