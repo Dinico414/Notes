@@ -453,7 +453,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         val oldNote = _allNotesItems[index]
         val wasOffline = oldNote.isOffline
         val nowShouldBeOffline = forceLocal || updatedItem.isOffline
-        
+
         val finalAudioLastModified = if (updatedItem.noteType == NoteType.AUDIO &&
             (updatedItem.title != oldNote.title || updatedItem.description != oldNote.description)
         ) {
