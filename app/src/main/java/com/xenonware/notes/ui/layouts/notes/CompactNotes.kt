@@ -448,6 +448,9 @@ fun CompactNotes(
             }
             showResizeValue = true
             resizeTimerKey++
+            scope.launch {
+                lazyListState.scrollToItem(0)
+            }
         }
 
         fun onListTextResizeClick() {
@@ -810,6 +813,9 @@ fun CompactNotes(
                             val newLayout =
                                 if (notesLayoutType == NotesLayoutType.LIST) NotesLayoutType.GRID else NotesLayoutType.LIST
                             viewModel.setNotesLayoutType(newLayout)
+                            scope.launch {
+                                lazyListState.scrollToItem(0)
+                            }
                         },
                         modifier = Modifier.alpha(listIconAlpha),
                         enabled = !isSearchActive && showActionIconsExceptSearch

@@ -1,9 +1,11 @@
 package com.xenonware.notes.ui.res
 
 import android.content.ClipData
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,9 +25,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MicOff
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,6 +54,14 @@ import com.xenonware.notes.util.audio.RecordingState
 import com.xenonware.notes.util.audio.TranscriptSegment
 import kotlinx.coroutines.launch
 
+private enum class TranscriptViewState {
+    IDLE_EMPTY,
+    LISTENING,
+    TRANSCRIBING,
+    HAS_CONTENT,
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TranscriptDisplay(
     modifier: Modifier = Modifier,
@@ -58,142 +71,260 @@ fun TranscriptDisplay(
     currentPartialText: String = "",
     errorMessage: String? = null,
     onCopyTranscript: (() -> Unit)? = null,
-    recordingState: RecordingState
+    recordingState: RecordingState,
 ) {
     val listState = rememberLazyListState()
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
 
+    val hasContent = transcriptSegments.isNotEmpty() || currentPartialText.isNotBlank()
+
+    val viewState = when {
+        isRecording -> TranscriptViewState.LISTENING
+        isTranscribing -> TranscriptViewState.TRANSCRIBING
+        hasContent -> TranscriptViewState.HAS_CONTENT
+        else -> TranscriptViewState.IDLE_EMPTY
+    }
+
     LaunchedEffect(transcriptSegments.size, currentPartialText) {
-        if (transcriptSegments.isNotEmpty() || currentPartialText.isNotEmpty()) {
+        if (hasContent) {
             listState.animateScrollToItem(0)
         }
     }
 
     Box(modifier = modifier) {
-        if (transcriptSegments.isEmpty() && currentPartialText.isEmpty() && !isRecording) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.MicOff,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                )
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = "No transcript available",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(8.dp))
-
-                val hint = if (recordingState == RecordingState.VIEWING_SAVED_AUDIO) {
-                    ""
-                } else {
-                    "Start recording to generate a transcript"
-                }
-                Text(
-                    text = hint,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                    textAlign = TextAlign.Center
-                )
-            }
-        } else {
-            Column(modifier = Modifier.fillMaxSize()) {
-                if ((transcriptSegments.isNotEmpty() || currentPartialText.isNotBlank()) && onCopyTranscript != null) {
-                    Row(
+        AnimatedContent(
+            targetState = viewState,
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            label = "transcriptViewState",
+        ) { state ->
+            when (state) {
+                // ── Listening (recording active) ────────────────────────
+                TranscriptViewState.LISTENING -> {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
                     ) {
-                        Text(
-                            text = "Transcript",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = {
-                            val fullText = buildString {
-                                append(transcriptSegments.joinToString(" ") { it.text })
-                                if (currentPartialText.isNotBlank()) {
-                                    append(" $currentPartialText")
-                                }
-                            }.trim()
-                            coroutineScope.launch {
-                                val clipData = ClipData.newPlainText("Transcript", fullText)
-                                clipboard.setClipEntry(clipData.toClipEntry())
-                            }
-                            onCopyTranscript.invoke()
-                        }) {
-                            Icon(
-                                imageVector = Icons.Rounded.ContentCopy,
-                                contentDescription = "Copy transcript",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    item(key = "main") {
-                        Column {
-                            if (transcriptSegments.isNotEmpty()) {
-                                val joined = transcriptSegments.joinToString(" ") { it.text }
-                                Text(
-                                    text = joined,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
-                            }
-
-                            if (currentPartialText.isNotBlank()) {
-                                CurrentLiveText(
-                                    text = currentPartialText,
-                                    isTranscribing = isTranscribing,
-                                    modifier = Modifier
-                                        .padding(top = if (transcriptSegments.isEmpty()) 0.dp else 6.dp)
-                                )
-                            }
-
-                            Spacer(Modifier.height(100.dp))
-                        }
-                    }
-                }
-
-                AnimatedVisibility(
-                    visible = errorMessage != null,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    errorMessage?.let { err ->
+                        // Animated pulsing mic icon
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.errorContainer)
-                                .padding(16.dp)
+                                .size(80.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                ),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                text = err,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
+                            PulsingMicIcon()
+                        }
+
+                        Spacer(Modifier.height(20.dp))
+
+                        Text(
+                            text = "Listening …",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            text = "Transcript will be generated when you stop recording",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+
+                // ── Transcribing (processing audio) ─────────────────────
+                TranscriptViewState.TRANSCRIBING -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        LoadingIndicator(
+                            modifier = Modifier.size(48.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+
+                        Spacer(Modifier.height(24.dp))
+
+                        Text(
+                            text = "Transcribing …",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            text = "Processing your recording",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+
+                // ── Has transcript content ──────────────────────────────
+                TranscriptViewState.HAS_CONTENT -> {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        if (onCopyTranscript != null) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "Transcript",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                IconButton(onClick = {
+                                    val fullText = buildString {
+                                        append(transcriptSegments.joinToString(" ") { it.text })
+                                        if (currentPartialText.isNotBlank()) {
+                                            append(" $currentPartialText")
+                                        }
+                                    }.trim()
+                                    coroutineScope.launch {
+                                        val clipData =
+                                            ClipData.newPlainText("Transcript", fullText)
+                                        clipboard.setClipEntry(clipData.toClipEntry())
+                                    }
+                                    onCopyTranscript.invoke()
+                                }) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.ContentCopy,
+                                        contentDescription = "Copy transcript",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                            }
+                        }
+
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            contentPadding = PaddingValues(
+                                horizontal = 16.dp,
+                                vertical = 12.dp
+                            ),
+                        ) {
+                            item(key = "main") {
+                                Column {
+                                    if (transcriptSegments.isNotEmpty()) {
+                                        val joined =
+                                            transcriptSegments.joinToString(" ") { it.text }
+                                        Text(
+                                            text = joined,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(bottom = 8.dp),
+                                        )
+                                    }
+
+                                    if (currentPartialText.isNotBlank()) {
+                                        CurrentLiveText(
+                                            text = currentPartialText,
+                                            isTranscribing = isTranscribing,
+                                            modifier = Modifier.padding(
+                                                top = if (transcriptSegments.isEmpty()) 0.dp else 6.dp
+                                            ),
+                                        )
+                                    }
+
+                                    Spacer(Modifier.height(100.dp))
+                                }
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = errorMessage != null,
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                        ) {
+                            errorMessage?.let { err ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.errorContainer)
+                                        .padding(16.dp),
+                                ) {
+                                    Text(
+                                        text = err,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ── Idle / empty ────────────────────────────────────────
+                TranscriptViewState.IDLE_EMPTY -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.MicOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            text = "No transcript available",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(Modifier.height(8.dp))
+
+                        val hint =
+                            if (recordingState == RecordingState.VIEWING_SAVED_AUDIO) ""
+                            else "Start recording to generate a transcript"
+
+                        Text(
+                            text = hint,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            textAlign = TextAlign.Center,
+                        )
+
+                        // Show error below the empty state too
+                        if (errorMessage != null) {
+                            Spacer(Modifier.height(16.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.errorContainer)
+                                    .padding(16.dp),
+                            ) {
+                                Text(
+                                    text = errorMessage,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                            }
                         }
                     }
                 }
@@ -202,11 +333,39 @@ fun TranscriptDisplay(
     }
 }
 
+// ── Pulsing mic icon ────────────────────────────────────────────────────────
+
+@Composable
+private fun PulsingMicIcon() {
+    var large by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            large = true
+            kotlinx.coroutines.delay(600)
+            large = false
+            kotlinx.coroutines.delay(600)
+        }
+    }
+
+    val size = if (large) 40.dp else 32.dp
+    val alpha = if (large) 1f else 0.6f
+
+    Icon(
+        imageVector = Icons.Rounded.Mic,
+        contentDescription = "Listening",
+        modifier = Modifier.size(size),
+        tint = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
+    )
+}
+
+// ── Live text display ───────────────────────────────────────────────────────
+
 @Composable
 private fun CurrentLiveText(
     text: String,
     isTranscribing: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val words = text.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
     if (words.isEmpty()) return
@@ -218,16 +377,14 @@ private fun CurrentLiveText(
             .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.20f))
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (isTranscribing) {
             PulsingDotRow()
             Spacer(Modifier.width(12.dp))
         }
 
-        FlowRow(
-            modifier = Modifier.weight(1f),
-        ) {
+        FlowRow(modifier = Modifier.weight(1f)) {
             words.forEachIndexed { index, word ->
                 val isRecent = index >= words.size - 2
                 val isCurrent = index == words.lastIndex
@@ -245,9 +402,9 @@ private fun CurrentLiveText(
                     text = word,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = weight,
-                        fontStyle = if (isRecent) FontStyle.Italic else FontStyle.Normal
+                        fontStyle = if (isRecent) FontStyle.Italic else FontStyle.Normal,
                     ),
-                    color = color
+                    color = color,
                 )
 
                 if (index < words.lastIndex) {
@@ -290,14 +447,14 @@ private fun PulsingDot(delay: Int) {
             .background(
                 if (visible) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
-            )
+            ),
     )
 }
 
 @Composable
 private fun FlowRow(
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     Layout(modifier = modifier, content = content) { measurables, constraints ->
         val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0)) }

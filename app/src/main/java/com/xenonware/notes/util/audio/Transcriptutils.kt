@@ -5,6 +5,12 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
 
+data class TranscriptSegment(
+    val text: String,
+    val timestampMillis: Long,
+    val confidence: Float = 1.0f,
+)
+
 @Serializable
 data class SerializableTranscriptSegment(
     val text: String,
