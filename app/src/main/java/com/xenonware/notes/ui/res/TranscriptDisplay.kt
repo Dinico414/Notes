@@ -3,6 +3,8 @@ package com.xenonware.notes.ui.res
 import android.content.ClipData
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -36,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -52,6 +55,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.xenonware.notes.util.audio.RecordingState
 import com.xenonware.notes.util.audio.TranscriptSegment
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private enum class TranscriptViewState {
@@ -141,7 +145,34 @@ fun TranscriptDisplay(
                 }
 
                 // ── Transcribing (processing audio) ─────────────────────
+// ── Transcribing (processing audio) ─────────────────────
                 TranscriptViewState.TRANSCRIBING -> {
+                    val colors = listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.secondary,
+                        MaterialTheme.colorScheme.tertiary,
+                        // You can add more colors if you want a longer cycle
+                    )
+
+                    var colorIndex by remember { mutableIntStateOf(0) }
+
+                    // Trigger color change at the same rhythm as the morph (~every 650ms)
+                    LaunchedEffect(Unit) {
+                        while (true) {
+                            delay(650L)                    // Matches MorphIntervalMillis
+                            colorIndex = (colorIndex + 1) % colors.size
+                        }
+                    }
+
+                    val animatedColor by animateColorAsState(
+                        targetValue = colors[colorIndex],
+                        animationSpec = tween(
+                            durationMillis = 550,           // Slightly shorter than 650ms so it mostly finishes during the morph
+                            easing = androidx.compose.animation.core.FastOutSlowInEasing
+                        ),
+                        label = "loadingIndicatorColor"
+                    )
+
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -150,8 +181,8 @@ fun TranscriptDisplay(
                         verticalArrangement = Arrangement.Center,
                     ) {
                         LoadingIndicator(
-                            modifier = Modifier.size(48.dp),
-                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxSize(0.5f),
+                            color = animatedColor,          // Now synced with shape changes
                         )
 
                         Spacer(Modifier.height(24.dp))
@@ -172,7 +203,6 @@ fun TranscriptDisplay(
                         )
                     }
                 }
-
                 // ── Has transcript content ──────────────────────────────
                 TranscriptViewState.HAS_CONTENT -> {
                     Column(modifier = Modifier.fillMaxSize()) {
