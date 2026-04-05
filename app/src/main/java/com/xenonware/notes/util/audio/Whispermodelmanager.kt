@@ -18,13 +18,13 @@ enum class WhisperModelType(
 ) {
     TINY(
         fileName = "ggml-tiny.bin",
-        displayName = "Tiny",
+        displayName = "Base",
         downloadUrl = "",                       // bundled in assets — never downloaded
         approximateBytes = 75_000_000L,
     ),
     BASE(
         fileName = "ggml-base.bin",
-        displayName = "Base",
+        displayName = "Pro",
         downloadUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
         approximateBytes = 142_000_000L,
     ),

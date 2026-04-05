@@ -833,7 +833,7 @@ fun NoteAudioSheet(
                                     onDismissRequest = { showModelMenu = false }
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("Tiny") },
+                                        text = { Text("Base") },
                                         onClick = {
                                             showModelMenu = false
                                             selectedModel = WhisperModelType.TINY
@@ -847,9 +847,9 @@ fun NoteAudioSheet(
                                         text = {
                                             Text(
                                                 if (modelManager.isModelDownloaded(WhisperModelType.BASE))
-                                                    "Base"
+                                                    "Pro"
                                                 else
-                                                    "Base (download ~142 MB)"
+                                                    "Pro (download ~142 MB)"
                                             )
                                         },
                                         onClick = {

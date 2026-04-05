@@ -126,8 +126,8 @@ private fun ModelRow(
     var progress by remember { mutableFloatStateOf(0f) }
 
     val label = when (modelType) {
-        WhisperModelType.TINY -> "Tiny"
-        WhisperModelType.BASE -> "Base (better quality)"
+        WhisperModelType.TINY -> "Base"
+        WhisperModelType.BASE -> "Pro (better quality)"
     }
 
     Surface(

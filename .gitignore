@@ -16,3 +16,4 @@ local.properties
 /.idea
 /.kotlin
 
+app/src/main/cpp/whisper.cpp/
