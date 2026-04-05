@@ -6,6 +6,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
@@ -34,7 +35,6 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -47,6 +47,7 @@ import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.ColorLens
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MoreVert
@@ -96,9 +97,11 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.xenon.mylibrary.res.XenonDialog
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.notes.ui.res.LabelSelectionDialog
 import com.xenonware.notes.ui.res.MenuItem
@@ -206,7 +209,28 @@ fun NoteAudioSheet(
     var isDownloadingBase by remember { mutableStateOf(false) }
     var baseDownloadProgress by remember { mutableFloatStateOf(0f) }
     var showModelMenu by remember { mutableStateOf(false) }
+    var isProModelDownloaded by remember {
+        mutableStateOf(modelManager.isModelDownloaded(WhisperModelType.BASE))
+    }
     var isModelReady by remember { mutableStateOf(false) }
+    var showDownloadDialog by remember { mutableStateOf(false) }
+
+    val startProDownload: () -> Unit = {
+        if (!isDownloadingBase) {
+            isDownloadingBase = true
+            baseDownloadProgress = 0f
+            scope.launch {
+                val success = modelManager.downloadBaseModel { progress ->
+                    baseDownloadProgress = progress
+                }
+                isDownloadingBase = false
+                if (success) {
+                    isProModelDownloaded = true
+                    selectedModel = WhisperModelType.BASE
+                }
+            }
+        }
+    }
 
     val whisper = remember {
         WhisperSpeechRecognitionManager(
@@ -523,6 +547,26 @@ fun NoteAudioSheet(
                 onAddNewLabel = onAddNewLabel,
                 onDismiss = { showLabelDialog = false })
         }
+
+        if (showDownloadDialog) {
+            XenonDialog(
+                onDismissRequest = { showDownloadDialog = false },
+                properties = DialogProperties(usePlatformDefaultWidth = true),
+                title = "Download Pro Model",
+                confirmButtonText = "Download",
+                onConfirmButtonClick = {
+                    showDownloadDialog = false
+                    startProDownload()
+                },
+                content = {
+                    Text(
+                        "The Pro model provides better transcription accuracy but requires a ~142MB download. Do you want to proceed?",
+                        style = typography.bodyMedium,
+                        color = colorScheme.onSurfaceVariant
+                    )
+                }
+            )
+        }
         val primary by animateColorAsState(
             targetValue = colorScheme.primary, animationSpec = tween(500), label = "primary"
         )
@@ -590,8 +634,6 @@ fun NoteAudioSheet(
         val adaptivePaddingEnd = if (safeDrawingPaddingEnd <= 16.dp) 16.dp - safeDrawingPaddingEnd
         else safeDrawingPaddingEnd
 
-        var showModelMenu by remember { mutableStateOf(false) }
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -651,7 +693,7 @@ fun NoteAudioSheet(
                                                     containerColor = secondary,
                                                     contentColor = onSecondary
                                                 ),
-                                                modifier = Modifier.height(48.dp).width(82.dp)
+                                                modifier = Modifier.height(48.dp).widthIn(min = 82.dp)
                                             ) {
                                                 if (isDownloadingBase) {
                                                     Text(
@@ -707,33 +749,59 @@ fun NoteAudioSheet(
                                         DropdownMenuItem(
                                             text = {
                                                 Text(
-                                                    if (modelManager.isModelDownloaded(WhisperModelType.BASE))
-                                                        "Pro"
-                                                    else
-                                                        "Pro (download ~142 MB)"
+                                                    if (isProModelDownloaded) "Pro"
+                                                    else "Pro (download ~142 MB)"
                                                 )
                                             },
                                             onClick = {
                                                 showModelMenu = false
-                                                if (modelManager.isModelDownloaded(WhisperModelType.BASE)) {
+                                                if (isProModelDownloaded) {
                                                     selectedModel = WhisperModelType.BASE
                                                 } else if (!isDownloadingBase) {
-                                                    isDownloadingBase = true
-                                                    baseDownloadProgress = 0f
-                                                    scope.launch {
-                                                        val success = modelManager.downloadBaseModel { progress ->
-                                                            baseDownloadProgress = progress
-                                                        }
-                                                        isDownloadingBase = false
-                                                        if (success) {
-                                                            selectedModel = WhisperModelType.BASE
-                                                        }
-                                                    }
+                                                    showDownloadDialog = true
                                                 }
                                             },
                                             leadingIcon = {
                                                 if (selectedModel == WhisperModelType.BASE)
                                                     Icon(Icons.Rounded.Check, null, tint = primary)
+                                            },
+                                            trailingIcon = {
+                                                if (isProModelDownloaded && !isDownloadingBase) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(48.dp)
+                                                            .pointerInput(Unit) {
+                                                                detectTapGestures(
+                                                                    onTap = {
+                                                                        Toast
+                                                                            .makeText(
+                                                                                context,
+                                                                                "Long press to delete Pro Model",
+                                                                                Toast.LENGTH_SHORT
+                                                                            )
+                                                                            .show()
+                                                                    },
+                                                                    onLongPress = {
+                                                                        modelManager.deleteModel(
+                                                                            WhisperModelType.BASE
+                                                                        )
+                                                                        isProModelDownloaded = false
+                                                                        if (selectedModel == WhisperModelType.BASE) {
+                                                                            selectedModel =
+                                                                                WhisperModelType.TINY
+                                                                        }
+                                                                        showModelMenu = false
+                                                                    }
+                                                                )
+                                                            },
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Rounded.Delete,
+                                                            contentDescription = "Delete model",
+                                                        )
+                                                    }
+                                                }
                                             }
                                         )
                                     }
@@ -855,7 +923,7 @@ fun NoteAudioSheet(
                                                 containerColor = secondary,
                                                 contentColor = onSecondary
                                             ),
-                                            modifier = Modifier.height(48.dp).width(82.dp)
+                                            modifier = Modifier.height(48.dp).widthIn(min = 82.dp)
                                         ) {
                                             if (isDownloadingBase) {
                                                 Text(
@@ -911,33 +979,59 @@ fun NoteAudioSheet(
                                     DropdownMenuItem(
                                         text = {
                                             Text(
-                                                if (modelManager.isModelDownloaded(WhisperModelType.BASE))
-                                                    "Pro"
-                                                else
-                                                    "Pro (download ~142 MB)"
+                                                if (isProModelDownloaded) "Pro"
+                                                else "Pro (download ~142 MB)"
                                             )
                                         },
                                         onClick = {
                                             showModelMenu = false
-                                            if (modelManager.isModelDownloaded(WhisperModelType.BASE)) {
+                                            if (isProModelDownloaded) {
                                                 selectedModel = WhisperModelType.BASE
                                             } else if (!isDownloadingBase) {
-                                                isDownloadingBase = true
-                                                baseDownloadProgress = 0f
-                                                scope.launch {
-                                                    val success = modelManager.downloadBaseModel { progress ->
-                                                        baseDownloadProgress = progress
-                                                    }
-                                                    isDownloadingBase = false
-                                                    if (success) {
-                                                        selectedModel = WhisperModelType.BASE
-                                                    }
-                                                }
+                                                showDownloadDialog = true
                                             }
                                         },
                                         leadingIcon = {
                                             if (selectedModel == WhisperModelType.BASE)
                                                 Icon(Icons.Rounded.Check, null, tint = primary)
+                                        },
+                                        trailingIcon = {
+                                            if (isProModelDownloaded && !isDownloadingBase) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(48.dp)
+                                                        .pointerInput(Unit) {
+                                                            detectTapGestures(
+                                                                onTap = {
+                                                                    Toast
+                                                                        .makeText(
+                                                                            context,
+                                                                            "Long press to delete Pro Model",
+                                                                            Toast.LENGTH_SHORT
+                                                                        )
+                                                                        .show()
+                                                                },
+                                                                onLongPress = {
+                                                                    modelManager.deleteModel(
+                                                                        WhisperModelType.BASE
+                                                                    )
+                                                                    isProModelDownloaded = false
+                                                                    if (selectedModel == WhisperModelType.BASE) {
+                                                                        selectedModel =
+                                                                            WhisperModelType.TINY
+                                                                    }
+                                                                    showModelMenu = false
+                                                                }
+                                                            )
+                                                        },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        Icons.Rounded.Delete,
+                                                        contentDescription = "Delete model",
+                                                    )
+                                                }
+                                            }
                                         }
                                     )
                                 }
