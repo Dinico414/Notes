@@ -17,51 +17,65 @@ data class SerializableTranscriptSegment(
     val timestampMillis: Long,
     val confidence: Float = 1.0f
 )
+
 private fun TranscriptSegment.toSerializable() = SerializableTranscriptSegment(
     text = text,
     timestampMillis = timestampMillis,
     confidence = confidence
 )
+
 private fun SerializableTranscriptSegment.toTranscriptSegment() = TranscriptSegment(
     text = text,
     timestampMillis = timestampMillis,
     confidence = confidence
 )
+
+private val lenientJson = Json {
+    ignoreUnknownKeys = true
+    isLenient = true          // tolerates unquoted strings from very old builds
+    coerceInputValues = true  // fills in missing confidence with default
+}
+
 fun saveTranscript(
     context: Context,
     audioId: String?,
     segments: List<TranscriptSegment>
 ) {
     if (audioId == null || segments.isEmpty()) return
-
     try {
-        val serializableSegments = segments.map { it.toSerializable() }
-        val json = Json { prettyPrint = true }
-        val jsonString = json.encodeToString(serializableSegments)
-
-        val file = File(context.filesDir, "${audioId}_transcript.json")
-        file.writeText(jsonString)
+        val jsonString = Json { prettyPrint = true }
+            .encodeToString(segments.map { it.toSerializable() })
+        File(context.filesDir, "${audioId}_transcript.json").writeText(jsonString)
     } catch (e: Exception) {
         e.printStackTrace()
     }
 }
+
 fun loadTranscript(
     context: Context,
     audioId: String?
 ): List<TranscriptSegment> {
     if (audioId == null) return emptyList()
 
-    return try {
-        val file = File(context.filesDir, "${audioId}_transcript.json")
-        if (!file.exists()) return emptyList()
+    val file = File(context.filesDir, "${audioId}_transcript.json")
+    if (!file.exists()) return emptyList()
 
-        val jsonString = file.readText()
-        val json = Json { ignoreUnknownKeys = true }
-        val serializableSegments = json.decodeFromString<List<SerializableTranscriptSegment>>(jsonString)
+    val jsonString = try { file.readText() } catch (e: Exception) { return emptyList() }
 
-        serializableSegments.map { it.toTranscriptSegment() }
-    } catch (e: Exception) {
-        e.printStackTrace()
-        emptyList()
-    }
+    // 1. Try the current format: JSON array of SerializableTranscriptSegment
+    tryParse<List<SerializableTranscriptSegment>>(jsonString) { raw ->
+        lenientJson.decodeFromString(raw)
+    }?.let { return it.map { s -> s.toTranscriptSegment() } }
+
+    // 2. Fallback: very old apps saved a single object instead of an array
+    tryParse<SerializableTranscriptSegment>(jsonString) { raw ->
+        lenientJson.decodeFromString(raw)
+    }?.let { return listOf(it.toTranscriptSegment()) }
+
+    return emptyList()
 }
+
+private inline fun <reified T> tryParse(
+    json: String,
+    block: (String) -> T
+): T? = try { block(json) } catch (_: Exception) { null }
