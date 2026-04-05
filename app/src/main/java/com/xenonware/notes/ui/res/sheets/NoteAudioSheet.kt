@@ -1036,6 +1036,8 @@ fun NoteAudioSheet(
                                     )
                                 }
                             }
+                            Spacer(Modifier.height(8.dp))
+
                             AudioTimerDisplay(
                                 isRecording = isInRecordingMode,
                                 recordingDurationMillis = recorder.recordingDurationMillis,

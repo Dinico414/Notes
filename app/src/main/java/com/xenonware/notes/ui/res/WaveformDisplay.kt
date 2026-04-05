@@ -22,6 +22,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.notes.util.audio.RecordingState
 import java.io.File
 import java.io.IOException
@@ -50,13 +51,6 @@ fun WaveformDisplay(
                 tint = colorScheme.onSurface.copy(alpha = 0.3f)
             )
             Spacer(Modifier.height(16.dp))
-            Text(
-                text = "No waveform available",
-                style = typography.bodyLarge,
-                color = colorScheme.onSurface.copy(alpha = 0.6f),
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(8.dp))
 
             val text = if (recordingState == RecordingState.VIEWING_SAVED_AUDIO) {
                 ""
@@ -65,8 +59,9 @@ fun WaveformDisplay(
             }
             Text(
                 text = text,
-                style = typography.bodySmall,
-                color = colorScheme.onSurface.copy(alpha = 0.4f),
+                style = typography.bodyLarge,
+                fontFamily = QuicksandTitleVariable,
+                color = colorScheme.onSurface.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
             )
         }

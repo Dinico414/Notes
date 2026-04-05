@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.notes.util.audio.RecordingState
 import com.xenonware.notes.util.audio.TranscriptSegment
 import kotlinx.coroutines.delay
@@ -145,21 +146,18 @@ fun TranscriptDisplay(
                 }
 
                 // ── Transcribing (processing audio) ─────────────────────
-// ── Transcribing (processing audio) ─────────────────────
                 TranscriptViewState.TRANSCRIBING -> {
                     val colors = listOf(
                         MaterialTheme.colorScheme.primary,
                         MaterialTheme.colorScheme.secondary,
                         MaterialTheme.colorScheme.tertiary,
-                        // You can add more colors if you want a longer cycle
                     )
 
                     var colorIndex by remember { mutableIntStateOf(0) }
 
-                    // Trigger color change at the same rhythm as the morph (~every 650ms)
                     LaunchedEffect(Unit) {
                         while (true) {
-                            delay(650L)                    // Matches MorphIntervalMillis
+                            delay(650L)
                             colorIndex = (colorIndex + 1) % colors.size
                         }
                     }
@@ -167,7 +165,7 @@ fun TranscriptDisplay(
                     val animatedColor by animateColorAsState(
                         targetValue = colors[colorIndex],
                         animationSpec = tween(
-                            durationMillis = 550,           // Slightly shorter than 650ms so it mostly finishes during the morph
+                            durationMillis = 550,
                             easing = androidx.compose.animation.core.FastOutSlowInEasing
                         ),
                         label = "loadingIndicatorColor"
@@ -182,7 +180,7 @@ fun TranscriptDisplay(
                     ) {
                         LoadingIndicator(
                             modifier = Modifier.fillMaxSize(0.5f),
-                            color = animatedColor,          // Now synced with shape changes
+                            color = animatedColor,
                         )
 
                         Spacer(Modifier.height(24.dp))
@@ -321,41 +319,12 @@ fun TranscriptDisplay(
                         )
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            text = "No transcript available",
+                            text = "Start recording to generate a transcript",
                             style = MaterialTheme.typography.bodyLarge,
+                            fontFamily = QuicksandTitleVariable,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             textAlign = TextAlign.Center,
                         )
-                        Spacer(Modifier.height(8.dp))
-
-                        val hint =
-                            if (recordingState == RecordingState.VIEWING_SAVED_AUDIO) ""
-                            else "Start recording to generate a transcript"
-
-                        Text(
-                            text = hint,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                            textAlign = TextAlign.Center,
-                        )
-
-                        // Show error below the empty state too
-                        if (errorMessage != null) {
-                            Spacer(Modifier.height(16.dp))
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.errorContainer)
-                                    .padding(16.dp),
-                            ) {
-                                Text(
-                                    text = errorMessage,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                )
-                            }
-                        }
                     }
                 }
             }
