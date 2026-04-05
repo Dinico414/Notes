@@ -564,8 +564,7 @@ fun NoteAudioSheet(
                         style = typography.bodyMedium,
                         color = colorScheme.onSurfaceVariant
                     )
-                }
-            )
+                })
         }
         val primary by animateColorAsState(
             targetValue = colorScheme.primary, animationSpec = tween(500), label = "primary"
@@ -681,129 +680,115 @@ fun NoteAudioSheet(
                                     // Arrow spin animation
                                     val arrowRotation by animateFloatAsState(
                                         targetValue = if (showModelMenu) 180f else 0f,
-                                        animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+                                        animationSpec = tween(
+                                            durationMillis = 100, easing = LinearEasing
+                                        ),
                                         label = "ArrowRotation"
                                     )
 
-                                    SplitButtonLayout(
-                                        leadingButton = {
-                                            SplitButtonDefaults.LeadingButton(
-                                                onClick = { showModelMenu = true },
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = secondary,
-                                                    contentColor = onSecondary
-                                                ),
-                                                modifier = Modifier.height(48.dp).widthIn(min = 82.dp)
-                                            ) {
-                                                if (isDownloadingBase) {
-                                                    Text(
-                                                        "${(baseDownloadProgress * 100).toInt()}%",
-                                                        style = typography.labelLarge
-                                                    )
-                                                } else {
-                                                    Text(
-                                                        selectedModel.displayName,
-                                                        style = typography.labelLarge
-                                                    )
-                                                }
-                                            }
-                                        },
-                                        trailingButton = {
-                                            SplitButtonDefaults.TrailingButton(
-                                                checked = showModelMenu,                    // Makes it a circle when open
-                                                onCheckedChange = { showModelMenu = it },
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = secondary,
-                                                    contentColor = onSecondary
-                                                ),
-                                                modifier = Modifier.height(48.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Rounded.KeyboardArrowDown,
-                                                    contentDescription = "Select Whisper model",
-                                                    modifier = Modifier
-                                                        .size(20.dp)
-                                                        .graphicsLayer {
-                                                            rotationZ = arrowRotation
-                                                        }
+                                    SplitButtonLayout(leadingButton = {
+                                        SplitButtonDefaults.LeadingButton(
+                                            onClick = { showModelMenu = true },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = secondary,
+                                                contentColor = onSecondary
+                                            ),
+                                            modifier = Modifier
+                                                .height(48.dp)
+                                                .widthIn(min = 82.dp)
+                                        ) {
+                                            if (isDownloadingBase) {
+                                                Text(
+                                                    "${(baseDownloadProgress * 100).toInt()}%",
+                                                    style = typography.labelLarge
+                                                )
+                                            } else {
+                                                Text(
+                                                    selectedModel.displayName,
+                                                    style = typography.labelLarge
                                                 )
                                             }
                                         }
-                                    )
+                                    }, trailingButton = {
+                                        SplitButtonDefaults.TrailingButton(
+                                            checked = showModelMenu,                    // Makes it a circle when open
+                                            onCheckedChange = { showModelMenu = it },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = secondary,
+                                                contentColor = onSecondary
+                                            ),
+                                            modifier = Modifier.height(48.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.KeyboardArrowDown,
+                                                contentDescription = "Select Whisper model",
+                                                modifier = Modifier
+                                                    .size(20.dp)
+                                                    .graphicsLayer {
+                                                        rotationZ = arrowRotation
+                                                    })
+                                        }
+                                    })
 
                                     DropdownMenu(
                                         expanded = showModelMenu,
-                                        onDismissRequest = { showModelMenu = false }
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text("Base") },
-                                            onClick = {
-                                                showModelMenu = false
-                                                selectedModel = WhisperModelType.TINY
-                                            },
-                                            leadingIcon = {
-                                                if (selectedModel == WhisperModelType.TINY)
-                                                    Icon(Icons.Rounded.Check, null, tint = primary)
+                                        onDismissRequest = { showModelMenu = false }) {
+                                        DropdownMenuItem(text = { Text("Base") }, onClick = {
+                                            showModelMenu = false
+                                            selectedModel = WhisperModelType.TINY
+                                        }, leadingIcon = {
+                                            if (selectedModel == WhisperModelType.TINY) Icon(
+                                                Icons.Rounded.Check, null, tint = primary
+                                            )
+                                        })
+                                        DropdownMenuItem(text = {
+                                            Text(
+                                                if (isProModelDownloaded) "Pro"
+                                                else "Pro (download ~142 MB)"
+                                            )
+                                        }, onClick = {
+                                            showModelMenu = false
+                                            if (isProModelDownloaded) {
+                                                selectedModel = WhisperModelType.BASE
+                                            } else if (!isDownloadingBase) {
+                                                showDownloadDialog = true
                                             }
-                                        )
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    if (isProModelDownloaded) "Pro"
-                                                    else "Pro (download ~142 MB)"
-                                                )
-                                            },
-                                            onClick = {
-                                                showModelMenu = false
-                                                if (isProModelDownloaded) {
-                                                    selectedModel = WhisperModelType.BASE
-                                                } else if (!isDownloadingBase) {
-                                                    showDownloadDialog = true
-                                                }
-                                            },
-                                            leadingIcon = {
-                                                if (selectedModel == WhisperModelType.BASE)
-                                                    Icon(Icons.Rounded.Check, null, tint = primary)
-                                            },
-                                            trailingIcon = {
-                                                if (isProModelDownloaded && !isDownloadingBase) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(48.dp)
-                                                            .pointerInput(Unit) {
-                                                                detectTapGestures(
-                                                                    onTap = {
-                                                                        Toast
-                                                                            .makeText(
-                                                                                context,
-                                                                                "Long press to delete Pro Model",
-                                                                                Toast.LENGTH_SHORT
-                                                                            )
-                                                                            .show()
-                                                                    },
-                                                                    onLongPress = {
-                                                                        modelManager.deleteModel(
-                                                                            WhisperModelType.BASE
-                                                                        )
-                                                                        isProModelDownloaded = false
-                                                                        if (selectedModel == WhisperModelType.BASE) {
-                                                                            selectedModel =
-                                                                                WhisperModelType.TINY
-                                                                        }
-                                                                        showModelMenu = false
-                                                                    }
+                                        }, leadingIcon = {
+                                            if (selectedModel == WhisperModelType.BASE) Icon(
+                                                Icons.Rounded.Check, null, tint = primary
+                                            )
+                                        }, trailingIcon = {
+                                            if (isProModelDownloaded && !isDownloadingBase) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(48.dp)
+                                                        .pointerInput(Unit) {
+                                                            detectTapGestures(onTap = {
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    "Long press to delete Pro Model",
+                                                                    Toast.LENGTH_SHORT
+                                                                ).show()
+                                                            }, onLongPress = {
+                                                                modelManager.deleteModel(
+                                                                    WhisperModelType.BASE
                                                                 )
-                                                            },
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Icon(
-                                                            Icons.Rounded.Delete,
-                                                            contentDescription = "Delete model",
-                                                        )
-                                                    }
+                                                                isProModelDownloaded = false
+                                                                if (selectedModel == WhisperModelType.BASE) {
+                                                                    selectedModel =
+                                                                        WhisperModelType.TINY
+                                                                }
+                                                                showModelMenu = false
+                                                            })
+                                                        }, contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        Icons.Rounded.Delete,
+                                                        contentDescription = "Delete model",
+                                                    )
                                                 }
                                             }
-                                        )
+                                        })
                                     }
                                 }
                             }
@@ -911,107 +896,97 @@ fun NoteAudioSheet(
                             Box {
                                 val arrowRotation by animateFloatAsState(
                                     targetValue = if (showModelMenu) 180f else 0f,
-                                    animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+                                    animationSpec = tween(
+                                        durationMillis = 100, easing = LinearEasing
+                                    ),
                                     label = "ArrowRotation"
                                 )
 
-                                SplitButtonLayout(
-                                    leadingButton = {
-                                        SplitButtonDefaults.LeadingButton(
-                                            onClick = { showModelMenu = true },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = secondary,
-                                                contentColor = onSecondary
-                                            ),
-                                            modifier = Modifier.height(48.dp).widthIn(min = 82.dp)
-                                        ) {
-                                            if (isDownloadingBase) {
-                                                Text(
-                                                    "${(baseDownloadProgress * 100).toInt()}%",
-                                                    style = typography.labelLarge
-                                                )
-                                            } else {
-                                                Text(
-                                                    selectedModel.displayName,
-                                                    style = typography.labelLarge
-                                                )
-                                            }
-                                        }
-                                    },
-                                    trailingButton = {
-                                        SplitButtonDefaults.TrailingButton(
-                                            checked = showModelMenu,                    // Makes it a circle when open
-                                            onCheckedChange = { showModelMenu = it },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = secondary,
-                                                contentColor = onSecondary
-                                            ),
-                                            modifier = Modifier.height(48.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.KeyboardArrowDown,
-                                                contentDescription = "Select Whisper model",
-                                                modifier = Modifier
-                                                    .size(20.dp)
-                                                    .graphicsLayer {
-                                                        rotationZ = arrowRotation
-                                                    }
+                                SplitButtonLayout(leadingButton = {
+                                    SplitButtonDefaults.LeadingButton(
+                                        onClick = { showModelMenu = true },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = secondary, contentColor = onSecondary
+                                        ),
+                                        modifier = Modifier
+                                            .height(48.dp)
+                                            .widthIn(min = 82.dp)
+                                    ) {
+                                        if (isDownloadingBase) {
+                                            Text(
+                                                "${(baseDownloadProgress * 100).toInt()}%",
+                                                style = typography.labelLarge
+                                            )
+                                        } else {
+                                            Text(
+                                                selectedModel.displayName,
+                                                style = typography.labelLarge
                                             )
                                         }
                                     }
-                                )
-
-                                DropdownMenu(
+                                }, trailingButton = {
+                                    SplitButtonDefaults.TrailingButton(
+                                        checked = showModelMenu,                    // Makes it a circle when open
+                                        onCheckedChange = { showModelMenu = it },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = secondary, contentColor = onSecondary
+                                        ),
+                                        modifier = Modifier.height(48.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.KeyboardArrowDown,
+                                            contentDescription = "Select Whisper model",
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .graphicsLayer {
+                                                    rotationZ = arrowRotation
+                                                })
+                                    }
+                                })
+                                // XenonDropDown for model selection
+                                XenonDropDown(
+                                    alignment = Alignment.TopCenter,
+                                    offsetY = 56.dp,
+                                    offsetX = 0.dp,
+                                    widthMax = 220.dp,
                                     expanded = showModelMenu,
-                                    onDismissRequest = { showModelMenu = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("Base") },
-                                        onClick = {
-                                            showModelMenu = false
+                                    onDismissRequest = { showModelMenu = false },
+                                    items = listOfNotNull(
+                                        MenuItem(text = "Base", onClick = {
                                             selectedModel = WhisperModelType.TINY
-                                        },
-                                        leadingIcon = {
-                                            if (selectedModel == WhisperModelType.TINY)
-                                                Icon(Icons.Rounded.Check, null, tint = primary)
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                if (isProModelDownloaded) "Pro"
-                                                else "Pro (download ~142 MB)"
-                                            )
-                                        },
-                                        onClick = {
                                             showModelMenu = false
-                                            if (isProModelDownloaded) {
-                                                selectedModel = WhisperModelType.BASE
-                                            } else if (!isDownloadingBase) {
-                                                showDownloadDialog = true
+                                        }, dismissOnClick = true, leadingIcon = {
+                                            if (selectedModel == WhisperModelType.TINY) {
+                                                Icon(
+                                                    Icons.Rounded.Check,
+                                                    null,
+                                                    tint = colorScheme.primary
+                                                )
                                             }
-                                        },
-                                        leadingIcon = {
-                                            if (selectedModel == WhisperModelType.BASE)
-                                                Icon(Icons.Rounded.Check, null, tint = primary)
-                                        },
-                                        trailingIcon = {
-                                            if (isProModelDownloaded && !isDownloadingBase) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(48.dp)
-                                                        .pointerInput(Unit) {
-                                                            detectTapGestures(
-                                                                onTap = {
-                                                                    Toast
-                                                                        .makeText(
-                                                                            context,
-                                                                            "Long press to delete Pro Model",
-                                                                            Toast.LENGTH_SHORT
-                                                                        )
-                                                                        .show()
-                                                                },
-                                                                onLongPress = {
+                                        }), MenuItem(
+                                            text = if (isProModelDownloaded) "Pro" else "Pro (Download ~142 MB)",
+                                            onClick = {
+                                                if (isProModelDownloaded) {
+                                                    selectedModel = WhisperModelType.BASE
+                                                    showModelMenu = false
+                                                } else if (!isDownloadingBase) {
+                                                    showModelMenu = false
+                                                    showDownloadDialog = true
+                                                }
+                                            },
+                                            dismissOnClick = true,
+                                            trailingIcon = if (isProModelDownloaded && !isDownloadingBase) {
+                                                {
+                                                    Icon(
+                                                        Icons.Rounded.Delete,
+                                                        contentDescription = "Delete model",
+                                                        modifier = Modifier.size(24.dp)
+                                                            .pointerInput(Unit) {
+                                                                detectTapGestures(
+                                                                    onTap = {
+                                                                        Toast.makeText(context, "Long press to delete Pro Model", Toast.LENGTH_SHORT).show()
+                                                                    },
+                                                                    onLongPress = {
                                                                     modelManager.deleteModel(
                                                                         WhisperModelType.BASE
                                                                     )
@@ -1021,20 +996,24 @@ fun NoteAudioSheet(
                                                                             WhisperModelType.TINY
                                                                     }
                                                                     showModelMenu = false
-                                                                }
-                                                            )
-                                                        },
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Icon(
-                                                        Icons.Rounded.Delete,
-                                                        contentDescription = "Delete model",
+                                                                    }
+                                                                )
+                                                            }
                                                     )
                                                 }
-                                            }
-                                        }
-                                    )
-                                }
+                                            } else null,
+                                            leadingIcon = {
+                                                if (selectedModel == WhisperModelType.BASE) {
+                                                    Icon(
+                                                        Icons.Rounded.Check,
+                                                        null,
+                                                        tint = colorScheme.primary
+                                                    )
+                                                }
+                                            })
+                                    ),
+                                    hazeState = hazeState
+                                )
                             }
                             Spacer(Modifier.height(8.dp))
 
@@ -1175,48 +1154,48 @@ fun NoteAudioSheet(
                         onDismissRequest = { showMenu = false },
                         items = listOfNotNull(
                             MenuItem(
-                            text = "Label",
-                            onClick = { showLabelDialog = true; showMenu = false },
-                            dismissOnClick = true,
-                            icon = {
-                                if (isLabeled) Icon(
-                                    Icons.Rounded.Bookmark, null, tint = labelColor
-                                )
-                                else Icon(Icons.Rounded.BookmarkBorder, null)
-                            }), MenuItem(
+                                text = "Label",
+                                onClick = { showLabelDialog = true; showMenu = false },
+                                dismissOnClick = true,
+                                leadingIcon = {
+                                    if (isLabeled) Icon(
+                                        Icons.Rounded.Bookmark, null, tint = labelColor
+                                    )
+                                    else Icon(Icons.Rounded.BookmarkBorder, null)
+                                }), MenuItem(
                                 text = colorMenuItemText, onClick = {
-                                val currentIndex = availableThemes.indexOf(selectedTheme)
-                                val nextIndex = (currentIndex + 1) % availableThemes.size
-                                val newTheme = availableThemes[nextIndex]
-                                noteEditingViewModel.setAudioTheme(newTheme)
-                                colorChangeJob?.cancel()
-                                colorChangeJob = scope.launch {
-                                    colorMenuItemText = newTheme
-                                    isFadingOut = false
-                                    delay(2500)
-                                    isFadingOut = true
-                                    delay(500)
-                                    colorMenuItemText = "Color"
-                                    isFadingOut = false
-                                }
-                            }, dismissOnClick = false, icon = {
-                                Icon(
-                                    Icons.Rounded.ColorLens,
-                                    null,
-                                    tint = if (selectedTheme == "Default") onSurfaceVariant else primary
-                                )
-                            }, textColor = animatedTextColor
-                        ), MenuItem(
-                            text = if (isOffline) "Offline note" else "Online note",
-                            onClick = { noteEditingViewModel.setAudioIsOffline(!isOffline) },
-                            dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else null,
-                            icon = {
-                                if (isOffline) Icon(
-                                    Icons.Rounded.CloudOff, null, tint = colorScheme.error
-                                )
-                                else Icon(Icons.Rounded.Cloud, null)
-                            })
+                                    val currentIndex = availableThemes.indexOf(selectedTheme)
+                                    val nextIndex = (currentIndex + 1) % availableThemes.size
+                                    val newTheme = availableThemes[nextIndex]
+                                    noteEditingViewModel.setAudioTheme(newTheme)
+                                    colorChangeJob?.cancel()
+                                    colorChangeJob = scope.launch {
+                                        colorMenuItemText = newTheme
+                                        isFadingOut = false
+                                        delay(2500)
+                                        isFadingOut = true
+                                        delay(500)
+                                        colorMenuItemText = "Color"
+                                        isFadingOut = false
+                                    }
+                                }, dismissOnClick = false, leadingIcon = {
+                                    Icon(
+                                        Icons.Rounded.ColorLens,
+                                        null,
+                                        tint = if (selectedTheme == "Default") onSurfaceVariant else primary
+                                    )
+                                }, textColor = animatedTextColor
+                            ), MenuItem(
+                                text = if (isOffline) "Offline note" else "Online note",
+                                onClick = { noteEditingViewModel.setAudioIsOffline(!isOffline) },
+                                dismissOnClick = false,
+                                textColor = if (isOffline) colorScheme.error else null,
+                                leadingIcon = {
+                                    if (isOffline) Icon(
+                                        Icons.Rounded.CloudOff, null, tint = colorScheme.error
+                                    )
+                                    else Icon(Icons.Rounded.Cloud, null)
+                                })
                         ),
                         hazeState = hazeState
                     )

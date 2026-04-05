@@ -639,7 +639,7 @@ fun NoteTextSheet(
                             MenuItem(text = "Label", onClick = {
                                 showLabelDialog = true
                                 showMenu = false
-                            }, dismissOnClick = true, icon = {
+                            }, dismissOnClick = true, leadingIcon = {
                                 if (isLabeled) {
                                     Icon(
                                         Icons.Rounded.Bookmark,
@@ -665,7 +665,7 @@ fun NoteTextSheet(
                                     colorMenuItemText = "Color"
                                     isFadingOut = false
                                 }
-                            }, dismissOnClick = false, icon = {
+                            }, dismissOnClick = false, leadingIcon = {
                                 Icon(
                                     Icons.Rounded.ColorLens,
                                     contentDescription = "Color",
@@ -679,7 +679,7 @@ fun NoteTextSheet(
                                 },
                                 dismissOnClick = false,
                                 textColor = if (isOffline) colorScheme.error else null,
-                                icon = {
+                                leadingIcon = {
                                     if (isOffline) {
                                         Icon(
                                             Icons.Rounded.CloudOff,

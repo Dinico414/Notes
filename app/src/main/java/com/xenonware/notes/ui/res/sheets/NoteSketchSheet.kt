@@ -464,7 +464,7 @@ fun NoteSketchSheet(
                             MenuItem(text = "Label", onClick = {
                                 showLabelDialog = true
                                 showMenu = false
-                            }, dismissOnClick = true, icon = {
+                            }, dismissOnClick = true, leadingIcon = {
                                 if (isLabeled) {
                                     Icon(
                                         Icons.Rounded.Bookmark,
@@ -492,7 +492,7 @@ fun NoteSketchSheet(
                                         colorMenuItemText = "Color"
                                         isFadingOut = false
                                     }
-                                }, dismissOnClick = false, icon = {
+                                }, dismissOnClick = false, leadingIcon = {
                                     Icon(
                                         Icons.Rounded.ColorLens,
                                         contentDescription = "Color",
@@ -506,7 +506,7 @@ fun NoteSketchSheet(
                                 },
                                 dismissOnClick = false,
                                 textColor = if (isOffline) colorScheme.error else null,
-                                icon = {
+                                leadingIcon = {
                                     if (isOffline) {
                                         Icon(
                                             Icons.Rounded.CloudOff,
@@ -522,7 +522,7 @@ fun NoteSketchSheet(
                                     text = "Debug text",
                                     onClick = { debugTextEnabled = !debugTextEnabled },
                                     dismissOnClick = false,
-                                    icon = {
+                                    leadingIcon = {
                                         if (debugTextEnabled) {
                                             Icon(
                                                 Icons.Rounded.Visibility,

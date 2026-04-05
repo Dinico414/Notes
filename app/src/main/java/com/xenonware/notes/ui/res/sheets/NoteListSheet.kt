@@ -106,7 +106,7 @@ fun NoteListSheet(
     isBlackThemeActive: Boolean = false,
     isCoverModeActive: Boolean = false,
     backProgress: Float = 0f,
-    ) {
+) {
     val hazeState = remember { HazeState() }
     val isDarkTheme = LocalIsDarkTheme.current
 
@@ -192,8 +192,7 @@ fun NoteListSheet(
                 selectedLabelId = labelId,
                 onLabelSelected = noteEditingViewModel::setListLabelId,
                 onAddNewLabel = onAddNewLabel,
-                onDismiss = { showLabelDialog = false }
-            )
+                onDismiss = { showLabelDialog = false })
         }
 
         val targetSurfaceDim by animateColorAsState(
@@ -201,9 +200,7 @@ fun NoteListSheet(
                 lerp(colorScheme.surfaceDim, colorScheme.secondary, 0.2f)
             } else {
                 colorScheme.surfaceDim
-            },
-            animationSpec = tween(durationMillis = 500),
-            label = "targetSurfaceDim"
+            }, animationSpec = tween(durationMillis = 500), label = "targetSurfaceDim"
         )
 
         val hazeThinColor = targetSurfaceDim
@@ -211,29 +208,43 @@ fun NoteListSheet(
 
         val layoutDirection = LocalLayoutDirection.current
 
-        val safeDrawingPaddingTop = WindowInsets.safeDrawing.only(WindowInsetsSides.Top).asPaddingValues().calculateTopPadding()
+        val safeDrawingPaddingTop =
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Top).asPaddingValues()
+                .calculateTopPadding()
 
         val topPadding = 4.dp + safeDrawingPaddingTop - safeDrawingPaddingTop * backProgress
         val animatedTopPadding = if (topPadding < 16.dp) 16.dp else topPadding
 
-        val safeDrawingPaddingStart = WindowInsets.safeDrawing.only(WindowInsetsSides.Start).asPaddingValues().calculateStartPadding(layoutDirection)
-        val safeDrawingPaddingEnd = WindowInsets.safeDrawing.only(WindowInsetsSides.End).asPaddingValues().calculateEndPadding(layoutDirection)
+        val safeDrawingPaddingStart =
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Start).asPaddingValues()
+                .calculateStartPadding(layoutDirection)
+        val safeDrawingPaddingEnd =
+            WindowInsets.safeDrawing.only(WindowInsetsSides.End).asPaddingValues()
+                .calculateEndPadding(layoutDirection)
 
-        val adaptivePaddingStart = if (safeDrawingPaddingStart <= 16.dp) 16.dp-safeDrawingPaddingStart else safeDrawingPaddingStart
-        val adaptivePaddingEnd = if (safeDrawingPaddingEnd <= 16.dp) 16.dp-safeDrawingPaddingEnd else safeDrawingPaddingEnd
+        val adaptivePaddingStart =
+            if (safeDrawingPaddingStart <= 16.dp) 16.dp - safeDrawingPaddingStart else safeDrawingPaddingStart
+        val adaptivePaddingEnd =
+            if (safeDrawingPaddingEnd <= 16.dp) 16.dp - safeDrawingPaddingEnd else safeDrawingPaddingEnd
 
-        val safeDrawingPaddingBottom = if (WindowInsets.ime.asPaddingValues().calculateBottomPadding() > WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()) {
+        val safeDrawingPaddingBottom = if (WindowInsets.ime.asPaddingValues()
+                .calculateBottomPadding() > WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+                .asPaddingValues().calculateBottomPadding()
+        ) {
             WindowInsets.ime.asPaddingValues().calculateBottomPadding()
         } else {
-            WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues()
+                .calculateBottomPadding()
         }
 
         val backgroundColorState by animateColorAsState(
             targetValue = if (selectedTheme == "Default") colorScheme.surfaceContainer else colorScheme.secondaryContainer,
-            animationSpec = tween(durationMillis = 500), label = "backgroundColorState"
+            animationSpec = tween(durationMillis = 500),
+            label = "backgroundColorState"
         )
         val bottomPadding = safeDrawingPaddingBottom + toolbarHeight + 16.dp
-        val backgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else backgroundColorState
+        val backgroundColor =
+            if (isCoverModeActive || isBlackThemeActive) Color.Black else backgroundColorState
 
         Box(
             modifier = Modifier
@@ -265,14 +276,11 @@ fun NoteListSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
-                            checked = listItem.isChecked,
-                            onCheckedChange = { isChecked ->
+                            checked = listItem.isChecked, onCheckedChange = { isChecked ->
                                 noteEditingViewModel.updateListItem(
-                                    listItem.id,
-                                    listItem.copy(isChecked = isChecked)
+                                    listItem.id, listItem.copy(isChecked = isChecked)
                                 )
-                            }
-                        )
+                            })
 
                         val itemTextStyle = typography.bodyLarge.merge(
                             TextStyle(
@@ -286,8 +294,7 @@ fun NoteListSheet(
                             value = listItem.text,
                             onValueChange = { newText ->
                                 noteEditingViewModel.updateListItem(
-                                    listItem.id,
-                                    listItem.copy(text = newText)
+                                    listItem.id, listItem.copy(text = newText)
                                 )
                             },
                             modifier = Modifier
@@ -307,23 +314,19 @@ fun NoteListSheet(
                                     }
                                     innerTextField()
                                 }
-                            }
-                        )
+                            })
 
                         IconButton(
                             onClick = {
                                 noteEditingViewModel.removeListItem(listItem.id)
                                 if (items.size == 1) {
                                     val newItem = ListItem(
-                                        id = System.nanoTime(),
-                                        text = "",
-                                        isChecked = false
+                                        id = System.nanoTime(), text = "", isChecked = false
                                     )
                                     noteEditingViewModel.addListItem(newItem)
                                     focusOnNewItemId = newItem.id
                                 }
-                            }
-                        ) {
+                            }) {
                             Icon(Icons.Rounded.Delete, contentDescription = "Delete item")
                         }
                     }
@@ -355,7 +358,11 @@ fun NoteListSheet(
                 }
 
                 val titleTextStyle = typography.titleLarge.merge(
-                    TextStyle(fontFamily = QuicksandTitleVariable, textAlign = TextAlign.Center, color = colorScheme.onSurface)
+                    TextStyle(
+                        fontFamily = QuicksandTitleVariable,
+                        textAlign = TextAlign.Center,
+                        color = colorScheme.onSurface
+                    )
                 )
 
                 BasicTextField(
@@ -377,11 +384,12 @@ fun NoteListSheet(
                             }
                             innerTextField()
                         }
-                    }
-                )
+                    })
 
                 Box {
-                    IconButton(onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)) {
+                    IconButton(
+                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
+                    ) {
                         Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
                     }
                     XenonDropDown(
@@ -389,60 +397,57 @@ fun NoteListSheet(
                         onDismissRequest = { showMenu = false },
                         items = listOfNotNull(
                             MenuItem(text = "Label", onClick = {
-                                showLabelDialog = true
-                                showMenu = false
-                            }, dismissOnClick = true, icon = {
-                                if (isLabeled) {
+                            showLabelDialog = true
+                            showMenu = false
+                        }, dismissOnClick = true, leadingIcon = {
+                            if (isLabeled) {
+                                Icon(
+                                    Icons.Rounded.Bookmark,
+                                    contentDescription = "Label",
+                                    tint = labelColor
+                                )
+                            } else {
+                                Icon(Icons.Rounded.BookmarkBorder, contentDescription = "Label")
+                            }
+                        }), MenuItem(text = colorMenuItemText, onClick = {
+                            val currentIndex = availableThemes.indexOf(selectedTheme)
+                            val nextIndex = (currentIndex + 1) % availableThemes.size
+                            val newTheme = availableThemes[nextIndex]
+                            noteEditingViewModel.setListTheme(newTheme)
+                            colorChangeJob?.cancel()
+                            colorChangeJob = scope.launch {
+                                colorMenuItemText = newTheme
+                                isFadingOut = false
+                                delay(2500)
+                                isFadingOut = true
+                                delay(500)
+                                colorMenuItemText = "Color"
+                                isFadingOut = false
+                            }
+                        }, dismissOnClick = false, leadingIcon = {
+                            Icon(
+                                Icons.Rounded.ColorLens,
+                                contentDescription = "Color",
+                                tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                            )
+                        }, textColor = animatedTextColor), MenuItem(
+                            text = if (isOffline) "Offline note" else "Online note",
+                            onClick = {
+                                noteEditingViewModel.setListIsOffline(!isOffline)
+                            },
+                            dismissOnClick = false,
+                            textColor = if (isOffline) colorScheme.error else null,
+                            leadingIcon = {
+                                if (isOffline) {
                                     Icon(
-                                        Icons.Rounded.Bookmark,
-                                        contentDescription = "Label",
-                                        tint = labelColor
+                                        Icons.Rounded.CloudOff,
+                                        "Local only",
+                                        tint = colorScheme.error
                                     )
                                 } else {
-                                    Icon(Icons.Rounded.BookmarkBorder, contentDescription = "Label")
+                                    Icon(Icons.Rounded.Cloud, "Synced")
                                 }
-                            }),
-                            MenuItem(text = colorMenuItemText, onClick = {
-                                val currentIndex = availableThemes.indexOf(selectedTheme)
-                                val nextIndex = (currentIndex + 1) % availableThemes.size
-                                val newTheme = availableThemes[nextIndex]
-                                noteEditingViewModel.setListTheme(newTheme)
-                                colorChangeJob?.cancel()
-                                colorChangeJob = scope.launch {
-                                    colorMenuItemText = newTheme
-                                    isFadingOut = false
-                                    delay(2500)
-                                    isFadingOut = true
-                                    delay(500)
-                                    colorMenuItemText = "Color"
-                                    isFadingOut = false
-                                }
-                            }, dismissOnClick = false, icon = {
-                                Icon(
-                                    Icons.Rounded.ColorLens,
-                                    contentDescription = "Color",
-                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                )
-                            }, textColor = animatedTextColor),
-                            MenuItem(
-                                text = if (isOffline) "Offline note" else "Online note",
-                                onClick = {
-                                    noteEditingViewModel.setListIsOffline(!isOffline)
-                                },
-                                dismissOnClick = false,
-                                textColor = if (isOffline) colorScheme.error else null,
-                                icon = {
-                                    if (isOffline) {
-                                        Icon(
-                                            Icons.Rounded.CloudOff,
-                                            "Local only",
-                                            tint = colorScheme.error
-                                        )
-                                    } else {
-                                        Icon(Icons.Rounded.Cloud, "Synced")
-                                    }
-                                }
-                            )
+                            })
                         ),
                         hazeState = hazeState
                     )
