@@ -9,7 +9,9 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -32,6 +34,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -44,6 +47,7 @@ import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.ColorLens
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Pause
@@ -55,13 +59,14 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.material3.SplitButtonDefaults
+import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -81,6 +86,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
@@ -253,9 +259,7 @@ fun NoteAudioSheet(
     val hasAudioContent =
         remember(initialAudioFilePath, recorder.audioFilePath, cachedAudioUniqueId) {
             derivedStateOf {
-                initialAudioFilePath != null ||
-                        recorder.audioFilePath != null ||
-                        cachedAudioUniqueId != null
+                initialAudioFilePath != null || recorder.audioFilePath != null || cachedAudioUniqueId != null
             }
         }.value
 
@@ -359,9 +363,7 @@ fun NoteAudioSheet(
 
             if (title.isNotBlank() && hasAudio) {
                 // Stop recording if still active
-                if (recorder.currentRecordingState == RecordingState.RECORDING ||
-                    recorder.currentRecordingState == RecordingState.PAUSED
-                ) {
+                if (recorder.currentRecordingState == RecordingState.RECORDING || recorder.currentRecordingState == RecordingState.PAUSED) {
                     recorder.stopRecording()
                     delay(600)
                 }
@@ -390,8 +392,8 @@ fun NoteAudioSheet(
                     saveTranscript(context, audioId, finalSegments)
                 }
 
-                val joinedTranscript = finalSegments.joinToString(" ") { it.text.trim() }
-                    .takeIf { it.isNotBlank() }
+                val joinedTranscript =
+                    finalSegments.joinToString(" ") { it.text.trim() }.takeIf { it.isNotBlank() }
 
                 val themeColorMap = mapOf(
                     "Red" to noteRedLight.value.toLong(),
@@ -414,8 +416,7 @@ fun NoteAudioSheet(
                     noteType = NoteType.AUDIO,
                     color = themeColorMap[selectedTheme],
                     labels = labelId?.let { listOf(it) } ?: emptyList(),
-                    isOffline = isOffline
-                )
+                    isOffline = isOffline)
 
                 if (cachedAudioUniqueId != null) {
                     notesViewModel.updateItem(note, forceLocal = isOffline)
@@ -455,12 +456,12 @@ fun NoteAudioSheet(
         recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED
 
     @Suppress("SENSELESS_COMPARISON") val sheetAudioDuration by remember(
-        currentSheetAudioPath,
-        recordingState
+        currentSheetAudioPath, recordingState
     ) {
         mutableLongStateOf(
-            if (hasAudioFile && !isInRecordingMode && currentSheetAudioPath != null)
-                player.getAudioDuration(currentSheetAudioPath)
+            if (hasAudioFile && !isInRecordingMode && currentSheetAudioPath != null) player.getAudioDuration(
+                currentSheetAudioPath
+            )
             else 0L
         )
     }
@@ -469,7 +470,10 @@ fun NoteAudioSheet(
     val stopAndTranscribe: () -> Unit = {
         val audioId = recorder.uniqueAudioId
         recorder.stopRecording()
-        Log.i(TAG, "stopAndTranscribe: audioId=$audioId, isAvailable=${whisper.isAvailable()}, isModelReady=$isModelReady")
+        Log.i(
+            TAG,
+            "stopAndTranscribe: audioId=$audioId, isAvailable=${whisper.isAvailable()}, isModelReady=$isModelReady"
+        )
         if (audioId != null && whisper.isAvailable()) {
             scope.launch {
                 delay(500)
@@ -508,9 +512,7 @@ fun NoteAudioSheet(
     ) {
         val animatedTextColor by animateColorAsState(
             targetValue = if (isFadingOut) colorScheme.onSurface.copy(alpha = 0f)
-            else colorScheme.onSurface,
-            animationSpec = tween(500),
-            label = "animatedTextColor"
+            else colorScheme.onSurface, animationSpec = tween(500), label = "animatedTextColor"
         )
 
         if (showLabelDialog) {
@@ -519,8 +521,7 @@ fun NoteAudioSheet(
                 selectedLabelId = labelId,
                 onLabelSelected = noteEditingViewModel::setAudioLabelId,
                 onAddNewLabel = onAddNewLabel,
-                onDismiss = { showLabelDialog = false }
-            )
+                onDismiss = { showLabelDialog = false })
         }
         val primary by animateColorAsState(
             targetValue = colorScheme.primary, animationSpec = tween(500), label = "primary"
@@ -543,27 +544,26 @@ fun NoteAudioSheet(
             label = "onSurfaceVariant"
         )
         val targetSurfaceDim by animateColorAsState(
-            targetValue = if (selectedTheme != "Default")
-                lerp(colorScheme.surfaceDim, colorScheme.secondary, 0.2f)
-            else colorScheme.surfaceDim,
-            animationSpec = tween(500),
-            label = "targetSurfaceDim"
+            targetValue = if (selectedTheme != "Default") lerp(
+                colorScheme.surfaceDim, colorScheme.secondary, 0.2f
+            )
+            else colorScheme.surfaceDim, animationSpec = tween(500), label = "targetSurfaceDim"
         )
 
         val hazeThinColor = targetSurfaceDim
         val labelColor = extendedMaterialColorScheme.label
         val layoutDirection = LocalLayoutDirection.current
 
-        val safeDrawingPaddingBottom = if (
-            WindowInsets.ime.asPaddingValues().calculateBottomPadding() >
-            WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
+        val safeDrawingPaddingBottom = if (WindowInsets.ime.asPaddingValues()
+                .calculateBottomPadding() > WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
                 .asPaddingValues().calculateBottomPadding()
         ) WindowInsets.ime.asPaddingValues().calculateBottomPadding()
-        else WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)
-            .asPaddingValues().calculateBottomPadding()
+        else WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom).asPaddingValues()
+            .calculateBottomPadding()
 
-        val safeDrawingPaddingTop = WindowInsets.safeDrawing.only(WindowInsetsSides.Top)
-            .asPaddingValues().calculateTopPadding()
+        val safeDrawingPaddingTop =
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Top).asPaddingValues()
+                .calculateTopPadding()
 
         val topPadding = 4.dp + safeDrawingPaddingTop - safeDrawingPaddingTop * backProgress
         val animatedTopPadding = if (topPadding < 16.dp) 16.dp else topPadding
@@ -578,16 +578,19 @@ fun NoteAudioSheet(
         val backgroundColor =
             if (isCoverModeActive || isBlackThemeActive) Color.Black else backgroundColorState
 
-        val safeDrawingPaddingStart = WindowInsets.safeDrawing.only(WindowInsetsSides.Start)
-            .asPaddingValues().calculateStartPadding(layoutDirection)
-        val safeDrawingPaddingEnd = WindowInsets.safeDrawing.only(WindowInsetsSides.End)
-            .asPaddingValues().calculateEndPadding(layoutDirection)
+        val safeDrawingPaddingStart =
+            WindowInsets.safeDrawing.only(WindowInsetsSides.Start).asPaddingValues()
+                .calculateStartPadding(layoutDirection)
+        val safeDrawingPaddingEnd =
+            WindowInsets.safeDrawing.only(WindowInsetsSides.End).asPaddingValues()
+                .calculateEndPadding(layoutDirection)
         val adaptivePaddingStart =
             if (safeDrawingPaddingStart <= 16.dp) 16.dp - safeDrawingPaddingStart
             else safeDrawingPaddingStart
-        val adaptivePaddingEnd =
-            if (safeDrawingPaddingEnd <= 16.dp) 16.dp - safeDrawingPaddingEnd
-            else safeDrawingPaddingEnd
+        val adaptivePaddingEnd = if (safeDrawingPaddingEnd <= 16.dp) 16.dp - safeDrawingPaddingEnd
+        else safeDrawingPaddingEnd
+
+        var showModelMenu by remember { mutableStateOf(false) }
 
         Box(
             modifier = Modifier
@@ -633,27 +636,58 @@ fun NoteAudioSheet(
 
                                 // ── Model selector (landscape) ──────────────
                                 Box {
-                                    FilledTonalButton(
-                                        onClick = { showModelMenu = true },
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = secondary,
-                                            contentColor = onSecondary
-                                        ),
-                                        shape = RoundedCornerShape(28.dp),
-                                        modifier = Modifier.height(48.dp)
-                                    ) {
-                                        if (isDownloadingBase) {
-                                            Text(
-                                                "${(baseDownloadProgress * 100).toInt()}%",
-                                                style = typography.labelLarge
-                                            )
-                                        } else {
-                                            Text(
-                                                selectedModel.displayName,
-                                                style = typography.labelLarge
-                                            )
+                                    // Arrow spin animation
+                                    val arrowRotation by animateFloatAsState(
+                                        targetValue = if (showModelMenu) 180f else 0f,
+                                        animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+                                        label = "ArrowRotation"
+                                    )
+
+                                    SplitButtonLayout(
+                                        leadingButton = {
+                                            SplitButtonDefaults.LeadingButton(
+                                                onClick = { showModelMenu = true },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = secondary,
+                                                    contentColor = onSecondary
+                                                ),
+                                                modifier = Modifier.height(48.dp).width(82.dp)
+                                            ) {
+                                                if (isDownloadingBase) {
+                                                    Text(
+                                                        "${(baseDownloadProgress * 100).toInt()}%",
+                                                        style = typography.labelLarge
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        selectedModel.displayName,
+                                                        style = typography.labelLarge
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        trailingButton = {
+                                            SplitButtonDefaults.TrailingButton(
+                                                checked = showModelMenu,                    // Makes it a circle when open
+                                                onCheckedChange = { showModelMenu = it },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = secondary,
+                                                    contentColor = onSecondary
+                                                ),
+                                                modifier = Modifier.height(48.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.KeyboardArrowDown,
+                                                    contentDescription = "Select Whisper model",
+                                                    modifier = Modifier
+                                                        .size(20.dp)
+                                                        .graphicsLayer {
+                                                            rotationZ = arrowRotation
+                                                        }
+                                                )
+                                            }
                                         }
-                                    }
+                                    )
 
                                     DropdownMenu(
                                         expanded = showModelMenu,
@@ -687,10 +721,9 @@ fun NoteAudioSheet(
                                                     isDownloadingBase = true
                                                     baseDownloadProgress = 0f
                                                     scope.launch {
-                                                        val success =
-                                                            modelManager.downloadBaseModel { progress ->
-                                                                baseDownloadProgress = progress
-                                                            }
+                                                        val success = modelManager.downloadBaseModel { progress ->
+                                                            baseDownloadProgress = progress
+                                                        }
                                                         isDownloadingBase = false
                                                         if (success) {
                                                             selectedModel = WhisperModelType.BASE
@@ -708,8 +741,7 @@ fun NoteAudioSheet(
                             }
 
                             Box(
-                                modifier = Modifier.weight(1f),
-                                contentAlignment = Alignment.Center
+                                modifier = Modifier.weight(1f), contentAlignment = Alignment.Center
                             ) {
                                 if (hasAudioFile && !isInRecordingMode && sheetAudioDuration > 0L) {
                                     AudioProgressBar(
@@ -736,9 +768,11 @@ fun NoteAudioSheet(
                                 contentAlignment = Alignment.TopCenter
                             ) {
                                 val progress =
-                                    if (isSheetAudioActive && sheetAudioDuration > 0L)
-                                        (player.currentPlaybackPositionMillis.toFloat() /
-                                                sheetAudioDuration.coerceAtLeast(1L)).coerceIn(0f, 1f)
+                                    if (isSheetAudioActive && sheetAudioDuration > 0L) (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(
+                                        1L
+                                    )).coerceIn(
+                                        0f, 1f
+                                    )
                                     else 0f
 
                                 AudioContentDisplay(
@@ -795,8 +829,7 @@ fun NoteAudioSheet(
                                         player.stopAudio()
                                         whisper.clearTranscript()
                                         noteEditingViewModel.setAudioTranscriptSegments(emptyList())
-                                    }
-                                )
+                                    })
                             }
                         }
                     } else {
@@ -805,28 +838,60 @@ fun NoteAudioSheet(
                             modifier = Modifier.fillMaxSize(),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // ── Model selector (portrait) ───────────────────
+                            // ── Model selector (portrait) ──────────────────
+
                             Box {
-                                FilledTonalButton(
-                                    onClick = { showModelMenu = true },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = secondary,
-                                        contentColor = onSecondary
-                                    ),
-                                    shape = RoundedCornerShape(28.dp)
-                                ) {
-                                    if (isDownloadingBase) {
-                                        Text(
-                                            "${(baseDownloadProgress * 100).toInt()}%",
-                                            style = typography.labelLarge
-                                        )
-                                    } else {
-                                        Text(
-                                            selectedModel.displayName,
-                                            style = typography.labelLarge
-                                        )
+                                val arrowRotation by animateFloatAsState(
+                                    targetValue = if (showModelMenu) 180f else 0f,
+                                    animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+                                    label = "ArrowRotation"
+                                )
+
+                                SplitButtonLayout(
+                                    leadingButton = {
+                                        SplitButtonDefaults.LeadingButton(
+                                            onClick = { showModelMenu = true },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = secondary,
+                                                contentColor = onSecondary
+                                            ),
+                                            modifier = Modifier.height(48.dp).width(82.dp)
+                                        ) {
+                                            if (isDownloadingBase) {
+                                                Text(
+                                                    "${(baseDownloadProgress * 100).toInt()}%",
+                                                    style = typography.labelLarge
+                                                )
+                                            } else {
+                                                Text(
+                                                    selectedModel.displayName,
+                                                    style = typography.labelLarge
+                                                )
+                                            }
+                                        }
+                                    },
+                                    trailingButton = {
+                                        SplitButtonDefaults.TrailingButton(
+                                            checked = showModelMenu,                    // Makes it a circle when open
+                                            onCheckedChange = { showModelMenu = it },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = secondary,
+                                                contentColor = onSecondary
+                                            ),
+                                            modifier = Modifier.height(48.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.KeyboardArrowDown,
+                                                contentDescription = "Select Whisper model",
+                                                modifier = Modifier
+                                                    .size(20.dp)
+                                                    .graphicsLayer {
+                                                        rotationZ = arrowRotation
+                                                    }
+                                            )
+                                        }
                                     }
-                                }
+                                )
 
                                 DropdownMenu(
                                     expanded = showModelMenu,
@@ -860,10 +925,9 @@ fun NoteAudioSheet(
                                                 isDownloadingBase = true
                                                 baseDownloadProgress = 0f
                                                 scope.launch {
-                                                    val success =
-                                                        modelManager.downloadBaseModel { progress ->
-                                                            baseDownloadProgress = progress
-                                                        }
+                                                    val success = modelManager.downloadBaseModel { progress ->
+                                                        baseDownloadProgress = progress
+                                                    }
                                                     isDownloadingBase = false
                                                     if (success) {
                                                         selectedModel = WhisperModelType.BASE
@@ -878,7 +942,6 @@ fun NoteAudioSheet(
                                     )
                                 }
                             }
-
                             AudioTimerDisplay(
                                 isRecording = isInRecordingMode,
                                 recordingDurationMillis = recorder.recordingDurationMillis,
@@ -890,9 +953,11 @@ fun NoteAudioSheet(
 
                             Box(modifier = Modifier.weight(1f)) {
                                 val progress =
-                                    if (isSheetAudioActive && sheetAudioDuration > 0L)
-                                        (player.currentPlaybackPositionMillis.toFloat() /
-                                                sheetAudioDuration.coerceAtLeast(1L)).coerceIn(0f, 1f)
+                                    if (isSheetAudioActive && sheetAudioDuration > 0L) (player.currentPlaybackPositionMillis.toFloat() / sheetAudioDuration.coerceAtLeast(
+                                        1L
+                                    )).coerceIn(
+                                        0f, 1f
+                                    )
                                     else 0f
 
                                 AudioContentDisplay(
@@ -955,8 +1020,7 @@ fun NoteAudioSheet(
                                     player.stopAudio()
                                     whisper.clearTranscript()
                                     noteEditingViewModel.setAudioTranscriptSegments(emptyList())
-                                }
-                            )
+                                })
                         }
                     }
                 }
@@ -971,10 +1035,8 @@ fun NoteAudioSheet(
                     .clip(RoundedCornerShape(100f))
                     .background(surfaceDim)
                     .hazeEffect(
-                        state = hazeState,
-                        style = HazeMaterials.ultraThin(hazeThinColor)
-                    ),
-                verticalAlignment = Alignment.CenterVertically
+                        state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)
+                    ), verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onDismiss, Modifier.padding(4.dp)) {
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
@@ -1006,8 +1068,7 @@ fun NoteAudioSheet(
                             }
                             innerTextField()
                         }
-                    }
-                )
+                    })
 
                 Box {
                     IconButton(onClick = { showMenu = !showMenu }, Modifier.padding(4.dp)) {
@@ -1018,52 +1079,48 @@ fun NoteAudioSheet(
                         onDismissRequest = { showMenu = false },
                         items = listOfNotNull(
                             MenuItem(
-                                text = "Label",
-                                onClick = { showLabelDialog = true; showMenu = false },
-                                dismissOnClick = true,
-                                icon = {
-                                    if (isLabeled) Icon(Icons.Rounded.Bookmark, null, tint = labelColor)
-                                    else Icon(Icons.Rounded.BookmarkBorder, null)
+                            text = "Label",
+                            onClick = { showLabelDialog = true; showMenu = false },
+                            dismissOnClick = true,
+                            icon = {
+                                if (isLabeled) Icon(
+                                    Icons.Rounded.Bookmark, null, tint = labelColor
+                                )
+                                else Icon(Icons.Rounded.BookmarkBorder, null)
+                            }), MenuItem(
+                                text = colorMenuItemText, onClick = {
+                                val currentIndex = availableThemes.indexOf(selectedTheme)
+                                val nextIndex = (currentIndex + 1) % availableThemes.size
+                                val newTheme = availableThemes[nextIndex]
+                                noteEditingViewModel.setAudioTheme(newTheme)
+                                colorChangeJob?.cancel()
+                                colorChangeJob = scope.launch {
+                                    colorMenuItemText = newTheme
+                                    isFadingOut = false
+                                    delay(2500)
+                                    isFadingOut = true
+                                    delay(500)
+                                    colorMenuItemText = "Color"
+                                    isFadingOut = false
                                 }
-                            ),
-                            MenuItem(
-                                text = colorMenuItemText,
-                                onClick = {
-                                    val currentIndex = availableThemes.indexOf(selectedTheme)
-                                    val nextIndex = (currentIndex + 1) % availableThemes.size
-                                    val newTheme = availableThemes[nextIndex]
-                                    noteEditingViewModel.setAudioTheme(newTheme)
-                                    colorChangeJob?.cancel()
-                                    colorChangeJob = scope.launch {
-                                        colorMenuItemText = newTheme
-                                        isFadingOut = false
-                                        delay(2500)
-                                        isFadingOut = true
-                                        delay(500)
-                                        colorMenuItemText = "Color"
-                                        isFadingOut = false
-                                    }
-                                },
-                                dismissOnClick = false,
-                                icon = {
-                                    Icon(
-                                        Icons.Rounded.ColorLens,
-                                        null,
-                                        tint = if (selectedTheme == "Default") onSurfaceVariant else primary
-                                    )
-                                },
-                                textColor = animatedTextColor
-                            ),
-                            MenuItem(
-                                text = if (isOffline) "Offline note" else "Online note",
-                                onClick = { noteEditingViewModel.setAudioIsOffline(!isOffline) },
-                                dismissOnClick = false,
-                                textColor = if (isOffline) colorScheme.error else null,
-                                icon = {
-                                    if (isOffline) Icon(Icons.Rounded.CloudOff, null, tint = colorScheme.error)
-                                    else Icon(Icons.Rounded.Cloud, null)
-                                }
-                            )
+                            }, dismissOnClick = false, icon = {
+                                Icon(
+                                    Icons.Rounded.ColorLens,
+                                    null,
+                                    tint = if (selectedTheme == "Default") onSurfaceVariant else primary
+                                )
+                            }, textColor = animatedTextColor
+                        ), MenuItem(
+                            text = if (isOffline) "Offline note" else "Online note",
+                            onClick = { noteEditingViewModel.setAudioIsOffline(!isOffline) },
+                            dismissOnClick = false,
+                            textColor = if (isOffline) colorScheme.error else null,
+                            icon = {
+                                if (isOffline) Icon(
+                                    Icons.Rounded.CloudOff, null, tint = colorScheme.error
+                                )
+                                else Icon(Icons.Rounded.Cloud, null)
+                            })
                         ),
                         hazeState = hazeState
                     )
@@ -1124,7 +1181,10 @@ fun AudioControlButtons(
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = primary, contentColor = onPrimary
                     ),
-                    modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                    modifier = Modifier
+                        .height(136.dp)
+                        .weight(1f)
+                        .widthIn(max = 184.dp)
                 ) {
                     Icon(Icons.Rounded.Mic, "Start recording", Modifier.size(40.dp))
                 }
@@ -1138,7 +1198,10 @@ fun AudioControlButtons(
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = primary, contentColor = onPrimary
                         ),
-                        modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                        modifier = Modifier
+                            .height(136.dp)
+                            .weight(1f)
+                            .widthIn(max = 184.dp)
                     ) {
                         Icon(Icons.Rounded.Pause, "Pause recording", Modifier.size(40.dp))
                     }
@@ -1148,7 +1211,10 @@ fun AudioControlButtons(
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = colorScheme.error, contentColor = colorScheme.onError
                         ),
-                        modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                        modifier = Modifier
+                            .height(136.dp)
+                            .weight(1f)
+                            .widthIn(max = 184.dp)
                     ) {
                         Icon(Icons.Rounded.Stop, "Stop recording", Modifier.size(40.dp))
                     }
@@ -1163,7 +1229,10 @@ fun AudioControlButtons(
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = primary, contentColor = onPrimary
                         ),
-                        modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                        modifier = Modifier
+                            .height(136.dp)
+                            .weight(1f)
+                            .widthIn(max = 184.dp)
                     ) {
                         Icon(Icons.Rounded.Mic, "Resume recording", Modifier.size(40.dp))
                     }
@@ -1173,7 +1242,10 @@ fun AudioControlButtons(
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = colorScheme.error, contentColor = colorScheme.onError
                         ),
-                        modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                        modifier = Modifier
+                            .height(136.dp)
+                            .weight(1f)
+                            .widthIn(max = 184.dp)
                     ) {
                         Icon(Icons.Rounded.Stop, "Stop recording", Modifier.size(40.dp))
                     }
@@ -1188,7 +1260,10 @@ fun AudioControlButtons(
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = primary, contentColor = onPrimary
                         ),
-                        modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                        modifier = Modifier
+                            .height(136.dp)
+                            .weight(1f)
+                            .widthIn(max = 184.dp)
                     ) {
                         Icon(
                             imageVector = if (isSheetAudioPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
@@ -1203,7 +1278,10 @@ fun AudioControlButtons(
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = secondary, contentColor = onSecondary
                         ),
-                        modifier = Modifier.height(136.dp).weight(1f).widthIn(max = 184.dp)
+                        modifier = Modifier
+                            .height(136.dp)
+                            .weight(1f)
+                            .widthIn(max = 184.dp)
                     ) {
                         Icon(Icons.Rounded.Stop, "Stop playback", Modifier.size(40.dp))
                     }
@@ -1215,7 +1293,10 @@ fun AudioControlButtons(
                                 containerColor = colorScheme.error,
                                 contentColor = colorScheme.onError
                             ),
-                            modifier = Modifier.height(136.dp).weight(0.5f).widthIn(max = 184.dp)
+                            modifier = Modifier
+                                .height(136.dp)
+                                .weight(0.5f)
+                                .widthIn(max = 184.dp)
                         ) {
                             Icon(Icons.Rounded.Clear, "Discard", Modifier.size(40.dp))
                         }
@@ -1290,8 +1371,7 @@ fun AudioProgressBar(
                         onSeek((totalDurationMillis * newProgress).toLong())
                     }
                 }
-            }
-    ) {
+            }) {
         LinearProgressIndicator(
             progress = { progress },
             modifier = Modifier
