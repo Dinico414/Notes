@@ -4,9 +4,13 @@ import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -23,9 +27,11 @@ import com.xenonware.notes.ui.theme.noteRedLight
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowLight
 import com.xenonware.notes.util.audio.loadTranscript
+import com.xenonware.notes.util.sketch.SketchSerializer
 import com.xenonware.notes.viewmodel.classes.Label
 import com.xenonware.notes.viewmodel.classes.NoteType
 import com.xenonware.notes.viewmodel.classes.NotesItems
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,6 +47,18 @@ enum class SortOption { FREE_SORTING, CREATION_DATE, NAME }
 enum class SortOrder { ASCENDING, DESCENDING }
 enum class NoteFilterType { ALL, TEXT, AUDIO, LIST, SKETCH }
 enum class NotesLayoutType { LIST, GRID }
+
+data class PrebuiltPathData(
+    val path: Path,
+    val colorIndex: Int,
+    val color: Color,
+    val fillColorIndex: Int,
+    val fillColor: Color,
+    val thickness: Float,
+    val isShape: Boolean,
+    val pointsCount: Int,
+    val firstPoint: Offset
+)
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -109,12 +127,69 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _showSketchCard = MutableStateFlow(false)
     val showSketchCard: StateFlow<Boolean> = _showSketchCard.asStateFlow()
 
+    private val _sketchPathsCache = mutableStateMapOf<Int, List<PrebuiltPathData>>()
+
+    fun getPrebuiltSketchPaths(note: NotesItems): List<PrebuiltPathData> {
+        val cached = _sketchPathsCache[note.id]
+        if (cached == null && note.noteType == NoteType.SKETCH && !note.description.isNullOrBlank()) {
+            viewModelScope.launch(Dispatchers.Default) {
+                val rawPaths = SketchSerializer.deserializePaths(note.description)
+                val prebuilt = rawPaths.map { pathData ->
+                    val composePath = Path()
+                    if (pathData.path.isNotEmpty()) {
+                        composePath.moveTo(pathData.path[0].offset.x, pathData.path[0].offset.y)
+                        for (i in 1 until pathData.path.size) {
+                            val end = pathData.path[i]
+                            if (pathData.isShape) {
+                                composePath.lineTo(end.offset.x, end.offset.y)
+                            } else if (end.controlPoint1 != Offset.Unspecified && end.controlPoint2 != Offset.Unspecified) {
+                                composePath.cubicTo(
+                                    end.controlPoint1.x, end.controlPoint1.y,
+                                    end.controlPoint2.x, end.controlPoint2.y,
+                                    end.offset.x, end.offset.y
+                                )
+                            } else if (end.controlPoint1 != Offset.Unspecified) {
+                                composePath.quadraticTo(
+                                    end.controlPoint1.x, end.controlPoint1.y,
+                                    end.offset.x, end.offset.y
+                                )
+                            } else {
+                                composePath.lineTo(end.offset.x, end.offset.y)
+                            }
+                        }
+                        if (pathData.isShape) composePath.close()
+                    }
+                    PrebuiltPathData(
+                        path = composePath,
+                        colorIndex = pathData.colorIndex,
+                        color = pathData.color,
+                        fillColorIndex = pathData.fillColorIndex,
+                        fillColor = pathData.fillColor,
+                        thickness = pathData.path.firstOrNull()?.thickness ?: 2f,
+                        isShape = pathData.isShape,
+                        pointsCount = pathData.path.size,
+                        firstPoint = pathData.path.firstOrNull()?.offset ?: Offset.Zero
+                    )
+                }
+                _sketchPathsCache[note.id] = prebuilt
+            }
+        }
+        return cached ?: emptyList()
+    }
+
+    private fun invalidateSketchCache(noteId: Int) {
+        _sketchPathsCache.remove(noteId)
+    }
+
     init {
         loadAllNotes()
         loadLabels()
         loadLayoutSettings()
         applySortingAndFiltering()
         migrateAllAudioTranscripts()
+
+        // Eagerly warm sketch cache for all sketch notes
+        _allNotesItems.filter { it.noteType == NoteType.SKETCH }.forEach { getPrebuiltSketchPaths(it) }
 
         auth.currentUser?.uid?.let { uid ->
             startRealtimeListenerForFutureChanges(uid)
@@ -208,6 +283,11 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                                     saveAllNotes()
                                     applySortingAndFiltering()
 
+                                    // Warm sketch cache for newly added sketch notes
+                                    if (note.noteType == NoteType.SKETCH) {
+                                        getPrebuiltSketchPaths(note)
+                                    }
+
                                     if (note.noteType == NoteType.AUDIO) {
                                         val audioId = note.description
                                         val context = getApplication<Application>().applicationContext
@@ -242,6 +322,12 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                                         _allNotesItems[index] = note.copy(isOffline = false)
                                         saveAllNotes()
                                         applySortingAndFiltering()
+
+                                        // Invalidate and re-warm sketch cache on modification
+                                        if (note.noteType == NoteType.SKETCH) {
+                                            invalidateSketchCache(note.id)
+                                            getPrebuiltSketchPaths(note)
+                                        }
                                     }
 
                                     if (note.noteType == NoteType.AUDIO &&
@@ -263,6 +349,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
                         DocumentChange.Type.REMOVED -> {
                             if (!offlineNoteIds.contains(note.id)) {
+                                invalidateSketchCache(note.id)
                                 _allNotesItems.removeAll { it.id == note.id }
                                 saveAllNotes()
                                 applySortingAndFiltering()
@@ -423,6 +510,11 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         saveAllNotes()
         applySortingAndFiltering()
 
+        // Warm sketch cache for newly added sketch notes
+        if (noteType == NoteType.SKETCH) {
+            getPrebuiltSketchPaths(newItem)
+        }
+
         if (forceLocal) {
             offlineNoteIds.add(newId)
         } else if (auth.currentUser != null) {
@@ -447,6 +539,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateItem(updatedItem: NotesItems, forceLocal: Boolean = false) {
+        invalidateSketchCache(updatedItem.id)
         val index = _allNotesItems.indexOfFirst { it.id == updatedItem.id }
         if (index == -1) return
 
@@ -473,6 +566,11 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
         saveAllNotes()
         applySortingAndFiltering()
+
+        // Re-warm sketch cache after update
+        if (finalNote.noteType == NoteType.SKETCH) {
+            getPrebuiltSketchPaths(finalNote)
+        }
 
         if (!nowShouldBeOffline && auth.currentUser != null) {
             val uid = auth.currentUser!!.uid
@@ -507,6 +605,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteItems(itemIds: List<Int>) {
+        itemIds.forEach { invalidateSketchCache(it) }
         val deletedNotes = _allNotesItems.filter { it.id in itemIds }
         _allNotesItems.removeAll { it.id in itemIds }
         offlineNoteIds.removeAll(itemIds)

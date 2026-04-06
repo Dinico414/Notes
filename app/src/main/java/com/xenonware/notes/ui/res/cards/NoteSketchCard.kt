@@ -45,12 +45,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,10 +75,9 @@ import com.xenonware.notes.ui.theme.noteTurquoiseDark
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
-import com.xenonware.notes.util.sketch.SketchSerializer
 import com.xenonware.notes.viewmodel.NotesViewModel
+import com.xenonware.notes.viewmodel.PrebuiltPathData
 import com.xenonware.notes.viewmodel.classes.NotesItems
-import kotlin.math.ceil
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalFoundationApi::class)
@@ -157,7 +156,7 @@ fun NoteSketchCard(
         )
 
         val canvasBackgroundColor = if (isCoverModeActive || isBlackThemeActive) Color.Black else backgroundColorState
-        
+
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -195,11 +194,21 @@ fun NoteSketchCard(
                     color = colorScheme.onSurface
                 )
 
-                val paths = remember(item.description) {
-                    SketchSerializer.deserializePaths(item.description)
+                val prebuiltPaths = notesViewModel.getPrebuiltSketchPaths(item)
+
+                // Only remap colors — Path objects are already built in the cache
+                val memoizedPaths = remember(prebuiltPaths, themeDrawColors) {
+                    prebuiltPaths.map { p ->
+                        val color = if (p.colorIndex in themeDrawColors.indices)
+                            themeDrawColors[p.colorIndex] else p.color
+                        val fill = if (p.isShape && p.fillColor != Color.Transparent &&
+                            p.fillColorIndex in themeDrawColors.indices)
+                            themeDrawColors[p.fillColorIndex] else p.fillColor
+                        ResolvedPathData(p, color, fill)
+                    }
                 }
 
-                if (paths.isNotEmpty()) {
+                if (memoizedPaths.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
 
                     val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
@@ -242,66 +251,33 @@ fun NoteSketchCard(
                                         translationY = -offsetY * scaleFactor
                                     }
                             ) {
-                                for (pathData in paths) {
-                                    val path = pathData.path
-                                    val color = if (pathData.colorIndex in themeDrawColors.indices) {
-                                        themeDrawColors[pathData.colorIndex]
-                                    } else {
-                                        pathData.color
+                                for (resolved in memoizedPaths) {
+                                    val src = resolved.source
+
+                                    if (src.isShape && resolved.fillColor != Color.Transparent) {
+                                        drawPath(path = src.path, color = resolved.fillColor, style = Fill)
                                     }
 
-                                    if (pathData.isShape && pathData.fillColor != Color.Transparent) {
-                                        val resolvedFillColor = if (pathData.fillColorIndex in themeDrawColors.indices) {
-                                            themeDrawColors[pathData.fillColorIndex]
-                                        } else {
-                                            pathData.fillColor
-                                        }
-
-                                        val composePath = Path()
-                                        composePath.moveTo(path[0].offset.x, path[0].offset.y)
-                                        for (i in 1 until path.size) {
-                                            composePath.lineTo(path[i].offset.x, path[i].offset.y)
-                                        }
-                                        composePath.close()
-                                        drawPath(path = composePath, color = resolvedFillColor, style = Fill)
-                                    }
-
-                                    if (path.size < 2) {
-                                        if (path.isNotEmpty()) {
-                                            drawCircle(color, radius = path.first().thickness / 2, center = path.first().offset)
+                                    if (src.pointsCount < 2) {
+                                        if (src.pointsCount == 1) {
+                                            drawCircle(
+                                                color = resolved.color,
+                                                radius = src.thickness / 2,
+                                                center = src.firstPoint
+                                            )
                                         }
                                         continue
                                     }
 
-                                    for (i in 1..path.lastIndex) {
-                                        val start = path[i - 1]
-                                        val end = path[i]
-                                        val distance = (end.offset - start.offset).getDistance()
-                                        if (distance < 1f) {
-                                            drawLine(color = color, start = start.offset, end = end.offset, strokeWidth = (start.thickness + end.thickness) / 2f, cap = StrokeCap.Round)
-                                            continue
-                                        }
-                                        val steps = ceil(distance / 2.5f).toInt().coerceAtLeast(2)
-                                        var previousPoint = start.offset
-                                        var previousThickness = start.thickness
-                                        for (step in 1..steps) {
-                                            val t = step.toFloat() / steps
-                                            val currentPoint = when {
-                                                end.controlPoint1 != Offset.Unspecified && end.controlPoint2 != Offset.Unspecified ->
-                                                    cubicBezier(t, start.offset, end.controlPoint1, end.controlPoint2, end.offset)
-                                                end.controlPoint1 != Offset.Unspecified ->
-                                                    quadraticBezier(t, start.offset, end.controlPoint1, end.offset)
-                                                else -> Offset(
-                                                    lerp(start.offset.x, end.offset.x, t),
-                                                    lerp(start.offset.y, end.offset.y, t)
-                                                )
-                                            }
-                                            val currentThickness = lerp(start.thickness, end.thickness, t)
-                                            drawLine(color = color, start = previousPoint, end = currentPoint, strokeWidth = (previousThickness + currentThickness) / 2f, cap = StrokeCap.Round)
-                                            previousPoint = currentPoint
-                                            previousThickness = currentThickness
-                                        }
-                                    }
+                                    drawPath(
+                                        path = src.path,
+                                        color = resolved.color,
+                                        style = Stroke(
+                                            width = src.thickness,
+                                            cap = StrokeCap.Round,
+                                            join = StrokeJoin.Round
+                                        )
+                                    )
                                 }
                             }
                         }
@@ -402,22 +378,13 @@ fun NoteSketchCard(
     }
 }
 
-private fun lerp(start: Float, stop: Float, fraction: Float): Float = (1 - fraction) * start + fraction * stop
-private fun cubicBezier(t: Float, p0: Offset, p1: Offset, p2: Offset, p3: Offset): Offset {
-    val u = 1 - t
-    val tt = t * t
-    val uu = u * u
-    val uuu = uu * u
-    val ttt = tt * t
-    val x = uuu * p0.x + 3 * uu * t * p1.x + 3 * u * tt * p2.x + ttt * p3.x
-    val y = uuu * p0.y + 3 * uu * t * p1.y + 3 * u * tt * p2.y + ttt * p3.y
-    return Offset(x, y)
-}
-private fun quadraticBezier(t: Float, p0: Offset, p1: Offset, p2: Offset): Offset {
-    val u = 1 - t
-    val tt = t * t
-    val uu = u * u
-    val x = uu * p0.x + 2 * u * t * p1.x + tt * p2.x
-    val y = uu * p0.y + 2 * u * t * p1.y + tt * p2.y
-    return Offset(x, y)
-}
+/**
+ * Lightweight wrapper that pairs a pre-built [PrebuiltPathData] (which owns the
+ * expensive [Path] object) with theme-resolved colors. Only colors change per
+ * recomposition; the Path itself is reused from the ViewModel cache.
+ */
+private data class ResolvedPathData(
+    val source: PrebuiltPathData,
+    val color: Color,
+    val fillColor: Color
+)
