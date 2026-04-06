@@ -838,6 +838,12 @@ fun NoteAudioSheet(
                                     isTranscribing = whisper.isTranscribing,
                                     currentPartialText = "",
                                     errorMessage = whisper.errorMessage,
+                                    onCopyTranscript = { /* Handled in TranscriptDisplay */ },
+                                    onTranscriptChange = { newText ->
+                                        noteEditingViewModel.setAudioTranscriptSegments(
+                                            listOf(TranscriptSegment(text = newText, timestampMillis = 0L))
+                                        )
+                                    },
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .padding(horizontal = 8.dp)
@@ -1045,6 +1051,12 @@ fun NoteAudioSheet(
                                     isTranscribing = whisper.isTranscribing,
                                     currentPartialText = "",
                                     errorMessage = whisper.errorMessage,
+                                    onCopyTranscript = { /* Handled in TranscriptDisplay */ },
+                                    onTranscriptChange = { newText ->
+                                        noteEditingViewModel.setAudioTranscriptSegments(
+                                            listOf(TranscriptSegment(text = newText, timestampMillis = 0L))
+                                        )
+                                    },
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .padding(horizontal = 16.dp)
@@ -1396,6 +1408,8 @@ fun AudioContentDisplay(
     isTranscribing: Boolean = false,
     currentPartialText: String = "",
     errorMessage: String? = null,
+    onCopyTranscript: (() -> Unit)? = null,
+    onTranscriptChange: ((String) -> Unit)? = null,
 ) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         when (selectedAudioViewType) {
@@ -1414,7 +1428,8 @@ fun AudioContentDisplay(
                 isTranscribing = isTranscribing,
                 currentPartialText = currentPartialText,
                 errorMessage = errorMessage,
-                onCopyTranscript = {},
+                onCopyTranscript = onCopyTranscript,
+                onTranscriptChange = onTranscriptChange,
                 recordingState = recordingState
             )
         }

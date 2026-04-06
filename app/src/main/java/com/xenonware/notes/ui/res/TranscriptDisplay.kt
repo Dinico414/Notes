@@ -25,8 +25,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MicOff
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -34,7 +37,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,13 +51,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.toClipEntry
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.notes.util.audio.RecordingState
 import com.xenonware.notes.util.audio.TranscriptSegment
@@ -76,11 +84,17 @@ fun TranscriptDisplay(
     currentPartialText: String = "",
     errorMessage: String? = null,
     onCopyTranscript: (() -> Unit)? = null,
+    onTranscriptChange: ((String) -> Unit)? = null,
     recordingState: RecordingState,
 ) {
     val listState = rememberLazyListState()
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
+
+    var isEditing by remember { mutableStateOf(false) }
+    var editableText by remember(transcriptSegments) {
+        mutableStateOf(transcriptSegments.joinToString(" ") { it.text })
+    }
 
     val hasContent = transcriptSegments.isNotEmpty() || currentPartialText.isNotBlank()
 
@@ -217,7 +231,7 @@ fun TranscriptDisplay(
                                     modifier = Modifier.weight(1f),
                                 )
                                 IconButton(onClick = {
-                                    val fullText = buildString {
+                                    val fullText = if (isEditing) editableText else buildString {
                                         append(transcriptSegments.joinToString(" ") { it.text })
                                         if (currentPartialText.isNotBlank()) {
                                             append(" $currentPartialText")
@@ -236,43 +250,80 @@ fun TranscriptDisplay(
                                         tint = MaterialTheme.colorScheme.primary,
                                     )
                                 }
+
+                                if (onTranscriptChange != null) {
+                                    IconButton(onClick = {
+                                        if (isEditing) {
+                                            onTranscriptChange.invoke(editableText)
+                                        }
+                                        isEditing = !isEditing
+                                    }) {
+                                        Icon(
+                                            imageVector = if (isEditing) Icons.Rounded.Check else Icons.Rounded.Edit,
+                                            contentDescription = if (isEditing) "Save transcript" else "Edit transcript",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                }
                             }
                         }
 
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                            contentPadding = PaddingValues(
-                                horizontal = 16.dp,
-                                vertical = 12.dp
-                            ),
-                        ) {
-                            item(key = "main") {
-                                Column {
-                                    if (transcriptSegments.isNotEmpty()) {
-                                        val joined =
-                                            transcriptSegments.joinToString(" ") { it.text }
-                                        Text(
-                                            text = joined,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.padding(bottom = 8.dp),
-                                        )
-                                    }
+                        SelectionContainer {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                                contentPadding = PaddingValues(
+                                    horizontal = 16.dp,
+                                    vertical = 12.dp
+                                ),
+                            ) {
+                                item(key = "main") {
+                                    Column {
+                                        if (isEditing) {
+                                            OutlinedTextField(
+                                                value = editableText,
+                                                onValueChange = { editableText = it },
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(bottom = 8.dp),
+                                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                                    lineHeight = 24.sp
+                                                ),
+                                                colors = TextFieldDefaults.colors(
+                                                    focusedContainerColor = Color.Transparent,
+                                                    unfocusedContainerColor = Color.Transparent,
+                                                    disabledContainerColor = Color.Transparent,
+                                                    focusedIndicatorColor = Color.Transparent,
+                                                    unfocusedIndicatorColor = Color.Transparent,
+                                                )
+                                            )
+                                        } else {
+                                            if (transcriptSegments.isNotEmpty()) {
+                                                val joined =
+                                                    transcriptSegments.joinToString(" ") { it.text }
+                                                Text(
+                                                    text = joined,
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.padding(bottom = 8.dp),
+                                                )
+                                            }
 
-                                    if (currentPartialText.isNotBlank()) {
-                                        CurrentLiveText(
-                                            text = currentPartialText,
-                                            isTranscribing = isTranscribing,
-                                            modifier = Modifier.padding(
-                                                top = if (transcriptSegments.isEmpty()) 0.dp else 6.dp
-                                            ),
-                                        )
-                                    }
+                                            if (currentPartialText.isNotBlank()) {
+                                                CurrentLiveText(
+                                                    text = currentPartialText,
+                                                    isTranscribing = isTranscribing,
+                                                    modifier = Modifier.padding(
+                                                        top = if (transcriptSegments.isEmpty()) 0.dp else 6.dp
+                                                    ),
+                                                )
+                                            }
+                                        }
 
-                                    Spacer(Modifier.height(100.dp))
+                                        Spacer(Modifier.height(100.dp))
+                                    }
                                 }
                             }
                         }
