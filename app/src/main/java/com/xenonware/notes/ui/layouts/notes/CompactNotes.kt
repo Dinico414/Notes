@@ -221,9 +221,9 @@ fun CompactNotes(
         val sharedPreferenceManager = remember { SharedPreferenceManager(context) }
 
         val density = LocalDensity.current
+        val screenWidthDp = with(density) { appSize.width.toDp() }.value.toInt()
         val configuration = LocalConfiguration.current
         val appHeight = configuration.screenHeightDp.dp
-        val screenWidthDp = with(density) { appSize.width.toDp() }.value.toInt()
 
         val isAppBarExpandable = when (layoutType) {
             LayoutType.COVER -> false
