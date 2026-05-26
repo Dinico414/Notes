@@ -70,7 +70,7 @@
     <string name="restart_app_description">restart app</string>
 
     <!-- App Specific Strings -->
-    <string name="no_notes_message">No notes yet</string>
+    <string name="no_notes_message">Nothing noted yet.</string>
     <string name="remove_step">Remove step</string>
     <string name="add_text_note">Add Text Note</string>
     <string name="add_pen_note">Add Sketch</string>

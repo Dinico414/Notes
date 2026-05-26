@@ -1323,26 +1323,25 @@ fun CoverNotes(
                                         modifier = Modifier
                                             .weight(1f)
                                             .padding(scaffoldPadding)
-                                            .fillMaxWidth(),
-                                        contentAlignment = Alignment.Center
+                                            .fillMaxWidth(), contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = stringResource(R.string.no_notes_message),
-                                            style = typography.bodyLarge,
-                                            color = Color.White
+                                            fontFamily = QuicksandTitleVariable,
+                                            style = typography.titleLarge
                                         )
                                     }
                                 } else if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isNotBlank()) {
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
-                                            .fillMaxWidth(),
-                                        contentAlignment = Alignment.Center
+                                            .padding(scaffoldPadding)
+                                            .fillMaxWidth(), contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = stringResource(R.string.no_search_results),
-                                            style = typography.bodyLarge,
-                                            color = Color.White
+                                            fontFamily = QuicksandTitleVariable,
+                                            style = typography.titleLarge,
                                         )
                                     }
                                 } else {

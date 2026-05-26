@@ -70,7 +70,7 @@
     <string name="restart_app_description">App neustarten</string>
 
     <!-- App Specific Strings -->
-    <string name="no_notes_message">Keine Notizen</string>
+    <string name="no_notes_message">Noch nichts notiert.</string>
     <string name="remove_step">Schritt löschen</string>
     <string name="add_text_note">Textnotiz hinzufügen</string>
     <string name="add_pen_note">Skizze hinzufügen</string>

@@ -1146,7 +1146,7 @@ fun CompactNotes(
                     content = {
                         Text(stringResource(R.string.warning_datalost))
                     },
-                    )
+                )
             }
             Scaffold(snackbarHost = {
                 SnackbarHost(hostState = snackbarHostState) { data ->
@@ -1245,8 +1245,7 @@ fun CompactNotes(
                                         Icon(
                                             Icons.Rounded.PushPin, contentDescription = ""
                                         )
-                                    }
-                                )
+                                    })
                             }
                         },
                         addModeContentOverride = {
@@ -1421,19 +1420,21 @@ fun CompactNotes(
                                     ) {
                                         Text(
                                             text = stringResource(R.string.no_notes_message),
-                                            style = typography.bodyLarge
+                                            fontFamily = QuicksandTitleVariable,
+                                            style = typography.titleLarge
                                         )
                                     }
                                 } else if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isNotBlank()) {
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
-                                            .fillMaxWidth(),
-                                        contentAlignment = Alignment.Center
+                                            .padding(scaffoldPadding)
+                                            .fillMaxWidth(), contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = stringResource(R.string.no_search_results),
-                                            style = typography.bodyLarge
+                                            fontFamily = QuicksandTitleVariable,
+                                            style = typography.titleLarge,
                                         )
                                     }
                                 } else {
@@ -1859,8 +1860,8 @@ fun CompactNotes(
                                 .background(colorScheme.scrim.copy(alpha = scrimAlpha))
                                 .combinedClickable(
                                     onClick = {
-                                        handleDismissRequest()
-                                    },
+                                    handleDismissRequest()
+                                },
                                     indication = null,
                                     interactionSource = remember { MutableInteractionSource() })
                         )
