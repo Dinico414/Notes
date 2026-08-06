@@ -11,7 +11,7 @@ enum class NoteType {
 @Serializable
 data class NotesItems(
     val id: Int = 0,
-    val title: String,
+    val title: String = "",
     val description: String? = null,
     val transcript: String? = null,
     val notificationCount: Int = 0,
@@ -30,17 +30,5 @@ data class NotesItems(
     @PropertyName("isOffline")
     var isOffline: Boolean = false
 ) {
-    constructor() : this(
-        id = 0,
-        title = "",
-        description = null,
-        listId = "",
-        creationTimestamp = System.currentTimeMillis(),
-        displayOrder = 0,
-        noteType = NoteType.TEXT,
-        color = null,
-        labels = emptyList(),
-        isOffline = false
-    )
     var currentHeader = ""
 }

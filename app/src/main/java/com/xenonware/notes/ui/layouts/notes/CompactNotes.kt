@@ -2013,7 +2013,7 @@ fun CompactNotes(
                                         saveTrigger = saveTrigger,
                                         onSaveTriggerConsumed = { saveTrigger = false },
                                         addItemTrigger = addListItemTrigger,
-                                        onAddItemTriggerConsumed = { },
+                                        onAddItemTriggerConsumed = { addListItemTrigger = false },
                                         editorFontSize = listEditorFontSize,
                                         allLabels = allLabels,
                                         onAddNewLabel = { viewModel.addLabel(it) },
