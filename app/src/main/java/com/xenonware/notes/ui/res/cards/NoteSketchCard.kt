@@ -12,15 +12,16 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -43,15 +44,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -76,7 +71,6 @@ import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowDark
 import com.xenonware.notes.ui.theme.noteYellowLight
 import com.xenonware.notes.viewmodel.NotesViewModel
-import com.xenonware.notes.viewmodel.PrebuiltPathData
 import com.xenonware.notes.viewmodel.classes.NotesItems
 
 @SuppressLint("ConfigurationScreenWidthHeight")
@@ -194,21 +188,10 @@ fun NoteSketchCard(
                     color = colorScheme.onSurface
                 )
 
-                val prebuiltPaths = notesViewModel.getPrebuiltSketchPaths(item)
+                val hasSketch = !item.description.isNullOrBlank() && item.description != "[]" && item.description.contains("\"offset\"")
+                if (hasSketch) {
+                    val thumbnail = notesViewModel.getSketchThumbnail(item, themeDrawColors)
 
-                // Only remap colors — Path objects are already built in the cache
-                val memoizedPaths = remember(prebuiltPaths, themeDrawColors) {
-                    prebuiltPaths.map { p ->
-                        val color = if (p.colorIndex in themeDrawColors.indices)
-                            themeDrawColors[p.colorIndex] else p.color
-                        val fill = if (p.isShape && p.fillColor != Color.Transparent &&
-                            p.fillColorIndex in themeDrawColors.indices)
-                            themeDrawColors[p.fillColorIndex] else p.fillColor
-                        ResolvedPathData(p, color, fill)
-                    }
-                }
-
-                if (memoizedPaths.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
 
                     val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
@@ -219,67 +202,27 @@ fun NoteSketchCard(
                         9 -> 0.5f
                         else -> 1f
                     }
+                    val targetAspectRatio = (screenWidthDp.value / (screenHeightDp.value * heightRatio)).coerceAtLeast(0.1f)
 
-                    BoxWithConstraints(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clipToBounds()
+                            .aspectRatio(targetAspectRatio)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(canvasBackgroundColor)
+                            .border(
+                                width = 1.dp,
+                                color = colorScheme.onSurface.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(14.dp)
+                            )
                     ) {
-                        val scaleFactor = maxWidth.value / screenWidthDp.value
-                        val targetHeightDp = screenHeightDp * heightRatio * scaleFactor
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(canvasBackgroundColor)
-                                .border(
-                                    width = 1.dp,
-                                    color = colorScheme.onSurface.copy(alpha = 0.5f),
-                                    shape = RoundedCornerShape(14.dp)
-                                )
-                                .height(targetHeightDp)
-                        ) {
-                            Canvas(
-                                modifier = Modifier
-                                    .size(screenWidthDp, screenHeightDp)
-                                    .graphicsLayer {
-                                        scaleX = scaleFactor
-                                        scaleY = scaleFactor
-                                        transformOrigin = TransformOrigin(0f, 0f)
-                                        val offsetY = (screenHeightDp.toPx() * (1f - heightRatio)) / 2f
-                                        translationY = -offsetY * scaleFactor
-                                    }
-                            ) {
-                                for (resolved in memoizedPaths) {
-                                    val src = resolved.source
-
-                                    if (src.isShape && resolved.fillColor != Color.Transparent) {
-                                        drawPath(path = src.path, color = resolved.fillColor, style = Fill)
-                                    }
-
-                                    if (src.pointsCount < 2) {
-                                        if (src.pointsCount == 1) {
-                                            drawCircle(
-                                                color = resolved.color,
-                                                radius = src.thickness / 2,
-                                                center = src.firstPoint
-                                            )
-                                        }
-                                        continue
-                                    }
-
-                                    drawPath(
-                                        path = src.path,
-                                        color = resolved.color,
-                                        style = Stroke(
-                                            width = src.thickness,
-                                            cap = StrokeCap.Round,
-                                            join = StrokeJoin.Round
-                                        )
-                                    )
-                                }
-                            }
+                        if (thumbnail != null) {
+                            Image(
+                                bitmap = thumbnail,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
                 }
@@ -377,14 +320,3 @@ fun NoteSketchCard(
         }
     }
 }
-
-/**
- * Lightweight wrapper that pairs a pre-built [PrebuiltPathData] (which owns the
- * expensive [Path] object) with theme-resolved colors. Only colors change per
- * recomposition; the Path itself is reused from the ViewModel cache.
- */
-private data class ResolvedPathData(
-    val source: PrebuiltPathData,
-    val color: Color,
-    val fillColor: Color
-)

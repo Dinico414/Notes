@@ -9,8 +9,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Canvas as ComposeCanvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -37,11 +43,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Collections
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 enum class SortOption { FREE_SORTING, CREATION_DATE, NAME }
 enum class SortOrder { ASCENDING, DESCENDING }
@@ -128,57 +137,157 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     val showSketchCard: StateFlow<Boolean> = _showSketchCard.asStateFlow()
 
     private val _sketchPathsCache = mutableStateMapOf<Int, List<PrebuiltPathData>>()
+    private val _sketchThumbnailCache = mutableStateMapOf<String, ImageBitmap>()
+    private val activeThumbnailJobs = Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+
+    private fun buildPrebuiltPaths(description: String?): List<PrebuiltPathData> {
+        if (description.isNullOrBlank()) return emptyList()
+        val rawPaths = SketchSerializer.deserializePaths(description)
+        return rawPaths.map { pathData ->
+            val composePath = Path()
+            if (pathData.path.isNotEmpty()) {
+                composePath.moveTo(pathData.path[0].offset.x, pathData.path[0].offset.y)
+                for (i in 1 until pathData.path.size) {
+                    val end = pathData.path[i]
+                    if (pathData.isShape) {
+                        composePath.lineTo(end.offset.x, end.offset.y)
+                    } else if (end.controlPoint1 != Offset.Unspecified && end.controlPoint2 != Offset.Unspecified) {
+                        composePath.cubicTo(
+                            end.controlPoint1.x, end.controlPoint1.y,
+                            end.controlPoint2.x, end.controlPoint2.y,
+                            end.offset.x, end.offset.y
+                        )
+                    } else if (end.controlPoint1 != Offset.Unspecified) {
+                        composePath.quadraticTo(
+                            end.controlPoint1.x, end.controlPoint1.y,
+                            end.offset.x, end.offset.y
+                        )
+                    } else {
+                        composePath.lineTo(end.offset.x, end.offset.y)
+                    }
+                }
+                if (pathData.isShape) composePath.close()
+            }
+            PrebuiltPathData(
+                path = composePath,
+                colorIndex = pathData.colorIndex,
+                color = pathData.color,
+                fillColorIndex = pathData.fillColorIndex,
+                fillColor = pathData.fillColor,
+                thickness = pathData.path.firstOrNull()?.thickness ?: 2f,
+                isShape = pathData.isShape,
+                pointsCount = pathData.path.size,
+                firstPoint = pathData.path.firstOrNull()?.offset ?: Offset.Zero
+            )
+        }
+    }
 
     fun getPrebuiltSketchPaths(note: NotesItems): List<PrebuiltPathData> {
         val cached = _sketchPathsCache[note.id]
         if (cached == null && note.noteType == NoteType.SKETCH && !note.description.isNullOrBlank()) {
             viewModelScope.launch(Dispatchers.Default) {
-                val rawPaths = SketchSerializer.deserializePaths(note.description)
-                val prebuilt = rawPaths.map { pathData ->
-                    val composePath = Path()
-                    if (pathData.path.isNotEmpty()) {
-                        composePath.moveTo(pathData.path[0].offset.x, pathData.path[0].offset.y)
-                        for (i in 1 until pathData.path.size) {
-                            val end = pathData.path[i]
-                            if (pathData.isShape) {
-                                composePath.lineTo(end.offset.x, end.offset.y)
-                            } else if (end.controlPoint1 != Offset.Unspecified && end.controlPoint2 != Offset.Unspecified) {
-                                composePath.cubicTo(
-                                    end.controlPoint1.x, end.controlPoint1.y,
-                                    end.controlPoint2.x, end.controlPoint2.y,
-                                    end.offset.x, end.offset.y
-                                )
-                            } else if (end.controlPoint1 != Offset.Unspecified) {
-                                composePath.quadraticTo(
-                                    end.controlPoint1.x, end.controlPoint1.y,
-                                    end.offset.x, end.offset.y
-                                )
-                            } else {
-                                composePath.lineTo(end.offset.x, end.offset.y)
-                            }
-                        }
-                        if (pathData.isShape) composePath.close()
-                    }
-                    PrebuiltPathData(
-                        path = composePath,
-                        colorIndex = pathData.colorIndex,
-                        color = pathData.color,
-                        fillColorIndex = pathData.fillColorIndex,
-                        fillColor = pathData.fillColor,
-                        thickness = pathData.path.firstOrNull()?.thickness ?: 2f,
-                        isShape = pathData.isShape,
-                        pointsCount = pathData.path.size,
-                        firstPoint = pathData.path.firstOrNull()?.offset ?: Offset.Zero
-                    )
+                val prebuilt = buildPrebuiltPaths(note.description)
+                withContext(Dispatchers.Main) {
+                    _sketchPathsCache[note.id] = prebuilt
                 }
-                _sketchPathsCache[note.id] = prebuilt
             }
         }
         return cached ?: emptyList()
     }
 
+    fun getSketchThumbnail(note: NotesItems, themeDrawColors: List<Color>): ImageBitmap? {
+        val cacheKey = "${note.id}_${themeDrawColors.hashCode()}"
+        val cached = _sketchThumbnailCache[cacheKey]
+        if (cached != null) return cached
+
+        if (note.noteType == NoteType.SKETCH && !note.description.isNullOrBlank()) {
+            if (activeThumbnailJobs.add(cacheKey)) {
+                viewModelScope.launch(Dispatchers.Default) {
+                    try {
+                        val prebuilt = _sketchPathsCache[note.id] ?: buildPrebuiltPaths(note.description).also {
+                            withContext(Dispatchers.Main) {
+                                _sketchPathsCache[note.id] = it
+                            }
+                        }
+                        if (prebuilt.isEmpty()) return@launch
+
+                        val displayMetrics = getApplication<Application>().resources.displayMetrics
+                        val screenWidthPx = displayMetrics.widthPixels.coerceAtLeast(1)
+                        val screenHeightPx = displayMetrics.heightPixels.coerceAtLeast(1)
+
+                        val thumbWidth = 400
+                        val scale = thumbWidth.toFloat() / screenWidthPx.toFloat()
+                        val thumbHeight = (screenHeightPx * scale).toInt().coerceAtLeast(400)
+
+                        val imageBitmap = ImageBitmap(thumbWidth, thumbHeight)
+                        val canvas = ComposeCanvas(imageBitmap)
+                        canvas.scale(scale, scale)
+
+                        val strokePaint = Paint().apply {
+                            style = PaintingStyle.Stroke
+                            strokeCap = StrokeCap.Round
+                            strokeJoin = StrokeJoin.Round
+                            isAntiAlias = true
+                        }
+                        val fillPaint = Paint().apply {
+                            style = PaintingStyle.Fill
+                            isAntiAlias = true
+                        }
+
+                        for (p in prebuilt) {
+                            val strokeColor = if (p.colorIndex in themeDrawColors.indices) {
+                                themeDrawColors[p.colorIndex]
+                            } else {
+                                p.color
+                            }
+                            val fillColor = if (p.isShape && p.fillColor != Color.Transparent &&
+                                p.fillColorIndex in themeDrawColors.indices) {
+                                themeDrawColors[p.fillColorIndex]
+                            } else {
+                                p.fillColor
+                            }
+
+                            if (p.isShape && fillColor != Color.Transparent) {
+                                fillPaint.color = fillColor
+                                canvas.drawPath(p.path, fillPaint)
+                            }
+
+                            if (p.pointsCount < 2) {
+                                if (p.pointsCount == 1) {
+                                    fillPaint.color = strokeColor
+                                    canvas.drawCircle(p.firstPoint, p.thickness / 2f, fillPaint)
+                                }
+                                continue
+                            }
+
+                            strokePaint.color = strokeColor
+                            strokePaint.strokeWidth = p.thickness
+                            canvas.drawPath(p.path, strokePaint)
+                        }
+
+                        withContext(Dispatchers.Main) {
+                            if (_sketchThumbnailCache.size > 80) {
+                                val toRemove = _sketchThumbnailCache.keys.take(25)
+                                toRemove.forEach { _sketchThumbnailCache.remove(it) }
+                            }
+                            _sketchThumbnailCache[cacheKey] = imageBitmap
+                        }
+                    } catch (e: Exception) {
+                        Log.e("NotesViewModel", "Failed to render thumbnail for note ${note.id}", e)
+                    } finally {
+                        activeThumbnailJobs.remove(cacheKey)
+                    }
+                }
+            }
+        }
+        return null
+    }
+
     private fun invalidateSketchCache(noteId: Int) {
         _sketchPathsCache.remove(noteId)
+        val prefix = "${noteId}_"
+        val keysToRemove = _sketchThumbnailCache.keys.filter { it.startsWith(prefix) }
+        keysToRemove.forEach { _sketchThumbnailCache.remove(it) }
     }
 
     init {

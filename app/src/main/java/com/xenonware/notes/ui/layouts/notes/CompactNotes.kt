@@ -1449,9 +1449,14 @@ fun CompactNotes(
                                                 )
                                             ) {
                                                 itemsIndexed(
-                                                    items = noteItemsWithHeaders, key = { _, item ->
+                                                    items = noteItemsWithHeaders,
+                                                    key = { _, item ->
                                                         if (item is NotesItems) item.id else item.hashCode()
-                                                    }) { index, item ->
+                                                    },
+                                                    contentType = { _, item ->
+                                                        if (item is NotesItems) item.noteType else "HEADER"
+                                                    }
+                                                ) { index, item ->
                                                     when (item) {
                                                         is String -> {
                                                             Text(
@@ -1665,7 +1670,11 @@ fun CompactNotes(
                                                 ),
                                                 verticalItemSpacing = MediumPadding
                                             ) {
-                                                items(noteItemsWithHeaders.filterIsInstance<NotesItems>()) { item ->
+                                                items(
+                                                    items = noteItemsWithHeaders.filterIsInstance<NotesItems>(),
+                                                    key = { it.id },
+                                                    contentType = { it.noteType }
+                                                ) { item ->
                                                     NoteCard(
                                                         item = item,
                                                         notesViewModel = viewModel,
