@@ -131,7 +131,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.ActivityScreen
 import com.xenon.mylibrary.res.FloatingToolbarContent
 import com.xenon.mylibrary.res.GoogleProfilBorder
@@ -143,12 +142,12 @@ import com.xenon.mylibrary.theme.DeviceConfigProvider
 import com.xenon.mylibrary.theme.LocalDeviceConfig
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenon.mylibrary.values.ExtraLargePadding
-import com.xenon.mylibrary.values.ExtraLargeSpacing
-import com.xenon.mylibrary.values.LargePadding
 import com.xenon.mylibrary.values.LargestPadding
+import com.xenon.mylibrary.values.LargestSpacing
+import com.xenon.mylibrary.values.MediumLargePadding
 import com.xenon.mylibrary.values.MediumPadding
-import com.xenon.mylibrary.values.MediumSpacing
 import com.xenon.mylibrary.values.SmallPadding
+import com.xenon.mylibrary.values.SmallSpacing
 import com.xenonware.notes.R
 import com.xenonware.notes.data.SharedPreferenceManager
 import com.xenonware.notes.presentation.sign_in.GoogleAuthUiClient
@@ -430,8 +429,7 @@ fun CompactNotes(
         // ============================================================================
         val googleAuthUiClient = remember {
             GoogleAuthUiClient(
-                context = context.applicationContext,
-                oneTapClient = Identity.getSignInClient(context.applicationContext)
+                context = context.applicationContext
             )
         }
 
@@ -1124,7 +1122,9 @@ fun CompactNotes(
                     notesViewModel = viewModel,
                     signInViewModel = signInViewModel,
                     googleAuthUiClient = googleAuthUiClient,
-                    onFilterSelected = { viewModel.setNoteFilterType(it) })
+                    onFilterSelected = { viewModel.setNoteFilterType(it) },
+                    drawerState = drawerState
+                )
             }, drawerState = drawerState, gesturesEnabled = !isAnyNoteSheetOpen
         ) {
             if (showUnsavedChangesDialog) {
@@ -1176,12 +1176,12 @@ fun CompactNotes(
                     val targetBottomPadding =
                         remember(imeHeight, bottomPaddingNavigationBar, imePaddingValues) {
                             val calculatedPadding = if (imeHeight > bottomPaddingNavigationBar) {
-                                imeHeight + LargePadding
+                                imeHeight + MediumLargePadding
                             } else {
                                 max(
                                     bottomPaddingNavigationBar,
                                     imePaddingValues.calculateTopPadding()
-                                ) + LargePadding
+                                ) + MediumLargePadding
                             }
                             max(calculatedPadding, 0.dp)
                         }
@@ -1355,8 +1355,7 @@ fun CompactNotes(
                 val context = LocalContext.current
                 val googleAuthUiClient = remember {
                     GoogleAuthUiClient(
-                        context = context.applicationContext,
-                        oneTapClient = Identity.getSignInClient(context.applicationContext)
+                        context = context.applicationContext
                     )
                 }
                 val signInViewModel: SignInViewModel = viewModel()
@@ -1373,7 +1372,7 @@ fun CompactNotes(
                     expandable = isAppBarExpandable,
                     navigationIconStartPadding = MediumPadding,
                     navigationIconPadding = if (state.isSignInSuccessful) SmallPadding else MediumPadding,
-                    navigationIconSpacing = MediumSpacing,
+                    navigationIconSpacing = SmallSpacing,
                     navigationIcon = {
                         Icon(
                             Icons.Rounded.Menu,
@@ -1410,7 +1409,7 @@ fun CompactNotes(
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(horizontal = ExtraLargeSpacing)
+                                    .padding(horizontal = LargestSpacing)
                             ) {
                                 if (noteItemsWithHeaders.isEmpty() && currentSearchQuery.isBlank()) {
                                     Box(

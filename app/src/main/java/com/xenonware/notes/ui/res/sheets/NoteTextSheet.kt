@@ -10,7 +10,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -29,15 +29,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.ColorLens
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
@@ -68,24 +65,21 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import com.xenon.mylibrary.theme.QuicksandTitleVariable
+import com.xenon.mylibrary.res.MenuItem
+import com.xenon.mylibrary.res.TopContentBar
 import com.xenonware.notes.ui.res.LabelSelectionDialog
-import com.xenonware.notes.ui.res.MenuItem
-import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
 import com.xenonware.notes.viewmodel.NoteEditingViewModel
 import com.xenonware.notes.viewmodel.classes.Label
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
@@ -95,6 +89,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import kotlin.time.Duration.Companion.milliseconds
 
 fun AnnotatedString.toSerialized(): String {
     val json = JSONObject()
@@ -588,114 +583,74 @@ fun NoteTextSheet(
             }
 
             // Toolbar
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(top = animatedTopPadding)
-                    .clip(RoundedCornerShape(100f))
-                    .background(colorScheme.surfaceDim)
-                    .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onDismiss, Modifier.padding(4.dp)) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-                }
-
-                val titleTextStyle = typography.titleLarge.merge(
-                    TextStyle(fontFamily = QuicksandTitleVariable, textAlign = TextAlign.Center, color = colorScheme.onSurface)
-                )
-
-                BasicTextField(
-                    value = title,
-                    onValueChange = noteEditingViewModel::setTextTitle,
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    textStyle = titleTextStyle,
-                    cursorBrush = SolidColor(colorScheme.primary),
-                    decorationBox = { innerTextField ->
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (title.isEmpty()) {
-                                Text(
-                                    text = "Title",
-                                    style = titleTextStyle,
-                                    color = colorScheme.onSurface.copy(alpha = 0.6f),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                            innerTextField()
-                        }
-                    }
-                )
-
-                Box {
-                    IconButton(onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)) {
-                        Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
-                    }
-                    XenonDropDown(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        items = listOfNotNull(
-                            MenuItem(text = "Label", onClick = {
-                                showLabelDialog = true
-                                showMenu = false
-                            }, dismissOnClick = true, leadingIcon = {
-                                if (isLabeled) {
-                                    Icon(
-                                        Icons.Rounded.Bookmark,
-                                        contentDescription = "Label",
-                                        tint = labelColor
-                                    )
-                                } else {
-                                    Icon(Icons.Rounded.BookmarkBorder, contentDescription = "Label")
-                                }
-                            }),
-                            MenuItem(text = colorMenuItemText, onClick = {
-                                val currentIndex = availableThemes.indexOf(selectedTheme)
-                                val nextIndex = (currentIndex + 1) % availableThemes.size
-                                val newTheme = availableThemes[nextIndex]
-                                noteEditingViewModel.setTextTheme(newTheme)
-                                colorChangeJob?.cancel()
-                                colorChangeJob = scope.launch {
-                                    colorMenuItemText = newTheme
-                                    isFadingOut = false
-                                    delay(2500)
-                                    isFadingOut = true
-                                    delay(500)
-                                    colorMenuItemText = "Color"
-                                    isFadingOut = false
-                                }
-                            }, dismissOnClick = false, leadingIcon = {
-                                Icon(
-                                    Icons.Rounded.ColorLens,
-                                    contentDescription = "Color",
-                                    tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                                )
-                            }, textColor = animatedTextColor),
-                            MenuItem(
-                                text = if (isOffline) "Offline note" else "Online note",
-                                onClick = {
-                                    noteEditingViewModel.setTextIsOffline(!isOffline)
-                                },
-                                dismissOnClick = false,
-                                textColor = if (isOffline) colorScheme.error else null,
-                                leadingIcon = {
-                                    if (isOffline) {
-                                        Icon(
-                                            Icons.Rounded.CloudOff,
-                                            "Local only",
-                                            tint = colorScheme.error
-                                        )
-                                    } else {
-                                        Icon(Icons.Rounded.Cloud, "Synced")
-                                    }
-                                }
+            TopContentBar(
+                modifier = Modifier.align(Alignment.TopCenter),
+                outsidePadding = PaddingValues(top = animatedTopPadding),
+                hazeState = hazeState,
+                containerColor = colorScheme.surfaceDim,
+                hazeStyle = HazeMaterials.ultraThin(hazeThinColor),
+                onNavigationClick = onDismiss,
+                value = title,
+                onValueChange = noteEditingViewModel::setTextTitle,
+                placeholder = "Title",
+                menuItems = listOfNotNull(
+                    MenuItem(text = "Label", onClick = {
+                        showLabelDialog = true
+                        showMenu = false
+                    }, dismissOnClick = true, leadingIcon = {
+                        if (isLabeled) {
+                            Icon(
+                                Icons.Rounded.Bookmark,
+                                contentDescription = "Label",
+                                tint = labelColor
                             )
-                        ),
-                        hazeState = hazeState
+                        } else {
+                            Icon(Icons.Rounded.BookmarkBorder, contentDescription = "Label")
+                        }
+                    }),
+                    MenuItem(text = colorMenuItemText, onClick = {
+                        val currentIndex = availableThemes.indexOf(selectedTheme)
+                        val nextIndex = (currentIndex + 1) % availableThemes.size
+                        val newTheme = availableThemes[nextIndex]
+                        noteEditingViewModel.setTextTheme(newTheme)
+                        colorChangeJob?.cancel()
+                        colorChangeJob = scope.launch {
+                            colorMenuItemText = newTheme
+                            isFadingOut = false
+                            delay(2500.milliseconds)
+                            isFadingOut = true
+                            delay(500.milliseconds)
+                            colorMenuItemText = "Color"
+                            isFadingOut = false
+                        }
+                    }, dismissOnClick = false, leadingIcon = {
+                        Icon(
+                            Icons.Rounded.ColorLens,
+                            contentDescription = "Color",
+                            tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                        )
+                    }, textColor = animatedTextColor),
+                    MenuItem(
+                        text = if (isOffline) "Offline note" else "Online note",
+                        onClick = {
+                            noteEditingViewModel.setTextIsOffline(!isOffline)
+                        },
+                        dismissOnClick = false,
+                        textColor = if (isOffline) colorScheme.error else null,
+                        leadingIcon = {
+                            if (isOffline) {
+                                Icon(
+                                    Icons.Rounded.CloudOff,
+                                    "Local only",
+                                    tint = colorScheme.error
+                                )
+                            } else {
+                                Icon(Icons.Rounded.Cloud, "Synced")
+                            }
+                        }
                     )
-                }
-            }
+                )
+            )
         }
     }
 }

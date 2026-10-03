@@ -33,7 +33,7 @@ class DevSettingsViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             Toast.makeText(
                 getApplication(),
-                "To apply changes, restart the app.",
+                getApplication<Application>().getString(com.xenonware.notes.R.string.restart_required),
                 Toast.LENGTH_LONG
             ).show()
         }

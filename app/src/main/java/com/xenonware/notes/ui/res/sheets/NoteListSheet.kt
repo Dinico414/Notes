@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -53,9 +54,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -65,10 +69,10 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.xenon.mylibrary.res.MenuItem
+import com.xenon.mylibrary.res.TopContentBar
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.notes.ui.res.LabelSelectionDialog
-import com.xenonware.notes.ui.res.MenuItem
-import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
@@ -82,6 +86,7 @@ import dev.chrisbanes.haze.materials.HazeMaterials
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 data class ListItem(
     val id: Long,
@@ -343,116 +348,74 @@ fun NoteListSheet(
             }
 
             // Toolbar
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(top = animatedTopPadding)
-                    .clip(RoundedCornerShape(100f))
-                    .background(colorScheme.surfaceDim)
-                    .hazeEffect(state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onDismiss, Modifier.padding(4.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
-
-                val titleTextStyle = typography.titleLarge.merge(
-                    TextStyle(
-                        fontFamily = QuicksandTitleVariable,
-                        textAlign = TextAlign.Center,
-                        color = colorScheme.onSurface
-                    )
-                )
-
-                BasicTextField(
-                    value = title,
-                    onValueChange = noteEditingViewModel::setListTitle,
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    textStyle = titleTextStyle,
-                    cursorBrush = SolidColor(colorScheme.primary),
-                    decorationBox = { innerTextField ->
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (title.isEmpty()) {
-                                Text(
-                                    text = "Title",
-                                    style = titleTextStyle,
-                                    color = colorScheme.onSurface.copy(alpha = 0.6f),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                            innerTextField()
+            TopContentBar(
+                modifier = Modifier.align(Alignment.TopCenter),
+                outsidePadding = PaddingValues(top = animatedTopPadding),
+                hazeState = hazeState,
+                containerColor = colorScheme.surfaceDim,
+                hazeStyle = HazeMaterials.ultraThin(hazeThinColor),
+                onNavigationClick = onDismiss,
+                value = title,
+                onValueChange = noteEditingViewModel::setListTitle,
+                placeholder = "Title",
+                menuItems = listOfNotNull(
+                    MenuItem(text = "Label", onClick = {
+                        showLabelDialog = true
+                        showMenu = false
+                    }, dismissOnClick = true, leadingIcon = {
+                        if (isLabeled) {
+                            Icon(
+                                Icons.Rounded.Bookmark,
+                                contentDescription = "Label",
+                                tint = labelColor
+                            )
+                        } else {
+                            Icon(Icons.Rounded.BookmarkBorder, contentDescription = "Label")
                         }
-                    })
-
-                Box {
-                    IconButton(
-                        onClick = { showMenu = !showMenu }, modifier = Modifier.padding(4.dp)
-                    ) {
-                        Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
-                    }
-                    XenonDropDown(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        items = listOfNotNull(
-                            MenuItem(text = "Label", onClick = {
-                            showLabelDialog = true
-                            showMenu = false
-                        }, dismissOnClick = true, leadingIcon = {
-                            if (isLabeled) {
+                    }),
+                    MenuItem(text = colorMenuItemText, onClick = {
+                        val currentIndex = availableThemes.indexOf(selectedTheme)
+                        val nextIndex = (currentIndex + 1) % availableThemes.size
+                        val newTheme = availableThemes[nextIndex]
+                        noteEditingViewModel.setListTheme(newTheme)
+                        colorChangeJob?.cancel()
+                        colorChangeJob = scope.launch {
+                            colorMenuItemText = newTheme
+                            isFadingOut = false
+                            delay(2500.milliseconds)
+                            isFadingOut = true
+                            delay(500.milliseconds)
+                            colorMenuItemText = "Color"
+                            isFadingOut = false
+                        }
+                    }, dismissOnClick = false, leadingIcon = {
+                        Icon(
+                            Icons.Rounded.ColorLens,
+                            contentDescription = "Color",
+                            tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
+                        )
+                    }, textColor = animatedTextColor),
+                    MenuItem(
+                        text = if (isOffline) "Offline note" else "Online note",
+                        onClick = {
+                            noteEditingViewModel.setListIsOffline(!isOffline)
+                        },
+                        dismissOnClick = false,
+                        textColor = if (isOffline) colorScheme.error else null,
+                        leadingIcon = {
+                            if (isOffline) {
                                 Icon(
-                                    Icons.Rounded.Bookmark,
-                                    contentDescription = "Label",
-                                    tint = labelColor
+                                    Icons.Rounded.CloudOff,
+                                    "Local only",
+                                    tint = colorScheme.error
                                 )
                             } else {
-                                Icon(Icons.Rounded.BookmarkBorder, contentDescription = "Label")
+                                Icon(Icons.Rounded.Cloud, "Synced")
                             }
-                        }), MenuItem(text = colorMenuItemText, onClick = {
-                            val currentIndex = availableThemes.indexOf(selectedTheme)
-                            val nextIndex = (currentIndex + 1) % availableThemes.size
-                            val newTheme = availableThemes[nextIndex]
-                            noteEditingViewModel.setListTheme(newTheme)
-                            colorChangeJob?.cancel()
-                            colorChangeJob = scope.launch {
-                                colorMenuItemText = newTheme
-                                isFadingOut = false
-                                delay(2500)
-                                isFadingOut = true
-                                delay(500)
-                                colorMenuItemText = "Color"
-                                isFadingOut = false
-                            }
-                        }, dismissOnClick = false, leadingIcon = {
-                            Icon(
-                                Icons.Rounded.ColorLens,
-                                contentDescription = "Color",
-                                tint = if (selectedTheme == "Default") colorScheme.onSurfaceVariant else colorScheme.primary
-                            )
-                        }, textColor = animatedTextColor), MenuItem(
-                            text = if (isOffline) "Offline note" else "Online note",
-                            onClick = {
-                                noteEditingViewModel.setListIsOffline(!isOffline)
-                            },
-                            dismissOnClick = false,
-                            textColor = if (isOffline) colorScheme.error else null,
-                            leadingIcon = {
-                                if (isOffline) {
-                                    Icon(
-                                        Icons.Rounded.CloudOff,
-                                        "Local only",
-                                        tint = colorScheme.error
-                                    )
-                                } else {
-                                    Icon(Icons.Rounded.Cloud, "Synced")
-                                }
-                            })
-                        ),
-                        hazeState = hazeState
+                        }
                     )
-                }
-            }
+                )
+            )
         }
     }
 }

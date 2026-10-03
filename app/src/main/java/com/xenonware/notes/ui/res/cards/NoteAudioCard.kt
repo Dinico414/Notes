@@ -65,7 +65,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
-import com.xenon.mylibrary.values.MediumCornerRadius
+import com.xenon.mylibrary.values.ExtraLargerCornerRadius
 import com.xenonware.notes.ui.res.sheets.formatDuration
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
@@ -208,10 +208,10 @@ fun NoteAudioCard(
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(MediumCornerRadius))
+                .clip(RoundedCornerShape(ExtraLargerCornerRadius))
                 .background(backgroundColor)
-                .border(2.dp, borderColor, RoundedCornerShape(MediumCornerRadius))
-                .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f), RoundedCornerShape(MediumCornerRadius))
+                .border(2.dp, borderColor, RoundedCornerShape(ExtraLargerCornerRadius))
+                .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f), RoundedCornerShape(ExtraLargerCornerRadius))
                 .combinedClickable(
                     enabled = !isNoteSheetOpen,
                     onClick = { if (isSelectionModeActive) onSelectItem() else onEditItem(item) },
@@ -305,7 +305,7 @@ fun NoteAudioCard(
 
                                         Box(
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(MediumCornerRadius))
+                                                .clip(RoundedCornerShape(ExtraLargerCornerRadius))
                                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                                         ) {
@@ -334,7 +334,7 @@ fun NoteAudioCard(
                                         .padding(bottom = 4.dp)) {
                                         Box(
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(MediumCornerRadius))
+                                                .clip(RoundedCornerShape(ExtraLargerCornerRadius))
                                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                                         ) {
@@ -359,7 +359,7 @@ fun NoteAudioCard(
                                                 containerColor = MaterialTheme.colorScheme.primary,
                                                 contentColor = MaterialTheme.colorScheme.onPrimary
                                             ),
-                                            shape = RoundedCornerShape(MediumCornerRadius),
+                                            shape = RoundedCornerShape(ExtraLargerCornerRadius),
                                             modifier = Modifier
                                                 .padding(end = 32.dp)
                                                 .fillMaxWidth()

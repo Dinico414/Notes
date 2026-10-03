@@ -57,7 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenon.mylibrary.values.LargestPadding
-import com.xenon.mylibrary.values.MediumCornerRadius
+import com.xenon.mylibrary.values.ExtraLargerCornerRadius
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.extendedMaterialColorScheme
@@ -160,16 +160,16 @@ fun NoteSketchCard(
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(MediumCornerRadius))
+                .clip(RoundedCornerShape(ExtraLargerCornerRadius))
                 .background(backgroundColor)
                 .border(
-                    width = 2.dp, color = borderColor, shape = RoundedCornerShape(MediumCornerRadius)
+                    width = 2.dp, color = borderColor, shape = RoundedCornerShape(ExtraLargerCornerRadius)
                 )
                 .then(
                     Modifier.border(
                         width = 0.5.dp,
                         color = colorScheme.onSurface.copy(alpha = 0.075f),
-                        shape = RoundedCornerShape(MediumCornerRadius)
+                        shape = RoundedCornerShape(ExtraLargerCornerRadius)
                     )
                 )
                 .combinedClickable(

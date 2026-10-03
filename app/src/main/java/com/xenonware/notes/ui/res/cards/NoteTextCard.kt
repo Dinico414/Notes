@@ -44,10 +44,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
+import com.xenon.mylibrary.values.ExtraLargerCornerRadius
+import com.xenon.mylibrary.values.LargeMediumSpacing
 import com.xenon.mylibrary.values.LargestPadding
-import com.xenon.mylibrary.values.LargestSpacing
-import com.xenon.mylibrary.values.MediumCornerRadius
-import com.xenon.mylibrary.values.MediumSpacing
+import com.xenon.mylibrary.values.SmallSpacing
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
 import com.xenonware.notes.ui.theme.noteBlueDark
@@ -121,10 +121,10 @@ fun NoteTextCard(
         Box(
             modifier = modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(MediumCornerRadius))
+                .clip(RoundedCornerShape(ExtraLargerCornerRadius))
                 .background(backgroundColor)
-                .border(2.dp, borderColor, RoundedCornerShape(MediumCornerRadius))
-                .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f), RoundedCornerShape(MediumCornerRadius))
+                .border(2.dp, borderColor, RoundedCornerShape(ExtraLargerCornerRadius))
+                .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.075f), RoundedCornerShape(ExtraLargerCornerRadius))
                 .combinedClickable(
                     enabled = !isNoteSheetOpen,
                     onClick = { if (isSelectionModeActive) onSelectItem() else onEditItem(item) },
@@ -142,7 +142,7 @@ fun NoteTextCard(
                 )
 
                 if (!item.description.isNullOrBlank()) {
-                    Spacer(Modifier.height(MediumSpacing))
+                    Spacer(Modifier.height(SmallSpacing))
                     Text(
                         text = item.description.fromRichTextJson(),
                         style = MaterialTheme.typography.bodyLarge,
@@ -151,7 +151,7 @@ fun NoteTextCard(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                 } else {
-                    Spacer(Modifier.height(LargestSpacing))
+                    Spacer(Modifier.height(LargeMediumSpacing))
                 }
             }
 

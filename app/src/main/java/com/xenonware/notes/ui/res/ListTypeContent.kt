@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.ViewComfy
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -96,6 +97,7 @@ fun ListContent(
     signInViewModel: SignInViewModel,
     googleAuthUiClient: GoogleAuthUiClient,
     onFilterSelected: (NoteFilterType) -> Unit,
+    drawerState: DrawerState? = null,
 ) {
     val currentFilter by notesViewModel.noteFilterType.collectAsState()
     val selectedColors by notesViewModel.selectedColors.collectAsState()
@@ -115,7 +117,8 @@ fun ListContent(
         hasBottomContent = false,
         isSignedIn = state.isSignInSuccessful,
         noAccIcon = painterResource(R.drawable.default_icon),
-        profilePicDesc = stringResource(R.string.profile_picture)
+        profilePicDesc = stringResource(R.string.profile_picture),
+        drawerState = drawerState
     ) {
         Column {
             // === Type Filters ===

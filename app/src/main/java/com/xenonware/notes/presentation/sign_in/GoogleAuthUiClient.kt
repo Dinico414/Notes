@@ -1,17 +1,12 @@
-@file:Suppress("DEPRECATION")
-
 package com.xenonware.notes.presentation.sign_in
 
 import android.content.Context
-import android.content.Intent
-import com.google.android.gms.auth.api.identity.BeginSignInRequest
-import com.google.android.gms.auth.api.identity.BeginSignInResult
-import com.google.android.gms.auth.api.identity.SignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.common.api.UnsupportedApiCallException
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.Firebase
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
@@ -21,46 +16,49 @@ import kotlin.coroutines.cancellation.CancellationException
 
 class GoogleAuthUiClient(
     private val context: Context,
-    private val oneTapClient: SignInClient
 ) {
     private val auth = Firebase.auth
 
-    private val googleSignInClient: GoogleSignInClient by lazy {
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(context.getString(R.string.default_web_client_id))
-            .requestEmail()
-            .build()
-        GoogleSignIn.getClient(context, gso)
-    }
-
-    suspend fun signIn(): BeginSignInResult? {
+    suspend fun signIn(context: Context = this.context): SignInResult {
         return try {
-            val request = buildSignInRequest()
-            val result = oneTapClient.beginSignIn(request).await()
-            result
-        } catch (e: Exception) {
-            if (e is UnsupportedApiCallException || e is ApiException) {
-                return null
+            val googleIdOption = GetGoogleIdOption.Builder()
+                .setFilterByAuthorizedAccounts(false)
+                .setServerClientId(context.getString(R.string.default_web_client_id))
+                .setAutoSelectEnabled(false)
+                .build()
+
+            val request = GetCredentialRequest.Builder()
+                .addCredentialOption(googleIdOption)
+                .build()
+
+            val result = CredentialManager.create(context).getCredential(context, request)
+            val credential = result.credential
+
+            if (credential is androidx.credentials.CustomCredential &&
+                credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+            ) {
+                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                val googleIdToken = googleIdTokenCredential.idToken
+                firebaseAuthWithGoogle(googleIdToken)
+            } else {
+                SignInResult(data = null, errorMessage = "Unexpected credential type.")
             }
-            throw e
+        } catch (e: GetCredentialException) {
+            SignInResult(data = null, errorMessage = e.message)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            SignInResult(data = null, errorMessage = e.message)
         }
     }
 
-    fun getTraditionalSignInIntent(): Intent {
-        return googleSignInClient.signInIntent
-    }
-
-    suspend fun signInWithIntent(intent: Intent): SignInResult {
-        val credential = oneTapClient.getSignInCredentialFromIntent(intent)
-        val googleIdToken = credential.googleIdToken
-        return firebaseAuthWithGoogle(googleIdToken)
-    }
-
-    suspend fun signInWithTraditionalIntent(intent: Intent): SignInResult {
-        val task = GoogleSignIn.getSignedInAccountFromIntent(intent)
-        val account = task.await()
-        val idToken = account.idToken
-        return firebaseAuthWithGoogle(idToken)
+    suspend fun signOut(context: Context = this.context) {
+        try {
+            CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
+            auth.signOut()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            e.printStackTrace()
+        }
     }
 
     private suspend fun firebaseAuthWithGoogle(googleIdToken: String?): SignInResult {
@@ -88,17 +86,6 @@ class GoogleAuthUiClient(
         }
     }
 
-    suspend fun signOut() {
-        try {
-            oneTapClient.signOut().await()
-            googleSignInClient.signOut().await()
-            auth.signOut()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            if (e is CancellationException) throw e
-        }
-    }
-
     fun getSignedInUser(): UserData? = try {
         auth.currentUser?.let { user ->
             UserData(
@@ -111,20 +98,10 @@ class GoogleAuthUiClient(
             null
         }
     } catch (e: Exception) {
-        if (e is UnsupportedApiCallException ||
-            e.message?.contains("auth_api_credentials_begin_sign_in") == true) {
+        if (e.message?.contains("auth_api_credentials_begin_sign_in") == true) {
             null
         } else {
             throw e
         }
-    }
-
-    private fun buildSignInRequest(): BeginSignInRequest {
-        return BeginSignInRequest.Builder().setGoogleIdTokenRequestOptions(
-            BeginSignInRequest.GoogleIdTokenRequestOptions.builder().setSupported(true)
-                .setFilterByAuthorizedAccounts(false)
-                .setServerClientId(context.getString(R.string.default_web_client_id)).build()
-        ).setAutoSelectEnabled(false).build()
-
     }
 }

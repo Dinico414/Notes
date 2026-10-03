@@ -19,6 +19,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -57,8 +58,6 @@ import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -97,17 +96,21 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.xenon.mylibrary.res.MenuItem
+import com.xenon.mylibrary.res.TopContentBar
 import com.xenon.mylibrary.res.XenonDialog
+import com.xenon.mylibrary.res.XenonDropDown
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.notes.ui.res.LabelSelectionDialog
-import com.xenonware.notes.ui.res.MenuItem
 import com.xenonware.notes.ui.res.TranscriptDisplay
 import com.xenonware.notes.ui.res.WaveformDisplay
-import com.xenonware.notes.ui.res.XenonDropDown
 import com.xenonware.notes.ui.res.loadAmplitudes
 import com.xenonware.notes.ui.res.saveAmplitudes
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
@@ -145,13 +148,12 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val TAG = "NoteAudioSheet"
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(
-    ExperimentalMaterial3Api::class,
-    ExperimentalMaterial3ExpressiveApi::class,
     ExperimentalHazeMaterialsApi::class
 )
 @Composable
@@ -341,7 +343,7 @@ fun NoteAudioSheet(
     LaunchedEffect(recordingState) {
         if (recordingState == RecordingState.RECORDING) {
             while (isActive) {
-                delay(1000L)
+                delay(1000L.milliseconds)
                 recorder.recordingDurationMillis += 1000L
             }
         }
@@ -351,7 +353,7 @@ fun NoteAudioSheet(
         if (recordingState == RecordingState.RECORDING) {
             while (isActive) {
                 amplitudes.add(recorder.getMaxAmplitude().toFloat())
-                delay(100L)
+                delay(100L.milliseconds)
             }
         }
     }
@@ -361,7 +363,7 @@ fun NoteAudioSheet(
             while (isActive) {
                 player.currentPlaybackPositionMillis =
                     player.mediaPlayer?.currentPosition?.toLong() ?: 0L
-                delay(50L)
+                delay(50L.milliseconds)
             }
         }
     }
@@ -389,7 +391,7 @@ fun NoteAudioSheet(
                 // Stop recording if still active
                 if (recorder.currentRecordingState == RecordingState.RECORDING || recorder.currentRecordingState == RecordingState.PAUSED) {
                     recorder.stopRecording()
-                    delay(600)
+                    delay(600.milliseconds)
                 }
 
                 player.stopAudio()
@@ -399,12 +401,12 @@ fun NoteAudioSheet(
 
                 // Transcribe if not already done
                 val currentSegments = noteEditingViewModel.audioTranscriptSegments.value
-                if (currentSegments.isEmpty() && audioId != null && whisper.isAvailable()) {
+                if (currentSegments.isEmpty() && whisper.isAvailable()) {
                     var transcriptionDone = false
                     whisper.transcribeFile(audioId) { transcriptionDone = true }
                     val deadline = System.currentTimeMillis() + 90_000L
                     while (!transcriptionDone && System.currentTimeMillis() < deadline) {
-                        delay(300)
+                        delay(300.milliseconds)
                     }
                 }
 
@@ -412,7 +414,7 @@ fun NoteAudioSheet(
                 val finalSegments = noteEditingViewModel.audioTranscriptSegments.value
 
                 // Persist transcript to disk
-                if (finalSegments.isNotEmpty() && audioId != null) {
+                if (finalSegments.isNotEmpty()) {
                     saveTranscript(context, audioId, finalSegments)
                 }
 
@@ -456,7 +458,7 @@ fun NoteAudioSheet(
                     )
                 }
 
-                onSave(title, audioId!!, selectedTheme, labelId, isOffline)
+                onSave(title, audioId, selectedTheme, labelId, isOffline)
             }
             onSaveTriggerConsumed()
         }
@@ -500,7 +502,7 @@ fun NoteAudioSheet(
         )
         if (audioId != null && whisper.isAvailable()) {
             scope.launch {
-                delay(500)
+                delay(500.milliseconds)
                 whisper.transcribeFile(audioId) { segments ->
                     noteEditingViewModel.setAudioTranscriptSegments(segments)
                 }
@@ -512,7 +514,7 @@ fun NoteAudioSheet(
                 whisper.ensureReady()
                 isModelReady = whisper.isAvailable()
                 if (whisper.isAvailable()) {
-                    delay(200)
+                    delay(200.milliseconds)
                     whisper.transcribeFile(audioId) { segments ->
                         noteEditingViewModel.setAudioTranscriptSegments(segments)
                     }
@@ -1114,112 +1116,68 @@ fun NoteAudioSheet(
             }
 
             // Top app bar row
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(top = animatedTopPadding)
-                    .clip(RoundedCornerShape(100f))
-                    .background(surfaceDim)
-                    .hazeEffect(
-                        state = hazeState, style = HazeMaterials.ultraThin(hazeThinColor)
-                    ), verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onDismiss, Modifier.padding(4.dp)) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-                }
-
-                val titleTextStyle = typography.titleLarge.merge(
-                    TextStyle(
-                        fontFamily = QuicksandTitleVariable,
-                        textAlign = TextAlign.Center,
-                        color = onSurface
-                    )
-                )
-
-                BasicTextField(
-                    value = title,
-                    onValueChange = noteEditingViewModel::setAudioTitle,
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    textStyle = titleTextStyle,
-                    cursorBrush = SolidColor(primary),
-                    decorationBox = { innerTextField ->
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            if (title.isEmpty()) {
-                                Text(
-                                    "Title",
-                                    style = titleTextStyle,
-                                    color = onSurface.copy(alpha = 0.6f)
-                                )
+            TopContentBar(
+                modifier = Modifier.align(Alignment.TopCenter),
+                outsidePadding = PaddingValues(top = animatedTopPadding),
+                hazeState = hazeState,
+                containerColor = surfaceDim,
+                hazeStyle = HazeMaterials.ultraThin(hazeThinColor),
+                onNavigationClick = onDismiss,
+                value = title,
+                onValueChange = noteEditingViewModel::setAudioTitle,
+                placeholder = "Title",
+                menuItems = listOfNotNull(
+                    MenuItem(
+                        text = "Label",
+                        onClick = { showLabelDialog = true; showMenu = false },
+                        dismissOnClick = true,
+                        leadingIcon = {
+                            if (isLabeled) Icon(
+                                Icons.Rounded.Bookmark, null, tint = labelColor
+                            )
+                            else Icon(Icons.Rounded.BookmarkBorder, null)
+                        }), MenuItem(
+                        text = colorMenuItemText, onClick = {
+                            val currentIndex = availableThemes.indexOf(selectedTheme)
+                            val nextIndex = (currentIndex + 1) % availableThemes.size
+                            val newTheme = availableThemes[nextIndex]
+                            noteEditingViewModel.setAudioTheme(newTheme)
+                            colorChangeJob?.cancel()
+                            colorChangeJob = scope.launch {
+                                colorMenuItemText = newTheme
+                                isFadingOut = false
+                                delay(2500.milliseconds)
+                                isFadingOut = true
+                                delay(500.milliseconds)
+                                colorMenuItemText = "Color"
+                                isFadingOut = false
                             }
-                            innerTextField()
-                        }
-                    })
-
-                Box {
-                    IconButton(onClick = { showMenu = !showMenu }, Modifier.padding(4.dp)) {
-                        Icon(Icons.Rounded.MoreVert, contentDescription = "More options")
-                    }
-                    XenonDropDown(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        items = listOfNotNull(
-                            MenuItem(
-                                text = "Label",
-                                onClick = { showLabelDialog = true; showMenu = false },
-                                dismissOnClick = true,
-                                leadingIcon = {
-                                    if (isLabeled) Icon(
-                                        Icons.Rounded.Bookmark, null, tint = labelColor
-                                    )
-                                    else Icon(Icons.Rounded.BookmarkBorder, null)
-                                }), MenuItem(
-                                text = colorMenuItemText, onClick = {
-                                    val currentIndex = availableThemes.indexOf(selectedTheme)
-                                    val nextIndex = (currentIndex + 1) % availableThemes.size
-                                    val newTheme = availableThemes[nextIndex]
-                                    noteEditingViewModel.setAudioTheme(newTheme)
-                                    colorChangeJob?.cancel()
-                                    colorChangeJob = scope.launch {
-                                        colorMenuItemText = newTheme
-                                        isFadingOut = false
-                                        delay(2500)
-                                        isFadingOut = true
-                                        delay(500)
-                                        colorMenuItemText = "Color"
-                                        isFadingOut = false
-                                    }
-                                }, dismissOnClick = false, leadingIcon = {
-                                    Icon(
-                                        Icons.Rounded.ColorLens,
-                                        null,
-                                        tint = if (selectedTheme == "Default") onSurfaceVariant else primary
-                                    )
-                                }, textColor = animatedTextColor
-                            ), MenuItem(
-                                text = if (isOffline) "Offline note" else "Online note",
-                                onClick = { noteEditingViewModel.setAudioIsOffline(!isOffline) },
-                                dismissOnClick = false,
-                                textColor = if (isOffline) colorScheme.error else null,
-                                leadingIcon = {
-                                    if (isOffline) Icon(
-                                        Icons.Rounded.CloudOff, null, tint = colorScheme.error
-                                    )
-                                    else Icon(Icons.Rounded.Cloud, null)
-                                })
-                        ),
-                        hazeState = hazeState
-                    )
-                }
-            }
+                        }, dismissOnClick = false, leadingIcon = {
+                            Icon(
+                                Icons.Rounded.ColorLens,
+                                null,
+                                tint = if (selectedTheme == "Default") onSurfaceVariant else primary
+                            )
+                        }, textColor = animatedTextColor
+                    ), MenuItem(
+                        text = if (isOffline) "Offline note" else "Online note",
+                        onClick = { noteEditingViewModel.setAudioIsOffline(!isOffline) },
+                        dismissOnClick = false,
+                        textColor = if (isOffline) colorScheme.error else null,
+                        leadingIcon = {
+                            if (isOffline) Icon(
+                                Icons.Rounded.CloudOff, null, tint = colorScheme.error
+                            )
+                            else Icon(Icons.Rounded.Cloud, null)
+                        })
+                )
+            )
         }
     }
 }
 
 // ── Everything below this line is unchanged ──────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudioControlButtons(
     modifier: Modifier = Modifier,
