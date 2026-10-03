@@ -40,7 +40,7 @@ firebaseStorage = "22.0.2"
 voskAndroid = "0.3.75"
 xenonCommons = "3.1.2"
 #noinspection UnusedVersionCatalogEntry
-xenonUi = "3.2"
+xenonUi = "4.0"
 
 
 
