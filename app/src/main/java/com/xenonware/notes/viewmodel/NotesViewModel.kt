@@ -9,7 +9,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Canvas as ComposeCanvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
@@ -51,6 +50,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import androidx.compose.ui.graphics.Canvas as ComposeCanvas
 
 enum class SortOption { FREE_SORTING, CREATION_DATE, NAME }
 enum class SortOrder { ASCENDING, DESCENDING }
@@ -76,8 +76,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val firestore = FirebaseFirestore.getInstance()
 
     private val _allNotesItems = mutableStateListOf<NotesItems>()
-    private val _displayedNotesItems = mutableStateListOf<Any>()
-    val noteItems: List<Any> get() = _displayedNotesItems
+    val noteItems: List<Any>
+        field = mutableStateListOf<Any>()
 
     var currentNoteId = 1
 
@@ -234,35 +234,35 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                             isAntiAlias = true
                         }
 
-                        for (p in prebuilt) {
-                            val strokeColor = if (p.colorIndex in themeDrawColors.indices) {
-                                themeDrawColors[p.colorIndex]
+                        for ((path, colorIndex, color, fillColorIndex, fillColor1, thickness, isShape, pointsCount, firstPoint) in prebuilt) {
+                            val strokeColor = if (colorIndex in themeDrawColors.indices) {
+                                themeDrawColors[colorIndex]
                             } else {
-                                p.color
+                                color
                             }
-                            val fillColor = if (p.isShape && p.fillColor != Color.Transparent &&
-                                p.fillColorIndex in themeDrawColors.indices) {
-                                themeDrawColors[p.fillColorIndex]
+                            val fillColor = if (isShape && fillColor1 != Color.Transparent &&
+                                fillColorIndex in themeDrawColors.indices) {
+                                themeDrawColors[fillColorIndex]
                             } else {
-                                p.fillColor
+                                fillColor1
                             }
 
-                            if (p.isShape && fillColor != Color.Transparent) {
+                            if (isShape && fillColor != Color.Transparent) {
                                 fillPaint.color = fillColor
-                                canvas.drawPath(p.path, fillPaint)
+                                canvas.drawPath(path, fillPaint)
                             }
 
-                            if (p.pointsCount < 2) {
-                                if (p.pointsCount == 1) {
+                            if (pointsCount < 2) {
+                                if (pointsCount == 1) {
                                     fillPaint.color = strokeColor
-                                    canvas.drawCircle(p.firstPoint, p.thickness / 2f, fillPaint)
+                                    canvas.drawCircle(firstPoint, thickness / 2f, fillPaint)
                                 }
                                 continue
                             }
 
                             strokePaint.color = strokeColor
-                            strokePaint.strokeWidth = p.thickness
-                            canvas.drawPath(p.path, strokePaint)
+                            strokePaint.strokeWidth = thickness
+                            canvas.drawPath(path, strokePaint)
                         }
 
                         withContext(Dispatchers.Main) {
@@ -886,7 +886,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             tempAllNoteItems.add(insertIndex, currentRecentlyDeleted)
         }
 
-        _displayedNotesItems.clear()
+        noteItems.clear()
         var notesToDisplay = tempAllNoteItems.toList()
 
         if (searchQuery.value.isNotBlank()) {
@@ -951,10 +951,10 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 groupedItems.add(note)
             }
-            _displayedNotesItems.addAll(groupedItems)
+            noteItems.addAll(groupedItems)
         } else {
             sortedNotes.forEach { it.currentHeader = "" }
-            _displayedNotesItems.addAll(sortedNotes)
+            noteItems.addAll(sortedNotes)
         }
     }
 

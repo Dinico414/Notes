@@ -56,10 +56,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.ceil
+import kotlin.time.Duration.Companion.milliseconds
 import androidx.compose.ui.graphics.Canvas as ComposeCanvas
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun NoteCanvas(
     paths: List<PathData>,
@@ -114,7 +114,7 @@ fun NoteCanvas(
                        currentBitmap.width == canvasSize.width && 
                        currentBitmap.height == canvasSize.height
                        
-        if (isAppend && currentBitmap != null) {
+        if (isAppend) {
             val canvas = ComposeCanvas(currentBitmap)
             val paint = Paint().apply { isAntiAlias = true }
             val newPath = paths.last()
@@ -284,7 +284,7 @@ fun NoteCanvas(
                                 if (now - lastUpTime < 300L) {
                                     isDoubleTapSequence = true
                                     fillJob = coroutineScope.launch {
-                                        delay(500L)
+                                        delay(500L.milliseconds)
                                         // Double tap and hold triggered
                                         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                                         withContext(Dispatchers.Main) {
@@ -340,7 +340,7 @@ fun NoteCanvas(
                                     // Only restart timer if we haven't already snapped
                                     if (!isShapeSnapped) {
                                         holdJob = coroutineScope.launch {
-                                            delay(1000L) // Reduced to 1 Second
+                                            delay(1000L.milliseconds) // Reduced to 1 Second
 
                                             // Timer finished, analyze shape
                                             currentPath?.let { activePath ->

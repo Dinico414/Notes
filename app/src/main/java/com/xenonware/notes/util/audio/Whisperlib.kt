@@ -1,7 +1,5 @@
 package com.xenonware.notes.util.audio
 
-import com.xenonware.notes.util.audio.WhisperLib.initContext
-
 
 /**
  * JNI bridge to the whisper.cpp native library.

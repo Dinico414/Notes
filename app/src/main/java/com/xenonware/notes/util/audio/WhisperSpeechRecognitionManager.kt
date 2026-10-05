@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +14,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.io.File
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Local on-device speech recognition powered by whisper.cpp.
@@ -49,11 +49,6 @@ class WhisperSpeechRecognitionManager(
     var isModelLoading by mutableStateOf(false)
         private set
 
-    var modelLoadProgress by mutableFloatStateOf(0f)
-        private set
-
-    val currentPartialText: String = ""
-
     var onTranscriptUpdate: ((List<TranscriptSegment>) -> Unit)? = null
 
     private val segments = mutableListOf<TranscriptSegment>()
@@ -65,10 +60,6 @@ class WhisperSpeechRecognitionManager(
      * natively (Denglisch works perfectly). "auto" causes the tiny model to hang.
      */
     private var language: String = "de"
-
-    fun setLanguage(lang: String) {
-        language = lang
-    }
 
     // ── Public helpers ──────────────────────────────────────────────────────
 
@@ -222,14 +213,14 @@ class WhisperSpeechRecognitionManager(
                 Log.i(TAG, "Starting inference: lang=$language, threads=$numThreads")
 
                 val jsonResult = try {
-                    withTimeout(TRANSCRIPTION_TIMEOUT_MS) {
+                    withTimeout(TRANSCRIPTION_TIMEOUT_MS.milliseconds) {
                         withContext(Dispatchers.IO) {
                             WhisperLib.transcribeAudio(
                                 contextPtr, audioData, language, numThreads
                             )
                         }
                     }
-                } catch (e: TimeoutCancellationException) {
+                } catch (_: TimeoutCancellationException) {
                     Log.e(TAG, "Transcription timed out after ${TRANSCRIPTION_TIMEOUT_MS}ms")
                     // Force reload model on next attempt since state may be corrupted
                     WhisperLib.freeContext(contextPtr)
@@ -325,8 +316,6 @@ class WhisperSpeechRecognitionManager(
 
     @Suppress("UNUSED_PARAMETER")
     fun startListening(recordingStartTime: Long = System.currentTimeMillis()) {}
-    fun stopListening() {}
-    fun restartListening() {}
     fun cancel() {}
 
     fun dispose() {

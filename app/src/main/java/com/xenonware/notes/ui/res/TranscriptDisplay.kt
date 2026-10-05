@@ -55,7 +55,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.toClipEntry
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,6 +65,7 @@ import com.xenonware.notes.util.audio.RecordingState
 import com.xenonware.notes.util.audio.TranscriptSegment
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 private enum class TranscriptViewState {
     IDLE_EMPTY,
@@ -171,7 +171,7 @@ fun TranscriptDisplay(
 
                     LaunchedEffect(Unit) {
                         while (true) {
-                            delay(650L)
+                            delay(650L.milliseconds)
                             colorIndex = (colorIndex + 1) % colors.size
                         }
                     }
@@ -392,9 +392,9 @@ private fun PulsingMicIcon() {
     LaunchedEffect(Unit) {
         while (true) {
             large = true
-            kotlinx.coroutines.delay(600)
+            delay(600.milliseconds)
             large = false
-            kotlinx.coroutines.delay(600)
+            delay(600.milliseconds)
         }
     }
 
@@ -481,12 +481,12 @@ private fun PulsingDot(delay: Int) {
     var visible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(delay.toLong())
+        delay(delay.toLong().milliseconds)
         while (true) {
             visible = true
-            kotlinx.coroutines.delay(420)
+            delay(420.milliseconds)
             visible = false
-            kotlinx.coroutines.delay(420)
+            delay(420.milliseconds)
         }
     }
 

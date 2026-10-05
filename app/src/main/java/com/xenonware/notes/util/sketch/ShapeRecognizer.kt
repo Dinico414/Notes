@@ -311,9 +311,9 @@ object ShapeRecognizer {
         if (points.size < 2) return points
         var minD = Float.MAX_VALUE
         var p1 = -1; var p2 = -1
-        for (i in 0 until points.size) {
+        for ((i, element) in points.withIndex()) {
             val j = (i + 1) % points.size
-            val d = (points[i] - points[j]).getDistance()
+            val d = (element - points[j]).getDistance()
             if (d < minD) { minD = d; p1 = i; p2 = j }
         }
         val newPoints = points.toMutableList()
@@ -332,8 +332,8 @@ object ShapeRecognizer {
     }
     private fun createPolygonPath(corners: List<Offset>, thickness: Float): List<PathOffset> {
         val list = mutableListOf<PathOffset>()
-        for (i in 0 until corners.size) {
-            val start = corners[i]; val end = corners[(i+1)%corners.size]
+        for ((i, element) in corners.withIndex()) {
+            val start = element; val end = corners[(i+1)%corners.size]
             lerpLine(list, start, end, thickness)
         }
         list.add(PathOffset(corners[0], thickness))

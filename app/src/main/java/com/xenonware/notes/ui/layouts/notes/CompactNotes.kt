@@ -192,14 +192,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Duration.Companion.milliseconds
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-@OptIn(
-    ExperimentalMaterial3Api::class,
-    ExperimentalHazeMaterialsApi::class,
-    ExperimentalMaterial3ExpressiveApi::class
-)
 @Composable
 fun CompactNotes(
     viewModel: NotesViewModel = viewModel(),
@@ -479,7 +475,7 @@ fun CompactNotes(
 
         LaunchedEffect(resizeTimerKey) {
             if (showResizeValue) {
-                delay(2000)
+                delay(2000.milliseconds)
                 showResizeValue = false
             }
         }
@@ -1851,7 +1847,7 @@ fun CompactNotes(
 
                 LaunchedEffect(isAnyNoteSheetOpen) {
                     if (!isAnyNoteSheetOpen) {
-                        delay(200)
+                        delay(200.milliseconds)
                         backProgress = 0f
                     }
                 }

@@ -13,7 +13,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -64,8 +63,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
-import com.xenon.mylibrary.values.LargestPadding
 import com.xenon.mylibrary.values.ExtraLargerCornerRadius
+import com.xenon.mylibrary.values.LargestPadding
 import com.xenonware.notes.ui.res.sheets.formatDuration
 import com.xenonware.notes.ui.theme.LocalIsDarkTheme
 import com.xenonware.notes.ui.theme.XenonTheme
@@ -90,6 +89,7 @@ import com.xenonware.notes.viewmodel.classes.NotesItems
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.io.File
+import kotlin.time.Duration.Companion.milliseconds
 
 private fun togglePlayback(
     playerManager: AudioPlayerManager,
@@ -113,7 +113,6 @@ private fun togglePlayback(
         }
     }}
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteAudioCard(
     item: NotesItems,
@@ -154,7 +153,7 @@ fun NoteAudioCard(
                     audioFilePath = file.absolutePath
                     break
                 }
-                delay(1000) // Poll for download completion less aggressively
+                delay(1000.milliseconds) // Poll for download completion less aggressively
             }
         } else {
             audioFilePath = null
@@ -177,7 +176,7 @@ fun NoteAudioCard(
         if (isThisAudioActive) {
             while (isActive) {
                 currentPlaybackPosition = player.mediaPlayer?.currentPosition?.toLong() ?: 0L
-                delay(50L)
+                delay(50L.milliseconds)
             }
         } else {
             currentPlaybackPosition = 0L

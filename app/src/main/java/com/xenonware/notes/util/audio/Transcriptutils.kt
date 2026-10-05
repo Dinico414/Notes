@@ -60,7 +60,7 @@ fun loadTranscript(
     val file = File(context.filesDir, "${audioId}_transcript.json")
     if (!file.exists()) return emptyList()
 
-    val jsonString = try { file.readText() } catch (e: Exception) { return emptyList() }
+    val jsonString = try { file.readText() } catch (_: Exception) { return emptyList() }
 
     // 1. Try the current format: JSON array of SerializableTranscriptSegment
     tryParse<List<SerializableTranscriptSegment>>(jsonString) { raw ->
