@@ -45,6 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -52,6 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
+import com.xenon.mylibrary.res.DialogResetSettingsConfirmation
 import com.xenon.mylibrary.res.XenonDrawer
 import com.xenon.mylibrary.res.XenonTextField
 import com.xenon.mylibrary.values.LargestPadding
@@ -106,6 +109,8 @@ fun ListContent(
     val localLabel by notesViewModel.labels.collectAsState()
     val selectedLabel by notesViewModel.selectedLabel.collectAsState()
     var newLabelName by remember { mutableStateOf("") }
+    var labelToDelete by remember { mutableStateOf<com.xenonware.notes.viewmodel.classes.Label?>(null) }
+    val haptic = LocalHapticFeedback.current
 
     val state by signInViewModel.state.collectAsStateWithLifecycle()
     val userData = googleAuthUiClient.getSignedInUser()
@@ -120,7 +125,7 @@ fun ListContent(
         profilePicDesc = stringResource(R.string.profile_picture),
         drawerState = drawerState
     ) {
-        Column {
+            Column {
             // === Type Filters ===
             Column(modifier = Modifier.padding(vertical = LargestPadding)) {
                 FilterItem(
@@ -337,9 +342,28 @@ fun ListContent(
                             label = label.text,
                             isSelected = selectedLabel == label.id,
                             onClick = { notesViewModel.setLabelFilter(label.id) },
-                            onDeleteClick = { notesViewModel.removeLabel(label.id) })
+                            onDeleteClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                labelToDelete = label
+                            }
+                        )
                     }
                 }
+            }
+
+            labelToDelete?.let { label ->
+                DialogResetSettingsConfirmation(
+                    onConfirm = {
+                        notesViewModel.removeLabel(label.id)
+                        labelToDelete = null
+                    },
+                    onDismiss = {
+                        labelToDelete = null
+                    },
+                    dialogTitle = stringResource(id = R.string.delete_label_dialog_title),
+                    confirmText = stringResource(id = R.string.delete),
+                    descriptionText = stringResource(id = R.string.delete_label_dialog_description, label.text)
+                )
             }
 
             // === Add New Label ===

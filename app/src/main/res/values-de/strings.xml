@@ -41,11 +41,13 @@
     <string name="cover_screen_dialog_title">Ist dies aktuell der Frontdisplay?</string>
     <string name="clear_data_dialog_title">Alle Daten löschen?</string>
     <string name="reset_settings_dialog_title">Alle Einstellungen zurücksetzen?</string>
+    <string name="delete_label_dialog_title">Label löschen?</string>
 
     <!-- Dialog Content -->
     <string name="cover_dialog_description">Aktivieren, um ein kompakteres, randloses Layout anzuwenden, wenn das Frontdisplay verwendet wird.</string>
     <string name="clear_data_dialog_description">Bist du sicher, dass du alle Daten löschen willst?</string>
     <string name="reset_settings_dialog_description">Bist du sicher, dass du alle Einstellungen zurücksetzen willst?</string>
+    <string name="delete_label_dialog_description">Bist du sicher, dass du \"%1$s\" löschen willst?</string>
     <string name="sign_out_description">Bist du sicher, dass du dich abmelden möchtest?</string>
 
     <!-- Dialog Buttons / Common Actions -->

@@ -41,11 +41,13 @@
     <string name="cover_screen_dialog_title">Is this currently the cover screen?</string>
     <string name="clear_data_dialog_title">Clear all data?</string>
     <string name="reset_settings_dialog_title">Reset all settings?</string>
+    <string name="delete_label_dialog_title">Delete label?</string>
 
     <!-- Dialog Content -->
     <string name="cover_dialog_description">Enable to apply a more compact, edgeless layout when using the cover screen.</string>
     <string name="clear_data_dialog_description">Are you sure you want to clear all data?</string>
     <string name="reset_settings_dialog_description">Are you sure you want to reset all settings?</string>
+    <string name="delete_label_dialog_description">Are you sure you want to delete \"%1$s\"?</string>
     <string name="sign_out_description">Are you sure you want to sign out?</string>
 
     <!-- Dialog Buttons / Common Actions -->
