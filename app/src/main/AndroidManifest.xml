@@ -9,6 +9,11 @@
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Model downloads run in a data-sync foreground service so they survive the app
+         being backgrounded. POST_NOTIFICATIONS is requested at runtime on API 33+. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="AllFilesAccessPolicy,ScopedStorage" />
@@ -46,6 +51,16 @@
             android:exported="true"
             android:label="@string/developer_options"
             android:theme="@style/Theme.Xenon" />
+
+        <!--
+          Keeps the Whisper model download alive while the app is backgrounded and
+          shows progress in a notification. dataSync is the appropriate type for a
+          user-initiated download that must complete even if the app is not visible.
+        -->
+        <service
+            android:name=".service.WhisperDownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>

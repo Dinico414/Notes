@@ -13,6 +13,14 @@ object WhisperLib {
     }
 
     /**
+     * Native whisper.cpp version string, e.g. "1.9.5".
+     *
+     * Read from the compiled shared library rather than BuildConfig so it can be
+     * used to prove which source was actually linked in.
+     */
+    external fun nativeVersion(): String
+
+    /**
      * Load a ggml model file and return an opaque context pointer.
      * Returns 0 on failure.
      */

@@ -5,16 +5,20 @@ package com.xenonware.notes.ui.res.sheets
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,19 +61,20 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.SplitButtonDefaults
 import androidx.compose.material3.SplitButtonLayout
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +83,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -90,7 +96,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.xenon.mylibrary.res.MenuItem
@@ -113,10 +118,13 @@ import com.xenonware.notes.ui.theme.notePurpleLight
 import com.xenonware.notes.ui.theme.noteRedLight
 import com.xenonware.notes.ui.theme.noteTurquoiseLight
 import com.xenonware.notes.ui.theme.noteYellowLight
+import com.xenonware.notes.service.WhisperDownloadService
 import com.xenonware.notes.util.audio.AudioRecorderManager
 import com.xenonware.notes.util.audio.GlobalAudioPlayer
 import com.xenonware.notes.util.audio.RecordingState
 import com.xenonware.notes.util.audio.TranscriptSegment
+import com.xenonware.notes.util.audio.WhisperDownloadState
+import com.xenonware.notes.util.audio.WhisperModelDownloads
 import com.xenonware.notes.util.audio.WhisperModelManager
 import com.xenonware.notes.util.audio.WhisperModelType
 import com.xenonware.notes.util.audio.WhisperSpeechRecognitionManager
@@ -198,29 +206,54 @@ fun NoteAudioSheet(
     // ── Model selection (replaces old language toggle) ──────────────────────
     val modelManager = remember { WhisperModelManager(context) }
     var selectedModel by remember { mutableStateOf(WhisperModelType.TINY) }
-    var isDownloadingBase by remember { mutableStateOf(false) }
-    var baseDownloadProgress by remember { mutableFloatStateOf(0f) }
     var showModelMenu by remember { mutableStateOf(false) }
-    var isProModelDownloaded by remember {
+
+    // Download state lives in an app-scoped singleton, NOT in remember{}. This is what
+    // lets the transfer continue when the sheet is closed, and lets a re-opened sheet
+    // re-attach to whatever is currently happening.
+    val downloadState by WhisperModelDownloads.state.collectAsStateWithLifecycle()
+    val isDownloadingBase = downloadState is WhisperDownloadState.Downloading
+    val baseDownloadProgress =
+        (downloadState as? WhisperDownloadState.Downloading)?.progress ?: 0f
+
+    var isProModelDownloaded by remember(downloadState) {
         mutableStateOf(modelManager.isModelDownloaded(WhisperModelType.BASE))
     }
     var isModelReady by remember { mutableStateOf(false) }
     var showDownloadDialog by remember { mutableStateOf(false) }
 
-    val startProDownload: () -> Unit = {
-        if (!isDownloadingBase) {
-            isDownloadingBase = true
-            baseDownloadProgress = 0f
-            scope.launch {
-                val success = modelManager.downloadBaseModel { progress ->
-                    baseDownloadProgress = progress
-                }
-                isDownloadingBase = false
-                if (success) {
-                    isProModelDownloaded = true
-                    selectedModel = WhisperModelType.BASE
-                }
+    // Declared before the launcher because the launcher's callback invokes it.
+    val startProDownloadAndService: () -> Unit = {
+        // Hand off to the foreground service, which owns the notification and keeps
+        // the process alive. The download coroutine itself lives in the singleton.
+        WhisperDownloadService.start(context, WhisperModelType.BASE)
+    }
+
+    // Notification permission for the foreground-service progress notification.
+    // Denial is non-fatal: the download proceeds without a notification.
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            Log.i(TAG, "POST_NOTIFICATIONS denied — continuing without progress notification")
+        }
+        startProDownloadAndService()
+    }
+
+    // Surface a terminal result once, then reset so it is not re-shown.
+    LaunchedEffect(downloadState) {
+        when (val s = downloadState) {
+            is WhisperDownloadState.Completed -> {
+                isProModelDownloaded = true
+                selectedModel = WhisperModelType.BASE
+                Toast.makeText(context, "Model ready", Toast.LENGTH_SHORT).show()
+                WhisperModelDownloads.acknowledgeTerminalState()
             }
+            is WhisperDownloadState.Failed -> {
+                Toast.makeText(context, s.message, Toast.LENGTH_LONG).show()
+                WhisperModelDownloads.acknowledgeTerminalState()
+            }
+            else -> Unit
         }
     }
 
@@ -548,11 +581,22 @@ fun NoteAudioSheet(
                 confirmButtonText = "Download",
                 onConfirmButtonClick = {
                     showDownloadDialog = false
-                    startProDownload()
+                    // Ask for notification permission first on API 33+, then start.
+                    // The launcher callback starts the download either way.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.POST_NOTIFICATIONS,
+                        ) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        startProDownloadAndService()
+                    }
                 },
                 content = {
                     Text(
-                        "The Pro model provides better transcription accuracy but requires a ~142MB download. Do you want to proceed?",
+                        "The ${WhisperModelType.BASE.displayName} model provides better transcription accuracy but requires a ${WhisperModelType.BASE.sizeLabel} download. Do you want to proceed?",
                         style = typography.bodyMedium,
                         color = colorScheme.onSurfaceVariant
                     )
@@ -690,10 +734,24 @@ fun NoteAudioSheet(
                                                 .widthIn(min = 82.dp)
                                         ) {
                                             if (isDownloadingBase) {
-                                                Text(
-                                                    "${(baseDownloadProgress * 100).toInt()}%",
-                                                    style = typography.labelLarge
-                                                )
+                                                // Compact in-button readout; the full bar lives
+                                                // just below the button row (see DownloadProgressCard).
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    CircularProgressIndicator(
+                                                        progress = { baseDownloadProgress },
+                                                        modifier = Modifier.size(16.dp),
+                                                        strokeWidth = 2.dp,
+                                                        color = onSecondary,
+                                                        trackColor = onSecondary.copy(alpha = 0.3f)
+                                                    )
+                                                    Text(
+                                                        "${(baseDownloadProgress * 100).toInt()}%",
+                                                        style = typography.labelLarge
+                                                    )
+                                                }
                                             } else {
                                                 Text(
                                                     selectedModel.displayName,
@@ -735,8 +793,10 @@ fun NoteAudioSheet(
                                         })
                                         DropdownMenuItem(text = {
                                             Text(
-                                                if (isProModelDownloaded) "Pro"
-                                                else "Pro (download ~142 MB)"
+                                                if (isProModelDownloaded) WhisperModelType.BASE.displayName
+                                                else "${WhisperModelType.BASE.displayName} (${WhisperModelType.BASE.sizeLabel})",
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         }, onClick = {
                                             showModelMenu = false
@@ -946,7 +1006,7 @@ fun NoteAudioSheet(
                                     alignment = Alignment.TopCenter,
                                     offsetY = 56.dp,
                                     offsetX = 0.dp,
-                                    widthMax = 220.dp,
+                                    widthMax = 280.dp,
                                     expanded = showModelMenu,
                                     onDismissRequest = { showModelMenu = false },
                                     items = listOfNotNull(
@@ -962,7 +1022,8 @@ fun NoteAudioSheet(
                                                 )
                                             }
                                         }), MenuItem(
-                                            text = if (isProModelDownloaded) "Pro" else "Pro (Download ~142 MB)",
+                                            text = if (isProModelDownloaded) WhisperModelType.BASE.displayName
+                                            else "${WhisperModelType.BASE.displayName} (${WhisperModelType.BASE.sizeLabel})",
                                             onClick = {
                                                 if (isProModelDownloaded) {
                                                     selectedModel = WhisperModelType.BASE
@@ -1013,6 +1074,18 @@ fun NoteAudioSheet(
                                     hazeState = hazeState
                                 )
                             }
+
+                            // Live download feedback. Driven by the app-scoped singleton, so
+                            // this re-attaches automatically if the user closes and reopens
+                            // the sheet while a download is still running.
+                            (downloadState as? WhisperDownloadState.Downloading)?.let { dl ->
+                                Spacer(Modifier.height(8.dp))
+                                DownloadProgressCard(
+                                    state = dl,
+                                    onCancel = { WhisperModelDownloads.cancel() }
+                                )
+                            }
+
                             Spacer(Modifier.height(8.dp))
 
                             AudioTimerDisplay(
@@ -1451,4 +1524,82 @@ fun formatDuration(millis: Long): String {
     val m = TimeUnit.MILLISECONDS.toMinutes(millis)
     val s = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
     return String.format("%02d:%02d", m, s)
+}
+
+/**
+ * Full-width download feedback: a determinate progress bar, a byte readout and a
+ * cancel affordance.
+ *
+ * Backed by [WhisperModelDownloads], so it renders the true state of the transfer
+ * even if it was started before this sheet was (re)opened.
+ */
+@Composable
+private fun DownloadProgressCard(
+    state: WhisperDownloadState.Downloading,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val progress = state.progress.coerceIn(0f, 1f)
+    val mb = 1_000_000.0
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = colorScheme.surfaceContainerHighest,
+    ) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Downloading ${WhisperModelType.BASE.displayName} model",
+                    style = typography.labelLarge,
+                    color = colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "${(progress * 100).toInt()}%",
+                    style = typography.labelLarge,
+                    color = colorScheme.primary,
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp),
+                color = colorScheme.primary,
+                trackColor = colorScheme.surfaceVariant,
+            )
+
+            Spacer(Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "%.0f of %.0f MB".format(
+                        state.bytesDownloaded / mb,
+                        state.totalBytes / mb,
+                    ),
+                    style = typography.labelSmall,
+                    color = colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "Cancel",
+                    style = typography.labelSmall,
+                    color = colorScheme.error,
+                    modifier = Modifier
+                        .clickable(onClick = onCancel)
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                )
+            }
+        }
+    }
 }

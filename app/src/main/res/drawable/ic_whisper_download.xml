@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Notification small icon for model downloads.
+  Android renders small icons as a monochrome silhouette, so this is a single-path
+  white vector rather than the full-colour launcher art.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M480,640Q471,640 464.5,637Q458,634 453,629L253,429Q242,418 242,401Q242,384 253.5,372.5Q265,361 282,361Q299,361 310,372L440,502L440,160Q440,143 451.5,131.5Q463,120 480,120Q497,120 508.5,131.5Q520,143 520,160L520,502L650,372Q661,361 678,361Q695,361 706.5,372.5Q718,384 718,401Q718,418 707,429L507,629Q502,634 495.5,637Q489,640 480,640ZM240,800Q207,800 183.5,776.5Q160,753 160,720L160,600Q160,583 171.5,571.5Q183,560 200,560Q217,560 228.5,571.5Q240,583 240,600L240,720L720,720L720,600Q720,583 731.5,571.5Q743,560 760,560Q777,560 788.5,571.5Q800,583 800,600L800,720Q800,753 776.5,776.5Q753,800 720,800L240,800Z" />
+
+</vector>

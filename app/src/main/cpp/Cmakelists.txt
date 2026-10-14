@@ -1,10 +1,36 @@
 cmake_minimum_required(VERSION 3.22)
 project(whisper_android_jni)
 
+# ── whisper.cpp version ───────────────────────────────────────────────────────
+# Passed from Gradle, which reads it from gradle/libs.versions.toml.
+# Keeping it here means a catalog bump forces a CMake re-configure.
+if (NOT DEFINED WHISPER_CPP_VERSION)
+    message(FATAL_ERROR
+        "WHISPER_CPP_VERSION is not set. It must be passed from Gradle "
+        "(-DWHISPER_CPP_VERSION=...) so that libs.versions.toml stays the "
+        "single source of truth. See app/build.gradle.kts.")
+endif()
+
+message(STATUS "Building whisper.cpp v${WHISPER_CPP_VERSION} (from libs.versions.toml)")
+
 # ── Whisper.cpp build options ─────────────────────────────────────────────────
 set(WHISPER_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
 set(WHISPER_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_SERVER   OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS      OFF CACHE BOOL "" FORCE)
+
+# Report a clean "1.9.5" instead of "1.9.5-dev". whisper.cpp defaults this to ON,
+# so leaving it alone would silently produce dev-style version strings.
+set(WHISPER_BUILD_IS_DEV   OFF CACHE BOOL "" FORCE)
+
+# Optional back-ends added in v1.9.x. All must stay OFF: each one pulls in a
+# find_package(... REQUIRED) for a dependency that is not available on Android.
+set(WHISPER_VITISAI        OFF CACHE BOOL "" FORCE)
+set(WHISPER_OPENVINO       OFF CACHE BOOL "" FORCE)
+set(WHISPER_COREML         OFF CACHE BOOL "" FORCE)
+set(WHISPER_COREML_ALLOW_FALLBACK OFF CACHE BOOL "" FORCE)
+set(WHISPER_USE_SYSTEM_GGML OFF CACHE BOOL "" FORCE)
+set(WHISPER_USE_SYSTEM_LLAMA OFF CACHE BOOL "" FORCE)
 
 # Disable GPU back-ends not available on Android
 set(GGML_METAL  OFF CACHE BOOL "" FORCE)
@@ -14,6 +40,16 @@ set(GGML_OPENCL OFF CACHE BOOL "" FORCE)
 
 # ── Include whisper.cpp as a sub-project ──────────────────────────────────────
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/whisper.cpp)
+
+# Assert that the checked-out source actually matches the requested version.
+# whisper.cpp compiles its version in as WHISPER_VERSION via target_compile_definitions,
+# so a mismatch here means `syncWhisperCpp` did not check out the right tag.
+if (DEFINED WHISPER_VERSION_BASE AND NOT WHISPER_VERSION_BASE STREQUAL WHISPER_CPP_VERSION)
+    message(FATAL_ERROR
+        "Version mismatch: libs.versions.toml requests ${WHISPER_CPP_VERSION} but the "
+        "checked-out whisper.cpp source is ${WHISPER_VERSION_BASE}. Run the Gradle "
+        "'syncWhisperCpp' task.")
+endif()
 
 # ── JNI bridge library ───────────────────────────────────────────────────────
 find_library(log-lib log)

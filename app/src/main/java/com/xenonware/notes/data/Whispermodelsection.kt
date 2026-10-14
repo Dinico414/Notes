@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -36,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.xenonware.notes.util.audio.WhisperLib
 import com.xenonware.notes.util.audio.WhisperModelManager
 import com.xenonware.notes.util.audio.WhisperModelType
 import kotlinx.coroutines.launch
@@ -44,6 +47,10 @@ import kotlinx.coroutines.launch
  * Settings section for managing local Whisper models.
  *
  * Drop-in replacement for [OpenAiApiKeySection].
+ *
+ * Model files are version-stamped, so bumping `whisper` in `libs.versions.toml`
+ * makes existing models show up as "Update available" rather than silently
+ * continuing to serve weights from an older build.
  */
 @Composable
 fun WhisperModelSection(
@@ -52,6 +59,9 @@ fun WhisperModelSection(
     val context = LocalContext.current
     val modelManager = remember { WhisperModelManager(context) }
     val scope = rememberCoroutineScope()
+
+    // Bumped whenever a model is written or deleted, to re-read the on-disk state.
+    var refreshKey by remember { mutableIntStateOf(0) }
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -97,31 +107,81 @@ fun WhisperModelSection(
                 ModelRow(
                     modelType = modelType,
                     modelManager = modelManager,
+                    refreshKey = refreshKey,
                     onDownload = { type, onProgress ->
                         scope.launch {
                             modelManager.downloadModel(type, onProgress)
+                            refreshKey++
                         }
                     },
                     onDelete = { type ->
                         modelManager.deleteModel(type)
+                        refreshKey++
                     },
                 )
                 if (modelType != WhisperModelType.entries.last()) {
                     Spacer(Modifier.height(12.dp))
                 }
             }
+
+            Spacer(Modifier.height(12.dp))
+            SystemInfoFooter(modelManager = modelManager, refreshKey = refreshKey)
         }
     }
+}
+
+/**
+ * Shows which whisper.cpp build is actually linked into the app plus the version of
+ * each model currently on disk, so a version bump is verifiable at a glance.
+ */
+@Composable
+private fun SystemInfoFooter(
+    modelManager: WhisperModelManager,
+    refreshKey: Int,
+) {
+    // Reading this from the compiled .so proves which source was linked, unlike a
+    // constant that could be stale.
+    val nativeVersion = remember(refreshKey) {
+        runCatching { WhisperLib.nativeVersion() }.getOrDefault("unavailable")
+    }
+    val expected = WhisperModelManager.WHISPER_VERSION
+
+    val modelSummary = remember(refreshKey, nativeVersion) {
+        WhisperModelType.entries.joinToString(" · ") { type ->
+            val installed = if (modelManager.isModelDownloaded(type)) {
+                modelManager.installedVersion(type) ?: expected
+            } else {
+                null
+            }
+            when {
+                installed == null && modelManager.isModelOutdated(type) -> "${type.displayName} outdated"
+                installed == null -> "${type.displayName} —"
+                installed == expected -> "${type.displayName} $installed"
+                else -> "${type.displayName} $installed (update)"
+            }
+        }
+    }
+
+    Text(
+        text = "Native whisper.cpp $nativeVersion · $modelSummary",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable
 private fun ModelRow(
     modelType: WhisperModelType,
     modelManager: WhisperModelManager,
+    refreshKey: Int,
     onDownload: (WhisperModelType, (Float) -> Unit) -> Unit,
     onDelete: (WhisperModelType) -> Unit,
 ) {
-    var isDownloaded by remember { mutableStateOf(modelManager.isModelDownloaded(modelType)) }
+    // Re-derive state from disk whenever refreshKey changes.
+    val isDownloaded = remember(refreshKey) { modelManager.isModelDownloaded(modelType) }
+    val isOutdated = remember(refreshKey) { modelManager.isModelOutdated(modelType) }
+    val installedVersion = remember(refreshKey) { modelManager.installedVersion(modelType) }
+
     var isDownloading by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0f) }
 
@@ -130,12 +190,15 @@ private fun ModelRow(
         WhisperModelType.BASE -> "Pro (better quality)"
     }
 
+    val sizeLabel = remember { modelType.sizeLabel }
+
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = if (isDownloaded)
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-        else
-            MaterialTheme.colorScheme.surfaceContainerHighest,
+        color = when {
+            isDownloaded -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+            isOutdated -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f)
+            else -> MaterialTheme.colorScheme.surfaceContainerHighest
+        },
     ) {
         Column(Modifier.padding(12.dp)) {
             Row(
@@ -149,7 +212,11 @@ private fun ModelRow(
                         fontWeight = FontWeight.Medium,
                     )
                     Text(
-                        text = modelType.displayName,
+                        text = when {
+                            isDownloaded -> "${modelType.displayName} · v$installedVersion"
+                            isOutdated -> "${modelType.displayName} · v$installedVersion installed · $sizeLabel"
+                            else -> modelType.displayName
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -172,10 +239,7 @@ private fun ModelRow(
                             color = MaterialTheme.colorScheme.primary,
                         )
                         IconButton(
-                            onClick = {
-                                onDelete(modelType)
-                                isDownloaded = false
-                            },
+                            onClick = { onDelete(modelType) },
                             modifier = Modifier.size(32.dp),
                         ) {
                             Icon(
@@ -206,20 +270,25 @@ private fun ModelRow(
                                 progress = p
                                 if (p >= 1f) {
                                     isDownloading = false
-                                    isDownloaded = modelManager.isModelDownloaded(modelType)
                                 }
                             }
                         },
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Icon(
-                            Icons.Rounded.Download,
+                            // An outdated model gets the "new release" glyph, so the
+                            // prompt reads as an update rather than a fresh install.
+                            imageVector = if (isOutdated) {
+                                Icons.Rounded.NewReleases
+                            } else {
+                                Icons.Rounded.Download
+                            },
                             contentDescription = null,
                             modifier = Modifier
                                 .padding(end = 6.dp)
                                 .size(16.dp),
                         )
-                        Text("Download")
+                        Text(if (isOutdated) "Update" else "Download")
                     }
                 }
             }
@@ -237,6 +306,26 @@ private fun ModelRow(
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = "${(progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            // Explain an update before the user taps it, especially for the ~142 MB
+            // Pro model where re-downloading costs real mobile data.
+            AnimatedVisibility(visible = isOutdated && !isDownloading && !isDownloaded) {
+                Column {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = if (modelType.isBundled) {
+                            "A newer model is available for whisper.cpp " +
+                                "${WhisperModelManager.WHISPER_VERSION} and will be extracted on update."
+                        } else {
+                            "A newer model is available for whisper.cpp " +
+                                "${WhisperModelManager.WHISPER_VERSION}. Updating re-downloads " +
+                                "$sizeLabel."
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

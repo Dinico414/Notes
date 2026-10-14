@@ -10,6 +10,13 @@
 
 extern "C" {
 
+// ── Native whisper.cpp version string (e.g. "1.9.5") ────────────────────────
+JNIEXPORT jstring JNICALL
+Java_com_xenonware_notes_util_audio_WhisperLib_nativeVersion(
+        JNIEnv *env, jobject /* thiz */) {
+    return env->NewStringUTF(whisper_version());
+}
+
 // ── Load model and return an opaque context pointer ─────────────────────────
 JNIEXPORT jlong JNICALL
 Java_com_xenonware_notes_util_audio_WhisperLib_initContext(
